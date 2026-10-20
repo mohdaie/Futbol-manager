@@ -27,6 +27,7 @@ js/systems/scouting.js     knowledge and fog of war, scout assignments, reports
 js/systems/transfers.js    bids, contracts, sales, releases, AI market, agent pitches
 js/systems/ai.js           Jev and DeepSeek clients: settings, calls, budget guard, usage and cost tracking
 js/systems/brain.js        learning engine for computer managers, engine versions, DeepSeek press library
+js/systems/brain-cloud.js  private incremental cloud uploads, legacy import, offline queue and retry checkpoints
 js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
 js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
 js/ui/navigation.js        browser/in-game Back history, view restoration, root guard
@@ -46,6 +47,8 @@ The scripts are classic `<script>` tags that share one global scope, so the load
 **Main tabs.** Dashboard, News, My Team, Transfers, Facilities and More use two rows of three buttons. My Team groups Squad, Tactics, Fixtures, Training, Staff, Medical Center, Youth Academy, Stats and League Table. Facilities groups Finance, Board & Fans and Club. More contains Settings, Admin (when allowed) and Game Status. Child screens highlight their parent tab while Back retraces the actual visit order.
 
 **Game Status.** Shows the career, season results, club finances/squad/facilities, world/save details and `GAME_VERSION` from `data.js`. `G.playtime` persists visible in-game time and session counts; title/setup and background time are excluded. A 15-second checkpoint and visibility/page-exit saves preserve time. Existing careers begin tracking on this update, without inventing older playtime. The playful addiction label uses recorded time only; browser view history never restores the clock.
+
+**AI Brain cloud data.** Brain learning stays local for offline play and syncs to musab-agents through the write-only `futbol-brain` function. Details last 30 days; compact totals and engine/press/settings snapshots are retained. Existing drafts import once as legacy totals without recounting recent logs. AI Brain shows sync status and a manual retry. No cloud engine is automatically activated. See `supabase/functions/futbol-brain/README.md` for access, bounded batches, retention, analysis and production migration; `supabase/analysis/brain.sql` contains the analysis queries.
 
 ## 2. The game loop
 

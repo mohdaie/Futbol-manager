@@ -10,7 +10,8 @@
 
    Teachers: Jev picks the option (fast, gives a confidence). When Jev is unsure,
    DeepSeek can give a second opinion. Without either, the training camp explores options
-   and learns purely from outcomes. Everything is stored on this device only. */
+   and learns purely from outcomes. A local copy works offline; brain-cloud.js
+   syncs compact research data to the private analysis database. */
 
 const BRAIN_KEY = 'futbol-manager:brain';
 const CHECKPOINTS = [46, 60, 70, 80];
@@ -39,14 +40,21 @@ function brain() {
   try { const s = JSON.parse(localStorage.getItem(BRAIN_KEY) || 'null'); if (s) BRAIN = { ...BRAIN, ...s }; } catch (e) { /* storage blocked */ }
   return BRAIN;
 }
-function brainSave() { try { localStorage.setItem(BRAIN_KEY, JSON.stringify(brain())); return true; } catch (e) { return false; } }
+function brainSave() {
+  try {
+    const B = brain(); brainCloudCapture(B);
+    localStorage.setItem(BRAIN_KEY, JSON.stringify(B)); brainCloudSchedule(); return true;
+  } catch (e) { return false; }
+}
 const activeVersion = () => brain().versions.find(v => v.id === brain().active) || null;
 
 /* ---------- situations ---------- */
 function situation(M, S) {
   const O = M.sides[1 - S.idx], outs = onPitch(S).filter(x => x.pos !== 'GK');
   const str = (S.u.att / O.u.def) / (O.u.att / S.u.def);
-  return { min: M.min, diff: S.st.g - O.st.g, home: S.idx === 0, str: Math.round(str * 100) / 100, cond: Math.round(avg(outs, x => S.cond[x.p.id])), reds: S.reds.length - O.reds.length, ment: S.ment, subs: 5 - S.subs };
+  return { min: M.min, diff: S.st.g - O.st.g, home: S.idx === 0, str: Math.round(str * 100) / 100, cond: Math.round(avg(outs, x => S.cond[x.p.id])), reds: S.reds.length - O.reds.length, ment: S.ment, subs: 5 - S.subs,
+    shots: S.st.sh, sot: S.st.sot, xg: Math.round(S.st.xg * 100) / 100, oppShots: O.st.sh, oppXg: Math.round(O.st.xg * 100) / 100,
+    possession: Math.round(100 * S.st.pos / (S.st.pos + O.st.pos || 1)), press: S.press, line: S.line, tempo: S.tempo };
 }
 function sitKey(f) {
   const mb = f.min < 55 ? 'HT' : f.min < 65 ? '60' : f.min < 75 ? '70' : '80';
@@ -120,7 +128,10 @@ function applyMgrOption(M, S, opt) {
 
 /* ---------- recording ---------- */
 function logDecision(M, S, f, opt, src, extra = {}) {
-  const e = { t: Date.now(), key: sitKey(f), f, opt, src, at: [S.st.g, M.sides[1 - S.idx].st.g], out: null, ...extra };
+  const cfg = aiCfg();
+  const e = { t: Date.now(), key: sitKey(f), f, opt, src, at: [S.st.g, M.sides[1 - S.idx].st.g], out: null,
+    cloudMeta: { app: GAME_VERSION, engine: brainCloudEngine(), kind: M.camp ? 'camp' : M.instant ? 'instant' : M.live ? 'live' : 'background',
+      match: M.brainId || (M.brainId = crypto.randomUUID()), side: S.idx, mode: brain().mode, jevModel: cfg.jev.model, dsModel: cfg.ds.model }, ...extra };
   (M.dec = M.dec || []).push([S.idx, e]);
   return e;
 }
@@ -177,20 +188,24 @@ async function askTeacher(M, S, f) {
 /* ---------- judging ---------- */
 const ptsOf = d => (d > 0 ? 3 : d === 0 ? 1 : 0);
 function brainScore(M) {
-  if (!M.dec || !M.dec.length || M.noLog) return;
+  if (!M.dec || !M.dec.length || M.noLog || M.brainScored) return;
   const B = brain();
+  brainCloudInit(B); M.brainScored = true;
   M.dec.forEach(([si, e]) => {
     if (e.src === 'pending' || e.src === 'late') return;
     const S = M.sides[si], O = M.sides[1 - si];
     const gf = S.st.g - e.at[0], ga = O.st.g - e.at[1];
     e.out = Math.round(((gf - ga) + 1.5 * (ptsOf(S.st.g - O.st.g) - ptsOf(e.at[0] - e.at[1]))) * 100) / 100;
+    e.score = [S.st.g, O.st.g];
     const b = B.draft[e.key] || (B.draft[e.key] = {});
     const x = b[e.opt] || (b[e.opt] = { n: 0, sum: 0, tv: 0 });
     x.n++; x.sum = Math.round((x.sum + e.out) * 100) / 100;
     if (e.src === 'jev' || e.src === 'deepseek') x.tv++;
     B.log.push(e);
+    brainCloudRecord(B, e);
   });
   if (B.log.length > 2000) B.log.splice(0, B.log.length - 2000);
+  if (!M.camp) brainSave();
 }
 
 /* ---------- versions ---------- */

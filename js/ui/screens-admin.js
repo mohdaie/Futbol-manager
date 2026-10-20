@@ -359,11 +359,18 @@ ADMIN_TABS.brain = () => {
   const teacher = teacherReady(), second = aiReady('ds', 'second');
   const srcRows = Object.entries(st.bySrc).sort((a, b) => b[1].n - a[1].n).map(([k, s]) => `<div class="kvrow"><span>${SRC_NAME[k] || k} · ${s.n} decisions</span><b class="${s.sum / s.n > 0.05 ? 'good' : s.sum / s.n < -0.05 ? 'bad' : ''}">${(s.sum / s.n >= 0 ? '+' : '') + (s.sum / s.n).toFixed(2)}</b></div>`).join('');
   const buckets = Object.keys(B.draft).map(k => ({ k, s: bucketScores(B.draft, k) })).filter(x => x.s.n >= 3).sort((a, b) => b.s.n - a.s.n).slice(0, 12);
-  return `<div class="card"><h3>How it works</h3><p class="muted">Computer managers make a decision at half-time and at 60, 70 and 80 minutes. Every decision and its result is recorded on this device. The engine learns which choice works best in each situation. New engine versions are only used after you approve them.</p>
+  return `<div class="card"><h3>How it works</h3><p class="muted">Computer managers make a decision at half-time and at 60, 70 and 80 minutes. Decisions and outcomes are saved locally and synced to private cloud storage for analysis. The engine learns which choice works best in each situation. New engine versions are only used after you approve them.</p>
       <div class="kv"><div><small>Teacher (Jev)</small><b class="${teacher ? 'good' : ''}">${teacher ? 'Configured' : 'Off'}</b></div><div><small>Second opinion (DeepSeek)</small><b class="${second ? 'good' : ''}">${second ? 'Configured' : 'Off'}</b></div>
       <div><small>Engine in use</small><b>${V ? esc(V.name) : 'Built-in rules'}</b></div><div><small>Teacher calls saved by hybrid</small><b>${B.saved.skipped}</b></div></div>
       <div class="btns"><button class="btn sm" data-a="tab" data-key="adm" data-v="jev">Jev settings</button><button class="btn sm" data-a="tab" data-key="adm" data-v="ds">DeepSeek settings</button></div>
       ${!teacher ? '<p class="note">No teacher is connected, so the engine learns from outcomes only (the training camp tries options and keeps what works). Connect Jev in the Jev AI tab and tick “Computer managers” to add a teacher. If direct browser requests fail, configure a server proxy.</p>' : ''}</div>
+
+    <div class="card"><h3>Cloud learning data</h3>
+      <p id="brain-cloud-status" class="muted">${esc(B.cloud && B.cloud.error || (B.cloud && B.cloud.lastSync ? 'Last synced ' + new Date(B.cloud.lastSync).toLocaleString() + ' · ' + B.cloud.received + ' detailed records received' : 'Waiting for first upload…'))}</p>
+      <p class="muted">Recent decisions stay on the server for 30 days. Compact learning summaries, engine versions and press questions are kept for analysis. Offline results upload when you reconnect. API keys and manager names are excluded.</p>
+      <button class="btn" data-a="brCloudSync">Sync now</button>
+      <p class="muted">Resetting the local brain keeps previously uploaded research data.</p>
+    </div>
 
     <div class="card"><h3>Mode for real matches</h3>
       <div class="list brain-modes">${BRAIN_MODES.map(([k, n, d]) => `<button class="row act ${B.mode === k ? 'sel' : ''}" data-a="brMode" data-v="${k}" ${brainModeAvailable(k) ? '' : 'disabled'}><span class="grow"><b>${n}</b><small>${d}</small></span>${B.mode === k ? '<span class="tag good">On</span>' : ''}</button>`).join('')}</div>
@@ -399,6 +406,7 @@ ADMIN_TABS.brain = () => {
 };
 
 ACT.brMode = ds => { if (!brainModeAvailable(ds.v)) return toast('Configure the required AI or approve an engine version first.'); brain().mode = ds.v; brainSave(); toast('Mode: ' + BRAIN_MODES.find(m => m[0] === ds.v)[1]); render(); };
+ACT.brCloudSync = () => brainCloudSync(true);
 ACT.brSaveSet = () => { const B = brain(); B.minN = clamp(Math.round(nval('brMinN')), 2, 100); B.conf = clamp(nval('brConf'), 0, 1); B.explore = clamp(nval('brExp'), 0, 1); brainSave(); toast('Brain settings saved.'); render(); };
 ACT.brCamp = async ds => {
   const n = +ds.n, useT = teacherReady() && !!(document.getElementById('brUseT') || {}).checked;

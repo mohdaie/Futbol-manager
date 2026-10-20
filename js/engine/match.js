@@ -267,6 +267,7 @@ function stepMatch(M, autoUser) {
 
 function quickSim(fx) {
   const M = createMatch(fx);
+  M.instant = fx.h === G.club || fx.a === G.club;
   while (!M.ended) stepMatch(M, true);
   finishMatch(M);
   return M;

@@ -5,3 +5,7 @@ verify_jwt = false
 [functions.futbol-deepseek]
 # DeepSeek authenticates the caller's personal API key.
 verify_jwt = false
+
+[functions.futbol-brain]
+# Uses a random installation credential, hashed server-side; no public data reads.
+verify_jwt = false
