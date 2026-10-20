@@ -125,15 +125,19 @@ function takeShot(M, S, O, ev, seq, i, x, y, o = {}) {
     S.st.g++; S.st.sot++; pstat(S, i, 'sot');
     ev.t = 'goal'; step.res = 'goal';
     S.goals.push({ min: M.min, pid: p.id, aid: ev.aid, pen: !!o.pen });
+    moodSwing(S, 'all', 4); moodSwing(S, p.id, 5); if (ev.aid) moodSwing(S, ev.aid, 3);
+    moodSwing(O, 'all', -4); moodSwing(O, O.on[0], -3);
     bumpRating(S, p.id, o.pen ? 0.6 : 1.0); bumpRating(S, ev.aid, 0.6);
     S.on.forEach(id => bumpRating(S, id, 0.05));
     onPitch(O).forEach(z => bumpRating(O, z.p.id, z.pos === 'GK' ? -0.35 : LINE[z.pos] <= 2 ? -0.22 : -0.05));
   } else if (R() < clamp(0.32 + xg * 0.7, 0, 0.95)) {
     S.st.sot++; pstat(S, i, 'sot'); pstat(O, 0, 'sv');
+    if (xg > 0.3) { moodSwing(O, O.on[0], 4); moodSwing(S, p.id, -2); } // big save, big chance missed
     ev.t = 'save'; step.res = 'save'; step.x1 = 0.5 + rf(-0.04, 0.04); step.y1 = 0.03;
     bumpRating(S, p.id, 0.1); bumpRating(O, O.on[0], 0.15 + xg * 0.5);
     if (R() < 0.33) { S.st.co++; ev.corner = true; S.ckDue = true; }
   } else {
+    if (xg > 0.3 || o.pen) moodSwing(S, p.id, o.pen ? -7 : -3);
     ev.t = 'miss'; step.res = 'miss'; step.x1 = 0.5 + (R() < 0.5 ? -1 : 1) * rf(0.1, 0.2); step.y1 = -0.01;
     bumpRating(S, p.id, -0.05);
     if (R() < 0.16) { S.st.co++; ev.corner = true; S.ckDue = true; }
@@ -201,6 +205,12 @@ function playMinute(M) {
   const nPass = Math.round([13, 9.5, 7][S.tempo ?? 1] * [1.15, 1, 0.75][S.pass ?? 1] * rf(0.6, 1.3));
   const rate = clamp(0.86 - 0.025 - ((O.press ?? 1) - 1) * 0.025 * ((O.fit ? O.fit.press : 0) + 0.5) + (S.pass === 0 ? 0.02 * (S.fit ? S.fit.poss : 0) : 0) + (S.u.mid - O.u.mid) / 300 - (M.mod.wind < 1 ? 0.01 : 0), 0.72, 0.97);
   S.st.pa = (S.st.pa || 0) + nPass; S.st.pc = (S.st.pc || 0) + Math.round(nPass * rate);
+  // Credit these passes to the players who make them: midfielders and defenders most, better passers more.
+  const passers = S.on.map((id, k) => (id ? k : -1)).filter(k => k >= 0);
+  for (let n = 0; n < nPass && passers.length; n++) {
+    const k = wpick(passers, q => ({ 0: 0.35, 1: 1.1, 2: 1.4, 3: 1.4, 4: 0.9, 5: 0.6 }[LINE[FORMATIONS[S.ip][q][0]]] || 1) * (0.6 + av(S, q, 'pas') / 25));
+    pstat(S, k, 'pa'); if (R() < rate + (av(S, k, 'pas') - 13) * 0.01) pstat(S, k, 'pc');
+  }
   let x = st.x, y = st.y, i = -1, counter = st.counter, lastPasser = null;
   const turnover = (tx, ty) => {
     const won = O.won ?? 1, regroup = (S.lost ?? 1) === 0;

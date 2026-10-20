@@ -358,3 +358,18 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 
 ## Live commentary
 - The newest line is a full-width bar in the kit colour of the team it is about, and a goal flashes.
+
+## During a live match (2026.10.20.7)
+- **On the pitch:** every player has a condition bar (green, yellow below 75%, red below 60%) and his live match rating under him.
+- **Tap a player:** his live card shows:
+  - Match rating, condition, morale (with ↑/↓ when the match is lifting or knocking him) and sharpness.
+  - His match stats: passes, key passes, dribbles, crosses, tackles, interceptions, aerials, blocks, shots, offsides and fouls, or saves for a keeper.
+  - For your players, buttons for player instructions and a substitution.
+
+  The card refreshes every minute while it is open. Names in the Stats sheet open the same card.
+- **Live morale** (`moodSwing()`, `liveMor()` in match.js):
+  - Goals lift the scoring side (most of all the scorer and the assister) and knock the conceding side (most of all the keeper).
+  - Big saves lift the keeper; big chances missed and penalty misses knock the shooter; red cards knock the side that loses a player.
+  - Temperamental players swing more, and determined, professional and model-citizen players shrug off setbacks. A high-leadership captain steadies the team.
+  - Swings fade over about an hour, count in every duel through `pForm`, and only last for the match; the result changes real morale at full time.
+- **Pass credit:** background passes that aren't animated are credited to the players who make them, so each player's pass count is realistic.

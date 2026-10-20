@@ -196,6 +196,8 @@ ACT.subIn = ds => {
   reopenLive('subs');
 };
 ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`, LIVE.bottom); reopenLive('tactics'); };
+ACT.liveSubFor = ds => { const L = LIVE; L.subSel = +ds.id; const wasPaused = L.paused; L.paused = true; updateBoard(L); openLiveSheet('subs'); UI.sheetOpts = { onClose: () => { L.subSel = null; if (!wasPaused && !(L.overlay && L.overlay.stay)) L.paused = false; updateBoard(L); } }; };
+ACT.livePl = ds => { LIVE.selId = +ds.id; const si = LIVE.M.sides.findIndex(X => X.on.includes(+ds.id)); LIVE.sel = si >= 0 ? [si, LIVE.M.sides[si].on.indexOf(+ds.id)] : null; reopenLive('pl'); };
 ACT.livePi = ds => { LIVE.piSlot = +ds.i; reopenLive('pi'); };
 ACT.livePiSet = ds => {
   const S = liveSide(), i = LIVE.piSlot, x = S.pi[i] || (S.pi[i] = {});

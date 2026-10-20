@@ -77,7 +77,25 @@ function taker(S, key) {
 }
 // Direct free-kick skill on the 1-20 scale.
 const fkSkill = p => (p.at[A.fin] + p.at[A.pas] + p.at[A.vis] / 2) / 2.5;
-const pForm = (S, p) => (0.7 + 0.3 * (S.cond[p.id] ?? p.cond) / 100) * (0.94 + 0.12 * p.mor / 100) * (0.95 + 0.05 * p.shp / 100);
+// Morale in the match: his morale coming in plus how the match is going for him (S.mo, see moodSwing).
+const liveMor = (S, p) => clamp(p.mor + ((S.mo && S.mo[p.id]) || 0), 0, 100);
+const pForm = (S, p) => (0.7 + 0.3 * (S.cond[p.id] ?? p.cond) / 100) * (0.94 + 0.12 * liveMor(S, p) / 100) * (0.95 + 0.05 * p.shp / 100);
+/* Live morale swings: goals, big chances, saves and red cards lift or knock players during the match.
+   Character matters (temperamental players swing more, determined and professional players shrug off setbacks),
+   and a captain with high leadership steadies the team after a blow. The swing fades slowly and is only for this match;
+   the result changes real morale at full time. who: 'all' or a player id; d: change in morale points. */
+function moodSwing(S, who, d) {
+  S.mo = S.mo || {};
+  const one = id => {
+    const p = G.players[id]; if (!p) return;
+    let x = d;
+    if (p.pers === 'Temperamental') x *= 1.4;
+    if (x < 0 && ['Determined', 'Professional', 'Model Citizen'].includes(p.pers)) x *= 0.6;
+    if (x < 0 && who === 'all') x *= 1 - clamp(((S.capLdr ?? 10) - 10) * 0.04, -0.2, 0.4);
+    S.mo[id] = clamp((S.mo[id] || 0) + x, -30, 30);
+  };
+  if (who === 'all') S.on.forEach(id => { if (id) one(id); }); else one(who);
+}
 
 function calcUnits(S) {
   const ip = FORMATIONS[S.ip], oop = FORMATIONS[S.oop];
@@ -132,6 +150,7 @@ function simMinute(M) {
   const [H, W] = M.sides, evs = [];
   if (M.min % 5 === 0 || M.dirty) { calcUnits(H); calcUnits(W); M.dirty = false; }
   drain(M, H); drain(M, W);
+  M.sides.forEach(X => { if (X.mo) Object.keys(X.mo).forEach(id => { X.mo[id] *= 0.985; }); }); // swings fade over about an hour
   if (M.shout && M.min >= M.shout.until) { const S = M.sides[M.shout.side]; S.boost = 0; S.guard = 0; S.calm = 0; M.shout = null; }
   const played = playMinute(M), ev = played[0];
   evs.push(...played);
@@ -150,6 +169,7 @@ function sendOff(M, S, id, ev) {
   S.on = S.on.map(x => (x === id ? null : x));
   S.reds.push(id); S.st.rc++;
   ev.t = 'red';
+  moodSwing(S, 'all', -3); moodSwing(M.sides[1 - S.idx], 'all', 2);
   bumpRating(S, id, -1.5);
   M.dirty = true;
 }
