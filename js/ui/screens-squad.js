@@ -183,6 +183,10 @@ SCREENS.tactics = {
       <div class="sec-h"><h2>Tactical style</h2><span class="muted">${cur ? STYLES[cur].n : 'Custom'}</span></div>
       <div class="grid2">${Object.entries(STYLES).map(([k, s]) => `<button class="gcard ${cur === k ? 'on' : ''}" data-a="style" data-v="${k}"><b>${s.n}</b><small>${s.d}</small></button>`).join('')}</div>
       <p class="muted">A style sets the team instructions, recommended shape and roles. Change anything afterwards to make it your own.</p>
+      ${(() => { const r = tacticReport(T); return `<div class="card"><h3>Tactic fit <small>${r.overall == null ? 'No special demands' : r.overall + '% overall'}</small></h3>
+        <p class="muted">Tactics only work when the players suit them. Good fit makes the instructions pay off; poor fit makes them backfire (lost balls, tired legs, space behind).</p>
+        ${r.active.map(x => `<div class="fitrow"><span><b>${x.n}</b><small>Needs ${x.need}</small></span>${bar(x.pct, x.pct >= 60 ? 'good' : x.pct >= 45 ? 'warn' : 'bad')}<b class="${x.pct >= 60 ? 'good' : x.pct >= 45 ? 'warn' : 'bad'}">${x.pct}%</b></div>`).join('') || '<p class="muted">Balanced settings ask nothing special of the players.</p>'}
+        ${r.active.filter(x => x.pct < 45).map(x => `<p class="note">${x.n}: your players are not suited to it. Expect it to cost you more than it gains.</p>`).join('')}</div>`; })()}
       <div class="sec-h"><h2>Substitutes</h2><span class="muted">${T.bench.length}/9</span></div>
       <div class="list">${T.bench.map((id, i) => { const p = G.players[id]; return `<button class="row act" data-a="benchSlot" data-i="${i}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${morLabel(p.mor)}</small></span>${condBar(p.cond)}${ovrPill(p.ca)}</button>`; }).join('')}
         ${T.bench.length < 9 ? '<button class="row act add" data-a="benchSlot" data-i="-1"><span class="grow"><b>Add a substitute</b></span><span class="chev">+</span></button>' : ''}</div>
@@ -244,11 +248,13 @@ SCREENS.pinstr = {
   render() {
     const T = G.tactics, ip = FORMATIONS[T.ip];
     ensureUserLineup();
+    const rep = tacticReport(T);
     return `<h1 class="h1">Player instructions</h1>
-      <p class="muted">Instructions belong to a position, so they stay when you change the player. They add to the role and can differ from the team instructions.</p>
+      <p class="muted">Instructions belong to a position, so they stay when you change the player. They add to the role and can differ from the team instructions. An instruction makes a player try something more often; whether it works depends on his attributes (a poor dribbler told to dribble more just loses the ball more).</p>
+      ${rep.overall != null ? `<p class="muted">Fit shows how well each player suits what the team instructions ask of his position.</p>` : ''}
       <div class="list">${T.slots.map((id, i) => {
-        const p = G.players[id], pos = ip[i][0], set = PLAYER_INS.filter(x => T.pi[i] && T.pi[i][x.k] != null && T.pi[i][x.k] !== 1);
-        return `<button class="row act" data-a="piOpen" data-i="${i}"><span class="pos">${pos}</span><span class="grow"><b>${p ? esc(pname(p)) : 'Empty'}</b><small>${esc(roleName(T, i))}${set.length ? ' · ' + set.map(x => x.o[T.pi[i][x.k]]).join(', ') : ''}</small></span><span class="chev">›</span></button>`;
+        const p = G.players[id], pos = ip[i][0], set = PLAYER_INS.filter(x => T.pi[i] && T.pi[i][x.k] != null && T.pi[i][x.k] !== 1), f = rep.perSlot(i);
+        return `<button class="row act" data-a="piOpen" data-i="${i}"><span class="pos">${pos}</span><span class="grow"><b>${p ? esc(pname(p)) : 'Empty'}</b><small>${esc(roleName(T, i))}${set.length ? ' · ' + set.map(x => x.o[T.pi[i][x.k]]).join(', ') : ''}</small></span>${f == null ? '' : `<span class="stat"><b class="${f >= 60 ? 'good' : f >= 45 ? 'warn' : 'bad'}">${f}%</b><small>fit</small></span>`}<span class="chev">›</span></button>`;
       }).join('')}</div>
       <div class="btns"><button class="btn" data-a="piClear">Clear all</button><button class="btn" data-a="go" data-s="tactics">Back to tactics</button></div>`;
   },

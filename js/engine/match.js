@@ -100,17 +100,22 @@ function calcUnits(S) {
   const famF = (S.user ? 0.93 + 0.07 * G.training.fam / 100 : 0.985) * capF;
   S.capLdr = cap && cap.chosen ? cap.p.at[A.ldr] : 10;
   S.capF = capF;
+  sideFit(S);
   S.u = { att: (att / (wa || 1)) * famF, mid: (mid / (wm || 1)) * famF * (1 + (gkRole.m || 0) * 0.3), def: (def / (wd || 1)) * famF, gk, n, nAtt, nDef, pace: pace / Math.max(1, n - 1), sweep: gkRole.n === 'Sweeper Keeper' };
 }
 
 function possShare(H, W) {
-  const f = S => Math.pow(S.u.mid, 1.2) * (1 + 0.03 * (S.press - 1) + 0.02 * (S.line - 1) - 0.08 * (S.pass - 1) - 0.06 * (S.tempo - 1)) * (S.u.n / 11);
+  // Short passing, patience and pressing only help keep the ball if the players suit them (tactic fit).
+  const fp = S => (S.fit ? S.fit.poss : 0) * 0.9 + 0.1, fr = S => (S.fit ? S.fit.press : 0) + 0.5;
+  const f = S => Math.pow(S.u.mid, 1.2) * (1 + 0.03 * (S.press - 1) * fr(S) + (S.pass === 0 ? 0.2 * fp(S) : -0.08 * (S.pass - 1)) + (S.tempo === 0 ? 0.14 * fp(S) : -0.06 * (S.tempo - 1))) * (S.u.n / 11);
   const a = f(H) * tune('homePoss'), b = f(W);
   return a / (a + b);
 }
 
 function drain(M, S) {
-  const rate = (tune('fatigue') + 0.06 * (S.press - 1) + 0.03 * (S.tempo - 1)) * M.mod.drain;
+  // Pressing tires players; those built for it cope better.
+  const pf = 1 - (S.fit ? S.fit.press : 0) * 0.35;
+  const rate = (tune('fatigue') + (0.06 * (S.press - 1) + ((S.lost ?? 1) === 2 ? 0.02 : 0)) * pf + 0.03 * (S.tempo - 1)) * M.mod.drain;
   S.on.forEach((id, i) => {
     if (!id) return;
     const p = G.players[id];
