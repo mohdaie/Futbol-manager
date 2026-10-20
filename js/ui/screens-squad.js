@@ -184,6 +184,7 @@ SCREENS.tactics = {
       <div class="tpitch ${view}"><div class="tp-lines"></div>${toks}</div>
       <div class="famrow"><span>Tactical familiarity</span>${bar(G.training.fam, G.training.fam < 50 ? 'warn' : 'good')}<b>${G.training.fam}%</b></div>
       <div class="btns"><button class="btn pri" data-a="autoPick">Pick best XI</button><button class="btn" data-a="go" data-s="pinstr">Player instructions</button></div>
+      ${(() => { const nf = nextUserFixture(); return nf ? assistCard(nf) : ''; })()}
       <div class="sec-h"><h2>Tactical style</h2><span class="muted">${cur ? STYLES[cur].n : 'Custom'}</span></div>
       <div class="grid2">${Object.entries(STYLES).map(([k, s]) => `<button class="gcard ${cur === k ? 'on' : ''}" data-a="style" data-v="${k}"><b>${s.n}</b><small>${s.d}</small></button>`).join('')}</div>
       <p class="muted">A style sets the team instructions, recommended shape and roles. Change anything afterwards to make it your own.</p>

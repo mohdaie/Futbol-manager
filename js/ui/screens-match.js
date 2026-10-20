@@ -111,6 +111,7 @@ SCREENS.prematch = {
         <div class="kv"><div><small>League position</small><b>${orow.p ? ordinal(tbl.indexOf(orow) + 1) : '-'}</b></div><div><small>Form</small><b>${orow.form.length ? formChips(orow.form) : '-'}</b></div>
         <div><small>Likely shape</small><b>${analyst >= 8 ? opp.tac.ip + ' / ' + opp.tac.oop : 'Unknown'}</b></div><div><small>Pressing</small><b>${analyst >= 11 ? INSTRUCTIONS[4].o[opp.tac.press] : 'Unknown'}</b></div></div>
         <h4 class="lbl">Players to watch</h4><div class="list">${theirs.map(p => playerRow(p, '', { sub: POS_NAME[p.pos] })).join('')}</div></div>
+      ${assistCard(fx)}
       <div class="card"><h3>Your line-up <small>${T.ip} · ${INSTRUCTIONS[0].o[T.ment]}</small></h3>
         <div class="xi">${T.slots.map((id, i) => { const p = G.players[id]; return `<span class="${p && fam(p, ip[i][0]) < 0.9 ? 'warn' : ''}"><em>${ip[i][0]}</em>${p ? esc(p.ln) : '-'}</span>`; }).join('')}</div>
         ${warn.length ? `<ul class="warns">${warn.slice(0, 4).map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '<p class="muted">No selection problems.</p>'}
@@ -118,6 +119,48 @@ SCREENS.prematch = {
       <div class="card press"><h3>Press conference</h3>${pc.done ? `<p class="muted">Done. ${esc(pc.said)}</p>` : `<p class="q">“${esc(Q.q)}”</p><div class="list">${Q.a.map((a, k) => `<button class="row act" data-a="pressA" data-k="${k}"><span class="grow">${esc(a[0])}</span><span class="chev">›</span></button>`).join('')}</div><button class="link" data-a="pressSkip">Send the assistant instead</button>`}</div>
       <div class="btns col"><button class="btn pri wide big" data-a="kickoff">${LIVE && !LIVE.done && LIVE.fid === fx.id ? 'Resume match' : 'Kick off'}</button><button class="btn wide ghost" data-a="instant">Instant result</button></div>`;
   },
+};
+/* ---------- assistant manager ---------- */
+function assistCard(fx) {
+  const r = assistantRating(), A = UI.assist && UI.assist.fid === fx.id ? UI.assist : null, a = A && A.adv, rec = assistantRecord();
+  const who = staffOf('Assistant')[0];
+  const head = `<h3>Assistant manager <small>${who ? esc(who.name) + ' · ' : ''}${Math.round(r)}/20</small></h3>`;
+  if (!a) return `<div class="card">${head}<p class="muted">${A && A.busy ? esc(A.step || 'Working…') : 'He can play this match through many times with your squad and theirs, then advise on tactics. Better assistants try more options and read the numbers more accurately.'}</p>
+    ${A && A.busy ? '' : `<button class="btn wide" data-a="assistAsk">Ask for advice</button>`}${rec ? `<p class="muted">Record: called ${rec.accuracy}% of ${rec.n} results right.${rec.nf ? ` When you followed his tactic advice: ${rec.followed} points a game` : ''}${rec.ni ? `; when you didn't: ${rec.ignored}` : ''}.</p>` : ''}</div>`;
+  const bar = (v, c) => `<i style="width:${v}%;background:${c}"></i>`;
+  return `<div class="card">${head}
+    <div class="predbar">${bar(a.pred.w, 'var(--good)')}${bar(a.pred.d, 'var(--draw)')}${bar(a.pred.l, 'var(--bad)')}</div>
+    <div class="predlbl"><span class="good">Win ${a.pred.w}%</span><span>Draw ${a.pred.d}%</span><span class="bad">Loss ${a.pred.l}%</span></div>
+    <p>${esc(a.text)}${a.src === 'ai' ? ' <em class="tag">AI</em>' : ''}</p>
+    <ul class="notes">${a.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+    <p class="muted">${a.n * 2 + (a.tried.length - 1) * a.n} run-throughs; tactics tried: ${a.tried.map(styleName).join(', ')}.</p>
+    ${a.rec !== a.cur ? `<div class="btns"><button class="btn pri" data-a="assistApply">Switch to ${esc(styleName(a.rec))}</button><button class="btn" data-a="assistAsk">Ask again</button></div>` : `<button class="btn wide" data-a="assistAsk">Ask again</button>`}</div>`;
+}
+ACT.assistAsk = async () => {
+  const uf = userFixture(), fx = uf && !played(uf) ? uf : nextUserFixture();
+  if (!fx || (UI.assist && UI.assist.busy)) return;
+  UI.assist = { fid: fx.id, busy: true, step: 'Studying the opposition…' };
+  render();
+  try {
+    const adv = await assistantAdvice(fx, s => { UI.assist.step = s; if (['prematch', 'tactics'].includes(UI.s)) render(); });
+    UI.assist = { fid: fx.id, busy: false, adv };
+    logAdvice(adv);
+    if (['prematch', 'tactics'].includes(UI.s)) render();
+    await assistantAiWords(adv);
+    saveGame();
+  } catch (e) { UI.assist = null; toast('The assistant could not finish: ' + (e.message || e)); }
+  if (['prematch', 'tactics'].includes(UI.s)) render();
+};
+ACT.assistApply = () => {
+  const a = UI.assist && UI.assist.adv, T = G.tactics;
+  if (!a || !STYLES[a.rec]) return;
+  const shape = T.ip + '/' + T.oop;
+  applyStyle(T, a.rec);
+  if (shape !== T.ip + '/' + T.oop) { G.training.fam = Math.max(20, G.training.fam - 15); const pk = autoPick(G.club, T.ip); T.slots = pk.xi; T.bench = pk.bench; T.cap = T.pk = T.fk = T.ck = null; T.pi = {}; }
+  ensureUserLineup(); autoSetPieces();
+  a.cur = a.rec;
+  toast(`Switched to ${styleName(a.rec)}. Check the line-up before kick-off.`);
+  render();
 };
 ACT.pressA = ds => {
   const fx = userFixture(), pc = G.press[fx.id], a = (pc.Q || PRESS[pc.q]).a[+ds.k], e = a[1];

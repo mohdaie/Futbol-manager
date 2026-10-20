@@ -588,3 +588,6 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .feed li.fd-main.blink { animation: goalBlink .5s steps(2, jump-none) 8; font-size: 16px; }
 @keyframes goalBlink { 0% { background: var(--tc); color: var(--tf); } 100% { background: #FFFFFF; color: #10061A; } }
 @media (prefers-reduced-motion: reduce) { .feed li.fd-main.blink { animation: none; } }
+.predbar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,.08); }
+.predbar i { display: block; height: 100%; }
+.predlbl { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin: 4px 0 6px; }
