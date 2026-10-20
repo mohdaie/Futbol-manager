@@ -23,7 +23,7 @@ SCREENS.start = {
       <h2 class="lbl">Choose your manager</h2>
       ${avatarPicker(START.avatar, 'pickAvatar')}
       <h2 class="lbl">Choose your club</h2>
-      <div class="clubs">${order.map((c, i) => `<button class="club ${START.club === c.id ? 'on' : ''}" data-a="pickClub" data-id="${c.id}" style="--k1:${c.c1}">${startBadge(c, 34)}<span class="grow"><b>${c.name}</b><small>${c.city} · ${exp(i)}</small></span><span class="diff d${diff(i)}" title="Difficulty">${['', 'Easy', 'Normal', 'Hard', 'Very hard'][diff(i)]}</span></button>`).join('')}</div>
+      <div class="clubs">${order.map((c, i) => `<button class="club ${START.club === c.id ? 'on' : ''}" data-a="pickClub" data-id="${c.id}" style="--k1:${c.c1}">${startBadge(c, 28)}<span class="grow"><b>${c.name}</b><small>${c.city} · ${exp(i)}</small></span><span class="diff d${diff(i)}" title="Difficulty">${['', 'Easy', 'Normal', 'Hard', 'Very hard'][diff(i)]}</span></button>`).join('')}</div>
       <div class="st-go"><button class="btn pri wide big" data-a="startGame">Take charge of the ${sel.name}</button></div>
     </div>`;
   },
@@ -68,7 +68,7 @@ SCREENS.prematch = {
     const pc = G.press[fx.id] || (G.press[fx.id] = { Q: pickPress(), done: false }), Q = pc.Q || PRESS[pc.q];
     return `<section class="hero" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
         <div class="eyebrow">${esc(phaseLabel())} · ${fxWhen(fx)} · ${esc(G.clubs[fx.h].ground)}</div>
-        <div class="vs">${badge(fx.h, 58)}<div class="vs-mid"><b>v</b></div>${badge(fx.a, 58)}</div>
+        <div class="vs">${badge(fx.h, 46)}<div class="vs-mid"><b>v</b></div>${badge(fx.a, 46)}</div>
         <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div></section>
       ${conditionsCard(fx)}
       <div class="card"><h3>Opposition report <small>Analyst ${analyst.toFixed(0)}/20</small></h3>
@@ -109,9 +109,9 @@ SCREENS.match = {
     const [H, W] = LIVE.M.sides;
     return `<div class="mscr">
       <div class="sb">
-        <div class="sb-t">${badge(H.cid, 26)}<b>${esc(clubName(H.cid))}</b></div>
+        <div class="sb-t">${badge(H.cid, 22)}<b>${esc(clubName(H.cid))}</b></div>
         <div class="sb-m"><b id="sbScore">0 - 0</b><span id="sbClock">0'</span></div>
-        <div class="sb-t r"><b>${esc(clubName(W.cid))}</b>${badge(W.cid, 26)}</div>
+        <div class="sb-t r"><b>${esc(clubName(W.cid))}</b>${badge(W.cid, 22)}</div>
       </div>
       <div class="poss"><span class="pbar"><i id="sbPoss" style="width:50%"></i></span><small id="sbPossTxt"></small></div>
       ${(() => { const f = G.fixtures.find(x => x.id === LIVE.fid); return f && f.wx ? `<div class="mcond">${fxWhen(f)} · ${wxLabel(f.wx)}${f.tv ? ' · TV' : ''}</div>` : ''; })()}
@@ -185,7 +185,7 @@ SCREENS.post = {
     const others = G.fixtures.filter(f => f.r === fx.r && f.id !== fx.id).sort(fxSort);
     return `<section class="hero rep" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
         <div class="eyebrow">Full time · ${fxWhen(fx)}${fx.wx ? ' · ' + wxLabel(fx.wx) : ''}${fx.att ? ' · Att ' + fx.att.toLocaleString('en-GB') : ''}</div>
-        <div class="vs">${badge(fx.h, 52)}<div class="vs-mid score"><b>${fx.hg} - ${fx.ag}</b></div>${badge(fx.a, 52)}</div>
+        <div class="vs">${badge(fx.h, 42)}<div class="vs-mid score"><b>${fx.hg} - ${fx.ag}</b></div>${badge(fx.a, 42)}</div>
         <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div>
         <div class="scorers"><span>${sc(0)}</span><span>${sc(1)}</span></div></section>
       ${stats}${rats}
@@ -220,7 +220,7 @@ SCREENS.sacked = {
     return `<div class="start review">
       <header class="st-hero">${avatarImg(G.avatar, 'av-hero sad')}<div class="eyebrow">Statement from the board</div><h1 class="logo">Sacked</h1><p>${esc(o.reason)}</p></header>
       <h2 class="lbl">Job offers</h2>
-      <div class="clubs">${o.offers.map(id => `<button class="club" data-a="takeJob" data-id="${id}" style="--k1:${G.clubs[id].c1}">${badge(id, 34)}<span class="grow"><b>${esc(clubName(id))}</b><small>${esc(expectationFor(id).text)}</small></span><span class="chev">›</span></button>`).join('')}</div>
+      <div class="clubs">${o.offers.map(id => `<button class="club" data-a="takeJob" data-id="${id}" style="--k1:${G.clubs[id].c1}">${badge(id, 28)}<span class="grow"><b>${esc(clubName(id))}</b><small>${esc(expectationFor(id).text)}</small></span><span class="chev">›</span></button>`).join('')}</div>
       <button class="btn wide ghost" data-a="newGame2">Start a new career</button></div>`;
   },
 };

@@ -18,7 +18,7 @@ SCREENS.home = {
     const conf = G.board.conf;
 
     const clubCard = `<section class="clubcard">
-      <div class="cc-top"><div class="cc-badge">${badge(c.id, 54)}</div>
+      <div class="cc-top"><div class="cc-badge">${badge(c.id, 40)}</div>
         <div class="cc-name"><b>${esc(c.name)}</b><small>${LEAGUE_NAME} · ${seasonLabel()}</small></div>
         <button class="cc-link" data-a="go" data-s="club">Club overview <span aria-hidden="true">→</span></button></div>
       <div class="cc-stats"><div><small>Position</small><b>${row.p ? ordinal(pos) : '-'}</b></div><div><small>Points</small><b>${row.pts}</b></div><div><small>Played</small><b>${row.p}</b></div></div>
@@ -32,9 +32,9 @@ SCREENS.home = {
       const days = fxDayNo(fx) - todayNo(), rest = restDays(G.club, fx);
       next = `<section class="dcard" ${fx.w === G.week ? 'data-a="continue" role="button"' : ''}>
         <div class="dcard-h"><h2>Next match</h2><span class="pill">${days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days'}</span></div>
-        <div class="nm"><div class="nm-team">${badge(fx.h, 40)}<span>${esc(clubName(fx.h))}</span></div>
+        <div class="nm"><div class="nm-team">${badge(fx.h, 32)}<span>${esc(clubName(fx.h))}</span></div>
           <div class="nm-mid"><b>vs</b>${fxWhen(fx)}<br>${home ? 'Home' : 'Away'} · League${fx.tv ? ' · TV' : ''}</div>
-          <div class="nm-team r">${badge(fx.a, 40)}<span>${esc(clubName(fx.a))}</span></div></div>
+          <div class="nm-team r">${badge(fx.a, 32)}<span>${esc(clubName(fx.a))}</span></div></div>
         <div class="nm-cond"><span>${wxLabel(fx.wx)}</span><span>${rest == null ? 'First match' : rest + " days' rest"}</span>${rest != null && rest <= 3 ? '<span class="warnc">Tight turnaround</span>' : ''}</div>
         <div class="nm-form"><span>Opponent form</span>${orow.form.length ? formChips(orow.form) : '<span>No matches yet</span>'}</div>
       </section>`;
@@ -163,7 +163,7 @@ SCREENS.stats = {
 SCREENS.club = {
   render() {
     const c = userClub(), B = G.board;
-    return `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 64)}${avatarImg(G.avatar, 'av-sm')}<div><h1 class="h1">${esc(c.name)}</h1><p class="muted">${esc(c.city)} · Manager ${esc(G.manager)}</p></div></section>
+    return `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 50)}${avatarImg(G.avatar, 'av-sm')}<div><h1 class="h1">${esc(c.name)}</h1><p class="muted">${esc(c.city)} · Manager ${esc(G.manager)}</p></div></section>
       <div class="kv">
         <div><small>Stadium</small><b>${esc(c.ground)}</b></div><div><small>Capacity</small><b>${c.cap.toLocaleString('en-GB')}</b></div>
         <div><small>Reputation</small><b>${Math.round(c.rep)} / 100</b></div><div><small>Training facilities</small><b>Level ${B.facTrain}</b></div>
