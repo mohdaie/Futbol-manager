@@ -193,9 +193,22 @@ const SHOUTS = [
 
 const INJURIES = [['Hamstring strain', 2, 5], ['Twisted ankle', 1, 3], ['Calf strain', 1, 4], ['Groin strain', 2, 4], ['Knee ligament damage', 6, 14], ['Bruised ribs', 1, 2], ['Broken metatarsal', 6, 10], ['Thigh strain', 2, 4], ['Concussion', 1, 2], ['Back spasms', 1, 2]];
 
+// Weather effects on a match. drain = fatigue, xg = chance quality, shot = chances created,
+// foul / inj = foul and injury rates, wind = penalty for direct passing or wide play.
+const WEATHER = {
+  clear: { n: 'Clear', d: 'Good conditions.' },
+  rain: { n: 'Rain', d: 'Slippery: harder finishing, more fouls and knocks.', xg: 0.97, foul: 1.12, inj: 1.15, drain: 1.03 },
+  wind: { n: 'Windy', d: 'Long balls and crosses are unreliable.', wind: 0.93 },
+  cold: { n: 'Cold', d: 'Heavy pitch: players tire faster, more muscle injuries.', drain: 1.06, inj: 1.15 },
+  hot: { n: 'Hot', d: 'Draining heat: fatigue builds quickly.', drain: 1.15, shot: 0.97 },
+  snow: { n: 'Snow', d: 'Scrappy game: fewer clear chances.', xg: 0.92, shot: 0.97, drain: 1.1 },
+};
+const KICKOFF_NOTES = { early: 'Early kick-off: games tend to start slowly.', evening: 'Evening game under the lights: louder home crowd.' };
+const TV_FEE = 0.6e6; // extra per club for a televised match
+
 // Match engine tuning. The admin page can override these per save (G.tune).
 const TUNE_DEFAULTS = {
-  shotBase: { v: 0.27, min: 0.1, max: 0.5, step: 0.01, n: 'Shot chance per possession minute' },
+  shotBase: { v: 0.29, min: 0.1, max: 0.5, step: 0.01, n: 'Shot chance per possession minute' },
   xgScale: { v: 1, min: 0.5, max: 2, step: 0.05, n: 'Chance quality (xG) multiplier' },
   homeShot: { v: 1.06, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: shots' },
   homePoss: { v: 1.04, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: possession' },

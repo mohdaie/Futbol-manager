@@ -29,13 +29,13 @@ SCREENS.home = {
     let next = '';
     if (fx) {
       const home = fx.h === G.club, opp = home ? fx.a : fx.h, orow = tbl.find(r => r.id === opp);
-      const days = Math.max(0, Math.round((matchDate(fx.w) - weekDate(G.week)) / 864e5));
-      const md = matchDate(fx.w);
+      const days = fxDayNo(fx) - todayNo(), rest = restDays(G.club, fx);
       next = `<section class="dcard" ${fx.w === G.week ? 'data-a="continue" role="button"' : ''}>
-        <div class="dcard-h"><h2>Next match</h2><span class="pill">${fx.w === G.week ? 'This week' : 'In ' + days + ' days'}</span></div>
+        <div class="dcard-h"><h2>Next match</h2><span class="pill">${days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days'}</span></div>
         <div class="nm"><div class="nm-team">${badge(fx.h, 40)}<span>${esc(clubName(fx.h))}</span></div>
-          <div class="nm-mid"><b>vs</b>${md.getDate()} ${MONTHS[md.getMonth()]} · 15:00<br>${home ? 'Home' : 'Away'} · League</div>
+          <div class="nm-mid"><b>vs</b>${fxWhen(fx)}<br>${home ? 'Home' : 'Away'} · League${fx.tv ? ' · TV' : ''}</div>
           <div class="nm-team r">${badge(fx.a, 40)}<span>${esc(clubName(fx.a))}</span></div></div>
+        <div class="nm-cond"><span>${wxLabel(fx.wx)}</span><span>${rest == null ? 'First match' : rest + " days' rest"}</span>${rest != null && rest <= 3 ? '<span class="warnc">Tight turnaround</span>' : ''}</div>
         <div class="nm-form"><span>Opponent form</span>${orow.form.length ? formChips(orow.form) : '<span>No matches yet</span>'}</div>
       </section>`;
     } else next = `<section class="dcard"><div class="dcard-h"><h2>Next match</h2></div><p class="muted">No fixtures left this season.</p></section>`;
@@ -125,13 +125,13 @@ SCREENS.fixtures = {
         const home = f.h === G.club, opp = home ? f.a : f.h;
         let res = '<span class="res">-</span>';
         if (played(f)) { const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg; res = `<span class="res r${us > them ? 'W' : us < them ? 'L' : 'D'}">${f.hg}-${f.ag}</span>`; }
-        return `<button class="row act" ${played(f) ? `data-a="go" data-s="post" data-fid="${f.id}"` : 'disabled'}><span class="rd">${f.r + 1}</span>${badge(opp, 22)}<span class="grow"><b>${esc(clubName(opp))}</b><small>${home ? 'Home' : 'Away'} · ${fmtDate(matchDate(f.w), false)}</small></span>${res}</button>`;
+        return `<button class="row act" ${played(f) ? `data-a="go" data-s="post" data-fid="${f.id}"` : 'disabled'}><span class="rd">${f.r + 1}</span>${badge(opp, 22)}<span class="grow"><b>${esc(clubName(opp))}</b><small>${home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}</small></span>${res}</button>`;
       }).join('')}</div>`;
     } else {
       const cur = G.fixtures.filter(f => f.w >= G.week)[0], r = UI.tab.round ?? (cur ? cur.r : 37);
-      const list = G.fixtures.filter(f => f.r === +r);
-      body = `<div class="field"><label for="rsel">Round</label>${selectHtml('rsel', Array.from({ length: 38 }, (_, i) => [i, 'Matchweek ' + (i + 1) + ' · ' + fmtDate(matchDate(roundWeek(i)), false)]), r, 'round')}</div>
-        <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<span class="res">${played(f) ? f.hg + '-' + f.ag : 'v'}</span>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>`;
+      const list = G.fixtures.filter(f => f.r === +r).sort(fxSort);
+      body = `<div class="field"><label for="rsel">Round</label>${selectHtml('rsel', Array.from({ length: 38 }, (_, i) => [i, 'Matchweek ' + (i + 1) + (SCHEDULE[i].mid ? ' (midweek)' : '') + ' · ' + fmtDate(weekDate(roundWeek(i)), false)]), r, 'round')}</div>
+        <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="fxt">${fxWhen(f).replace(/ \d+ \w+ ·/, '')}${f.tv ? '<em>TV</em>' : ''}</span><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<span class="res">${played(f) ? f.hg + '-' + f.ag : 'v'}</span>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>`;
     }
     return `<h1 class="h1">Fixtures</h1>${tabs('fx', [['ours', 'Our fixtures'], ['all', 'All rounds']], t)}${body}`;
   },

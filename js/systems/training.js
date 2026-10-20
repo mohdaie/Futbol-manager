@@ -31,6 +31,18 @@ function develop(p, q, focusKeys, im) {
   }
 }
 
+// Condition recovers per day of rest. Your training intensity, recovery focus and physios change the rate.
+function recoveryRate(p) {
+  if (p.club !== G.club) return 3.4;
+  const T = G.training;
+  return [4, 3.2, 2.3][T.intensity] + (T.focus === 'rec' ? 1.7 : 0) + staffAvg('Physio') * 0.045;
+}
+function recoverTo(p, day) {
+  if (p.rd == null || day < p.rd) { p.rd = day; return; }
+  if (!p.inj) p.cond = Math.min(100, Math.round(p.cond + (day - p.rd) * recoveryRate(p)));
+  p.rd = day;
+}
+
 function weeklyTraining(playedThisWeek) {
   const T = G.training, foc = TRAINING_FOCUS.find(f => f.k === T.focus) || TRAINING_FOCUS[0];
   const coach = staffAvg('Coach'), physio = staffAvg('Physio');
@@ -43,8 +55,7 @@ function weeklyTraining(playedThisWeek) {
     const mine = userSet.has(p.id);
     const c = G.clubs[p.club];
     // condition, sharpness
-    const rec = mine ? [28, 22, 15][T.intensity] + (T.focus === 'rec' ? 12 : 0) + physio * 0.3 : 24;
-    if (!p.inj) p.cond = Math.min(100, Math.round(p.cond + rec));
+    recoverTo(p, (G.week + 1) * 7);
     if (!playedThisWeek.has(p.id)) p.shp = Math.max(30, p.shp - (mine && T.intensity === 2 ? 2 : 4));
     // injuries from training (user only; AI squads get match injuries)
     if (mine && !p.inj) {

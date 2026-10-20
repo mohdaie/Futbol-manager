@@ -21,6 +21,7 @@ function advanceWeek() {
   if (G.week % 6 === 5) G.staffPool = genStaffPool(userClub().rep);
   if (G.board.conf < 10 && G.week > 12) { sack('The board has lost confidence after a run of poor results.'); return 'sacked'; }
   G.week++;
+  G.day = 0;
   if (G.week >= SEASON_WEEKS) { seasonEnd(); return G.gameOver ? 'sacked' : 'season'; }
   const nx = userFixture();
   if (nx && !G.press[nx.id]) G.press[nx.id] = { Q: pickPress(), done: false };
@@ -29,9 +30,19 @@ function advanceWeek() {
 }
 
 // After the user's match: play the rest of the round so the table is current.
+// After the user's match: play the other games up to the same kick-off so the table is current.
 function finishRound() {
-  G.fixtures.filter(f => f.w === G.week && !played(f)).forEach(f => quickSim(f));
+  const fx = G.fixtures.find(f => f.id === G.lastMatch);
+  if (fx) simUpTo(fx, true);
   saveGame();
+}
+
+// The user's match as an instant result, keeping the order of kick-offs.
+function playUserInstant(fx) {
+  simUpTo(fx, false);
+  G.day = fx.d ?? 5;
+  quickSim(fx);
+  finishRound();
 }
 
 function monthly() {
@@ -136,7 +147,7 @@ function rollover() {
   Object.values(G.players).forEach(p => {
     const cl = G.clubs[p.club];
     p.prev = { ...p.st, season: seasonLabel() };
-    p.st = newStats(); p.ban = 0; p.age++;
+    p.st = newStats(); p.ban = 0; p.age++; p.rd = null; p.cond = 100;
     if (!cl || cl.fa) return;
     if (p.con <= S + 1) {
       if (p.club === G.club) {
@@ -157,7 +168,7 @@ function rollover() {
   Object.values(G.clubs).filter(x => x.foreign && !x.fa).forEach(x => {
     while (x.squad.length < 16) { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (x.rep - 50) * 0.6 - rf(0, 8), pa: 0, age: ri(17, 24), nat: R() < 0.75 ? x.nat : pickNat(PL_NATS), club: x.id }); p.pa = clamp(p.ca + ri(3, 18), p.ca, 95); addToClub(p, x); G.know[p.id] = 10; }
   });
-  G.season++; G.week = 0;
+  G.season++; G.week = 0; G.day = 0;
   G.fixtures = genFixtures(plClubs());
   G.press = {};
   G.flags = {};

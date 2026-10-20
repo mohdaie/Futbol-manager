@@ -36,28 +36,45 @@ The scripts are classic `<script>` tags that share one global scope, so the load
 
 ## 2. The game loop
 
-One press of **Continue** moves the game on one week.
+One turn is one week, but every fixture has a real day and kick-off time. Pressing **Continue** moves the game on.
 
 ```
 Continue
- ├─ your match this week not played yet? → Pre-match screen
- │     press conference → Kick off (live 2D) or Instant result
- │     full time → finishMatch() → finishRound() sims the other 9 games → Match report
+ ├─ an unplayed match of yours this week? (earliest first; midweek weeks have two)
+ │     simUpTo() plays every game that kicks off earlier → Pre-match (conditions, press, line-up)
+ │     Kick off (live 2D) or Instant result → finishRound() plays the games at the same time
  └─ otherwise advanceWeek():
-       sim any unplayed fixtures this week
-       weeklyTraining   condition, sharpness, development, familiarity, training injuries
-       weeklyMedical    injury countdown
-       weeklyFinance    sponsorship, merchandise, wages, staff, running costs, scouting
-       weeklyScouting   assignments file graded reports
-       weeklyTransfers  AI-to-AI deals, bids for your players, agent pitches, squad refills
-       weeklyContracts  inbox reminders for expiring deals
-       monthly          Player and Manager of the Month
-       youthIntake      new academy players each March
-       board check      sacked if confidence drops below 10
-       week++ → after week 48: seasonEnd() → review screen → rollover()
+       sim the rest of this week's fixtures
+       weeklyTraining   development, familiarity, training injuries, recovery to the end of the week
+       weeklyMedical, weeklyFinance, weeklyScouting, weeklyTransfers, weeklyContracts
+       monthly awards, youth intake (March), board check
+       week++ (day = Monday) → after the last week: seasonEnd() → review → rollover()
 ```
 
-The season runs 5 pre-season weeks, then 38 league rounds with 4 international breaks, then 2 off-season weeks. The summer window is open in pre-season through 1 September and again in the off-season. The January window runs from 1 January to 2 February.
+**The season calendar** (calendar.js, `SCHEDULE`):
+
+| Item | Details |
+|---|---|
+| Pre-season | 5 weeks |
+| League | 38 rounds from mid-August to late May |
+| International breaks | 4 weeks: September, October, November, March |
+| Cup weekends | 5 weekends with no league games (a hook for cup competitions later) |
+| Midweek weeks | 6 weeks with a Tuesday/Wednesday round plus a weekend round |
+| Weekend slots | Fri 20:00, Sat 12:30, Sat 15:00 ×4, Sat 17:30, Sun 14:00 ×2, Sun 16:30. Every slot except Saturday 15:00 is televised, and the biggest games take those slots. |
+| Midweek slots | Tue/Wed 19:30–20:00; the 20:00 games are televised |
+| Transfer windows | Summer: pre-season to 1 September, plus the off-season. January: 1 January to 2 February. |
+
+**Rest, weather and kick-off effects:**
+
+| Factor | Effect |
+|---|---|
+| **Rest days** | Players recover condition for each day since their last match (`recoverTo` in training.js). The rate is 3.4 a day for computer clubs; for you it depends on training intensity, recovery focus and physios. A full week brings a tired player back to about 90%. Two or three days leaves the team around 80%, so rotation matters. |
+| **Injuries** | Teams that start a match tired get injured more often, and the most fatigued players are the likeliest to be hurt |
+| **Weather** | Picked for each fixture from the month's climate (`CLIMATE`, `WEATHER` in data.js). Rain: harder finishing, more fouls and injuries. Wind: direct or wide play is less effective. Cold: faster fatigue, more injuries. Heat: much faster fatigue. Snow: fewer clear chances. |
+| **Kick-off time** | 12:30 games create slightly fewer chances; games at 19:00 or later give a slightly bigger home advantage |
+| **TV** | Televised games pay both clubs £0.6m extra |
+
+The effects are kept small so the engine stays near real football: about 2.8 goals per game, around 41% home wins and 25% draws over full simulated seasons.
 
 ## 3. Game state (`G`)
 

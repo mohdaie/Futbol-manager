@@ -53,7 +53,7 @@ function shell(body) {
       </div>
     </header>
     <nav class="tabs2">${NAV.map(([k, n]) => `<button class="${cur === k ? 'on' : ''}" data-a="go" data-s="${k}">${n}</button>`).join('')}</nav>
-    <div class="subbar"><button data-a="go" data-s="club">${badge(c.id, 20)}<b>${esc(c.name)}</b><span>· ${esc(phaseLabel())}</span></button><span>${ICON.cal}${fmtDate(weekDate(G.week), false)}</span></div>
+    <div class="subbar"><button data-a="go" data-s="club">${badge(c.id, 20)}<b>${esc(c.name)}</b><span>· ${esc(phaseLabel())}</span></button><span>${ICON.cal}${fmtDate(today())}</span></div>
     <main class="main">${body}<div class="spacer"></div></main>
     ${UI.s === 'admin' ? '' : `<div class="bottombar">
       <button class="bb-sum" data-a="go" data-s="news">${ICON.doc}<span>${unread} news · ${reports} report${reports === 1 ? '' : 's'}</span></button>
@@ -136,13 +136,13 @@ ACT.tab = ds => { UI.tab[ds.key] = ds.v; render(); };
 ACT.continue = () => {
   if (!G) return;
   const fx = userFixture();
-  if (fx && !played(fx)) return go('prematch');
+  if (fx && !played(fx)) { simUpTo(fx, false); G.day = fx.d ?? 5; saveGame(); return go('prematch'); }
   const r = advanceWeek();
   if (r === 'sacked') return go('home');
   if (r === 'season') return go('review');
   const nx = userFixture();
   if (nx && !played(nx)) toast('Matchday: ' + clubName(nx.h) + ' v ' + clubName(nx.a));
-  else toast(phaseLabel() + ' · ' + fmtDate(weekDate(G.week), false));
+  else toast(phaseLabel() + ' · ' + fmtDate(today(), false));
   go('home');
 };
 
