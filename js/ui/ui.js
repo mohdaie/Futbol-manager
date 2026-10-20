@@ -98,6 +98,24 @@ function avatarPicker(cur, act) {
 const condBar = c => `<span class="mbar ${condClass(c)}" title="Condition ${Math.round(c)}%"><i style="width:${clamp(Math.round(c), 0, 100)}%"></i></span>`;
 const bar = (v, cls = '') => `<span class="bar ${cls}"><i style="width:${clamp(Math.round(v), 0, 100)}%"></i></span>`;
 const ovrPill = (v, txt) => `<span class="ovr ${v >= 82 ? 'o4' : v >= 74 ? 'o3' : v >= 65 ? 'o2' : 'o1'}">${txt ?? v}</span>`;
+const ratingRemark = v => (v >= 88 ? 'World class' : v >= 82 ? 'Elite' : v >= 76 ? 'Excellent' : v >= 70 ? 'Very good' : v >= 64 ? 'Good' : v >= 57 ? 'Decent' : v >= 50 ? 'Average' : v >= 42 ? 'Developing' : 'Raw');
+const potRemark = s => (s >= 4.5 ? 'Superstar' : s >= 3.5 ? 'Top player' : s >= 2.5 ? 'Solid pro' : s >= 1.5 ? 'Squad player' : 'Limited');
+
+// Six-sided attribute shape. Keepers and outfielders use different sides.
+const HEX_OUT = [['Attacking', ['fin', 'cro', 'cmp']], ['Technical', ['pas', 'fir', 'dri']], ['Speed', ['pac', 'agi']], ['Physical', ['str', 'sta', 'hea']], ['Defending', ['tck', 'mar', 'pos']], ['Mental', ['vis', 'dec', 'wor', 'ldr']]];
+const HEX_GK = [['Shot stopping', ['ref', 'agi']], ['Handling', ['han']], ['One on ones', ['one']], ['Distribution', ['kic']], ['Positioning', ['pos', 'cmp']], ['Mental', ['dec', 'ldr', 'wor']]];
+function playerHex(p) {
+  const axes = p.pos === 'GK' ? HEX_GK : HEX_OUT, mine = p.club === G.club;
+  const val = k => { if (mine) return p.at[A[k]]; const s = seenAttr(p, A[k]); return (s.lo + s.hi) / 2; };
+  const vals = axes.map(([, ks]) => ks.reduce((t, k) => t + val(k), 0) / ks.length / 20);
+  const cx = 170, cy = 96, R = 64, pt = (i, r) => { const a = -Math.PI / 2 + i * Math.PI / 3; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; };
+  const poly = r => axes.map((_, i) => pt(i, typeof r === 'function' ? r(i) : r).map(n => n.toFixed(1)).join(',')).join(' ');
+  const rings = [0.25, 0.5, 0.75, 1].map(f => `<polygon points="${poly(R * f)}" class="hx-ring"/>`).join('');
+  const spokes = axes.map((_, i) => { const [x, y] = pt(i, R); return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="hx-ring"/>`; }).join('');
+  const labels = axes.map(([n], i) => { const [x, y] = pt(i, R + 15); const anchor = Math.abs(x - cx) < 5 ? 'middle' : x > cx ? 'start' : 'end'; return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${n} <tspan>${Math.round(vals[i] * 20)}</tspan></text>`; }).join('');
+  return `<svg class="hex" viewBox="0 0 340 192" role="img" aria-label="${axes.map(([n], i) => n + ' ' + Math.round(vals[i] * 20)).join(', ')}">${rings}${spokes}
+    <polygon points="${poly(i => R * clamp(vals[i], 0.06, 1))}" class="hx-shape ${mine || knowOf(p) >= 95 ? '' : 'est'}"/>${labels}</svg>`;
+}
 const formChips = arr => `<span class="form">${arr.slice(-5).map(r => `<i class="f${r}">${r}</i>`).join('')}</span>`;
 const empty = (t, d) => `<div class="empty"><b>${t}</b><p>${d}</p></div>`;
 const tabs = (key, items, cur) => `<div class="tabs" role="tablist">${items.map(([k, n]) => `<button role="tab" class="${cur === k ? 'on' : ''}" data-a="tab" data-key="${key}" data-v="${k}">${n}</button>`).join('')}</div>`;
