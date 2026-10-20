@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.20.2';
+const GAME_VERSION = '2026.10.20.3';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -115,6 +115,8 @@ const ATTRS = [
   ['cmp', 'Composure', 'M'], ['ldr', 'Leadership', 'M'],
   ['pac', 'Pace', 'P'], ['sta', 'Stamina', 'P'], ['str', 'Strength', 'P'], ['agi', 'Agility', 'P'],
   ['ref', 'Reflexes', 'G'], ['han', 'Handling', 'G'], ['one', 'One on Ones', 'G'], ['kic', 'Kicking', 'G'],
+  // Added in 2026.10.20.3: appended so existing saves keep their attribute order (migrateAttrs fills them in).
+  ['ant', 'Anticipation', 'M'], ['otb', 'Off the Ball', 'M'], ['fla', 'Flair', 'M'], ['tea', 'Teamwork', 'M'],
 ];
 const A = {};
 ATTRS.forEach((a, i) => { A[a[0]] = i; });
@@ -122,15 +124,15 @@ const ATTR_GROUPS = { T: 'Technical', M: 'Mental', P: 'Physical', G: 'Goalkeepin
 
 // How much each attribute counts toward the rating in each position.
 const WEIGHTS = {
-  GK: { ref: 3, han: 2, one: 2, pos: 2, kic: 1, dec: 1, agi: 1, cmp: 1 },
-  DC: { tck: 3, mar: 3, pos: 3, hea: 2, str: 2, dec: 1, pac: 1, cmp: 1 },
-  DL: { tck: 2, mar: 2, pos: 2, pac: 2, sta: 2, cro: 2, wor: 1, dri: 1, pas: 1 },
-  DM: { tck: 2, pos: 2, pas: 2, dec: 2, wor: 2, sta: 1, str: 1, mar: 1, vis: 1 },
-  MC: { pas: 3, vis: 2, dec: 2, fir: 2, sta: 1, wor: 1, tck: 1, cmp: 1 },
-  ML: { cro: 2, pac: 2, sta: 2, dri: 2, pas: 2, wor: 1, fir: 1 },
-  AML: { dri: 3, pac: 3, fin: 2, fir: 2, agi: 2, cro: 1, vis: 1, cmp: 1 },
-  AMC: { vis: 3, pas: 2, dri: 2, fir: 2, fin: 2, dec: 1, cmp: 1, agi: 1 },
-  ST: { fin: 3, cmp: 2, fir: 2, pac: 2, hea: 1, str: 1, dri: 1, dec: 1 },
+  GK: { ref: 3, han: 2, one: 2, pos: 2, kic: 1, dec: 1, agi: 1, cmp: 1, ant: 1 },
+  DC: { tck: 3, mar: 3, pos: 3, hea: 2, str: 2, dec: 1, pac: 1, cmp: 1, ant: 2, tea: 1 },
+  DL: { tck: 2, mar: 2, pos: 2, pac: 2, sta: 2, cro: 2, wor: 1, dri: 1, pas: 1, ant: 1, tea: 1 },
+  DM: { tck: 2, pos: 2, pas: 2, dec: 2, wor: 2, sta: 1, str: 1, mar: 1, vis: 1, ant: 2, tea: 2 },
+  MC: { pas: 3, vis: 2, dec: 2, fir: 2, sta: 1, wor: 1, tck: 1, cmp: 1, tea: 2, ant: 1, otb: 1 },
+  ML: { cro: 2, pac: 2, sta: 2, dri: 2, pas: 2, wor: 1, fir: 1, otb: 1, tea: 1 },
+  AML: { dri: 3, pac: 3, fin: 2, fir: 2, agi: 2, cro: 1, vis: 1, cmp: 1, otb: 2, fla: 2 },
+  AMC: { vis: 3, pas: 2, dri: 2, fir: 2, fin: 2, dec: 1, cmp: 1, agi: 1, fla: 2, otb: 1 },
+  ST: { fin: 3, cmp: 2, fir: 2, pac: 2, hea: 1, str: 1, dri: 1, dec: 1, otb: 3, ant: 1 },
 };
 WEIGHTS.DR = WEIGHTS.DL; WEIGHTS.MR = WEIGHTS.ML; WEIGHTS.AMR = WEIGHTS.AML;
 
@@ -228,7 +230,7 @@ const TV_FEE = 0.6e6; // extra per club for a televised match
 
 // Match engine tuning. The admin page can override these per save (G.tune).
 const TUNE_DEFAULTS = {
-  shotBase: { v: 0.275, min: 0.1, max: 0.5, step: 0.01, n: 'Shot chance per possession minute' },
+  shotBase: { v: 0.285, min: 0.1, max: 0.5, step: 0.01, n: 'Shot chance per possession minute' },
   xgScale: { v: 1, min: 0.5, max: 2, step: 0.05, n: 'Chance quality (xG) multiplier' },
   homeShot: { v: 1.06, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: shots' },
   homePoss: { v: 1.04, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: possession' },

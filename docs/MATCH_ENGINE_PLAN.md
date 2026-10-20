@@ -85,7 +85,7 @@ context = pressure + fatigue + morale/form + home + weather + tactics modifiers
   - Condition hits physical attributes most (Pace, Stamina, Agility, Strength), then decisions late in the match.
   - Tactical familiarity adds to positional error: low familiarity means players stand in the wrong place more often.
 
-Attributes we do not have (Anticipation, Off the Ball, Flair, Teamwork) are approximated from the existing 22. Adding them later would mean regenerating all players, so it is not in v2.
+Anticipation, Off the Ball, Flair and Teamwork were added in 2026.10.20.3, so there are 26 attributes. Duel uses for v2: Anticipation for interceptions and reading through balls; Off the Ball for runs and getting free; Flair for take-ons and unexpected passes; Teamwork for holding shape, pressing together and support runs.
 
 ## 5. Decisions: what the ball carrier chooses
 
@@ -201,4 +201,4 @@ Each phase is a separate pull request that can go live on its own. Phases A and 
 1. Live match speed: show every action (longer matches, about 4-6 minutes at 1×), or key moments by default?
 2. Should offsides and VAR-style moments be shown?
 3. Make v2 the default for existing saves, or only for new games at first?
-4. Add the missing attributes (Anticipation, Off the Ball, Flair, Teamwork) later? This would mean regenerating player attributes.
+4. ~~Add the missing attributes?~~ Done in 2026.10.20.3, with old saves migrated and ratings kept.
