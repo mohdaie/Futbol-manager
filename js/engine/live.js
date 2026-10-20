@@ -17,7 +17,7 @@ function startLive(fx) {
   const M = createMatch(fx);
   const bottom = M.sides[0].user ? 0 : 1;
   M.live = true;
-  M.onAsync = evs => evs.forEach(e => { if (LIVE && LIVE.M === M) pushFeed(LIVE, e.t === 'sub' ? 'info' : 'tac', commLine(LIVE, e)); });
+  M.onAsync = evs => evs.forEach(e => { if (LIVE && LIVE.M === M) pushFeed(LIVE, e.t === 'sub' ? 'info' : 'tac', commLine(LIVE, e), e.side); });
   LIVE = { M, fid: fx.id, bottom, ball: { x: 0.5, y: 0.5 }, q: [], cur: null, poss: 0, t: 0, last: 0, paused: false, hold: 0, dots: [[], []], disp: [0, 0], feed: [], overlay: null, done: false, raf: 0, cv: null, ctx: null, W: 0, H: 0, placed: false, subSel: null, colors: null, pins: {}, line: null, carrier: null };
   LIVE.colors = kitColors(M.sides[bottom].cid, M.sides[1 - bottom].cid);
   pushFeed(LIVE, 'info', `Kick-off at ${G.clubs[fx.h].ground}. ${clubName(fx.h)} v ${clubName(fx.a)}.`);
@@ -123,25 +123,26 @@ function moveDots(L, dt) {
 }
 
 // Short commentary for the steps of a key moment.
+// Short commentary for the steps of a key moment: [text, side it is about].
 function stepLine(L, st) {
-  const n = id => (id && G.players[id] ? pname(G.players[id]) : '');
-  if (st.k === 'thru' && st.res === 'ok') return `${n(st.pid)} slides a pass in behind for ${n(st.to)}.`;
-  if (st.k === 'drib' && st.res === 'ok' && st.oid) return `${n(st.pid)} skips past ${n(st.oid)}.`;
-  if (st.k === 'drib' && st.res === 'lost' && st.oid) return `${n(st.oid)} wins the ball off ${n(st.pid)}.`;
-  if (st.k === 'cross' && st.res === 'claim') return `${n(st.oid)} comes out and claims the cross.`;
-  if (st.k === 'long' && st.res === 'ok') return `Long ball forward, ${n(st.to)} wins the header.`;
-  if (st.flick) return `${n(st.pid)} flicks it on for ${n(st.to)}.`;
-  if (st.k === 'regain') return `The ${clubName(L.M.sides[st.s].cid)} win it straight back high up the pitch.`;
-  if ((st.k === 'pass' || st.k === 'thru') && st.res === 'lost' && st.oid) return `${n(st.oid)} intercepts.`;
-  if (st.k === 'tackle') return `${n(st.pid)} gets back to stop the run.`;
-  return '';
+  const n = id => (id && G.players[id] ? pname(G.players[id]) : ''), o = 1 - st.s;
+  if (st.k === 'thru' && st.res === 'ok') return [`${n(st.pid)} slides a pass in behind for ${n(st.to)}.`, st.s];
+  if (st.k === 'drib' && st.res === 'ok' && st.oid) return [`${n(st.pid)} skips past ${n(st.oid)}.`, st.s];
+  if (st.k === 'drib' && st.res === 'lost' && st.oid) return [`${n(st.oid)} wins the ball off ${n(st.pid)}.`, o];
+  if (st.k === 'cross' && st.res === 'claim') return [`${n(st.oid)} comes out and claims the cross.`, o];
+  if (st.k === 'long' && st.res === 'ok') return [`Long ball forward, ${n(st.to)} wins the header.`, st.s];
+  if (st.flick) return [`${n(st.pid)} flicks it on for ${n(st.to)}.`, st.s];
+  if (st.k === 'regain') return [`The ${clubName(L.M.sides[st.s].cid)} win it straight back high up the pitch.`, st.s];
+  if ((st.k === 'pass' || st.k === 'thru') && st.res === 'lost' && st.oid) return [`${n(st.oid)} intercepts.`, o];
+  if (st.k === 'tackle') return [`${n(st.pid)} gets back to stop the run.`, st.s];
+  return ['', null];
 }
 
 function scriptEvents(L, evs) {
   const M = L.M, T = tickMs(), ev = evs[0];
   L.q.push({ fn: () => { L.poss = ev.side; L.pins = {}; L.line = null; } });
   if (ev.key && ev.seq && ev.seq.length) {
-    if (ev.counter) L.q.push({ fn: () => pushFeed(L, 'info', `The ${clubName(M.sides[ev.side].cid)} break forward quickly.`) });
+    if (ev.counter) L.q.push({ fn: () => pushFeed(L, 'info', `The ${clubName(M.sides[ev.side].cid)} break forward quickly.`, ev.side) });
     ev.seq.forEach((st, k) => {
       const from = toCanvas(L, st.s, st.x0, st.y0), to = toCanvas(L, st.s, st.x1, st.y1);
       const actor = slotOf(L, st.pid), recv = slotOf(L, st.to), opp = slotOf(L, st.oid);
@@ -153,41 +154,41 @@ function scriptEvents(L, evs) {
         L.pins = keep; L.carrier = actor;
         if (st.k !== 'clear' && st.k !== 'tackle' && st.k !== 'foul') L.poss = st.s;
         if (st.res === 'offside') { L.line = toCanvas(L, st.s, 0, st.line)[1]; }
-        const txt = stepLine(L, st); if (txt) pushFeed(L, 'info', txt);
+        const [txt, ts] = stepLine(L, st); if (txt) pushFeed(L, 'info', txt, ts);
       } });
       L.q.push({ x: to[0], y: to[1], sx0: from[0], sy0: from[1], d: T * (ACT_DUR[st.k] || 0.8), arc: ACT_ARC[st.k] || 0 });
       if (st.res === 'offside') {
-        L.q.push({ fn: () => { pushFeed(L, 'info', commLine(L, ev)); L.overlay = { big: 'OFFSIDE', small: pname(G.players[ev.pid]), t: 1200, flag: true }; } });
+        L.q.push({ fn: () => { pushFeed(L, 'info', commLine(L, ev), 1 - ev.side); L.overlay = { big: 'OFFSIDE', small: pname(G.players[ev.pid]), t: 1200, flag: true }; } });
         L.q.push({ hold: 1200 });
       }
       if (st.res === 'lost' && k === ev.seq.length - 1) L.q.push({ fn: () => { L.poss = 1 - st.s; } });
     });
     const shotEv = ['goal', 'save', 'miss'].includes(ev.t);
     if (ev.t === 'goal') {
-      L.q.push({ fn: () => { L.disp[ev.side]++; updateBoard(L); pushFeed(L, 'goal', commLine(L, ev)); L.overlay = { big: 'GOAL', small: pname(G.players[ev.pid]) + ' ' + ev.min + "'", t: 1900, side: ev.side }; } });
+      L.q.push({ fn: () => { L.disp[ev.side]++; updateBoard(L); pushFeed(L, 'goal', commLine(L, ev), ev.side); L.overlay = { big: 'GOAL', small: pname(G.players[ev.pid]) + ' ' + ev.min + "'", t: 1900, side: ev.side }; } });
       L.q.push({ hold: 1900 });
       L.q.push({ fn: () => { L.poss = 1 - ev.side; L.pins = {}; } });
       L.q.push({ x: 0.5, y: 0.5, d: 350 });
     } else if (shotEv) {
-      L.q.push({ fn: () => pushFeed(L, 'chance', commLine(L, ev)) });
+      L.q.push({ fn: () => pushFeed(L, 'chance', commLine(L, ev), ev.side) });
       L.q.push({ hold: 350 });
     }
   } else {
     // A quiet minute: the ball moves around the middle of the pitch quickly.
     const [cx, cy] = toCanvas(L, ev.side, rf(0.25, 0.75), rf(0.45, 0.75));
     L.q.push({ x: cx, y: cy, d: T * 0.45 });
-    if (R() < 0.08) L.q.push({ fn: () => pushFeed(L, 'info', fillerLine(L, ev)) });
+    if (R() < 0.08) L.q.push({ fn: () => pushFeed(L, 'info', fillerLine(L, ev), ev.side) });
   }
   evs.forEach(e => {
     if (e.t === 'yellow' || e.t === 'red') {
-      L.q.push({ fn: () => { pushFeed(L, e.t, commLine(L, e)); L.overlay = { big: e.t === 'red' ? 'RED CARD' : 'YELLOW', small: pname(G.players[e.pid]), t: 1100, card: e.t }; } });
+      L.q.push({ fn: () => { pushFeed(L, e.t, commLine(L, e), e.fside); L.overlay = { big: e.t === 'red' ? 'RED CARD' : 'YELLOW', small: pname(G.players[e.pid]), t: 1100, card: e.t }; } });
       L.q.push({ hold: 1000 });
     } else if (e.t === 'foul' && e !== ev) {
-      L.q.push({ fn: () => pushFeed(L, 'info', commLine(L, e)) });
+      L.q.push({ fn: () => pushFeed(L, 'info', commLine(L, e), e.fside) });
     }
   });
   evs.slice(1).filter(e => !['yellow', 'red', 'foul'].includes(e.t)).forEach(e => L.q.push({ fn: () => {
-    pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'tac' ? 'tac' : 'info', commLine(L, e));
+    pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'tac' ? 'tac' : 'info', commLine(L, e), e.side);
     if (e.t === 'inj' && M.sides[e.side].user) { L.paused = true; updateBoard(L); toast(`${pname(G.players[e.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
   } }));
   if (ev.ht) L.q.push({ fn: () => { L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); } });
@@ -281,19 +282,29 @@ function updateBoard(L) {
   if (ft) ft.hidden = !L.done;
 }
 
-function pushFeed(L, k, txt) {
+// Commentary: the newest line is a full-width bar in the colour of the team it is about; a goal flashes.
+function pushFeed(L, k, txt, side) {
   if (!txt) return;
   const M = L.M;
-  L.feed.unshift({ k, txt, min: M.min });
+  L.feed.unshift({ k, txt, min: M.min, side: side == null ? null : side, at: performance.now() });
   if (L.feed.length > 40) L.feed.length = 40;
   renderFeed(L);
+}
+function feedColor(L, side) {
+  if (side == null || !L.colors) return null;
+  const c = L.colors[side === L.bottom ? 0 : 1].f;
+  return { bg: c, fg: isLight(c) ? '#10061A' : '#FFFFFF' };
 }
 function renderFeed(L) {
   const el = document.getElementById('feed');
   if (!el) return;
-  el.innerHTML = L.feed.slice(0, 5).map(f => `<li class="fd-${f.k}"><b>${f.min ? f.min + "'" : ''}</b><span>${esc(f.txt)}</span></li>`).join('');
+  el.innerHTML = L.feed.slice(0, 4).map((f, i) => {
+    const c = feedColor(L, f.side);
+    const style = c ? (i === 0 ? `style="--tc:${c.bg};--tf:${c.fg}"` : `style="--tc:${c.bg}"`) : '';
+    const blink = i === 0 && f.k === 'goal' && performance.now() - f.at < 4000 ? ' blink' : '';
+    return `<li class="fd-${f.k}${i === 0 ? ' fd-main' : ''}${c ? ' tc' : ''}${blink}" ${style}><b>${f.min ? f.min + "'" : ''}</b><span>${esc(f.txt)}</span></li>`;
+  }).join('');
 }
-
 function commLine(L, ev) {
   const M = L.M, S = M.sides[ev.side], O = M.sides[1 - ev.side], n = id => pname(G.players[id]);
   const tn = 'the ' + clubName(S.cid);
@@ -312,6 +323,7 @@ function commLine(L, ev) {
     default: return '';
   }
 }
+
 function fillerLine(L, ev) {
   const t = 'The ' + clubName(L.M.sides[ev.side].cid);
   return pick([`${t} keep the ball in midfield.`, `${t} build patiently from the back.`, `${t} work it out to the flank.`, `Neat passing from ${t.toLowerCase()}.`, `${t} probe for an opening.`]);
@@ -343,7 +355,7 @@ function applyTalk(k) {
   const eff = talkEffect(k, S.st.g - O.st.g);
   S.played.forEach(id => { const p = G.players[id]; p.mor = clamp(p.mor + eff + ri(-2, 2), 0, 100); });
   L.M.dirty = true;
-  pushFeed(L, 'info', eff > 2 ? 'The players respond well to the team talk.' : eff < 0 ? 'The team talk does not go down well.' : 'The players take the message on board.');
+  pushFeed(L, 'info', eff > 2 ? 'The players respond well to the team talk.' : eff < 0 ? 'The team talk does not go down well.' : 'The players take the message on board.', L.bottom);
   closeSheet();
   L.overlay = null; L.paused = false; updateBoard(L);
 }
@@ -360,7 +372,7 @@ function applyShout(k) {
   if (k === 'calm') S.calm = 0.4;
   M.shout = { side: L.bottom, until: M.min + 10, k };
   M.dirty = true;
-  pushFeed(L, 'info', `${G.manager} on the touchline: ${SHOUTS.find(s => s.k === k).n}.`);
+  pushFeed(L, 'info', `${G.manager} on the touchline: ${SHOUTS.find(s => s.k === k).n}.`, L.bottom);
   closeSheet();
 }
 
@@ -406,7 +418,19 @@ function openLiveSheet(kind) {
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       <div class="field"><label>Tactical style</label><div class="chips">${Object.entries(STYLES).map(([k, s]) => `<button class="chip ${styleOf(S) === k ? 'on' : ''}" data-a="liveStyle" data-v="${k}">${s.n}</button>`).join('')}</div></div>
       ${INSTRUCTIONS.map(ins => `<div class="field"><label>${ins.n}</label><div class="seg">${ins.o.map((o, i) => `<button class="${S[ins.k] === i ? 'on' : ''}" data-a="liveIns" data-k="${ins.k}" data-v="${i}">${o}</button>`).join('')}</div></div>`).join('')}
+      <h4 class="lbl">Player instructions</h4>
+      <div class="list">${S.on.map((id, i) => { if (!id) return ''; const pos = FORMATIONS[S.ip][i][0], set = PLAYER_INS.filter(x => S.pi[i] && S.pi[i][x.k] != null && S.pi[i][x.k] !== 1); return `<button class="row act" data-a="livePi" data-i="${i}"><span class="pos">${pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}</b><small>${esc(roleName(S, i))}${set.length ? ' · ' + set.map(x => x.o[S.pi[i][x.k]]).join(', ') : ''}</small></span><span class="chev">›</span></button>`; }).join('')}</div>
       <p class="muted">Changes apply to this match only. Your saved tactic stays as it is.</p>`, opts);
+    return;
+  }
+  if (kind === 'pi') {
+    const i = L.piSlot, id = S.on[i];
+    if (!id) return openLiveSheet('tactics');
+    const pos = FORMATIONS[S.ip][i][0], cur = S.pi[i] || {}, list = pos === 'GK' ? PLAYER_INS.filter(x => GK_INS.includes(x.k)) : PLAYER_INS;
+    sheet(`<button class="link back" data-a="liveSheet" data-k="tactics">‹ In-match tactics</button>
+      <h3 class="sh-t">${POS_NAME[pos]} <small>${esc(pname(G.players[id]))} · ${esc(roleName(S, i))}</small></h3>
+      ${list.map(x => `<div class="field"><label>${x.n}</label><div class="seg">${x.o.map((o, v) => `<button class="${(cur[x.k] ?? 1) === v ? 'on' : ''}" data-a="livePiSet" data-k="${x.k}" data-v="${v}">${o}</button>`).join('')}</div></div>`).join('')}
+      <p class="muted">Takes effect straight away, for this match only.</p>`, opts);
     return;
   }
   if (kind === 'subs') {

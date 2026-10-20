@@ -40,7 +40,7 @@ function applyStyle(T, k) {
 // fw forward position, wd width (+ wider, - narrower), sh shooting, dr dribbling, cr crossing, thr through balls,
 // rk risky passing, run runs in behind, pr pressing, tk tackling, aer aerial target, hold hold-up play, sweep keeper sweeping.
 const ROLE_B = {
-  'Sweeper Keeper': { sweep: 1, rk: 0.2 }, 'Ball-Playing Keeper': { rk: 0.4 },
+  'Sweeper Keeper': { sweep: 1, rk: 0.2 }, 'Ball-Playing Keeper': { rk: 0.4, gkp: 0.6 },
   'Wing-Back': { fw: 0.6, wd: 0.3, cr: 0.5, run: 0.3, pr: 0.2 }, 'Inverted Full-Back': { wd: -0.7, fw: 0.15, rk: 0.2 },
   'Ball-Playing Defender': { rk: 0.4, thr: 0.2 }, Stopper: { fw: 0.15, tk: 0.4, pr: 0.3 },
   Anchor: { fw: -0.25, rk: -0.4, pr: -0.3 }, 'Deep-Lying Playmaker': { rk: 0.3, thr: 0.5, fw: -0.1 }, 'Ball-Winner': { pr: 0.6, tk: 0.5 },
@@ -147,11 +147,30 @@ const FIT_AREAS = {
     w: { cro: 1, dri: 0.6, pac: 0.5, hea: 0.4 }, line: { 1: 0.5, 2: 0.3, 3: 1, 4: 1.2, 5: 0.8 }, wide: true },
 };
 const OUTFIELD_KEYS = ATTRS.filter(a => a[2] !== 'G').map(a => a[0]);
+// Typical attributes for each position in the league (first teams), so fit compares like with like:
+// a centre-back is measured against other centre-backs, not against strikers.
+let NORM = null, NORM_KEY = '';
+function posNorm() {
+  const key = G.season + ':' + G.week;
+  if (NORM && NORM_KEY === key) return NORM;
+  const acc = {};
+  Object.values(G.players).forEach(p => {
+    const c = G.clubs[p.club]; if (!c || !c.pl || lvlOf(p) !== 'A') return;
+    const a = acc[p.pos] || (acc[p.pos] = { n: 0, at: ATTRS.map(() => 0), ht: 0 });
+    a.n++; a.ht += p.ht || 182; p.at.forEach((v, i) => { a.at[i] += v; });
+  });
+  NORM = {};
+  POSITIONS.forEach(pos => { const a = acc[pos]; NORM[pos] = a && a.n ? { at: a.at.map(v => v / a.n), ht: a.ht / a.n } : { at: ATTRS.map(() => 12), ht: 182 }; });
+  NORM_KEY = key;
+  return NORM;
+}
 // get(i, k): attribute value of the player in slot i. Returns { area: score } for every area, plus per-slot scores.
 function tacticFit(T, get) {
   const ip = FORMATIONS[T.ip], out = {}, slots = {};
   const slotsOn = (T.on || []).map((id, i) => (id && i ? i : -1)).filter(i => i > 0);
+  const N = posNorm();
   const general = i => OUTFIELD_KEYS.reduce((t, k) => t + get(i, k), 0) / OUTFIELD_KEYS.length;
+  const genNorm = pos => OUTFIELD_KEYS.reduce((t, k) => t + N[pos].at[A[k]], 0) / OUTFIELD_KEYS.length;
   Object.entries(FIT_AREAS).forEach(([a, F]) => {
     let s = 0, n = 0;
     slotsOn.forEach(i => {
@@ -161,11 +180,14 @@ function tacticFit(T, get) {
       if (a === 'press') wt *= 1 + Math.max(0, beh(T, i, 'pr')) * 0.5;
       if (a === 'long' && ln >= 4) wt *= 1 + Math.max(0, beh(T, i, 'aer'));
       if (!wt) return;
-      let v = 0, tw = 0;
-      Object.entries(F.w).forEach(([k, w]) => { v += get(i, k) * w; tw += Math.abs(w); });
-      v /= tw;
-      if (a === 'long' || a === 'deep') { const p = G.players[T.on[i]]; v += clamp(((p && p.ht) || 182) - 182, -10, 12) / 6 * (ln >= 4 || a === 'deep' ? 1 : 0); }
-      const sc = clamp((v - general(i)) / 2.5 + (v - 13) / 8, -1.5, 1.5);
+      const p = G.players[T.on[i]], np = N[pos];
+      let v = 0, nv = 0, tw = 0;
+      Object.entries(F.w).forEach(([k, w]) => { v += get(i, k) * w; nv += np.at[A[k]] * w; tw += Math.abs(w); });
+      v /= tw; nv /= tw;
+      if ((a === 'long' && ln >= 4) || a === 'deep') { v += clamp(((p && p.ht) || 182) - 182, -10, 12) / 6; nv += clamp(np.ht - 182, -10, 12) / 6; }
+      // Suitability only: how much more of these attributes he has than a typical player in his position,
+      // after allowing for his overall level (quality already counts in every duel).
+      const sc = clamp(((v - nv) - (general(i) - genNorm(pos))) / 1.6, -1.5, 1.5);
       (slots[i] || (slots[i] = {}))[a] = sc;
       s += sc * wt; n += wt;
     });
@@ -189,4 +211,51 @@ function tacticReport(T) {
   const overall = active.length ? Math.round(0.6 * active.reduce((t, x) => t + x.pct, 0) / active.length + 0.4 * Math.min(...active.map(x => x.pct))) : null;
   const perSlot = i => { const s = f.slots[i]; if (!s) return null; const ks = active.map(x => x.a).filter(a => s[a] != null); return ks.length ? fitPct(ks.reduce((t, a) => t + s[a], 0) / ks.length) : null; };
   return { active, overall, perSlot };
+}
+
+/* ---------- computer clubs: choose a tactic that suits their own players ---------- */
+// Attributes behind each kind of role behaviour (see ROLE_B).
+const BEH_ATTRS = { gkp: ['kic', 'cmp', 'dec'], sh: ['fin', 'cmp'], dr: ['dri', 'fla', 'agi'], cr: ['cro'], thr: ['vis', 'pas'], rk: ['pas', 'vis'], run: ['otb', 'pac'], pr: ['wor', 'sta'],
+  tk: ['tck', 'agi'], aer: ['hea', 'str'], hold: ['str', 'fir'], fw: ['sta', 'wor'], wd: ['pac', 'cro'], sweep: ['one', 'ant', 'pac'] };
+// How well a player suits a role: the attributes the role leans on, against his own general level.
+function roleFit(p, roleN) {
+  const b = ROLE_B[roleN];
+  if (!p || !b) return 0;
+  const keys = p.pos === 'GK' ? ['ref', 'han', 'one', 'kic', 'pos', 'dec', 'cmp', 'agi'] : OUTFIELD_KEYS, nm = posNorm()[p.pos];
+  const gen = keys.reduce((t, k) => t + p.at[A[k]] - nm.at[A[k]], 0) / keys.length;
+  let s = 0, w = 0;
+  Object.entries(b).forEach(([k, v]) => {
+    const ks = BEH_ATTRS[k]; if (!ks || v <= 0) return;
+    let a = ks.reduce((t, x) => t + p.at[A[x]] - nm.at[A[x]], 0) / ks.length;
+    if (k === 'aer') a += clamp(((p.ht || 182) - nm.ht) / 4, -3, 4);
+    s += (a - gen) * v; w += v;
+  });
+  return w ? s / w : 0;
+}
+// Pick the best role for each slot from the players who will play there.
+function chooseRoles(t, xi) {
+  t.roles = FORMATIONS[t.ip].map(([pos], i) => {
+    const p = G.players[xi[i]], rec = STYLES[t.style] && STYLES[t.style].roles[pos];
+    let best = 0, bs = -99;
+    ROLES[pos].forEach((r, k) => { const sc = roleFit(p, r.n) + (r.n === rec ? 0.8 : 0) + (ROLE_B[r.n] ? 0 : 0.3); if (sc > bs) { bs = sc; best = k; } });
+    return best;
+  });
+}
+// Before every match: try each style with the players available, keep the one they suit best.
+function aiChooseTactic(cid, oppCid) {
+  const opp = G.clubs[oppCid] && G.clubs[oppCid].tac, scored = [];
+  Object.keys(STYLES).forEach(k => {
+    const t = { style: k }; applyStyle(t, k);
+    const xi = autoPick(cid, t.ip).xi;
+    chooseRoles(t, xi);
+    const r = tacticReport({ ...t, slots: xi });
+    let sc = r.overall == null ? 50 : r.overall;
+    if (opp) {
+      if (k === 'counter' && (opp.line ?? 1) === 2) sc += 4; // space behind their high line
+      if (k === 'long' && (opp.press ?? 1) === 2) sc += 3;   // go over their press
+      if (k === 'tiki' && (opp.press ?? 1) === 0) sc += 3;   // time on the ball against a low block
+    }
+    scored.push([sc + rf(-3, 3), t]);
+  });
+  return scored.sort((a, b) => b[0] - a[0])[0][1];
 }

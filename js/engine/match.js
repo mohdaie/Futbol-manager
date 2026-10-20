@@ -51,6 +51,8 @@ function matchMods(fx) {
 function createMatch(fx) {
   // Real fixtures: players recover for the days since their last match before teams are picked.
   if (fx.id > 0 && fx.w != null) [fx.h, fx.a].forEach(cid => squadOf(cid).forEach(p => recoverTo(p, fxDayNo(fx))));
+  // Computer clubs set up for this match with the tactic their available players suit best.
+  [[fx.h, fx.a], [fx.a, fx.h]].forEach(([c, o]) => { if (c !== G.club && G.clubs[c] && G.clubs[c].pl && !(G.flags && G.flags.fixedTac)) G.clubs[c].tac = aiChooseTactic(c, o); });
   const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0), buildSide(fx.a, 1)], log: [], shout: null };
   M.sides.forEach(S => calcUnits(S));
   return M;
@@ -234,6 +236,8 @@ function finishMatch(M) {
       rt = clamp(Math.round(rt * 10) / 10, 3, 10);
       S.rat[id] = rt;
       p.st.a++; p.st.rt += rt; p.car.a++;
+      const ps = S.ps[id] || {};
+      PSTAT_KEYS.forEach(k => { if (ps[k]) p.st[k] = (p.st[k] || 0) + ps[k]; });
       (G.flags.pw = G.flags.pw || []).push(id);
       p.cond = clamp(Math.round(S.cond[id]), 0, 100);
       p.shp = Math.min(100, p.shp + 10);
@@ -279,6 +283,8 @@ function finishMatch(M) {
     const us = fx.h === G.club ? 0 : 1, S = M.sides[us], O = M.sides[1 - us];
     fx.stats = M.sides.map(X => ({ ...X.st, xg: Math.round(X.st.xg * 100) / 100 }));
     fx.ratings = M.sides.map(X => X.played.map(id => [id, X.rat[id]]));
+    // Player action stats for the match report: [id, passes completed, attempted, key passes, dribbles won, tackles, interceptions, aerials, shots, on target]
+    fx.pstats = M.sides.map(X => X.played.map(id => { const s = X.ps[id] || {}; return [id, s.pc || 0, s.pa || 0, s.kp || 0, s.dw || 0, s.tk || 0, s.int || 0, s.aer || 0, s.sh || 0, s.sot || 0]; }));
     boardAfterMatch(S.st.g, O.st.g, G.clubs[O.cid].rep, us === 0);
     const opp = clubName(O.cid), sg = S.st.g, og = O.st.g;
     const head = sg > og ? `${clubName(G.club)} beat the ${opp} ${sg}-${og}` : sg < og ? `${clubName(G.club)} lose ${sg}-${og} to the ${opp}` : `${clubName(G.club)} held ${sg}-${og} by the ${opp}`;

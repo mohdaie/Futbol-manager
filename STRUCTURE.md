@@ -183,6 +183,12 @@ Everything lives in one JSON-safe object, saved to `localStorage` after each wee
     - A technical squad gets nothing from long ball (0.5 points per game against about 1.0).
     - A quick squad gets nothing from gegenpressing over Balanced.
 - **Results follow squad strength.** League averages are only a sanity check. For example, against an even opponent the home side wins about 40%; when much stronger it wins 60–70% and outshoots the opponent by about 16 to 9.
+- **Computer clubs choose their own tactic before every match** (`aiChooseTactic()`):
+  - They try each style with their available XI and pick the one their players suit best (tactic fit).
+  - The opponent nudges the choice a little: counter against a high line, long ball against a high press, tiki-taka against a low block.
+  - Roles are picked from the players too (`roleFit()`, compared with typical players in that position, `posNorm()`).
+- **Fit is measured against the position:** each player is compared with the league's typical player in his position, after allowing for his overall level, so fit is about suitability, not quality.
+- **During a match:** team instructions, styles and player instructions can all be changed from the in-match Tactics sheet.
 - **Tactical styles** (`STYLES`) are presets of the team instructions, shape and roles:
   - Gegenpressing
   - Tiki-taka
@@ -325,3 +331,30 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - **Rebalance the engine:** change the weights in `chooseAction()` and the bases in `sim.js`, or `xgScale`, `foulRate` and `cornerShot` in `TUNE_DEFAULTS`. Then run the admin test season and check the targets in the engine section.
 - **Add a screen:** register `SCREENS.name = { render(p) { return html; } }` and add click handlers to `ACT`. Link to it with `data-a="go" data-s="name"`.
 - **Change money:** `wageFor()` and `pValue()` in players.js, `sponsorWeekly()` and `opsWeekly()` in finance.js, and gate and TV money in `finishMatch()`.
+
+## In-match manager decisions (2026.10.20.6)
+- **Options:** computer managers (and your instant results) choose at 46, 60, 70 and 80 minutes from 10 options (`MGR_OPTIONS`):
+
+| Option | What it does |
+|---|---|
+| attack | More attacking mentality, plus an attacker on |
+| hold | Keep the current approach |
+| defend | More defensive mentality, plus a defender or defensive midfielder on |
+| press | Press higher |
+| fresh | Replace tired players |
+| restyle | Switch to the style the players on the pitch suit best |
+| counter | Sit deep, regroup when the ball is lost, counter when it is won |
+| cpress | Counter-press and high press |
+| protect | Full-backs and holding midfielders stay back; tired players press less |
+| mark | Defenders and defensive midfielders mark tighter and stay on their feet |
+
+- **The rules policy** uses score, time, energy, tactic fit, duel share, shots and possession.
+- **The situation record** (`situation()`) adds style, formation and tactic fit for both sides, pass accuracy, regains, duel share and offsides. The bucket key ends with the team's style, so the learning table separates what works for each kind of team.
+- **The cloud function and table** (`futbol-brain`, migration `20261020150000`) accept the new options, style buckets and fields; older data is still valid.
+
+## Player match stats
+- **Per player:** passes and accuracy, key passes (the pass before a shot), dribbles, tackles, interceptions, aerial duels, blocks, shots, shots on target, crosses, offsides, fouls and saves (`PSTAT_KEYS`).
+- **Where they appear:** they are added to each player's season stats, shown in the match report and the player's Stats tab, and ranked in Stats leaders.
+
+## Live commentary
+- The newest line is a full-width bar in the kit colour of the team it is about, and a goal flashes.

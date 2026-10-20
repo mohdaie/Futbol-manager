@@ -1,10 +1,10 @@
 const ORIGIN = 'https://mohdaie.github.io';
 const CORS = { 'Access-Control-Allow-Origin': ORIGIN, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'authorization, content-type', 'Access-Control-Max-Age': '86400', 'Cache-Control': 'no-store', Vary: 'Origin' };
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
-const actions = ['attack', 'hold', 'defend', 'press', 'fresh'];
+const actions = ['attack', 'hold', 'defend', 'press', 'fresh', 'restyle', 'counter', 'cpress', 'protect', 'mark'];
 const providers = ['jev', 'deepseek', 'learned', 'rules', 'explore', 'legacy'];
 const kinds = ['live', 'instant', 'background', 'camp', 'legacy'];
-const bucket = /^(HT|60|70|80)\|(-2|-1|0|1|2)\|(weaker|stronger|even)\|(tired|fresh)\|(man down|man up|11v11)$/;
+const bucket = /^(HT|60|70|80)\|(-2|-1|0|1|2)\|(weaker|stronger|even)\|(tired|fresh)\|(man down|man up|11v11)(\|(gegen|tiki|bal|counter|long|custom))?$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const number = (v, min, max, integer = false) => Number.isFinite(v) && v >= min && v <= max && (!integer || Number.isSafeInteger(v));
 const text = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -35,7 +35,7 @@ export function validateBatch(b) {
   if (!b.records.every(r => only(r, ['id', 't', 'v', 'e', 'k', 'b', 'a', 's', 'o', 'c', 'details']) && uuid.test(r.id) && dimensions(r) &&
       number(r.t, 0, Date.now() + 86400000) && number(r.o, -100, 100) && (r.c === null || number(r.c, 0, 1)) &&
       only(r.details, ['f', 'match', 'side', 'at', 'score', 'jev', 'second', 'mode', 'jevModel', 'dsModel']) && JSON.stringify(r.details).length <= 2048 &&
-      (!r.details.f || (only(r.details.f, ['min', 'diff', 'home', 'str', 'cond', 'reds', 'ment', 'subs', 'shots', 'sot', 'xg', 'oppShots', 'oppXg', 'possession', 'press', 'line', 'tempo']) && Object.values(r.details.f).every(v => typeof v === 'boolean' || number(v, -100, 10000)))) &&
+      (!r.details.f || (only(r.details.f, ['min', 'diff', 'home', 'str', 'cond', 'reds', 'ment', 'subs', 'shots', 'sot', 'xg', 'oppShots', 'oppXg', 'possession', 'press', 'line', 'tempo', 'style', 'oppStyle', 'shape', 'oppShape', 'fit', 'oppFit', 'passPct', 'oppPassPct', 'regains', 'oppRegains', 'duels', 'offsides']) && Object.values(r.details.f).every(v => typeof v === 'boolean' || number(v, -100, 10000)))) &&
       Object.entries(r.details).filter(([k]) => k !== 'f').every(([, v]) => v === null || typeof v === 'boolean' || number(v, -100, 1e12) || (typeof v === 'string' && v.length <= 100) || (Array.isArray(v) && v.length <= 2 && v.every(n => number(n, 0, 100)))))) return false;
   return b.snapshots.every(validateSnapshot);
 }

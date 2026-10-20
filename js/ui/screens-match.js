@@ -191,11 +191,20 @@ ACT.subOut = ds => { LIVE.subSel = +ds.id; reopenLive('subs'); };
 ACT.subIn = ds => {
   const L = LIVE, S = liveSide();
   const e = makeSub(L.M, S, L.subSel, +ds.id);
-  if (e) pushFeed(L, 'info', commLine(L, e)); else toast('No substitutions left.');
+  if (e) pushFeed(L, 'info', commLine(L, e), L.bottom); else toast('No substitutions left.');
   L.subSel = null;
   reopenLive('subs');
 };
-ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`); reopenLive('tactics'); };
+ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`, LIVE.bottom); reopenLive('tactics'); };
+ACT.livePi = ds => { LIVE.piSlot = +ds.i; reopenLive('pi'); };
+ACT.livePiSet = ds => {
+  const S = liveSide(), i = LIVE.piSlot, x = S.pi[i] || (S.pi[i] = {});
+  x[ds.k] = +ds.v; if (+ds.v === 1) delete x[ds.k];
+  LIVE.M.dirty = true;
+  const ins = PLAYER_INS.find(q => q.k === ds.k);
+  pushFeed(LIVE, 'tac', `${G.manager} tells ${pname(G.players[S.on[i]])}: ${ins.o[+ds.v].toLowerCase()}.`, LIVE.bottom);
+  reopenLive('pi');
+};
 ACT.liveIns = ds => { const S = liveSide(); S[ds.k] = +ds.v; LIVE.M.dirty = true; reopenLive('tactics'); };
 CHG.liveShape = (v, ds, el) => {
   const S = liveSide(), k = el.id === 'lt-ip' ? 'ip' : 'oop';
@@ -203,7 +212,7 @@ CHG.liveShape = (v, ds, el) => {
   if (k === 'ip') S.roles = Array(11).fill(0);
   S.map = shapeMap(S.ip, S.oop);
   LIVE.M.dirty = true;
-  pushFeed(LIVE, 'info', `${clubName(S.cid)} switch to ${S.ip} with the ball, ${S.oop} without it.`);
+  pushFeed(LIVE, 'info', `${clubName(S.cid)} switch to ${S.ip} with the ball, ${S.oop} without it.`, LIVE.bottom);
 };
 
 /* ---------- match report ---------- */
@@ -218,7 +227,9 @@ SCREENS.post = {
       const row = (l, x, y) => `<div class="cmp"><b>${x}</b><span>${l}</span><b>${y}</b></div>`;
       stats = `<div class="card">${row('Possession', Math.round(h.pos / tot * 100) + '%', Math.round(a.pos / tot * 100) + '%')}${row('Shots', h.sh, a.sh)}${row('On target', h.sot, a.sot)}${row('Expected goals', h.xg.toFixed(2), a.xg.toFixed(2))}${row('Pass accuracy', h.pa ? Math.round(h.pc / h.pa * 100) + '%' : '-', a.pa ? Math.round(a.pc / a.pa * 100) + '%' : '-')}${row('Corners', h.co, a.co)}${row('Offsides', h.off || 0, a.off || 0)}${row('Fouls', h.fo, a.fo)}${row('Cards', h.yc + '/' + h.rc, a.yc + '/' + a.rc)}</div>`;
       const us = fx.h === G.club ? 0 : 1;
-      rats = `<div class="sec-h"><h2>Player ratings</h2></div><div class="list">${fx.ratings[us].filter(([id]) => G.players[id]).sort((x, y) => y[1] - x[1]).map(([id, r]) => `<button class="row act" data-a="player" data-id="${id}"><span class="pos">${G.players[id].pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}</b>${fx.motm === id ? ' <em class="tag good">Player of the match</em>' : ''}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('')}</div>`;
+      const PS = fx.pstats ? new Map(fx.pstats[us].map(r => [r[0], r])) : null;
+      const pst = id => { const r = PS && PS.get(id); return r ? `<small>${r[2] ? Math.round(r[1] / r[2] * 100) + '% of ' + r[2] + ' passes' : 'no passes'}${r[3] ? ' · ' + r[3] + ' key' : ''}${r[4] ? ' · ' + r[4] + ' dribbles' : ''}${r[5] + r[6] ? ' · ' + (r[5] + r[6]) + ' tackles/int' : ''}${r[7] ? ' · ' + r[7] + ' aerials' : ''}${r[8] ? ' · ' + r[9] + '/' + r[8] + ' shots on target' : ''}</small>` : ''; };
+      rats = `<div class="sec-h"><h2>Player ratings</h2></div><div class="list">${fx.ratings[us].filter(([id]) => G.players[id]).sort((x, y) => y[1] - x[1]).map(([id, r]) => `<button class="row act" data-a="player" data-id="${id}"><span class="pos">${G.players[id].pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}${fx.motm === id ? ' <em class="tag good">Player of the match</em>' : ''}</b>${pst(id)}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('')}</div>`;
     }
     const others = G.fixtures.filter(f => f.r === fx.r && f.id !== fx.id).sort(fxSort);
     return `<section class="hero rep" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">

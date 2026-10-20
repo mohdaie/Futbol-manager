@@ -219,9 +219,13 @@ SCREENS.stats = {
   render() {
     const t = UI.tab.stats || 'g';
     const pl = Object.values(G.players).filter(p => G.clubs[p.club] && G.clubs[p.club].pl && p.st.a > 0);
-    const cfg = { g: ['Goals', p => p.st.g, p => p.st.g], as: ['Assists', p => p.st.as, p => p.st.as], rt: ['Avg rating', p => (p.st.a >= 3 ? avgRating(p) : 0), p => avgRating(p).toFixed(2)], cs: ['Clean sheets', p => (p.pos === 'GK' ? p.st.cs : 0), p => p.st.cs] }[t];
+    const per = (p, k) => (p.st[k] || 0);
+    const cfg = { g: ['Goals', p => p.st.g, p => p.st.g], as: ['Assists', p => p.st.as, p => p.st.as], rt: ['Avg rating', p => (p.st.a >= 3 ? avgRating(p) : 0), p => avgRating(p).toFixed(2)], cs: ['Clean sheets', p => (p.pos === 'GK' ? p.st.cs : 0), p => p.st.cs],
+      kp: ['Key passes', p => per(p, 'kp'), p => per(p, 'kp')], pc: ['Pass accuracy', p => (per(p, 'pa') >= 60 ? per(p, 'pc') / per(p, 'pa') : 0), p => Math.round(per(p, 'pc') / (per(p, 'pa') || 1) * 100) + '%'],
+      dw: ['Dribbles won', p => per(p, 'dw'), p => per(p, 'dw')], tk: ['Tackles + interceptions', p => per(p, 'tk') + per(p, 'int'), p => per(p, 'tk') + per(p, 'int')],
+      aer: ['Aerial duels won', p => per(p, 'aer'), p => per(p, 'aer')], sv: ['Saves', p => (p.pos === 'GK' ? per(p, 'sv') : 0), p => per(p, 'sv')] }[t];
     const list = pl.filter(p => cfg[1](p) > 0).sort((a, b) => cfg[1](b) - cfg[1](a)).slice(0, 25);
-    return `<h1 class="h1">Stats leaders</h1>${tabs('stats', [['g', 'Goals'], ['as', 'Assists'], ['rt', 'Rating'], ['cs', 'Clean sheets']], t)}
+    return `<h1 class="h1">Stats leaders</h1><div class="chips">${[['g', 'Goals'], ['as', 'Assists'], ['rt', 'Rating'], ['kp', 'Key passes'], ['pc', 'Pass accuracy'], ['dw', 'Dribbles'], ['tk', 'Tackles + int'], ['aer', 'Aerials'], ['cs', 'Clean sheets'], ['sv', 'Saves']].map(([k, n]) => `<button class="chip ${t === k ? 'on' : ''}" data-a="tab" data-key="stats" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="list">${list.map((p, i) => playerRow(p, `<span class="stat"><b>${cfg[2](p)}</b><small>${p.st.a} apps</small></span>`, { sub: (i + 1) + '. ' + clubName(p.club) })).join('') || empty('No matches played yet', 'Leaders appear after the opening round.')}</div>`;
   },
 };
