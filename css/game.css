@@ -309,7 +309,7 @@ textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; wor
 .poss small { text-align: center; color: var(--mute); font-size: 9px; font-variant-numeric: tabular-nums; }
 .pitchwrap { flex: 1; min-height: 168px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 #pitch { display: block; border-radius: 8.5px; box-shadow: 0 8.5px 25px rgba(0,0,0,.45); max-width: 100%; }
-.feed { flex: none; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2.5px; height: 99px; overflow: hidden; }
+.feed { flex: none; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; height: 128px; overflow: hidden; }
 .feed li span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .feed li { display: flex; gap: 6.5px; font-size: 11px; padding: 2.5px 6.5px; border-radius: 5px; background: rgba(19,36,47,.7); animation: feedIn .3s ease; }
 .feed li:nth-child(n+4) { opacity: .55; }
@@ -579,3 +579,12 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .fitrow { display: grid; grid-template-columns: 1fr 70px auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); }
 .fitrow span { display: flex; flex-direction: column; min-width: 0; }
 .fitrow small { color: var(--mute); font-size: 10.5px; }
+/* commentary bar: newest line full width in the team's colour; goals flash */
+.feed li.tc { border-left: 4px solid var(--tc); }
+.feed li.fd-main { min-height: 52px; align-items: center; padding: 8px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 700; line-height: 1.25; background: rgba(48,14,66,.95); color: var(--chalk); opacity: 1; }
+.feed li.fd-main.tc { background: var(--tc); color: var(--tf); border-left: 0; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+.feed li.fd-main b { color: inherit; opacity: .8; width: 30px; font-size: 13px; }
+.feed li.fd-main span { -webkit-line-clamp: 2; }
+.feed li.fd-main.blink { animation: goalBlink .5s steps(2, jump-none) 8; font-size: 16px; }
+@keyframes goalBlink { 0% { background: var(--tc); color: var(--tf); } 100% { background: #FFFFFF; color: #10061A; } }
+@media (prefers-reduced-motion: reduce) { .feed li.fd-main.blink { animation: none; } }

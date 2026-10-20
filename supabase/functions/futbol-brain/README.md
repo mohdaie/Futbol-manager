@@ -79,3 +79,6 @@ change simulation coefficients or publish a learned version automatically.
    once clients have refreshed. Keep a single writable backend during cutover.
 5. Check a real phone's AI Brain sync status, query the received counts and inspect
    the retention job. No provider AI request is necessary to test cloud sync.
+
+## 2026.10.20.6 update
+Actions now also include `restyle`, `counter`, `cpress`, `protect` and `mark`. Buckets may end with the team's style (`|gegen`, `|tiki`, `|bal`, `|counter`, `|long`, `|custom`). `details.f` adds style, shape, fit, passPct, regains, duels and offsides for both sides. To set up production, apply migration `20261020150000_futbol_brain_actions_v2.sql` after the two earlier Brain migrations.

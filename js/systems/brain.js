@@ -21,8 +21,15 @@ const MGR_OPTIONS = {
   defend: 'Drop deeper and protect the result',
   press: 'Press higher to win the ball back',
   fresh: 'Bring on fresh legs for tired players',
+  restyle: 'Switch to the tactical style the players on the pitch suit best for this situation',
+  counter: 'Sit deeper, regroup when the ball is lost and counter-attack when it is won',
+  cpress: 'Counter-press straight after losing the ball and press high',
+  protect: 'Tell the full-backs and midfielders to stay back, and tired players to press less',
+  mark: 'Tell the defenders and defensive midfielders to mark tighter and stay on their feet',
 };
-const MGR_SAY = { attack: 'push forward and go for it', defend: 'drop deeper to protect the result', press: 'start pressing higher up the pitch', fresh: 'make changes to freshen things up' };
+const MGR_SAY = { attack: 'push forward and go for it', defend: 'drop deeper to protect the result', press: 'start pressing higher up the pitch', fresh: 'make changes to freshen things up',
+  restyle: 'change their whole approach', counter: 'sit deeper and look to break', cpress: 'start hunting the ball the moment they lose it', protect: 'tell their full-backs to hold their positions', mark: 'tighten up at the back with closer marking' };
+const STYLE_IDX = ['gegen', 'tiki', 'bal', 'counter', 'long'];
 const BRAIN_MODES = [
   ['rules', 'Built-in rules', 'The original fixed rules. No AI, no learning used.'],
   ['learned', 'Learned engine', 'Uses your approved engine version. No AI calls.'],
@@ -54,17 +61,37 @@ function situation(M, S) {
   const str = (S.u.att / O.u.def) / (O.u.att / S.u.def);
   return { min: M.min, diff: S.st.g - O.st.g, home: S.idx === 0, str: Math.round(str * 100) / 100, cond: Math.round(avg(outs, x => S.cond[x.p.id])), reds: S.reds.length - O.reds.length, ment: S.ment, subs: 5 - S.subs,
     shots: S.st.sh, sot: S.st.sot, xg: Math.round(S.st.xg * 100) / 100, oppShots: O.st.sh, oppXg: Math.round(O.st.xg * 100) / 100,
-    possession: Math.round(100 * S.st.pos / (S.st.pos + O.st.pos || 1)), press: S.press, line: S.line, tempo: S.tempo };
+    possession: Math.round(100 * S.st.pos / (S.st.pos + O.st.pos || 1)), press: S.press, line: S.line, tempo: S.tempo,
+    style: styleIdx(S), oppStyle: styleIdx(O), shape: Object.keys(FORMATIONS).indexOf(S.ip), oppShape: Object.keys(FORMATIONS).indexOf(O.ip),
+    fit: fitOverall(S), oppFit: fitOverall(O), passPct: Math.round(100 * (S.st.pc || 0) / (S.st.pa || 1)), oppPassPct: Math.round(100 * (O.st.pc || 0) / (O.st.pa || 1)),
+    regains: S.st.cp || 0, oppRegains: O.st.cp || 0, duels: duelShare(S, O), offsides: S.st.off || 0 };
+}
+// 0-4 for the five styles, 5 for a custom tactic.
+const styleIdx = S => { const k = styleOf(S); return k ? STYLE_IDX.indexOf(k) : 5; };
+const styleKey = S => styleOf(S) || 'custom';
+// Average tactic fit (%) over the areas this side's instructions switch on (50 when nothing special is asked).
+function fitOverall(S) {
+  const on = Object.entries(FIT_AREAS).filter(([, F]) => F.on(S)).map(([a]) => (S.fit ? S.fit[a] : 0));
+  return on.length ? fitPct(on.reduce((t, v) => t + v, 0) / on.length) : 50;
+}
+// Share of individual contests won (dribbles, tackles, interceptions, aerial duels, blocks) by S.
+function duelShare(S, O) {
+  const won = X => Object.values(X.ps || {}).reduce((t, x) => t + (x.dw || 0) + (x.tk || 0) + (x.int || 0) + (x.aer || 0) + (x.blk || 0), 0);
+  const a = won(S), b = won(O);
+  return a + b ? Math.round(100 * a / (a + b)) : 50;
 }
 function sitKey(f) {
   const mb = f.min < 55 ? 'HT' : f.min < 65 ? '60' : f.min < 75 ? '70' : '80';
   const s = f.str < 0.92 ? 'weaker' : f.str > 1.08 ? 'stronger' : 'even';
-  return [mb, clamp(f.diff, -2, 2), s, f.cond < 70 ? 'tired' : 'fresh', f.reds > 0 ? 'man down' : f.reds < 0 ? 'man up' : '11v11'].join('|');
+  const k = [mb, clamp(f.diff, -2, 2), s, f.cond < 70 ? 'tired' : 'fresh', f.reds > 0 ? 'man down' : f.reds < 0 ? 'man up' : '11v11'];
+  // The team's style is part of the situation: what works for a pressing side may not work for a possession side.
+  if (f.style != null) k.push(STYLE_IDX[f.style] || 'custom');
+  return k.join('|');
 }
 function sitLabel(key) {
-  const [mb, d, s, c, r] = key.split('|');
+  const [mb, d, s, c, r, st] = key.split('|');
   const score = +d > 0 ? `winning by ${d}` : +d < 0 ? `losing by ${-d}` : 'level';
-  return `${mb === 'HT' ? 'Half-time' : mb + "'"}, ${score}, ${s}, ${c}${r === '11v11' ? '' : ', ' + r}`;
+  return `${mb === 'HT' ? 'Half-time' : mb + "'"}, ${score}, ${s}, ${c}${r === '11v11' ? '' : ', ' + r}${st ? ', ' + (STYLES[st] ? STYLES[st].n : 'custom tactic') : ''}`;
 }
 function sitText(M, S, f) {
   const O = M.sides[1 - S.idx], tot = S.st.pos + O.st.pos || 1;
@@ -73,15 +100,22 @@ function sitText(M, S, f) {
     `Your team is ${f.str < 0.92 ? 'weaker than' : f.str > 1.08 ? 'stronger than' : 'about equal to'} the opponent (strength ratio ${f.str}). ` +
     `Your outfield players have ${f.cond}% energy left. Red cards: you ${S.reds.length}, them ${O.reds.length}. ` +
     `Shots: you ${S.st.sh} (${S.st.sot} on target), them ${O.st.sh} (${O.st.sot} on target). Possession ${Math.round(S.st.pos / tot * 100)}%. ` +
-    `Current mentality ${INSTRUCTIONS[0].o[S.ment]}, pressing ${INSTRUCTIONS[4].o[S.press]}. Substitutions left: ${f.subs}.`;
+    `Current mentality ${INSTRUCTIONS[0].o[S.ment]}, pressing ${INSTRUCTIONS[4].o[S.press]}. Substitutions left: ${f.subs}. ` +
+    `Your style: ${styleOf(S) ? STYLES[styleOf(S)].n : 'custom'} (players suit it ${f.fit}%); theirs: ${styleOf(O) ? STYLES[styleOf(O)].n : 'custom'} (${f.oppFit}%). ` +
+    `Pass accuracy you ${f.passPct}%, them ${f.oppPassPct}%. You win ${f.duels}% of individual duels. Balls won back high: you ${f.regains}, them ${f.oppRegains}.`;
 }
 
 /* ---------- policies ---------- */
 function rulesDecision(M, S) {
-  const f = situation(M, S);
+  const f = situation(M, S), O = M.sides[1 - S.idx];
   if (f.diff < 0 && f.min >= 70) return 'attack';
   if (f.diff === 1 && f.min >= 80) return 'defend';
   if (f.cond < 68 && f.min >= 60) return 'fresh';
+  if (f.diff > 0 && f.min >= 70 && f.cond < 75) return 'protect';
+  if (f.min <= 60 && f.fit < 45 && styleKey(S) !== bestStyleFor(M, S)) return 'restyle';
+  if (O.st.sh - S.st.sh >= 6 && f.duels < 45) return 'mark';
+  if (f.diff < 0 && f.possession < 42 && f.min <= 70 && (S.fit ? S.fit.press : 0) > 0.1) return 'cpress';
+  if (f.diff >= 0 && f.str < 0.92 && (O.line ?? 1) === 2 && (S.won ?? 1) !== 2) return 'counter';
   return 'hold';
 }
 // Value of each option in a bucket: average outcome shrunk toward zero, plus a small teacher bonus.
@@ -121,10 +155,47 @@ function applyMgrOption(M, S, opt) {
     S.press = 2;
   } else if (opt === 'fresh') {
     tired().slice(0, 2).forEach(x => sub(x, bestBenchFor(S, p => p.pos !== 'GK', x.pos)));
+  } else if (opt === 'restyle') {
+    const k = bestStyleFor(M, S);
+    Object.assign(S, STYLES[k].ins);
+    if (!S.user) { const t = { ...S, style: k }; chooseRoles(t, S.on); S.roles = t.roles; } // keeps the shape; roles suit the players on the pitch
+  } else if (opt === 'counter') {
+    Object.assign(S, { line: 0, press: 0, won: 2, lost: 0, ment: Math.max(1, S.ment - 1) });
+  } else if (opt === 'cpress') {
+    Object.assign(S, { lost: 2, press: 2 });
+  } else if (opt === 'protect') {
+    S.on.forEach((id, i) => {
+      if (!id || !i) return;
+      const pos = FORMATIONS[S.ip][i][0], pi = S.pi[i] || (S.pi[i] = {});
+      if (['DL', 'DR', 'DM'].includes(pos) || (LINE[pos] === 3 && S.cond[id] < 70)) pi.fw = 0;
+      if (S.cond[id] < 65) pi.pr = 0;
+    });
+  } else if (opt === 'mark') {
+    S.on.forEach((id, i) => {
+      if (!id || !i) return;
+      const pos = FORMATIONS[S.ip][i][0];
+      if (LINE[pos] <= 2) { const pi = S.pi[i] || (S.pi[i] = {}); pi.mk = 2; pi.tk = 0; }
+    });
   }
   if (opt !== 'hold') { M.dirty = true; evs.unshift({ min: M.min, side: S.idx, t: 'tac', opt }); }
   return evs;
 }
+
+// The style the players on the pitch suit best, leaning attacking when chasing a game and safer when ahead.
+function bestStyleFor(M, S) {
+  const f = situation0(M, S), r = {};
+  Object.keys(STYLES).forEach(k => {
+    const t = { ...S, ...STYLES[k].ins };
+    const fit = tacticFit(t, (i, a) => av(S, i, a)).area;
+    const on = Object.entries(FIT_AREAS).filter(([, F]) => F.on(t)).map(([a]) => fit[a]);
+    let sc = on.length ? fitPct(on.reduce((x, v) => x + v, 0) / on.length) : 50;
+    if (f.diff < 0 && STYLES[k].ins.ment >= 3) sc += 6;
+    if (f.diff > 0 && STYLES[k].ins.ment <= 1) sc += 6;
+    r[k] = sc;
+  });
+  return Object.entries(r).sort((a, b) => b[1] - a[1])[0][0];
+}
+const situation0 = (M, S) => ({ diff: S.st.g - M.sides[1 - S.idx].st.g });
 
 /* ---------- recording ---------- */
 function logDecision(M, S, f, opt, src, extra = {}) {

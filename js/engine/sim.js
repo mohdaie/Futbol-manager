@@ -108,6 +108,7 @@ function takeShot(M, S, O, ev, seq, i, x, y, o = {}) {
   // Blocked by a defender in the way?
   const [bi, bd] = o.pen || o.fk ? [-1, 9] : nearest(o.posO || [], [x, y * 0.6]);
   S.st.sh++; S.st.xg += xg; pstat(S, i, 'sh');
+  if (o.aid && o.aid !== p.id && S.on.includes(o.aid)) { pstat(S, S.on.indexOf(o.aid), 'kp'); bumpRating(S, o.aid, 0.08); } // key pass: the pass that set up the shot
   const step = { k: o.header ? 'head' : 'shot', s: S.idx, pid: p.id, x0: x, y0: y, x1: 0.5 + rf(-0.05, 0.05), y1: 0, xg };
   seq.push(step);
   Object.assign(ev, { t: 'shot', pid: p.id, xg, pen: !!o.pen, sp: !!o.header, ck: !!o.ck, fk: !!o.fk, aid: o.aid || null, key: true });
@@ -258,7 +259,7 @@ function playMinute(M) {
         }
         tgt = [posS[j][0], Math.max(0.06, line - rf(0.04, 0.12))];
         // Space behind a high line, unless the defenders are quick and organised; counters need quick, sharp forwards.
-        base = 0.32 + ((S.tempo ?? 1) === 0 ? 0.04 * (S.fit ? S.fit.poss : 0) : 0) + ((O.line ?? 1) === 2 ? 0.08 * (1 - (O.fit ? O.fit.line : 0)) : (O.line ?? 1) === 0 ? -0.04 * (1 + (O.fit ? O.fit.deep : 0)) : 0) + (counter ? 0.08 * (0.3 + (S.fit ? S.fit.counter : 0)) : 0);
+        base = 0.32 + ((S.tempo ?? 1) === 0 ? 0.04 * (S.fit ? S.fit.poss : 0) : 0) + ((O.line ?? 1) === 2 ? 0.06 * (1 - (O.fit ? O.fit.line : 0)) : (O.line ?? 1) === 0 ? -0.04 * (1 + (O.fit ? O.fit.deep : 0)) : 0) + (counter ? 0.08 * (0.3 + (S.fit ? S.fit.counter : 0)) : 0);
         a = avg2(S, i, [['pas', 0.6], ['vis', 0.7], ['tea', 0.2]]) + beh(S, i, 'rk') * 0.8;
       } else {
         const opts = posS.map((q, k) => (q && k && k !== i && q[1] < y - 0.15 ? k : -1)).filter(k => k > 0);
@@ -289,7 +290,7 @@ function playMinute(M) {
         break;
       }
       S.st.pc++; pstat(S, i, 'pc');
-      if (tgt[1] < 0.3) { pstat(S, i, 'kp'); bump(S, i, 0.06); }
+      if (tgt[1] < 0.3) bump(S, i, 0.04);
       lastPasser = A0;
       x = tgt[0]; y = tgt[1]; i = j;
       if (act === 'thru') {
@@ -311,7 +312,7 @@ function playMinute(M) {
           const k3 = wpick(run, k => av(S, k, 'otb') * (1 + beh(S, k, 'run')));
           const nt = [posS[k3][0], Math.max(0.08, y - rf(0.06, 0.12))];
           seq.push({ k: 'pass', s: S.idx, pid: S.on[j], x0: x, y0: y, x1: nt[0], y1: nt[1], to: S.on[k3], res: 'ok', flick: true });
-          lastPasser = S.on[j]; i = k3; x = nt[0]; y = nt[1]; pstat(S, j, 'kp');
+          lastPasser = S.on[j]; i = k3; x = nt[0]; y = nt[1];
           continue;
         }
         const [k2] = nearest(posS, tgt, true, j);
@@ -380,7 +381,7 @@ function playMinute(M) {
       }
       const ok = R() < duel(a, d, 0.3 * M.mod.wind * ((O.line ?? 1) === 0 ? 1 - 0.1 * (O.fit ? O.fit.deep : 0) : 1));
       seq.push({ k: 'cross', s: S.idx, pid: A0, x0: x, y0: y, x1: tgt[0], y1: tgt[1], to: S.on[t], oid: dI > 0 ? O.on[dI] : null, res: ok ? 'ok' : 'lost' });
-      if (ok) { pstat(S, i, 'kp'); takeShot(M, S, O, ev, seq, t, tgt[0], tgt[1], { header: true, del, aid: A0, posO }); break; }
+      if (ok) { takeShot(M, S, O, ev, seq, t, tgt[0], tgt[1], { header: true, del, aid: A0, posO }); break; }
       if (dI > 0) { pstat(O, dI, 'aer'); bump(O, dI, 0.04); }
       if (R() < 0.38) { S.st.co++; ev.corner = true; S.ckDue = true; break; }
       turnover(tgt[0], 0.2); break;

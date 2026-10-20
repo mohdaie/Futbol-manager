@@ -49,6 +49,8 @@ const fullName = p => (!p ? 'Unknown' : p.fn ? p.fn + ' ' + p.ln : p.ln);
 // Squad level: A first team, R reserves, Y U18s (older saves used a youth flag).
 const lvlOf = p => p.lvl || (p.youth ? 'Y' : 'A');
 const newStats = () => ({ a: 0, g: 0, as: 0, rt: 0, mom: 0, yc: 0, rc: 0, cs: 0 });
+// Per-match action stats kept for each player (season totals live in p.st alongside the above).
+const PSTAT_KEYS = ['pa', 'pc', 'kp', 'da', 'dw', 'tk', 'int', 'aer', 'blk', 'sh', 'sot', 'cr', 'off', 'fo', 'sv'];
 const avgRating = p => (p.st.a ? p.st.rt / p.st.a : 0);
 
 function genName(nat) {

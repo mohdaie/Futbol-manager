@@ -52,7 +52,11 @@ function playerSheet(pid) {
   } else if (t === 'stats') {
     const row = (lbl, s) => `<tr><td class="l">${lbl}</td><td>${s.a}</td><td>${s.g}</td><td>${s.as ?? '-'}</td><td>${s.a ? (s.rt / s.a).toFixed(2) : '-'}</td></tr>`;
     body = `<div class="tablewrap"><table class="tbl"><thead><tr><th class="l">Season</th><th>Apps</th><th>Gls</th><th>Ast</th><th>Avg</th></tr></thead><tbody>${row(seasonLabel(), p.st)}${p.prev ? row(p.prev.season, p.prev) : ''}<tr><td class="l">Career (in game)</td><td>${p.car.a}</td><td>${p.car.g}</td><td>-</td><td>-</td></tr></tbody></table></div>
-      <div class="kv"><div><small>Player of the match</small><b>${p.st.mom}</b></div><div><small>Yellow / red</small><b>${p.st.yc} / ${p.st.rc}</b></div><div><small>Clean sheets</small><b>${p.st.cs}</b></div></div>`;
+      <div class="kv"><div><small>Player of the match</small><b>${p.st.mom}</b></div><div><small>Yellow / red</small><b>${p.st.yc} / ${p.st.rc}</b></div><div><small>Clean sheets</small><b>${p.st.cs}</b></div>
+        <div><small>Passes</small><b>${p.st.pa ? Math.round((p.st.pc || 0) / p.st.pa * 100) + '% of ' + p.st.pa : '-'}</b></div><div><small>Key passes</small><b>${p.st.kp || 0}</b></div>
+        <div><small>Dribbles won</small><b>${p.st.dw || 0}${p.st.da ? ' / ' + p.st.da : ''}</b></div><div><small>Tackles / interceptions</small><b>${p.st.tk || 0} / ${p.st.int || 0}</b></div>
+        <div><small>Aerial duels won</small><b>${p.st.aer || 0}</b></div><div><small>Shots / on target</small><b>${p.st.sh || 0} / ${p.st.sot || 0}</b></div>
+        ${p.pos === 'GK' ? `<div><small>Saves</small><b>${p.st.sv || 0}</b></div>` : `<div><small>Offsides / fouls</small><b>${p.st.off || 0} / ${p.st.fo || 0}</b></div>`}</div>`;
   } else {
     const yl = p.con - G.season;
     body = `<div class="kv"><div><small>Value</small><b>${money(pValue(p))}</b></div><div><small>Wage</small><b>${p.club === 'FA' ? 'Unattached' : wageFmt(p.wage)}</b></div>
