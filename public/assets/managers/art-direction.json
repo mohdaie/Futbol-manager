@@ -1,0 +1,13 @@
+{
+  "tool": "built-in image_gen",
+  "transparentBackground": true,
+  "sharedArtDirection": "Use case: stylized-concept. Asset type: in-game manager avatar for Futbol Manager, a portrait mobile football management game with soft grey/white rounded cards. Create ONE individual square 1024x1024 comic-style head-and-shoulders portrait, isolated on a truly TRANSPARENT background. Entire head, hair, ears, neck and shoulder silhouette within canvas, generous 8% empty margin around head, centered front view with a very slight three-quarter turn to viewer left, eyes toward viewer, shoulders symmetrically balanced, chest cropped neatly at bottom with clean cutout silhouette. Consistent premium European editorial comic / modern sports management game character art: confident clean charcoal outer contour, thinner internal lines, simplified facial planes, mature believable anatomy, restrained cel shading with two tones and small soft highlights, warm natural skin colours, soft neutral overhead-left light. NOT photographic, not 3D, not anime, not oversized cute caricature. Head occupies 58% canvas height. All managers use the identical scale, pose, framing, restrained colour palette, off-white shirt and dark charcoal manager jacket without any badge, club marks, sponsor, tie text or lettering. Expressive recognisable facial character, polished production game asset. No circular frame, no border, no backdrop, no ground or drop shadow, no text, no watermark.",
+  "reference": "manager-mourinho.png",
+  "subjects": [
+    "José Mourinho — short silver-grey swept hair, composed half-smile.",
+    "Jürgen Klopp — charcoal cap, rectangular glasses, grey-brown beard, broad smile.",
+    "Patrick Vieira — closely shaved head, dark brown skin, strong face, calm expression.",
+    "Pep Guardiola — bald, close salt-and-pepper beard, angular face, thoughtful expression.",
+    "Gareth Southgate — side-parted brown hair with grey temples, neat beard, reserved smile."
+  ]
+}

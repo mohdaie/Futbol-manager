@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "style": "comic-editorial",
+  "managers": [
+    {
+      "id": "manager-mourinho",
+      "inspiredBy": "José Mourinho",
+      "file": "manager-mourinho.png",
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "transparent": true,
+      "alt": "Silver-haired manager with a composed expression."
+    },
+    {
+      "id": "manager-klopp",
+      "inspiredBy": "Jürgen Klopp",
+      "file": "manager-klopp.png",
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "transparent": true,
+      "alt": "Smiling bearded manager wearing glasses and a charcoal cap."
+    },
+    {
+      "id": "manager-vieira",
+      "inspiredBy": "Patrick Vieira",
+      "file": "manager-vieira.png",
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "transparent": true,
+      "alt": "Dark-skinned manager with a shaved head and a calm expression."
+    },
+    {
+      "id": "manager-guardiola",
+      "inspiredBy": "Pep Guardiola",
+      "file": "manager-guardiola.png",
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "transparent": true,
+      "alt": "Bald manager with a close salt-and-pepper beard."
+    },
+    {
+      "id": "manager-southgate",
+      "inspiredBy": "Gareth Southgate",
+      "file": "manager-southgate.png",
+      "width": 1254,
+      "height": 1254,
+      "format": "png",
+      "transparent": true,
+      "alt": "Manager with side-parted brown hair and a neatly trimmed beard."
+    }
+  ]
+}
