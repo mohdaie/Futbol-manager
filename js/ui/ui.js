@@ -10,7 +10,7 @@ const CHG = {};      // change actions: CHG[name](value, dataset, el)
 
 const NAV = [['home', 'Dashboard'], ['news', 'News'], ['team', 'My Team'], ['transfers', 'Transfers'], ['facilities', 'Facilities'], ['more', 'More']];
 const NAV_GROUPS = {
-  team: ['squad', 'tactics', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'prematch', 'match', 'post'],
+  team: ['squad', 'tactics', 'pinstr', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'prematch', 'match', 'post'],
   facilities: ['finance', 'board', 'club'],
 };
 const ICON = {

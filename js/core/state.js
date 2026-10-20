@@ -123,9 +123,12 @@ function expectationFor(cid) {
   return { pos: 17, text: 'Avoid relegation' };
 }
 
-function aiTactic() {
-  const [ip, oop] = pick(AI_SHAPES);
-  return { ip, oop, ment: 2, tempo: 1, width: 1, press: ri(0, 2), line: 1, pass: 1 };
+// Computer clubs: big clubs lean to pressing and possession, smaller clubs to counter-attack and long ball.
+function aiTactic(rep = 70) {
+  const k = wpick(Object.keys(STYLES), s => ({ gegen: rep - 60, tiki: rep - 66, bal: 30, counter: 95 - rep, long: 88 - rep }[s]) || 1);
+  const t = { style: k };
+  applyStyle(t, k);
+  return t;
 }
 
 function newGame(clubId, manager, avatar) {
@@ -140,7 +143,7 @@ function newGame(clubId, manager, avatar) {
     settings: { speed: 2 }, seasonReview: null, gameOver: false, flags: {}, lastMatch: null, press: {},
   };
   CLUBS.forEach(c => {
-    const cl = { ...c, squad: [], bal: Math.round(30e6 + Math.pow(Math.max(0, c.rep - 60), 2) * 0.25e6), tac: aiTactic(), pl: true };
+    const cl = { ...c, squad: [], bal: Math.round(30e6 + Math.pow(Math.max(0, c.rep - 60), 2) * 0.25e6), tac: aiTactic(c.rep), pl: true };
     G.clubs[c.id] = cl;
     // Real-inspired squads where available, generated otherwise; reserves and U18s topped up to 20 each.
     if (typeof ROSTERS !== 'undefined' && ROSTERS[c.id]) ROSTERS[c.id].forEach(row => addToClub(playerFromRoster(row, c.id), cl));
@@ -173,7 +176,7 @@ function newGame(clubId, manager, avatar) {
 function setupUserClub() {
   const c = userClub();
   c.squad.forEach(id => { G.know[id] = 100; });
-  G.tactics = { ip: c.tac.ip, oop: c.tac.oop, roles: Array(11).fill(0), slots: [], bench: [], ment: 2, tempo: 1, width: 1, press: 1, line: 1, pass: 1, cap: null, pk: null, fk: null, ck: null };
+  G.tactics = { ip: c.tac.ip, oop: c.tac.oop, roles: Array(11).fill(0), slots: [], bench: [], ment: 2, tempo: 1, width: 1, press: 1, line: 1, pass: 1, lost: 1, won: 1, pi: {}, cap: null, pk: null, fk: null, ck: null };
   const pk = autoPick(c.id, G.tactics.ip);
   G.tactics.slots = pk.xi;
   G.tactics.bench = pk.bench;

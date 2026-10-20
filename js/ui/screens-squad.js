@@ -164,8 +164,10 @@ SCREENS.tactics = {
     const T = G.tactics, view = UI.tab.tview || 'ip';
     ensureUserLineup();
     const ip = FORMATIONS[T.ip], oop = FORMATIONS[T.oop], map = shapeMap(T.ip, T.oop);
+    const prev = positions({ ...T, map, on: T.slots.map(id => id || null), cond: {}, fam: G.training.fam }, view === 'ip', 0.5, view === 'ip' ? 0.45 : 0.55);
+    const cur = styleOf(T);
     const toks = T.slots.map((id, i) => {
-      const p = G.players[id], src = view === 'ip' ? ip[i] : oop[map[i]];
+      const p = G.players[id], pp = prev[i] || (view === 'ip' ? ip[i].slice(1) : oop[map[i]].slice(1)), src = [0, pp[0], pp[1]];
       const pos = ip[i][0], f = p ? fam(p, pos) : 0, r = p ? ovrAt(p, pos) : '-';
       const role = ROLES[pos][T.roles[i]] || ROLES[pos][0];
       return `<button class="tok ${f >= 0.97 ? '' : f >= 0.85 ? 'f2' : 'f3'}" style="left:${src[1] * 100}%;top:${src[2] * 100}%" data-a="slot" data-i="${i}">
@@ -177,7 +179,10 @@ SCREENS.tactics = {
       <div class="seg wide">${[['ip', 'In possession'], ['oop', 'Out of possession']].map(([k, n]) => `<button class="${view === k ? 'on' : ''}" data-a="tview" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="tpitch ${view}"><div class="tp-lines"></div>${toks}</div>
       <div class="famrow"><span>Tactical familiarity</span>${bar(G.training.fam, G.training.fam < 50 ? 'warn' : 'good')}<b>${G.training.fam}%</b></div>
-      <div class="btns"><button class="btn pri" data-a="autoPick">Pick best XI</button><button class="btn" data-a="go" data-s="training">Training</button></div>
+      <div class="btns"><button class="btn pri" data-a="autoPick">Pick best XI</button><button class="btn" data-a="go" data-s="pinstr">Player instructions</button></div>
+      <div class="sec-h"><h2>Tactical style</h2><span class="muted">${cur ? STYLES[cur].n : 'Custom'}</span></div>
+      <div class="grid2">${Object.entries(STYLES).map(([k, s]) => `<button class="gcard ${cur === k ? 'on' : ''}" data-a="style" data-v="${k}"><b>${s.n}</b><small>${s.d}</small></button>`).join('')}</div>
+      <p class="muted">A style sets the team instructions, recommended shape and roles. Change anything afterwards to make it your own.</p>
       <div class="sec-h"><h2>Substitutes</h2><span class="muted">${T.bench.length}/9</span></div>
       <div class="list">${T.bench.map((id, i) => { const p = G.players[id]; return `<button class="row act" data-a="benchSlot" data-i="${i}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${morLabel(p.mor)}</small></span>${condBar(p.cond)}${ovrPill(p.ca)}</button>`; }).join('')}
         ${T.bench.length < 9 ? '<button class="row act add" data-a="benchSlot" data-i="-1"><span class="grow"><b>Add a substitute</b></span><span class="chev">+</span></button>' : ''}</div>
@@ -188,13 +193,20 @@ SCREENS.tactics = {
   },
 };
 ACT.tview = ds => { UI.tab.tview = ds.v; render(); };
+ACT.style = ds => {
+  const T = G.tactics, shape = T.ip + '/' + T.oop;
+  applyStyle(T, ds.v);
+  if (shape !== T.ip + '/' + T.oop) { G.training.fam = Math.max(20, G.training.fam - 15); T.pi = {}; ensureUserLineup(); }
+  toast(`${STYLES[ds.v].n}: ${T.ip} in possession, ${T.oop} without the ball.`);
+  render();
+};
 ACT.ins = ds => { G.tactics[ds.k] = +ds.v; render(); };
 ACT.autoPick = () => { const T = G.tactics, pk = autoPick(G.club, T.ip); T.slots = pk.xi; T.bench = pk.bench; T.cap = T.pk = T.fk = T.ck = null; autoSetPieces(); toast('Best available XI selected.'); render(); };
 CHG.shape = (v, ds) => {
   const T = G.tactics;
   if (T[ds.k] === v) return;
   T[ds.k] = v;
-  if (ds.k === 'ip') T.roles = Array(11).fill(0);
+  if (ds.k === 'ip') { T.roles = Array(11).fill(0); T.pi = {}; }
   G.training.fam = Math.max(20, G.training.fam - (ds.k === 'ip' ? 15 : 8));
   toast('Shape changed. Tactical familiarity drops while the players adjust.');
   render();
@@ -226,6 +238,32 @@ ACT.benchSlot = ds => {
 };
 ACT.benchPick = ds => { const T = G.tactics, i = +ds.i; if (i >= 0) T.bench[i] = +ds.id; else T.bench.push(+ds.id); closeSheet(true); render(); };
 ACT.benchDrop = ds => { G.tactics.bench.splice(+ds.i, 1); closeSheet(true); render(); };
+
+/* ---------- player instructions ---------- */
+SCREENS.pinstr = {
+  render() {
+    const T = G.tactics, ip = FORMATIONS[T.ip];
+    ensureUserLineup();
+    return `<h1 class="h1">Player instructions</h1>
+      <p class="muted">Instructions belong to a position, so they stay when you change the player. They add to the role and can differ from the team instructions.</p>
+      <div class="list">${T.slots.map((id, i) => {
+        const p = G.players[id], pos = ip[i][0], set = PLAYER_INS.filter(x => T.pi[i] && T.pi[i][x.k] != null && T.pi[i][x.k] !== 1);
+        return `<button class="row act" data-a="piOpen" data-i="${i}"><span class="pos">${pos}</span><span class="grow"><b>${p ? esc(pname(p)) : 'Empty'}</b><small>${esc(roleName(T, i))}${set.length ? ' · ' + set.map(x => x.o[T.pi[i][x.k]]).join(', ') : ''}</small></span><span class="chev">›</span></button>`;
+      }).join('')}</div>
+      <div class="btns"><button class="btn" data-a="piClear">Clear all</button><button class="btn" data-a="go" data-s="tactics">Back to tactics</button></div>`;
+  },
+};
+ACT.piOpen = ds => {
+  const T = G.tactics, i = +ds.i, pos = FORMATIONS[T.ip][i][0], p = G.players[T.slots[i]], cur = T.pi[i] || {};
+  const list = pos === 'GK' ? PLAYER_INS.filter(x => GK_INS.includes(x.k)) : PLAYER_INS;
+  sheet(`<h3 class="sh-t">${POS_NAME[pos]} <small>${p ? esc(pname(p)) : ''}</small></h3>
+    <h4 class="lbl">Role</h4><div class="chips">${ROLES[pos].map((r, k) => `<button class="chip ${T.roles[i] === k ? 'on' : ''}" data-a="piRole" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>
+    ${list.map(x => `<div class="field"><label>${x.n}</label><div class="seg">${x.o.map((o, v) => `<button class="${(cur[x.k] ?? 1) === v ? 'on' : ''}" data-a="piSet" data-i="${i}" data-k="${x.k}" data-v="${v}">${o}</button>`).join('')}</div></div>`).join('')}`,
+  { key: 'pi:' + i, restore: () => ACT.piOpen({ i }), onClose: () => render() });
+};
+ACT.piRole = ds => { G.tactics.roles[+ds.i] = +ds.k; ACT.piOpen(ds); };
+ACT.piSet = ds => { const T = G.tactics, i = +ds.i, x = T.pi[i] || (T.pi[i] = {}); x[ds.k] = +ds.v; if (+ds.v === 1) delete x[ds.k]; ACT.piOpen(ds); };
+ACT.piClear = () => { G.tactics.pi = {}; toast('Player instructions cleared.'); render(); };
 
 /* ---------- training ---------- */
 SCREENS.training = {

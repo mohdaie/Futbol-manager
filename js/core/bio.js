@@ -52,7 +52,8 @@ function linkBio(p) {
 
 // Makes sure every club has a manager and every player has personal details (new games and older saves).
 function ensureWorld() {
-  Object.values(G.clubs).forEach(c => { if (!c.fa && !c.mgr) c.mgr = genManagerName(); });
+  Object.values(G.clubs).forEach(c => { if (!c.fa && !c.mgr) c.mgr = genManagerName(); if (c.tac && !c.tac.style && !c.fa) c.tac = aiTactic(c.rep); });
+  if (G.tactics) { G.tactics.lost ??= 1; G.tactics.won ??= 1; G.tactics.pi ??= {}; }
   if (G.club && G.clubs[G.club]) G.clubs[G.club].mgr = G.manager;
   Object.values(G.players).forEach(p => { migrateAttrs(p); if (p.ht == null) genBio(p); });
   Object.values(G.players).forEach(p => { if (p.fpn == null) linkBio(p); });
