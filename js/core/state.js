@@ -130,6 +130,7 @@ function aiTactic() {
 
 function newGame(clubId, manager, avatar) {
   G = {
+    createdAt: Date.now(),
     v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,
     players: {}, clubs: {}, fixtures: [], news: [], know: {}, shortlist: [],
     scout: { assign: [], reports: [] }, pitches: [], offers: [], tHist: [],
@@ -265,8 +266,10 @@ function addNews(cat, title, body, action) {
 
 function saveGame() {
   if (!G) return false;
+  syncPlaytime();
   if (typeof brainSave === 'function') brainSave();
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); return true; } catch (e) { return false; }
+  const previous = G.savedAt;
+  try { G.savedAt = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(G)); return true; } catch (e) { G.savedAt = previous; return false; }
 }
 function loadGame() {
   try {

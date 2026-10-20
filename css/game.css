@@ -399,9 +399,9 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .iconbtn svg { width: 22px; height: 22px; fill: none; stroke: var(--chalk); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .iconbtn .dot { position: absolute; top: 5px; right: 6px; width: 7.5px; height: 7.5px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--night); }
 .top .av { width: 37px; height: 37px; border: 2px solid rgba(255,255,255,.85); }
-.tabs2 { display: grid; grid-template-columns: repeat(4, 1fr); padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); flex: none; border-bottom: 1px solid rgba(255,255,255,.06); }
+.tabs2 { display: grid; grid-template-columns: repeat(3, 1fr); padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); flex: none; border-bottom: 1px solid rgba(255,255,255,.06); }
 .tabs2 button { position: relative; padding: 7.5px 2px 8.5px; text-align: center; font-size: 12px; font-weight: 600; color: var(--mute); white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,.06); }
-.tabs2 button:nth-child(n+5) { border-bottom: 0; }
+.tabs2 button:nth-child(n+4) { border-bottom: 0; }
 .tabs2 button.on { color: var(--chalk); }
 .tabs2 button.on::after { content: ''; position: absolute; left: 14%; right: 14%; bottom: -1px; height: 2.5px; border-radius: 2.5px; background: var(--chalk); }
 .subbar { display: flex; justify-content: space-between; align-items: center; gap: 8.5px; padding-block: 8.5px 2px; padding-left: max(13.5px, env(safe-area-inset-left, 0px)); padding-right: max(13.5px, env(safe-area-inset-right, 0px)); flex: none; font-size: 11px; color: var(--mute); }

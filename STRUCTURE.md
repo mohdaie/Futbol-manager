@@ -17,6 +17,7 @@ js/core/bio.js             personal details (height, weight, character, ambition
                            person and manager), club managers, and how they affect the game
 js/core/state.js           the game state object G, new-game world build, save/load,
                            news, auto-pick, squad helpers
+js/core/playtime.js        per-career active time, session counts and background pause
 js/core/calendar.js        weeks and dates, fixture generator, transfer windows, league table
 js/engine/match.js         match simulation (minute by minute), subs, AI manager, results
 js/engine/live.js          2D canvas match: dots, ball, commentary, team talks, shouts
@@ -29,7 +30,8 @@ js/systems/brain.js        learning engine for computer managers, engine version
 js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
 js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
 js/ui/navigation.js        browser/in-game Back history, view restoration, root guard
-js/ui/screens-hub.js       Home, News, More, Fixtures, Table, Stats, Club, Settings
+js/ui/screens-hub.js       Dashboard, News, My Team, Facilities, More, Game Status,
+                           Fixtures, Table, Stats, Club, Settings
 js/ui/screens-squad.js     Squad (first team / reserves / U18s), player profile, Tactics, Training, Medical, Youth
 js/ui/screens-market.js    Transfers (search, shortlist, scouting, pitches, bids, history),
                            offers, contracts, Finances, Staff, Board
@@ -40,6 +42,10 @@ js/ui/screens-admin.js     Admin page: edit clubs and players, move time, tune t
 The scripts are classic `<script>` tags that share one global scope, so the load order in `index.html` matters. Core comes first, then engine, systems and UI.
 
 **Title menu.** Every launch opens the stadium artwork with Start Game and Options. Start Game resumes the loaded career, or opens manager/club setup when there is no save. Options sets match speed (also remembered for a new career) and links to game settings for existing careers. The title screen remains the root Back destination.
+
+**Main tabs.** Dashboard, News, My Team, Transfers, Facilities and More use two rows of three buttons. My Team groups Squad, Tactics, Fixtures, Training, Staff, Medical Center, Youth Academy, Stats and League Table. Facilities groups Finance, Board & Fans and Club. More contains Settings, Admin (when allowed) and Game Status. Child screens highlight their parent tab while Back retraces the actual visit order.
+
+**Game Status.** Shows the career, season results, club finances/squad/facilities, world/save details and `GAME_VERSION` from `data.js`. `G.playtime` persists visible in-game time and session counts; title/setup and background time are excluded. A 15-second checkpoint and visibility/page-exit saves preserve time. Existing careers begin tracking on this update, without inventing older playtime. The playful addiction label uses recorded time only; browser view history never restores the clock.
 
 ## 2. The game loop
 

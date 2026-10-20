@@ -107,11 +107,77 @@ ACT.bid = ds => {
   closeSheet(true); toast(msg); saveGame(); render();
 };
 
+function hubMenu(title, items) {
+  return `<h1 class="h1">${title}</h1><div class="grid2">${items.map(([s, n, d]) => `<button class="gcard" data-a="go" data-s="${s}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>`;
+}
+
+SCREENS.team = {
+  render() {
+    return hubMenu('My Team', [
+      ['squad', 'Squad', 'First team, reserves and under-18s'],
+      ['tactics', 'Tactics', 'Line-up, shape and instructions'],
+      ['fixtures', 'Fixtures', 'Your schedule and every round'],
+      ['training', 'Training', 'Team focus and individual development'],
+      ['staff', 'Staff', 'Coaches, scouts and physios'],
+      ['medical', 'Medical center', 'Injuries and fatigue'],
+      ['youth', 'Youth academy', 'Prospects and intake'],
+      ['stats', 'Stats', 'Goals, assists and ratings'],
+      ['table', 'League table', LEAGUE_NAME + ' standings'],
+    ]);
+  },
+};
+
+SCREENS.facilities = {
+  render() {
+    return hubMenu('Facilities', [
+      ['finance', 'Finance', 'Budgets, income and spending'],
+      ['board', 'Board & fans', 'Confidence, requests and upgrades'],
+      ['club', 'Club', 'Stadium, facilities, history and trophies'],
+    ]);
+  },
+};
+
 SCREENS.more = {
   render() {
-    const items = [['fixtures', 'Fixtures', 'Your schedule and every round'], ['table', 'League table', LEAGUE_NAME + ' standings'], ['stats', 'Stats leaders', 'Goals, assists, ratings'], ['medical', 'Medical centre', 'Injuries and fatigue'], ['youth', 'Youth academy', 'Prospects and intake'], ['staff', 'Staff', 'Coaches, scouts, physios'], ['board', 'Board & fans', 'Confidence and requests'], ['club', 'Club', 'Stadium, history, trophies'], ['settings', 'Settings', 'Save, speed, new game']];
+    const items = [['settings', 'Settings', 'Save, speed and new game']];
     if (adminAllowed()) items.push(['admin', 'Admin', 'Edit the game world and tune the engine']);
-    return `<h1 class="h1">Club menu</h1><div class="grid2">${items.map(([s, n, d]) => `<button class="gcard" data-a="go" data-s="${s}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>`;
+    items.push(['gamestatus', 'Game status', 'Your career, playtime and one-more-match level']);
+    return hubMenu('More', items);
+  },
+};
+
+SCREENS.gamestatus = {
+  render() {
+    const c = userClub(), squad = c.squad.map(id => G.players[id]).filter(Boolean);
+    const table = leagueTable(), pos = table.findIndex(r => r.id === G.club), row = table[pos];
+    const kv = pairs => `<div class="kv">${pairs.map(([label, value]) => `<div><small>${esc(label)}</small><b>${esc(value)}</b></div>`).join('')}</div>`;
+    const realDate = value => value ? new Date(value).toLocaleString() : 'Not recorded';
+    const time = G.playtime;
+    return `<h1 class="h1">Game status</h1>
+      <div class="card"><h3>Your time on the touchline</h3>
+        <div class="kv"><div><small>Active time played</small><b id="game-playtime">${playtimeLabel(time.ms)}</b></div><div><small>Play sessions</small><b>${time.sessions}</b></div></div>
+        <p class="muted">Addiction level · just for fun</p><h3 id="game-addiction">${addictionLabel(time.ms)}</h3>
+        <p class="muted">Counts while this game is visible, excluding the title screen. Tracking began ${esc(realDate(time.trackedFrom))}.${time.legacy ? ' Earlier playtime in this save is not included.' : ''}</p>
+      </div>
+      <div class="card"><h3>Current career</h3>${kv([
+        ['Manager', G.manager], ['Club', c.name], ['Season', seasonLabel()], ['Game date', fmtDate(today())],
+        ['Phase', phaseLabel()], ['Completed seasons', G.history.length], ['Trophies', G.trophies.length], ['Career started', realDate(G.createdAt)],
+      ])}</div>
+      <div class="card"><h3>This season</h3>${kv([
+        ['League position', row.p ? ordinal(pos + 1) : 'Pre-season'], ['Points', row.pts], ['Played', row.p], ['Won / drawn / lost', `${row.w} / ${row.d} / ${row.l}`],
+        ['Goals for / against', `${row.gf} / ${row.ga}`], ['Remaining club fixtures', G.fixtures.filter(f => (f.h === G.club || f.a === G.club) && !played(f)).length],
+      ])}</div>
+      <div class="card"><h3>Club snapshot</h3>${kv([
+        ['First team / reserves / U18s', ['A', 'R', 'Y'].map(l => squad.filter(p => lvlOf(p) === l).length).join(' / ')],
+        ['Injured players', squad.filter(p => p.inj).length], ['Staff', G.staff.length], ['Club balance', money(c.bal)],
+        ['Transfer budget', money(G.fin.tb)], ['Weekly wage budget', money(G.fin.wb)], ['Board confidence', Math.round(G.board.conf) + '%'], ['Fan confidence', Math.round(G.board.fans) + '%'],
+        ['Training / youth facilities', `Level ${G.board.facTrain} / ${G.board.facYouth}`], ['Transfer history entries', G.tHist.length],
+      ])}</div>
+      <div class="card"><h3>Game & save</h3>${kv([
+        ['Game version', GAME_VERSION], ['Save format', G.v], ['Last saved', realDate(G.savedAt)],
+        ['World clubs', Object.keys(G.clubs).length], ['World players', Object.keys(G.players).length], ['News / scout reports', `${G.news.length} / ${G.scout.reports.length}`],
+        ['Match speed', G.settings.speed + 'x'], ['Career status', G.gameOver ? 'Ended' : 'In progress'],
+      ])}<p class="muted">This career is stored in this browser. Export a backup from Settings.</p><button class="btn" data-a="go" data-s="settings">Save & backup settings</button></div>`;
   },
 };
 
@@ -191,7 +257,7 @@ SCREENS.settings = {
 ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to Manager ' + ds.v + '.'); render(); };
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
 ACT.saveNow = () => toast(saveGame() ? 'Game saved.' : 'Saving failed. Browser storage is blocked here, so export your save instead.');
-ACT.exportSave = () => { UI.tab.export = btoa(unescape(encodeURIComponent(JSON.stringify(G)))); render(); };
+ACT.exportSave = () => { syncPlaytime(); UI.tab.export = btoa(unescape(encodeURIComponent(JSON.stringify(G)))); render(); };
 ACT.copySave = () => {
   const box = document.getElementById('saveBox');
   navigator.clipboard.writeText(box.value).then(() => toast('Save copied.'), () => { box.select(); toast('Select the text and copy it manually.'); });

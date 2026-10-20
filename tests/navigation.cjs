@@ -37,7 +37,8 @@ const assert = require('node:assert/strict');
     check('Root guard preserves URL', page.url(), base + '/');
 
     await page.locator('[data-a="titleStart"]').click();
-    await page.locator('.tabs2 [data-s="squad"]').click();
+    await page.locator('.tabs2 [data-s="team"]').click();
+    await page.locator('.main [data-s="squad"]').click();
     await page.locator('[data-a="sqL"][data-v="R"]').click();
     await page.locator('[data-a="sqF"][data-v="GK"]').click();
     await back();

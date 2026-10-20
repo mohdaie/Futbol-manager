@@ -8,7 +8,11 @@ const SCREENS = {};  // name -> { render(p) -> html, after?(p), full?: bool, tit
 const ACT = {};      // click actions: ACT[name](dataset, el)
 const CHG = {};      // change actions: CHG[name](value, dataset, el)
 
-const NAV = [['home', 'Dashboard'], ['squad', 'Squad'], ['tactics', 'Tactics'], ['training', 'Training'], ['news', 'News'], ['transfers', 'Transfers'], ['finance', 'Finance'], ['more', 'More']];
+const NAV = [['home', 'Dashboard'], ['news', 'News'], ['team', 'My Team'], ['transfers', 'Transfers'], ['facilities', 'Facilities'], ['more', 'More']];
+const NAV_GROUPS = {
+  team: ['squad', 'tactics', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'prematch', 'match', 'post'],
+  facilities: ['finance', 'board', 'club'],
+};
 const ICON = {
   back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
   ball: '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#fff"/><path d="M20 11.5l7 5-2.7 8.2h-8.6L13 16.5z" fill="#22082F"/><path d="M20 2.2v9.3M27 16.5l8.6-3M24.3 24.7l5.4 7.6M15.7 24.7l-5.4 7.6M13 16.5l-8.6-3" stroke="#22082F" stroke-width="2"/><path d="M11 3.6l2.2 4.8M29 3.6l-2.2 4.8M37.9 21l-4.7 2.6M2.1 21l4.7 2.6M17 37.8l3-4.3 3 4.3" stroke="#22082F" stroke-width="2" fill="none"/></svg>',
@@ -28,6 +32,7 @@ function go(s, p = {}) {
 }
 
 function render(reset) {
+  syncPlaytime();
   const root = document.getElementById('app');
   const main = root.querySelector('.main');
   const keep = !reset && main ? main.scrollTop : 0;
@@ -48,7 +53,7 @@ function render(reset) {
 function shell(body) {
   const c = userClub(), unread = G.news.filter(n => !n.read).length, reports = G.scout.reports.length;
   const fx = userFixture(), matchNow = fx && !played(fx);
-  const cur = NAV.some(n => n[0] === UI.s) ? UI.s : 'more';
+  const cur = NAV.some(n => n[0] === UI.s) ? UI.s : Object.keys(NAV_GROUPS).find(k => NAV_GROUPS[k].includes(UI.s)) || 'more';
   return `<div class="app">
     <header class="top">
       <button class="iconbtn" data-a="back" aria-label="Back">${ICON.back}</button>
