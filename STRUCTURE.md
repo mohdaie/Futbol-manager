@@ -1,0 +1,186 @@
+# Futbol Manager: game structure
+
+A browser football manager built for a phone held in portrait. Plain HTML, CSS and JavaScript with no build step and no libraries. To play it, open `index.html` from any static web server, or use the published artifact.
+
+## 1. File map
+
+```
+index.html                 page shell; loads the CSS and every script in order
+css/game.css               all styling (design tokens are at the top)
+js/core/util.js            random numbers, maths, money/date formatting
+js/core/data.js            STATIC DATA: clubs, nations, names, attributes, formations,
+                           roles, instructions, training, press questions, talks, shouts
+js/core/players.js         player generation, ratings, position fit, value, wages
+js/core/state.js           the game state object G, new-game world build, save/load,
+                           news, auto-pick, squad helpers
+js/core/calendar.js        weeks and dates, fixture generator, transfer windows, league table
+js/engine/match.js         match simulation (minute by minute), subs, AI manager, results
+js/engine/live.js          2D canvas match: dots, ball, commentary, team talks, shouts
+js/systems/training.js     weekly training, development and decline, injuries, recovery
+js/systems/finance.js      weekly income and costs, moving money between budgets
+js/systems/scouting.js     knowledge and fog of war, scout assignments, reports
+js/systems/transfers.js    bids, contracts, sales, releases, AI market, agent pitches
+js/systems/ai.js           Jev and DeepSeek clients: settings, calls, budget guard, usage and cost tracking
+js/systems/brain.js        learning engine for computer managers, engine versions, DeepSeek press library
+js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
+js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
+js/ui/screens-hub.js       Home, News, More, Fixtures, Table, Stats, Club, Settings
+js/ui/screens-squad.js     Squad, player profile, Tactics, Training, Medical, Youth
+js/ui/screens-market.js    Transfers (search, shortlist, scouting, pitches, bids, history),
+                           offers, contracts, Finances, Staff, Board
+js/ui/screens-match.js     Start, Pre-match, Live match, Match report, Season review, Sacked
+js/ui/screens-admin.js     Admin page: edit clubs and players, move time, tune the engine, maintenance
+```
+
+The scripts are classic `<script>` tags that share one global scope, so the load order in `index.html` matters. Core comes first, then engine, systems and UI.
+
+## 2. The game loop
+
+One press of **Continue** moves the game on one week.
+
+```
+Continue
+ ├─ your match this week not played yet? → Pre-match screen
+ │     press conference → Kick off (live 2D) or Instant result
+ │     full time → finishMatch() → finishRound() sims the other 9 games → Match report
+ └─ otherwise advanceWeek():
+       sim any unplayed fixtures this week
+       weeklyTraining   condition, sharpness, development, familiarity, training injuries
+       weeklyMedical    injury countdown
+       weeklyFinance    sponsorship, merchandise, wages, staff, running costs, scouting
+       weeklyScouting   assignments file graded reports
+       weeklyTransfers  AI-to-AI deals, bids for your players, agent pitches, squad refills
+       weeklyContracts  inbox reminders for expiring deals
+       monthly          Player and Manager of the Month
+       youthIntake      new academy players each March
+       board check      sacked if confidence drops below 10
+       week++ → after week 48: seasonEnd() → review screen → rollover()
+```
+
+The season runs 5 pre-season weeks, then 38 league rounds with 4 international breaks, then 2 off-season weeks. The summer window is open in pre-season through 1 September and again in the off-season. The January window runs from 1 January to 2 February.
+
+## 3. Game state (`G`)
+
+Everything lives in one JSON-safe object, saved to `localStorage` after each week and each match.
+
+| Key | What it holds |
+|---|---|
+| `club`, `manager`, `season`, `week` | who you are and when it is |
+| `players{id}` | every player: attributes `at[22]`, `ca` (current rating), `pa` (potential), age, position plus alternates, contract, wage, morale, condition, sharpness, injury, ban, season and career stats |
+| `clubs{id}` | 20 league clubs, 13 clubs abroad and a free-agent pool; squad IDs, balance, AI tactic, reputation |
+| `fixtures[]` | 380 fixtures: round, week, teams, score, scorers, and for your games also stats and ratings |
+| `tactics` | your in-possession shape, out-of-possession shape, XI, roles, bench, instructions, set-piece takers |
+| `training` | weekly focus, intensity, tactical familiarity, individual focus per player |
+| `fin`, `ledger`, `balHist` | transfer and wage budgets, season income and costs, weekly balance trend |
+| `board` | board confidence, fan confidence, objective, facility levels |
+| `staff`, `staffPool` | your staff and the people available to hire |
+| `know{pid}` | scouting knowledge (0-100) per player; controls attribute ranges |
+| `scout`, `shortlist`, `pitches` | assignments and reports, tracked players, agent offers |
+| `news[]` | the news feed and inbox; items can carry actions (accept a bid, renew a contract) |
+| `history`, `trophies` | past seasons and awards |
+
+## 4. Systems in brief
+
+**Players.** Attributes use the classic 1-20 scale across technical, mental, physical and goalkeeping groups. Each position weights the attributes differently (`WEIGHTS` in data.js) to produce a rating out of 100. Position fit ranges from natural (1.0) through alternate positions (0.97) to badly out of position (0.6, or 0.3 for an outfield player in goal).
+
+**Match engine.** Each side gets attack, midfield and defence values plus a goalkeeper value. Attack and midfield come from the in-possession shape, defence from the out-of-possession shape. Every minute it rolls possession from midfield strength, then a shot from attack against defence, then fouls and injuries. Shots carry an xG value and convert based on finishing, composure and the keeper. Fatigue, morale, sharpness, roles, mentality, tempo, width, passing, pressing, line height, home advantage, red cards, shouts and team talks all feed in. It is calibrated to about 2.7 goals, 13 shots per team and 23% draws per game. The tuning numbers sit at the top of `shotChance()` and `shoot()`.
+
+**Live 2D match.** The canvas pitch is portrait, with your team always attacking upward. Players move between their two shapes depending on who has the ball, and the block shifts with the ball. The engine only steps forward once the ball animation for the last minute has finished, so the pictures and the commentary stay in sync. Speeds are 1x, 2x and 4x, plus Skip.
+
+**Scouting fog of war.** Players at other clubs show attribute ranges, and the ranges narrow as `know` rises. League players start at 45% known, players abroad at 10%. Assignments filter by region, position and age, and each report gets a grade from A to D relative to your current starter.
+
+**Transfers.** The selling club accepts a bid at its asking price or above, makes a counter offer from 75% of it, and rejects anything lower. The player can refuse to talk if your club is too small. Personal terms depend on wage, contract length and the squad status you promise, and every deal is checked against the wage budget. Half of each sale fee goes back into your transfer budget.
+
+**Finance.** Income comes from TV money per match, gate receipts at home, weekly sponsorship and merchandise, player sales and end-of-season prize money. Costs are wages, staff, running costs, scouting and transfer fees. Every £1k a week of wage budget converts to £100k of transfer budget.
+
+**Board.** Confidence moves after every result relative to expectation, and again at season end against the objective. You are sacked when confidence falls below 10, or after finishing more than 5 places below target with confidence under 35. When sacked, you get job offers from smaller clubs.
+
+## 5. Admin page
+
+Open it from **More → Admin**. Every change applies to the current save immediately.
+
+| Tab | What it does |
+|---|---|
+| Overview | Save statistics (season, week, player count, save size) and the manager's name |
+| Clubs | Any club's nickname, city, stadium, capacity, colours, reputation, balance and computer tactic. For your club, also the budgets, board and fan confidence, and facility levels. You can switch which club you manage. |
+| Players | Search every player. Edit names, position, nationality, age, potential, morale, condition, sharpness, wage, contract, personality and all 22 attributes. Move a player to another club, heal them, delete them, or create a new player for your club. |
+| Time | Move forward 1, 4 or 10 weeks, or to the end of the season (your matches are played instantly), or play this week's match instantly |
+| Engine | Sliders for the engine constants (`TUNE_DEFAULTS` in data.js, saved per game in `G.tune`). **Run test season** plays all 380 matches on a copy of the save and reports goals per game, home/draw/away split, shots, xG, cards, top scorer and the points range. |
+| AI Brain | The learning engine: mode for real matches, training camp, what it has learned, engine versions (test, approve, roll back), the DeepSeek press question library, recent decisions. |
+| Jev AI | Connection settings for TypeSafe Jev: on/off, direct key or proxy URL, model, timeout, monthly budget, which features it will drive, a **Test connection** button, this month's calls/tokens/cost and a call log. |
+| DeepSeek | The same for DeepSeek, plus base URL, max reply length, temperature and thinking mode. |
+| Data | Squad fixes (heal injuries, clear bans, full condition, morale, sharpness, add academy players), money, reveal every player, add free agents, news clean-up, delete save |
+
+**AI services:** settings are stored under their own browser key (`futbol-manager:ai`), never inside the game save, so an exported save never contains an API key. `jevAsk(state, questions)` and `dsChat(messages)` in `ai.js` are the two functions game features will call. Recommended picks: **jev-latest** ($0.042 per 1M input tokens, output free) and **deepseek-flash with thinking off** ($0.15-0.30 per 1M input, $0.60-1.20 per 1M output). A full season costs well under $1 for both together. DeepSeek accepts direct browser calls. Jev does not, so it needs a proxy, and a proxy is the right setup for real players anyway because it keeps the key off their devices.
+
+**Access control:** `adminAllowed()` at the top of `screens-admin.js` returns `true` for everyone. To restrict the page later, make it return `true` only after your own check. It hides both the More menu entry and the page. Because the game runs entirely in the browser, a check in this file only hides the page. Real protection needs a server login (for example Supabase Auth) and server-side saves.
+
+## 6. AI Brain (learning engine)
+
+Computer managers make a tactical decision at half-time and at 60, 70 and 80 minutes. They choose from five options: **attack, hold, defend, press, fresh legs** (`MGR_OPTIONS` in brain.js). The loop runs entirely on this device; there is no central logging.
+
+1. **Record.** Every decision is logged with its situation, choice and source (Jev, DeepSeek, learned engine, rules or exploring). A situation is a bucket made of the minute, the score, relative strength, fatigue and red cards, giving 360 possible buckets.
+2. **Judge.** At full time each decision gets a score: goal difference gained after it, plus 1.5 × points gained compared with the score at that moment.
+3. **Learn.** The draft table stores, for each bucket and option, the count, total outcome and how often a teacher picked it. Option value = average outcome, shrunk toward zero when there is little data, plus a small bonus for teacher picks.
+4. **Test.** A head-to-head plays the draft against the engine in use, each pairing twice with the sides swapped, and reports points per game.
+5. **Release.** Approving saves the draft as a version, which also stores the Engine tab's tuning, and puts it in use. Rolling back is one tap.
+
+**Modes for real matches:**
+
+| Mode | What happens |
+|---|---|
+| Rules | The original fixed rules |
+| Learned | The approved version, which falls back to the rules in situations it hasn't seen enough |
+| Hybrid | Asks the AI only when the approved version doesn't know the situation |
+| Teacher | Asks the AI at every decision |
+
+**When the AI is asked:** only in your live matches and in the training camp. It answers in the background and the match keeps playing. Background and instant results never wait for the AI.
+
+**Teachers:** Jev chooses the option. If Jev's confidence is below the threshold (default 60%) and DeepSeek's second opinion is switched on, DeepSeek's choice is used instead, and disagreements are counted.
+
+**Training camp:** plays simulated computer-vs-computer matches that never touch your career. With no teacher it explores random options at a set rate (default 30%), so learning works offline from outcomes alone.
+
+**Press library:** DeepSeek writes press questions with three answers and their effects, clamped to −3 to +3. Once you approve them, they join the built-in questions and are used offline.
+
+Brain data uses its own browser key (`futbol-manager:brain`) and is kept across careers. The decision log holds up to 2,000 entries, while the learned table keeps everything.
+
+## 7. How the FM26 features map to this game
+
+| Feature | Status |
+|---|---|
+| Separate in-possession and out-of-possession formations | Done: both shapes affect the engine, with a visualiser toggle on the tactics pitch |
+| Player roles | Done: 3 to 5 per position, each with an attack, midfield or defence lean |
+| Team instructions | Done: mentality, tempo, width, passing, pressing, defensive line |
+| Tile and card interface | Done: home dashboard tiles, card lists, bottom sheets |
+| Recruitment tools in the spirit of TransferRoom | Done: agent pitches aimed at your weakest position |
+| Touchline shouts (returned in Update 4) | Done: 5 shouts, each lasting 10 minutes |
+| Matchday presentation | Done: 2D pitch, score bug, possession bar, commentary, goal and card overlays |
+| Scouting with fog of war | Done |
+| Player search | Done: position, region, age, value, rating and name filters |
+| Press conferences, team talks, player talks | Done |
+| Board and fan confidence, board requests | Done: funds, training facilities, youth facilities |
+| Staff hiring | Done: assistant, coaches, scouts, physios, analyst |
+| Youth academy and intake | Done |
+| Medical centre | Done |
+| Monthly and season awards | Done |
+| Women's football | Not done |
+
+## 8. Roadmap: good next steps
+
+1. **Cup competitions.** Add a domestic knockout cup and a European competition for the top-four clubs. Fixtures already carry a round and week, so add a `comp` field.
+2. **Promotion and relegation.** Add a second division generated the same way as the top flight. The bottom three are already highlighted in the table.
+3. **Loans.** Use the same flow as transfers with a `loan` flag, a return date and wage sharing.
+4. **Player promises and dynamics.** `p.promise` is already stored. Check it after 8 weeks and add squad hierarchy and happiness events.
+5. **Set-piece routines and opposition instructions.**
+6. **Match highlights mode** that only animates key chances.
+7. **Data hub.** Charts of xG trends, player heatmaps and passing networks.
+8. **Cloud save** and a PWA manifest so it installs to the home screen.
+
+## 9. Making changes
+
+- **Rename clubs or recolour them:** edit `CLUBS` in `data.js` (`name`, `c1`, `c2`, `rep`, `ground`).
+- **Add a formation:** add 11 `[pos, x, y]` slots to `FORMATIONS`, with the GK first and y = 1 at your own goal line.
+- **Add a role:** append to `ROLES[pos]` with `a`, `m`, `d` (unit leans) and `s` (shot share).
+- **Rebalance the engine:** change `shotChance()` and `shoot()` in `match.js`, then run a season with `quickSim` over `G.fixtures` and check goals per game.
+- **Add a screen:** register `SCREENS.name = { render(p) { return html; } }` and add click handlers to `ACT`. Link to it with `data-a="go" data-s="name"`.
+- **Change money:** `wageFor()` and `pValue()` in players.js, `sponsorWeekly()` and `opsWeekly()` in finance.js, and gate and TV money in `finishMatch()`.

@@ -1,0 +1,193 @@
+'use strict';
+/* ===== season.js =====
+   The weekly turn, monthly awards, youth intake, board requests,
+   end-of-season review, rollover and the sack. */
+
+// Returns 'match' when the user must play first, 'season' at season end, otherwise 'ok'.
+function advanceWeek() {
+  const fx = userFixture();
+  if (fx && !played(fx)) return 'match';
+  G.fixtures.filter(f => f.w === G.week && !played(f)).forEach(f => quickSim(f));
+  const pw = new Set(G.flags.pw || []);
+  G.flags.pw = [];
+  weeklyTraining(pw);
+  weeklyMedical();
+  weeklyFinance();
+  weeklyScouting();
+  weeklyTransfers();
+  weeklyContracts();
+  monthly();
+  youthIntake();
+  if (G.week % 6 === 5) G.staffPool = genStaffPool(userClub().rep);
+  if (G.board.conf < 10 && G.week > 12) { sack('The board has lost confidence after a run of poor results.'); return 'sacked'; }
+  G.week++;
+  if (G.week >= SEASON_WEEKS) { seasonEnd(); return G.gameOver ? 'sacked' : 'season'; }
+  const nx = userFixture();
+  if (nx && !G.press[nx.id]) G.press[nx.id] = { Q: pickPress(), done: false };
+  saveGame();
+  return 'ok';
+}
+
+// After the user's match: play the rest of the round so the table is current.
+function finishRound() {
+  G.fixtures.filter(f => f.w === G.week && !played(f)).forEach(f => quickSim(f));
+  saveGame();
+}
+
+function monthly() {
+  const d0 = weekDate(G.week), d1 = weekDate(G.week + 1);
+  if (d0.getMonth() === d1.getMonth()) return;
+  const snap = G.flags.snap || {};
+  const pl = Object.values(G.players).filter(p => G.clubs[p.club] && G.clubs[p.club].pl);
+  if (G.week > PRESEASON_WEEKS + 2 && G.week < SEASON_WEEKS - 2) {
+    let best = null, bv = 0;
+    pl.forEach(p => {
+      const s = snap[p.id] || [0, 0, 0];
+      const a = p.st.a - s[0];
+      if (a < 2) return;
+      const v = (p.st.rt - s[1]) / a + (p.st.g - s[2]) * 0.15;
+      if (v > bv) { bv = v; best = p; }
+    });
+    if (best) {
+      addNews('league', `${MONTHS[d0.getMonth()]} Player of the Month`, `${fullName(best)} of the ${clubName(best.club)} wins the award.`);
+      if (best.club === G.club) best.mor = clamp(best.mor + 10, 0, 100);
+    }
+    const t0 = d0.getTime() - 35 * 864e5;
+    const pts = {};
+    G.fixtures.filter(f => played(f) && weekDate(f.w).getTime() > t0 && f.w <= G.week).forEach(f => {
+      pts[f.h] = (pts[f.h] || 0) + (f.hg > f.ag ? 3 : f.hg === f.ag ? 1 : 0);
+      pts[f.a] = (pts[f.a] || 0) + (f.ag > f.hg ? 3 : f.hg === f.ag ? 1 : 0);
+    });
+    const top = Object.entries(pts).sort((a, b) => b[1] - a[1])[0];
+    if (top) {
+      const mine = top[0] === G.club;
+      addNews('league', `${MONTHS[d0.getMonth()]} Manager of the Month`, mine ? `${G.manager} wins the award after ${top[1]} points from the month.` : `The ${clubName(top[0])} manager collects the award after ${top[1]} points.`);
+      if (mine) { G.board.conf = clamp(G.board.conf + 3, 0, 100); G.trophies.push({ season: seasonLabel(), name: MONTHS[d0.getMonth()] + ' Manager of the Month' }); }
+    }
+  }
+  G.flags.snap = {};
+  pl.forEach(p => { G.flags.snap[p.id] = [p.st.a, p.st.rt, p.st.g]; });
+}
+
+function youthIntake() {
+  const d = weekDate(G.week);
+  if (G.flags.intake || d.getMonth() !== 2 || d.getDate() < 15) return;
+  G.flags.intake = true;
+  const c = userClub(), n = ri(4, 7), q = 52 + G.board.facYouth * 1.7 + (c.rep - 70) / 4;
+  const names = [];
+  for (let i = 0; i < n; i++) names.push(genYouth(c, q));
+  const star = names.slice().sort((a, b) => b.pa - a.pa)[0];
+  addNews('club', 'Youth intake arrives', `${n} new players join the academy. Head of youth development highlights ${fullName(star)} (${star.pos}) as the pick of the group.`);
+}
+
+function boardRequest(kind) {
+  const c = userClub(), B = G.board, key = kind + ':' + G.season + ':' + windowState().label;
+  if (G.flags['req_' + key]) return 'You have already asked the board about this recently.';
+  G.flags['req_' + key] = true;
+  if (kind === 'funds') {
+    if (!inWindow()) return 'The board only reviews budgets while a transfer window is open.';
+    if (B.conf >= 55 && c.bal > G.fin.tb * 1.5 && R() < 0.65) { const add = roundMoney(c.bal * 0.08); G.fin.tb += add; return `The board approves an extra ${money(add)} for transfers.`; }
+    B.conf = Math.max(0, B.conf - 2);
+    return 'The board declines. They want to see better results first.';
+  }
+  const lvl = kind === 'train' ? B.facTrain : B.facYouth;
+  if (lvl >= 20) return 'Facilities are already at the highest level.';
+  const cost = roundMoney(3e6 + lvl * 0.8e6);
+  if (B.conf < 50 || c.bal < cost * 2) { B.conf = Math.max(0, B.conf - 1); return `The board declines. An upgrade costs ${money(cost)} and they want more confidence and cash first.`; }
+  c.bal -= cost; G.ledger.ops += cost;
+  if (kind === 'train') B.facTrain++; else B.facYouth++;
+  return `Approved. ${money(cost)} invested; ${kind === 'train' ? 'training' : 'youth'} facilities rise to level ${lvl + 1}.`;
+}
+
+function seasonEnd() {
+  const table = leagueTable(), c = userClub();
+  const pos = table.findIndex(r => r.id === G.club) + 1, me = table[pos - 1];
+  table.forEach((r, i) => { const prize = (20 - i) * 1.5e6; G.clubs[r.id].bal += prize; if (r.id === G.club) G.ledger.prize += prize; });
+  const pl = Object.values(G.players).filter(p => G.clubs[p.club] && G.clubs[p.club].pl);
+  const top = (arr, f) => arr.slice().sort((a, b) => f(b) - f(a))[0];
+  const boot = top(pl, p => p.st.g + p.st.as * 0.01);
+  const best = top(pl.filter(p => p.st.a >= 15), avgRating);
+  const young = top(pl.filter(p => p.st.a >= 10 && p.age <= 21), avgRating);
+  const aw = p => (p ? { name: fullName(p), club: p.club, v: p.st.g, r: avgRating(p).toFixed(2) } : null);
+  const target = G.board.target.pos;
+  G.board.conf = clamp(G.board.conf + (target - pos) * 4, 0, 100);
+  const verdict = pos <= target - 3 ? 'The board is delighted. You beat expectations by a distance.' : pos <= target ? 'The board is pleased. You met your objective.' : pos <= target + 3 ? 'The board is disappointed to miss the objective but will keep faith.' : 'The board is unhappy with the season.';
+  const review = { season: seasonLabel(), pos, pts: me.pts, champ: table[0].id, boot: aw(boot), best: aw(best), young: aw(young), verdict, target: G.board.target.text, ledger: { ...G.ledger }, relegated: table.slice(17).map(r => r.id) };
+  G.history.unshift({ season: seasonLabel(), champ: table[0].id, pos, pts: me.pts, club: G.club, boot: review.boot && review.boot.name + ' (' + review.boot.v + ')' });
+  if (table[0].id === G.club) G.trophies.push({ season: seasonLabel(), name: LEAGUE_NAME + ' champions' });
+  // Relegation is not modelled yet: all 20 clubs stay up. Reputation follows results instead.
+  const repOrder = plClubs().slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
+  table.forEach((r, i) => { const cl = G.clubs[r.id]; cl.rep = clamp(Math.round((cl.rep + (repOrder.indexOf(r.id) - i) * 0.4) * 10) / 10, 55, 95); });
+  G.seasonReview = review;
+  if ((pos > target + 5 && G.board.conf < 35) || G.board.conf < 10) { sack(`A ${ordinal(pos)}-place finish against a target of ${G.board.target.text.toLowerCase()} has cost you your job.`); }
+  rollover();
+}
+
+function retire(p) {
+  removeFromClub(p);
+  delete G.players[p.id]; delete G.know[p.id];
+  G.shortlist = G.shortlist.filter(id => id !== p.id);
+  G.pitches = G.pitches.filter(x => x.pid !== p.id);
+  G.scout.reports = G.scout.reports.filter(r => r.pid !== p.id);
+}
+
+function rollover() {
+  const S = G.season, c = userClub(), left = [];
+  Object.values(G.players).forEach(p => {
+    const cl = G.clubs[p.club];
+    p.prev = { ...p.st, season: seasonLabel() };
+    p.st = newStats(); p.ban = 0; p.age++;
+    if (!cl || cl.fa) return;
+    if (p.con <= S + 1) {
+      if (p.club === G.club) {
+        if (p.youth) p.con = S + 3;
+        else { moveClub(p, 'FA'); p.con = 0; left.push(fullName(p)); }
+      } else if (R() < 0.7) p.con = S + 1 + ri(1, 3);
+      else { moveClub(p, 'FA'); p.con = 0; }
+    }
+  });
+  const retired = [];
+  Object.values(G.players).forEach(p => {
+    if (p.age >= 38 || (p.age >= 35 && R() < 0.6) || (p.age >= 33 && p.ca < 62 && R() < 0.4)) {
+      if (p.ca >= 76 || p.club === G.club) retired.push(fullName(p));
+      retire(p);
+    }
+  });
+  squadOf(G.club).filter(p => p.youth && p.age >= 19).forEach(p => { p.youth = false; p.status = 'Prospect'; p.wage = Math.max(p.wage, 2000); });
+  Object.values(G.clubs).filter(x => x.foreign && !x.fa).forEach(x => {
+    while (x.squad.length < 16) { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (x.rep - 50) * 0.6 - rf(0, 8), pa: 0, age: ri(17, 24), nat: R() < 0.75 ? x.nat : pickNat(PL_NATS), club: x.id }); p.pa = clamp(p.ca + ri(3, 18), p.ca, 95); addToClub(p, x); G.know[p.id] = 10; }
+  });
+  G.season++; G.week = 0;
+  G.fixtures = genFixtures(plClubs());
+  G.press = {};
+  G.flags = {};
+  weeklyTransfers();
+  if (!G.gameOver) {
+    G.board.target = expectationFor(G.club);
+    G.fin.tb = roundMoney(Math.max(5e6, c.bal * 0.3));
+    G.fin.wb = roundWage(Math.max(clubWageBill(c) * 1.1, G.fin.wb));
+  }
+  G.ledgerPrev = G.ledger; G.ledger = emptyLedger();
+  G.pitches = [];
+  addNews('club', `${seasonLabel()} season begins`, `Board objective: ${G.board.target.text.toLowerCase()}. Transfer budget: ${money(G.fin.tb)}.` + (left.length ? ` Out of contract and gone: ${left.join(', ')}.` : ''));
+  if (retired.length) addNews('league', 'Retirements', retired.join(', ') + ' have hung up their boots.');
+  saveGame();
+}
+
+function sack(reason) {
+  const me = userClub().rep;
+  const offers = plClubs().filter(id => id !== G.club && G.clubs[id].rep < me).sort(() => R() - 0.5).slice(0, 3);
+  if (!offers.length) offers.push(plClubs().filter(id => id !== G.club).sort((a, b) => G.clubs[a].rep - G.clubs[b].rep)[0]);
+  G.gameOver = { reason, offers, club: G.club };
+  saveGame();
+}
+
+function takeJob(cid) {
+  const old = G.club;
+  G.club = cid;
+  G.gameOver = null;
+  setupUserClub();
+  G.board.conf = 60;
+  addNews('club', `${G.manager} takes over at the ${clubName(cid)}`, `After leaving the ${clubName(old)}, ${G.manager} gets a fresh start. Objective: ${G.board.target.text.toLowerCase()}.`);
+  saveGame();
+}
