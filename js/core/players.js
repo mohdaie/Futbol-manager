@@ -22,8 +22,10 @@ function fam(p, pos) {
 }
 
 const ovrAt = (p, pos) => (pos === p.pos ? p.ca : Math.round(ratingFor(p.at, pos) * fam(p, pos)));
-const pname = p => (p ? p.fn[0] + '. ' + p.ln : 'Unknown');
-const fullName = p => (p ? p.fn + ' ' + p.ln : 'Unknown');
+const pname = p => (!p ? 'Unknown' : p.fn ? p.fn[0] + '. ' + p.ln : p.ln);
+const fullName = p => (!p ? 'Unknown' : p.fn ? p.fn + ' ' + p.ln : p.ln);
+// Squad level: A first team, R reserves, Y U18s (older saves used a youth flag).
+const lvlOf = p => p.lvl || (p.youth ? 'Y' : 'A');
 const newStats = () => ({ a: 0, g: 0, as: 0, rt: 0, mom: 0, yc: 0, rc: 0, cs: 0 });
 const avgRating = p => (p.st.a ? p.st.rt / p.st.a : 0);
 
@@ -61,9 +63,37 @@ function genPlayer(o) {
     at, ca: ratingFor(at, pos), pa: 0, club: o.club || 'FA', no: 0, wage: 0, con: 0,
     mor: ri(55, 80), cond: 100, shp: ri(55, 75), inj: null, ban: 0,
     foot: R() < left ? 'Left' : 'Right', pers: pick(PERSONALITIES),
-    st: newStats(), car: { a: 0, g: 0 }, status: '', listed: false, youth: !!o.youth, prev: null,
+    st: newStats(), car: { a: 0, g: 0 }, status: (o.lvl || (o.youth ? 'Y' : 'A')) === 'A' ? '' : 'Prospect', listed: false, lvl: o.lvl || (o.youth ? 'Y' : 'A'), prev: null,
   };
   p.pa = clamp(Math.round(o.pa ?? p.ca), p.ca, 97);
+  return p;
+}
+
+// Starting rating and potential from a real market value (EUR millions) and age.
+// Young players' value is mostly potential, veterans' value is discounted by age.
+function ratingFromValue(v, age, lvl) {
+  if (v > 0) {
+    const base = 63 + 4.2 * Math.log2(v);
+    const ca = clamp(base - (age <= 23 ? (24 - age) * 1.8 : 0) + (age >= 30 ? (age - 29) * 2.2 : 0) + gauss() * 1.2, 38, 93);
+    const pa = age <= 23 ? Math.max(ca + 2, base + (24 - age) * 0.8 + rf(0, 4)) : ca + (age <= 26 ? rf(0, 3) : 0);
+    return [ca, clamp(pa, ca, 96)];
+  }
+  if (lvl === 'Y') { const ca = clamp(36 + (age - 15) * 3.5 + gauss() * 3, 28, 58); return [ca, clamp(56 + gauss() * 9, ca + 5, 92)]; }
+  if (lvl === 'R') { const ca = clamp(46 + (age - 17) * 2.5 + gauss() * 3, 38, 66); return [ca, clamp(ca + rf(5, 20), ca, 90)]; }
+  const ca = clamp(56 + gauss() * 3, 46, 66);
+  return [ca, ca + (age <= 23 ? rf(3, 10) : 0)];
+}
+
+// A player from a ROSTERS row: [level, name, position, age, nation, foot, contract, value]
+function playerFromRoster(row, club) {
+  const [lvl, name, pos, age, nat, foot, con, val] = row;
+  const [ca, pa] = ratingFromValue(val, age, lvl);
+  const p = genPlayer({ pos, ca, pa, age, nat, club, lvl });
+  const parts = name.split(' ');
+  p.fn = parts.length > 1 ? parts[0] : '';
+  p.ln = parts.length > 1 ? parts.slice(1).join(' ') : name;
+  p.foot = foot === 'L' ? 'Left' : foot === 'B' ? 'Either' : 'Right';
+  p.con = con >= START_SEASON + 1 ? con : START_SEASON + (lvl === 'A' ? ri(1, 3) : ri(1, 2));
   return p;
 }
 

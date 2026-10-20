@@ -75,6 +75,25 @@ const NATIONS = {
   MAS: { n: 'Malaysia', r: 'Asia', f: ['Aiman', 'Haziq', 'Faisal', 'Arif', 'Syafiq', 'Danial', 'Akhyar', 'Luqman', 'Hakimi', 'Irfan'], l: ['Rahman', 'Ismail', 'Hassan', 'Aziz', 'Hamzah', 'Yusof', 'Zainal', 'Halim'] },
   USA: { n: 'United States', r: 'North America', f: ['Tyler', 'Weston', 'Christian', 'Brenden', 'Gio', 'Josh', 'Zack', 'Matt'], l: ['Adams', 'Johnson', 'Miller', 'Davis', 'Carter', 'Robinson', 'Brooks', 'Hayes'] },
 };
+// Every nationality used in the game: code -> [name, scouting region].
+// NATIONS above only holds name pools for generated players.
+const COUNTRY = (() => {
+  const g = {
+    'Britain & Ireland': 'ENG England|SCO Scotland|WAL Wales|NIR Northern Ireland|IRL Ireland|GIB Gibraltar',
+    Europe: 'FRA France|ESP Spain|POR Portugal|GER Germany|NED Netherlands|BEL Belgium|ITA Italy|NOR Norway|SWE Sweden|DEN Denmark|ISL Iceland|AUT Austria|SUI Switzerland|CRO Croatia|SRB Serbia|BIH Bosnia-Herzegovina|ALB Albania|GRE Greece|TUR Türkiye|UKR Ukraine|POL Poland|CZE Czech Republic|SVK Slovakia|HUN Hungary|GEO Georgia|KAZ Kazakhstan|CYP Cyprus|LTU Lithuania|SVN Slovenia|BUL Bulgaria|ISR Israel',
+    'South America': 'BRA Brazil|ARG Argentina|URU Uruguay|PAR Paraguay|COL Colombia|ECU Ecuador|CHI Chile|VEN Venezuela|SUR Suriname',
+    'North America': 'USA United States|CAN Canada|MEX Mexico|JAM Jamaica|CUW Curaçao|HAI Haiti|BER Bermuda',
+    Africa: "NGA Nigeria|GHA Ghana|SEN Senegal|CIV Ivory Coast|CMR Cameroon|MLI Mali|BFA Burkina Faso|GAM The Gambia|GUI Guinea|ALG Algeria|MAR Morocco|TUN Tunisia|EGY Egypt|COD DR Congo|ANG Angola|BEN Benin|ZIM Zimbabwe|MOZ Mozambique|MTN Mauritania|COM Comoros",
+    Asia: 'JPN Japan|KOR South Korea|CHN China|AUS Australia|NZL New Zealand|PHI Philippines|UZB Uzbekistan|MAS Malaysia',
+  };
+  const out = {};
+  Object.entries(g).forEach(([r, list]) => list.split('|').forEach(x => { out[x.slice(0, 3)] = [x.slice(4), r]; }));
+  return out;
+})();
+const natName = c => (COUNTRY[c] ? COUNTRY[c][0] : NATIONS[c] ? NATIONS[c].n : c);
+const natRegion = c => (COUNTRY[c] ? COUNTRY[c][1] : NATIONS[c] ? NATIONS[c].r : 'Europe');
+const LEVELS = { A: 'First team', R: 'Reserves', Y: 'U18s' };
+
 const REGIONS = ['Everywhere', 'Premier Division', 'Britain & Ireland', 'Europe', 'South America', 'Africa', 'Asia', 'North America', 'Free agents'];
 
 // Nationality mix for generated top-flight squads (weights).

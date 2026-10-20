@@ -7,16 +7,20 @@ const SORTS = { pos: (a, b) => POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.po
 
 SCREENS.squad = {
   render() {
-    const f = UI.f.squad, s = UI.f.sort;
-    const list = seniorSquad(G.club).filter(p => f === 'ALL' || POS_GROUP[p.pos] === f).sort(SORTS[s]);
+    const f = UI.f.squad, s = UI.f.sort, l = UI.f.lvl || 'A';
+    const list = levelSquad(G.club, l).filter(p => f === 'ALL' || POS_GROUP[p.pos] === f).sort(SORTS[s]);
     const xi = new Set(G.tactics.slots);
-    return `<h1 class="h1">Squad <small>${seniorSquad(G.club).length} players</small></h1>
+    const note = { A: 'Picked for league matches. Reserves fill in only when fewer than 16 are fit.', R: 'Under-21 squad. Move a player up when he is ready for minutes.', Y: 'Academy players aged 15 to 18. At 19 they move up to the reserves.' }[l];
+    return `<h1 class="h1">Squad <small>${squadOf(G.club).length} players</small></h1>
+      <div class="seg wide">${Object.entries(LEVELS).map(([k, n]) => `<button class="${l === k ? 'on' : ''}" data-a="sqL" data-v="${k}">${n} <small>${levelSquad(G.club, k).length}</small></button>`).join('')}</div>
+      <p class="muted">${note}</p>
       <div class="chips">${[['ALL', 'All'], ['GK', 'Keepers'], ['DEF', 'Defence'], ['MID', 'Midfield'], ['ATT', 'Attack']].map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="sqF" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="sortbar"><span class="muted">Sort</span>${[['pos', 'Position'], ['ovr', 'Rating'], ['age', 'Age'], ['cond', 'Condition'], ['mor', 'Morale'], ['val', 'Value']].map(([k, n]) => `<button class="${s === k ? 'on' : ''}" data-a="sqS" data-v="${k}">${n}</button>`).join('')}</div>
-      <div class="list">${list.map(p => playerRow(p, `${xi.has(p.id) ? '<span class="xitag">XI</span>' : ''}${condBar(p.cond)}`, { noBadge: true, sub: s === 'val' ? money(pValue(p)) : p.status + ' · ' + morLabel(p.mor) })).join('')}</div>`;
+      <div class="list">${list.map(p => playerRow(p, `${xi.has(p.id) ? '<span class="xitag">XI</span>' : ''}${condBar(p.cond)}`, { noBadge: true, sub: s === 'val' ? money(pValue(p)) : l === 'A' ? p.status + ' · ' + morLabel(p.mor) : POS_NAME[p.pos] + ' · ' + morLabel(p.mor) })).join('') || empty('Nobody here', 'No players in this group for that position.')}</div>`;
   },
 };
 ACT.sqF = ds => { UI.f.squad = ds.v; render(); };
+ACT.sqL = ds => { UI.f.lvl = ds.v; render(); };
 ACT.sqS = ds => { UI.f.sort = ds.v; render(); };
 
 /* ---------- player profile ---------- */
@@ -47,7 +51,7 @@ function playerSheet(pid) {
       <button class="btn" data-a="talkOpen" data-id="${p.id}">Talk</button>
       <button class="btn" data-a="contract" data-id="${p.id}" data-mode="renew">New contract</button>
       <button class="btn" data-a="listToggle" data-id="${p.id}">${p.listed ? 'Remove from list' : 'Transfer list'}</button>
-      ${p.youth ? `<button class="btn pri" data-a="promote" data-id="${p.id}">Promote to first team</button>` : ''}
+      ${Object.keys(LEVELS).filter(k => k !== lvlOf(p) && (k !== 'Y' || p.age <= 18)).map(k => `<button class="btn ${k === 'A' ? 'pri' : ''}" data-a="setLvl" data-id="${p.id}" data-v="${k}">${k === 'A' ? 'Promote to first team' : 'Move to ' + LEVELS[k].toLowerCase()}</button>`).join('')}
       <button class="btn ghost ${UI.tab.rel === p.id ? 'bad' : ''}" data-a="release" data-id="${p.id}">${UI.tab.rel === p.id ? 'Confirm release' : 'Release'}</button></div>
       <div class="two"><div class="field"><label>Squad status</label>${selectHtml('st-' + p.id, ['Key player', 'First team', 'Rotation', 'Backup', 'Prospect'], p.status, 'pStatus', `data-id="${p.id}"`)}</div>
       <div class="field"><label>Individual training</label>${selectHtml('it-' + p.id, Object.entries(INDIV_FOCUS), G.training.indiv[p.id] || 'none', 'indiv', `data-id="${p.id}"`)}</div></div>`;
@@ -58,7 +62,7 @@ function playerSheet(pid) {
   }
   sheet(`<div class="phead">
       <div class="pnum" style="--k1:${G.clubs[p.club].c1}">${p.no || '-'}</div>
-      <div class="grow"><h3 class="sh-t">${esc(fullName(p))}</h3><p class="muted">${POS_NAME[p.pos]}${p.alt.length ? ' / ' + p.alt.join(', ') : ''} · ${p.age} · ${NATIONS[p.nat].n} · ${p.foot} foot</p>
+      <div class="grow"><h3 class="sh-t">${esc(fullName(p))}</h3><p class="muted">${POS_NAME[p.pos]}${p.alt.length ? ' / ' + p.alt.join(', ') : ''} · ${p.age} · ${natName(p.nat)} · ${p.foot} foot${mine ? ' · ' + LEVELS[lvlOf(p)] : ''}</p>
         <p class="pclub">${badge(p.club, 18)} ${esc(clubName(p.club))}${p.inj ? ` · <em class="tag bad">${esc(p.inj.n)}, ${p.inj.w} wk</em>` : ''}${p.ban ? ' · <em class="tag bad">Suspended</em>' : ''}</p></div>
       <div class="pov">${ovrPill(so.v, so.txt)}<small>Potential</small>${starHtml(pot)}</div></div>
     ${mine ? `<div class="meters"><div><small>Condition</small>${bar(p.cond, condClass(p.cond))}</div><div><small>Morale · ${morLabel(p.mor)}</small>${bar(p.mor, morClass(p.mor))}</div><div><small>Match sharpness</small>${bar(p.shp)}</div></div>` : ''}
@@ -69,7 +73,14 @@ ACT.psTab = ds => { UI.tab.ps = ds.v; playerSheet(+ds.id); };
 ACT.shortlist = ds => { const id = +ds.id; G.shortlist = G.shortlist.includes(id) ? G.shortlist.filter(x => x !== id) : [...G.shortlist, id]; playerSheet(id); };
 ACT.scoutOne = ds => { const p = G.players[+ds.id]; if (scoutPlayer(p)) { toast('Report filed. Knowledge now ' + knowOf(p) + '%.'); } else toast('Not enough money for a scout report.'); playerSheet(p.id); };
 ACT.listToggle = ds => { const p = G.players[+ds.id]; p.listed = !p.listed; if (p.listed) p.mor = clamp(p.mor - 6, 0, 100); toast(p.listed ? 'Transfer listed. Clubs will be told he is available.' : 'Removed from the transfer list.'); playerSheet(p.id); };
-ACT.promote = ds => { const p = G.players[+ds.id]; p.youth = false; p.status = 'Prospect'; p.wage = Math.max(p.wage, 1500); addNews('club', `${fullName(p)} promoted`, `${fullName(p)} moves up from the academy to the first-team squad.`); toast('Promoted to the first team.'); closeSheet(true); render(); };
+ACT.setLvl = ds => {
+  const p = G.players[+ds.id], to = ds.v, from = lvlOf(p);
+  if (to === 'A' && levelSquad(G.club, 'A').length >= 30) return toast('The first team already has 30 players. Move someone down first.');
+  p.lvl = to; p.youth = false;
+  if (to === 'A') { p.status = 'Prospect'; p.wage = Math.max(p.wage, 1500); addNews('club', `${fullName(p)} promoted`, `${fullName(p)} moves up from the ${LEVELS[from].toLowerCase()} to the first-team squad.`); }
+  if (from === 'A') { G.tactics.slots = G.tactics.slots.map(id => (id === p.id ? null : id)); G.tactics.bench = (G.tactics.bench || []).filter(id => id !== p.id); p.mor = clamp(p.mor - 10, 0, 100); }
+  toast(`${pname(p)} moved to the ${LEVELS[to].toLowerCase()}.`); closeSheet(true); render();
+};
 ACT.release = ds => {
   const p = G.players[+ds.id];
   if (UI.tab.rel !== p.id) { UI.tab.rel = p.id; return playerSheet(p.id); }
@@ -176,7 +187,7 @@ SCREENS.training = {
     const plan = ['Recover', short, short, 'Shape', 'Prep', 'Match', 'Rest'];
     const coach = staffAvg('Coach'), physio = staffAvg('Physio');
     const risk = Math.round(0.6 * (1 + T.intensity * 0.6) * (T.focus === 'phy' ? 1.4 : 1) * (1.3 - physio / 40) * 10) / 10;
-    const mine = seniorSquad(G.club).concat(squadOf(G.club).filter(p => p.youth));
+    const mine = squadOf(G.club);
     const focused = mine.filter(p => T.indiv[p.id] && T.indiv[p.id] !== 'none');
     return `<h1 class="h1">Training</h1>
       <div class="week">${days.map((d, i) => `<div class="${plan[i] === 'Match' ? 'm' : plan[i] === 'Rest' ? 'r' : ''}"><small>${d}</small><b>${plan[i]}</b></div>`).join('')}</div>
@@ -207,11 +218,11 @@ SCREENS.medical = {
 
 SCREENS.youth = {
   render() {
-    const y = squadOf(G.club).filter(p => p.youth).sort((a, b) => b.pa - a.pa);
+    const y = levelSquad(G.club, 'Y').sort((a, b) => b.pa - a.pa);
     const d = new Date(G.season + 1, 2, 15);
     return `<h1 class="h1">Youth academy</h1>
       <div class="kv"><div><small>Youth facilities</small><b>Level ${G.board.facYouth}</b></div><div><small>Next intake</small><b>${G.flags.intake ? 'Next March' : fmtDate(d, false)}</b></div></div>
-      <p class="muted">Academy players train every week and turn professional at 19. Promote the best ones early to give them first-team minutes.</p>
+      <p class="muted">The U18s train every week. At 19 they move up to the reserves. Promote the best ones early from their profile to give them first-team minutes.</p>
       <div class="list">${y.map(p => playerRow(p, `<span class="stat">${starHtml(stars(p.pa))}</span>`, { noBadge: true, sub: POS_NAME[p.pos] })).join('') || empty('No academy players', 'The youth intake arrives each March.')}</div>`;
   },
 };

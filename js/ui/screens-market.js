@@ -17,7 +17,7 @@ const TR_TABS = {
   search() {
     const S = UI.search;
     const res = Object.values(G.players).filter(p => {
-      if (p.club === G.club || p.youth) return false;
+      if (p.club === G.club) return false;
       if (S.pos !== 'Any' && p.pos !== S.pos && !p.alt.includes(S.pos)) return false;
       if (S.region !== 'Everywhere' && regionOf(p) !== S.region) return false;
       if (p.age > S.maxAge) return false;

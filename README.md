@@ -11,7 +11,7 @@ Your career saves automatically in the browser. Use Settings → Export save to 
 
 ## What's in it
 
-- The 20 top-flight clubs under their nicknames (Gunners, Reds, Citizens and so on). Around 800 generated players rated on 22 attributes.
+- The 20 top-flight clubs under their nicknames (Gunners, Reds, Citizens and so on). Every club has a first team, reserves and U18s (about 1,300 players). First teams, and some youth squads, are based on the real 2026/27 squads, renamed with different names that sound similar (same age, nationality and position). The rest of the youth squads are generated.
 - Squad, tactics with separate in-possession and out-of-possession shapes, roles and instructions.
 - Transfers with scouting fog of war, player search, agent pitches, bids and contract talks.
 - Training, medical centre, youth academy, finances, staff, board and fans, news and inbox.
