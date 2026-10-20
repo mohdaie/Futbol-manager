@@ -268,11 +268,11 @@ function renderFeed(L) {
 function commLine(L, ev) {
   const M = L.M, S = M.sides[ev.side], O = M.sides[1 - ev.side], n = id => pname(G.players[id]);
   const tn = 'the ' + clubName(S.cid);
-  const fk = ev.fk ? 'Free kick. ' : '';
+  const fk = ev.fk ? 'Free kick. ' : ev.ck ? 'Corner. ' : '';
   switch (ev.t) {
     case 'goal': return ev.pen ? `Penalty to ${tn}. ${n(ev.pid)} sends the keeper the wrong way. ${L.disp.join('-')}.` : `${fk}${n(ev.pid)} scores for ${tn}${ev.aid ? ', set up by ' + n(ev.aid) : ''}. ${L.disp.join('-')}.`;
     case 'save': return `${fk}${n(ev.pid)} forces a save from ${O.on[0] ? n(O.on[0]) : 'the keeper'}.${ev.corner ? ' Corner.' : ''}`;
-    case 'miss': return ev.sp ? `${n(ev.pid)} heads over from the set piece.` : `${fk}${n(ev.pid)} ${pick(['drags a shot wide', 'fires over the bar', 'shoots straight into a defender', 'curls it just past the post'])}.${ev.corner ? ' Corner.' : ''}`;
+    case 'miss': return ev.sp ? `${fk}${n(ev.pid)} heads over.` : `${fk}${n(ev.pid)} ${pick(['drags a shot wide', 'fires over the bar', 'shoots straight into a defender', 'curls it just past the post'])}.${ev.corner ? ' Corner.' : ''}`;
     case 'yellow': return `Yellow card for ${n(ev.pid)} (${clubName(M.sides[ev.fside].cid)}).`;
     case 'red': return ev.second ? `Second yellow for ${n(ev.pid)}. Off he goes.` : `Straight red card for ${n(ev.pid)}.`;
     case 'foul': return `Foul by ${n(ev.pid)}. Free kick to ${tn}.`;

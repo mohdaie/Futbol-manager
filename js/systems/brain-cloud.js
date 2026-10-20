@@ -8,6 +8,13 @@ const brainCloudHash = value => {
   for (let i = 0; i < value.length; i++) h = Math.imul(h ^ value.charCodeAt(i), 16777619);
   return (h >>> 0).toString(16);
 };
+// Older phone browsers lack crypto.randomUUID and AbortSignal.timeout; fall back so sync still works there.
+const brainCloudUuid = () => (crypto.randomUUID ? crypto.randomUUID() : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, ch => (ch ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (ch / 4)))).toString(16)));
+function brainCloudSignal(ms) {
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms);
+  if (typeof AbortController === 'undefined') return undefined;
+  const ctl = new AbortController(); setTimeout(() => ctl.abort(), ms); return ctl.signal;
+}
 function brainCloudEngine() { return String(brain().active || 'rules') + ':' + brainCloudHash(JSON.stringify(G && G.tune || {})); }
 function brainCloudEmpty() { return { stats: {}, records: [], snapshots: {}, omitted: 0 }; }
 function brainCloudRow(e) {
@@ -15,7 +22,7 @@ function brainCloudRow(e) {
   const meta = e.cloudMeta || {};
   const details = { f: e.f || {}, match: meta.match || null, side: meta.side ?? null, at: e.at || null, score: e.score || null,
     jev: e.jev || null, second: e.second || null, mode: meta.mode || 'legacy', jevModel: meta.jevModel || null, dsModel: meta.dsModel || null };
-  return { id: e.cloudId || (e.cloudId = crypto.randomUUID()), t: e.t, v: meta.app || 'legacy', e: meta.engine || 'legacy', k: meta.kind || 'legacy',
+  return { id: e.cloudId || (e.cloudId = brainCloudUuid()), t: e.t, v: meta.app || 'legacy', e: meta.engine || 'legacy', k: meta.kind || 'legacy',
     b: e.key, a: e.opt, s: e.src || 'legacy', o: e.out, c: Number.isFinite(e.conf) ? clamp(e.conf, 0, 1) : null, details };
 }
 function brainCloudKeepDetail(C, row) {
@@ -78,14 +85,18 @@ function brainCloudDisplay() {
   const B = brain(), C = B.cloud, el = document.getElementById('brain-cloud-status');
   if (!el || !C) return;
   const queued = C.pending.records.length + (C.inFlight ? C.inFlight.records.length : 0);
-  el.textContent = brainCloudBusy ? 'Syncing learning data…' : C.error ? C.error : C.lastSync ? `Last synced ${new Date(C.lastSync).toLocaleString()} · ${C.received} detailed records received${queued ? ` · ${queued} queued` : ''}` : 'Waiting for first upload…';
+  el.textContent = brainCloudBusy ? 'Syncing learning data…' : C.error ? C.error : C.lastSync ? `Last synced ${new Date(C.lastSync).toLocaleString()} · ${C.received} detailed records received${queued ? ` · ${queued} queued` : ' · up to date'}` : C.checked ? 'Nothing to upload yet. Learning data appears after matches.' : 'Waiting for first upload…';
 }
+// force: the Sync now button. It always reports the outcome with a toast.
 async function brainCloudSync(force = false) {
-  if (brainCloudBusy || (!force && Date.now() < brainCloudRetryAt)) return;
-  if (navigator.onLine === false) { brainCloudSchedule(30000); return; }
+  const say = msg => { if (force && typeof toast === 'function') toast(msg); };
+  if (brainCloudBusy) return say('Already syncing…');
+  if (!force && Date.now() < brainCloudRetryAt) return;
+  if (navigator.onLine === false) { brainCloudSchedule(30000); return say('You are offline. Learning data is kept and will upload when you reconnect.'); }
   const B = brain(); let C;
-  try { brainCloudCapture(B); C = B.cloud; } catch { return; }
-  if (!brainCloudPending(C)) return;
+  try { brainCloudCapture(B); C = B.cloud; } catch (e) { return say('Could not prepare learning data: ' + (e.message || e)); }
+  if (!brainCloudPending(C)) { C.checked = Date.now(); brainCloudDisplay(); return say(C.lastSync ? 'Everything is already synced.' : 'No learning data yet. Play or simulate matches first.'); }
+  const before = C.received;
   brainCloudBusy = true; brainCloudDisplay();
   try {
     for (let i = 0; i < 8 && brainCloudPending(C); i++) {
@@ -95,8 +106,8 @@ async function brainCloudSync(force = false) {
         stats.forEach(k => delete C.pending.stats[k]); snapshots.forEach(k => delete C.pending.snapshots[k]); C.pending.omitted = 0;
       }
       if (!brainCloudPersist(B)) throw new Error(C.error);
-      const response = await fetch(BRAIN_CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + C.token }, body: JSON.stringify(C.inFlight), signal: AbortSignal.timeout(18000) });
-      const result = await response.json();
+      const response = await fetch(BRAIN_CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + C.token }, body: JSON.stringify(C.inFlight), signal: brainCloudSignal(18000) });
+      const result = await response.json().catch(() => ({ error: `Cloud server error (${response.status}). Data is kept locally and will retry.` }));
       if (!response.ok) throw new Error(result.error || 'Cloud sync failed. Data is kept locally.');
       if (result.ack !== C.inFlight.seq) throw new Error('Unexpected cloud acknowledgement. Data is kept locally.');
       // Preserve the frozen batch until the acknowledgement is durable locally.
@@ -105,10 +116,12 @@ async function brainCloudSync(force = false) {
       if (!brainCloudPersist(B)) { C.seq = oldSeq; C.inFlight = batch; throw new Error(C.error); }
     }
     brainCloudFailures = 0; brainCloudRetryAt = 0;
+    say(brainCloudPending(C) ? 'Part uploaded. The rest will follow shortly.' : `Synced. ${Math.max(0, C.received - before)} new detailed record${C.received - before === 1 ? '' : 's'} uploaded.`);
   } catch (e) {
     C.error = e.message || 'Offline. Learning is kept locally and will retry.';
     brainCloudRetryAt = Date.now() + Math.min(3600000, 15000 * 2 ** Math.min(brainCloudFailures++, 8));
     brainCloudPersist(B);
+    say('Sync failed: ' + C.error);
   } finally {
     brainCloudBusy = false; brainCloudDisplay();
     if (brainCloudPending(C)) brainCloudSchedule(Math.max(5000, brainCloudRetryAt - Date.now()));
