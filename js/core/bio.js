@@ -54,7 +54,7 @@ function linkBio(p) {
 function ensureWorld() {
   Object.values(G.clubs).forEach(c => { if (!c.fa && !c.mgr) c.mgr = genManagerName(); });
   if (G.club && G.clubs[G.club]) G.clubs[G.club].mgr = G.manager;
-  Object.values(G.players).forEach(p => { if (p.ht == null) genBio(p); });
+  Object.values(G.players).forEach(p => { migrateAttrs(p); if (p.ht == null) genBio(p); });
   Object.values(G.players).forEach(p => { if (p.fpn == null) linkBio(p); });
 }
 

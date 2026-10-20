@@ -120,8 +120,8 @@ const ratingRemark = v => (v >= 88 ? 'World class' : v >= 82 ? 'Elite' : v >= 76
 const potRemark = s => (s >= 4.5 ? 'Superstar' : s >= 3.5 ? 'Top player' : s >= 2.5 ? 'Solid pro' : s >= 1.5 ? 'Squad player' : 'Limited');
 
 // Six-sided attribute shape. Keepers and outfielders use different sides.
-const HEX_OUT = [['Attacking', ['fin', 'cro', 'cmp']], ['Technical', ['pas', 'fir', 'dri']], ['Speed', ['pac', 'agi']], ['Physical', ['str', 'sta', 'hea']], ['Defending', ['tck', 'mar', 'pos']], ['Mental', ['vis', 'dec', 'wor', 'ldr']]];
-const HEX_GK = [['Shot stopping', ['ref', 'agi']], ['Handling', ['han']], ['One on ones', ['one']], ['Distribution', ['kic']], ['Positioning', ['pos', 'cmp']], ['Mental', ['dec', 'ldr', 'wor']]];
+const HEX_OUT = [['Attacking', ['fin', 'cro', 'cmp', 'otb']], ['Technical', ['pas', 'fir', 'dri', 'fla']], ['Speed', ['pac', 'agi']], ['Physical', ['str', 'sta', 'hea']], ['Defending', ['tck', 'mar', 'pos', 'ant']], ['Mental', ['vis', 'dec', 'wor', 'ldr', 'tea']]];
+const HEX_GK = [['Shot stopping', ['ref', 'agi']], ['Handling', ['han']], ['One on ones', ['one']], ['Distribution', ['kic']], ['Positioning', ['pos', 'cmp']], ['Mental', ['dec', 'ldr', 'wor', 'ant']]];
 function playerHex(p) {
   const axes = p.pos === 'GK' ? HEX_GK : HEX_OUT, mine = p.club === G.club;
   const val = k => { if (mine) return p.at[A[k]]; const s = seenAttr(p, A[k]); return (s.lo + s.hi) / 2; };

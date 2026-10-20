@@ -3,6 +3,28 @@
    Player generation, ratings, positional familiarity, value and wages. */
 
 // Rating (about 5-100) for a set of attributes played in a position.
+// Older saves have 22 attributes. The four added later (Anticipation, Off the Ball, Flair, Teamwork)
+// are derived from related attributes, then nudged so the player's rating stays the same.
+const DERIVE = { ant: ['pos', 'dec'], otb: ['dec', 'pac', 'fin'], fla: ['dri', 'vis'], tea: ['wor', 'dec'] };
+function migrateAttrs(p) {
+  if (p.at.length >= ATTRS.length) return;
+  const old = p.ca;
+  ATTRS.forEach(([k], i) => {
+    if (i < p.at.length) return;
+    const src = DERIVE[k] || ['dec'];
+    p.at[i] = clamp(Math.round(src.reduce((t, s) => t + p.at[A[s]], 0) / src.length + gauss() * 1.5), 1, 20);
+  });
+  const fresh = ATTRS.slice(22).map(a => a[0]).filter(k => WEIGHTS[p.pos][k]);
+  for (let n = 0; n < 40 && fresh.length; n++) {
+    const r = ratingFor(p.at, p.pos);
+    if (Math.abs(r - old) <= 0) break;
+    const i = A[pick(fresh)];
+    p.at[i] = clamp(p.at[i] + (r < old ? 1 : -1), 1, 20);
+  }
+  p.ca = ratingFor(p.at, p.pos);
+  p.pa = Math.max(p.pa, p.ca);
+}
+
 function ratingFor(at, pos) {
   const w = WEIGHTS[pos];
   let s = 0, t = 0;
