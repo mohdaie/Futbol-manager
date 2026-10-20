@@ -131,7 +131,7 @@ function logDecision(M, S, f, opt, src, extra = {}) {
   const cfg = aiCfg();
   const e = { t: Date.now(), key: sitKey(f), f, opt, src, at: [S.st.g, M.sides[1 - S.idx].st.g], out: null,
     cloudMeta: { app: GAME_VERSION, engine: brainCloudEngine(), kind: M.camp ? 'camp' : M.instant ? 'instant' : M.live ? 'live' : 'background',
-      match: M.brainId || (M.brainId = crypto.randomUUID()), side: S.idx, mode: brain().mode, jevModel: cfg.jev.model, dsModel: cfg.ds.model }, ...extra };
+      match: M.brainId || (M.brainId = brainCloudUuid()), side: S.idx, mode: brain().mode, jevModel: cfg.jev.model, dsModel: cfg.ds.model }, ...extra };
   (M.dec = M.dec || []).push([S.idx, e]);
   return e;
 }

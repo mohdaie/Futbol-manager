@@ -32,7 +32,7 @@ function buildSide(cid, idx) {
   else { tac = c.tac; const pk = autoPick(cid, tac.ip); xi = pk.xi; bench = pk.bench; roles = Array(11).fill(0); }
   const S = {
     cid, idx, user, ip: tac.ip, oop: tac.oop, roles, ment: tac.ment, tempo: tac.tempo, width: tac.width, press: tac.press, line: tac.line, pass: tac.pass,
-    pk: user ? tac.pk : null, on: xi, bench, off: [], subs: 0, wins: 0, lastSubMin: -1, cond: {}, rat: {}, yc: {}, reds: [], injuries: [],
+    pk: user ? tac.pk : null, cap: user ? tac.cap : null, fk: user ? tac.fk : null, ck: user ? tac.ck : null, on: xi, bench, off: [], subs: 0, wins: 0, lastSubMin: -1, cond: {}, rat: {}, yc: {}, reds: [], injuries: [],
     played: xi.filter(Boolean), st: { g: 0, sh: 0, sot: 0, xg: 0, pos: 0, fo: 0, yc: 0, rc: 0, co: 0 }, goals: [],
     banned: c.squad.filter(id => G.players[id] && G.players[id].ban > 0), u: null, map: shapeMap(tac.ip, tac.oop), boost: 0, guard: 0, calm: 0,
   };
@@ -57,16 +57,33 @@ function createMatch(fx) {
 
 const onPitch = S => S.on.map((id, i) => (id ? { p: G.players[id], i, pos: FORMATIONS[S.ip][i][0] } : null)).filter(Boolean);
 const roleOf = (S, i) => ROLES[FORMATIONS[S.ip][i][0]][S.roles[i]] || {};
+
+// Captain and set-piece takers. The chosen player if he is on the pitch, otherwise the best one on the pitch.
+const TAKER_SCORE = {
+  cap: p => p.at[A.ldr] * 2 + p.age / 3,
+  fk: p => p.at[A.pas] + p.at[A.fin] + p.at[A.vis] / 2,
+  ck: p => p.at[A.cro] * 2 + p.at[A.pas],
+};
+function taker(S, key) {
+  const xs = onPitch(S).filter(x => key === 'cap' || x.pos !== 'GK');
+  const mine = xs.find(x => x.p.id === S[key]);
+  if (mine) return { p: mine.p, chosen: true };
+  const best = xs.sort((a, b) => TAKER_SCORE[key](b.p) - TAKER_SCORE[key](a.p))[0];
+  return best ? { p: best.p, chosen: !S.user } : null;
+}
+// Direct free-kick skill on the 1-20 scale.
+const fkSkill = p => (p.at[A.fin] + p.at[A.pas] + p.at[A.vis] / 2) / 2.5;
 const pForm = (S, p) => (0.7 + 0.3 * (S.cond[p.id] ?? p.cond) / 100) * (0.94 + 0.12 * p.mor / 100) * (0.95 + 0.05 * p.shp / 100);
 
 function calcUnits(S) {
   const ip = FORMATIONS[S.ip], oop = FORMATIONS[S.oop];
-  let att = 0, wa = 0, mid = 0, wm = 0, def = 0, wd = 0, gk = 30, n = 0, nAtt = 0, nDef = 0, pace = 0;
+  let att = 0, wa = 0, mid = 0, wm = 0, def = 0, wd = 0, gk = 30, gkRole = {}, n = 0, nAtt = 0, nDef = 0, pace = 0;
   S.on.forEach((id, i) => {
     if (!id) return;
     n++;
     const p = G.players[id], slot = ip[i], f = pForm(S, p) * fam(p, slot[0]);
-    if (slot[0] === 'GK') { gk = ratingFor(p.at, 'GK') * f; return; }
+    // Keeper roles: a sweeper keeper gives up a little shot-stopping to cover the space behind a high line; a ball-playing keeper helps build-up play.
+    if (slot[0] === 'GK') { gkRole = roleOf(S, i); gk = ratingFor(p.at, 'GK') * f * (1 + (gkRole.d || 0)); return; }
     const role = roleOf(S, i), y = slot[2], yo = oop[S.map[i]][2];
     const wA = clamp((0.8 - y) * 1.8, 0.08, 1), wM = clamp(1 - Math.abs(y - 0.52) * 2.6, 0.1, 1), wD = clamp((yo - 0.36) * 1.9, 0.08, 1);
     att += cAtt(p) * f * wA * (1 + (role.a || 0)); wa += wA;
@@ -76,8 +93,11 @@ function calcUnits(S) {
     if (yo > 0.6) nDef++;
     pace += p.at[A.pac];
   });
-  const famF = S.user ? 0.93 + 0.07 * G.training.fam / 100 : 0.985;
-  S.u = { att: (att / (wa || 1)) * famF, mid: (mid / (wm || 1)) * famF, def: (def / (wd || 1)) * famF, gk, n, nAtt, nDef, pace: pace / Math.max(1, n - 1) };
+  // Captain: his leadership lifts the whole team (about ±3%); a stand-in captain has half the effect.
+  const cap = taker(S, 'cap'), capF = cap ? 1 + (cap.p.at[A.ldr] - 10) * (cap.chosen ? 0.003 : 0.0015) : 1;
+  const famF = (S.user ? 0.93 + 0.07 * G.training.fam / 100 : 0.985) * capF;
+  S.capLdr = cap && cap.chosen ? cap.p.at[A.ldr] : 10;
+  S.u = { att: (att / (wa || 1)) * famF, mid: (mid / (wm || 1)) * famF * (1 + (gkRole.m || 0) * 0.3), def: (def / (wd || 1)) * famF, gk, n, nAtt, nDef, pace: pace / Math.max(1, n - 1), sweep: gkRole.n === 'Sweeper Keeper' };
 }
 
 function possShare(H, W) {
@@ -94,7 +114,7 @@ function shotChance(M, S, O) {
   p *= 1 + 0.06 * (S.tempo - 1) + 0.03 * (O.tempo - 1);
   p *= 1 + 0.03 * (S.width - 1) + 0.03 * (S.pass - 1);
   p *= 1 - 0.04 * (O.press - 1);
-  if (O.line === 2) p *= 1 + 0.05 * (S.u.pace - 12) / 4;
+  if (O.line === 2) p *= 1 + 0.05 * (S.u.pace - 12) / 4 * (O.u.sweep ? 0.4 : 1); // a sweeper keeper covers the space behind a high line
   if (O.line === 0) p *= 0.96;
   p *= 0.85 + 0.05 * Math.min(S.u.nAtt, 5);
   p *= 1.12 - 0.03 * Math.min(O.u.nDef, 6);
@@ -123,11 +143,16 @@ function simMinute(M) {
   if (M.min % 5 === 0 || M.dirty) { calcUnits(H); calcUnits(W); M.dirty = false; }
   drain(M, H); drain(M, W);
   if (M.shout && M.min >= M.shout.until) { const S = M.sides[M.shout.side]; S.boost = 0; S.guard = 0; S.calm = 0; M.shout = null; }
-  const s = R() < possShare(H, W) ? 0 : 1, S = M.sides[s], O = M.sides[1 - s];
+  // A corner won last minute is taken now; if it comes to nothing, play goes on as normal.
+  const ckSide = M.sides.findIndex(X => X.ckDue);
+  M.sides.forEach(X => { X.ckDue = false; });
+  const header = ckSide >= 0 && R() < tune('cornerShot');
+  const s = header ? ckSide : R() < possShare(H, W) ? 0 : 1, S = M.sides[s], O = M.sides[1 - s];
   S.st.pos++;
   const ev = { min: M.min, side: s, t: 'poss' };
   evs.push(ev);
-  if (R() < shotChance(M, S, O)) shoot(M, S, O, ev, false);
+  if (header) shoot(M, S, O, ev, 'ck');
+  else if (R() < shotChance(M, S, O)) shoot(M, S, O, ev, false);
   else if (R() < tune('foulRate') * M.mod.foul) foul(M, O, S, ev);
   // Injuries: more likely in bad weather and for sides that started tired (fixture congestion).
   M.sides.forEach(X => {
@@ -148,20 +173,26 @@ function shoot(M, S, O, ev, setPiece) {
   let sh = null;
   if (pen && S.pk) sh = cands.find(x => x.p.id === S.pk);
   if (pen && !sh) sh = cands.slice().sort((a, b) => (b.p.at[A.fin] + b.p.at[A.cmp]) - (a.p.at[A.fin] + a.p.at[A.cmp]))[0];
-  if (!sh) sh = wpick(cands, x => POS_SHOT[x.pos] * (1 + (roleOf(S, x.i).s || 0)) * (0.5 + (setPiece ? aerial(x.p) : x.p.at[A.fin]) / 10));
+  const header = setPiece === 'hd' || setPiece === 'ck';
+  // The delivery comes from the free-kick or corner taker; direct free kicks are taken by the free-kick taker.
+  const del = setPiece ? taker(S, setPiece === 'ck' ? 'ck' : 'fk') : null;
+  if (!sh && setPiece === 'fk' && del) sh = cands.find(x => x.p.id === del.p.id);
+  const pool = header && del && cands.length > 1 ? cands.filter(x => x.p.id !== del.p.id) : cands;
+  if (!sh) sh = wpick(pool, x => POS_SHOT[x.pos] * (1 + (roleOf(S, x.i).s || 0)) * (0.5 + (header ? aerial(x.p) : x.p.at[A.fin]) / 10));
   const q = R();
-  let xg = pen ? 0.78 : setPiece ? rf(0.03, 0.16) : q < 0.05 ? rf(0.3, 0.6) : q < 0.25 ? rf(0.08, 0.25) : rf(0.02, 0.08);
+  let xg = pen ? 0.78 : setPiece === 'fk' ? rf(0.05, 0.12) : header ? rf(0.03, 0.16) * (del ? 0.8 + del.p.at[A.cro] / 50 : 1) : q < 0.05 ? rf(0.3, 0.6) : q < 0.25 ? rf(0.08, 0.25) : rf(0.02, 0.08);
   if (!pen) xg = clamp(xg * clamp(Math.pow(ratio, 0.35), 0.75, 1.3) * tune('xgScale') * M.mod.xg, 0.01, 0.9);
-  const a = sh.p.at, fin = setPiece ? (aerial(sh.p) + a[A.fin]) / 2 : a[A.fin];
+  const a = sh.p.at, fin = setPiece === 'fk' ? fkSkill(sh.p) : header ? (aerial(sh.p) + a[A.fin]) / 2 : a[A.fin];
   const gkId = O.on[0];
   const pg = xg * (0.75 + (fin - 10) / 30) * (1.25 - O.u.gk / 250) * (0.92 + 0.08 * a[A.cmp] / 10) * (1 - gkReach(G.players[gkId]));
   S.st.sh++; S.st.xg += xg;
-  Object.assign(ev, { t: 'shot', pid: sh.p.id, xg, pen, sp: setPiece });
+  Object.assign(ev, { t: 'shot', pid: sh.p.id, xg, pen, sp: header, ck: setPiece === 'ck' });
   if (R() < pg) {
     S.st.g++; S.st.sot++;
     ev.t = 'goal';
     let aid = null;
-    if (!pen && R() < 0.78) {
+    if (header && del && del.p.id !== sh.p.id) aid = del.p.id;
+    else if (!pen && setPiece !== 'fk' && R() < 0.78) {
       const mates = cands.filter(x => x.p.id !== sh.p.id);
       if (mates.length) aid = wpick(mates, x => POS_ASSIST[x.pos] * (x.p.at[A.pas] + x.p.at[A.vis] + x.p.at[A.cro] * 0.6)).p.id;
     }
@@ -176,11 +207,11 @@ function shoot(M, S, O, ev, setPiece) {
     ev.t = 'save';
     bumpRating(S, sh.p.id, 0.1);
     bumpRating(O, gkId, 0.15 + xg * 0.5);
-    if (R() < 0.3) { S.st.co++; ev.corner = true; }
+    if (R() < 0.3) { S.st.co++; ev.corner = true; S.ckDue = true; }
   } else {
     ev.t = 'miss';
     bumpRating(S, sh.p.id, -0.05);
-    if (R() < 0.25) { S.st.co++; ev.corner = true; }
+    if (R() < 0.25) { S.st.co++; ev.corner = true; S.ckDue = true; }
   }
 }
 
@@ -190,13 +221,13 @@ function foul(M, O, S, ev) {
   const f = wpick(cands, x => (LINE[x.pos] <= 2 ? 1.3 : 1) * (x.p.at[A.tck] < 10 ? 1.3 : 1));
   O.st.fo++;
   Object.assign(ev, { t: 'foul', pid: f.p.id, fside: O.idx });
-  const ycP = 0.14 * (1 + 0.3 * (O.press - 1)) * (1 - O.calm) * cardMul(f.p);
+  const ycP = 0.14 * (1 + 0.3 * (O.press - 1)) * (1 - O.calm) * cardMul(f.p) * (1 - ((O.capLdr ?? 10) - 10) * 0.008);
   if (R() < 0.006 * cardMul(f.p)) sendOff(M, O, f.p.id, ev);
   else if (R() < ycP) {
     if (O.yc[f.p.id]) { sendOff(M, O, f.p.id, ev); ev.second = true; }
     else { O.yc[f.p.id] = 1; O.st.yc++; ev.t = 'yellow'; bumpRating(O, f.p.id, -0.3); }
   } else if (R() < 0.05) {
-    shoot(M, S, O, ev, true);
+    shoot(M, S, O, ev, R() < 0.5 ? 'fk' : 'hd');
     ev.fk = true;
   }
 }

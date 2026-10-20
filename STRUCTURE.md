@@ -139,6 +139,15 @@ Everything lives in one JSON-safe object, saved to `localStorage` after each wee
 
 **Player page.** The big number is the player's rating out of 100 (current ability at his main position), with a remark from Raw to World class. The stars and remark below it show potential. The hexagon sums up the attributes on six sides. Outfielders show Attacking, Technical, Speed, Physical, Defending and Mental. Keepers show Shot stopping, Handling, One on ones, Distribution, Positioning and Mental. Keepers only list GK as a position. Everything you can do with a player sits behind one **Actions** button, grouped by category: Motivate, Squad, Training and Contract for your players; Transfer and Scouting for others. To add an action, add an item to `PLAYER_ACTIONS` in screens-squad.js.
 
+**Captain, set pieces and keeper roles** (match.js). These details affect matches:
+- **Captain:** his leadership (1–20) moves the whole team's strength by about ±3% while he is on the pitch, and a high-leadership captain cuts card risk. If he is off the pitch, the best leader on the pitch has half the effect.
+- **Free-kick taker:** half of the free kicks that lead to a shot are direct shots by him. His skill is finishing, passing and half his vision. The other half are crosses he delivers for a header, and his crossing improves chance quality.
+- **Corner taker:** a corner can lead to a header in the next minute (`cornerShot` in `TUNE_DEFAULTS`, 20%). His crossing improves chance quality, and he gets the assist.
+- **Keeper roles:** the role's modifiers now count. A Sweeper Keeper loses about 2% of shot-stopping but takes 60% of the sting out of a fast opponent attacking a high line. A Ball-Playing Keeper adds to midfield control.
+- **When the chosen player is off the pitch:** for any of these jobs, the best player on the pitch for that job takes over.
+- **Computer clubs:** they always use their best player for each job.
+- **Calibration:** after this change `shotBase` dropped to 0.275, which gives about 2.84 goals per game, 40% home wins and 24% draws.
+
 **Personal details** (Personal tab, `bio.js`). Every player has these details, and each one changes the game:
 | Detail | Effect |
 |---|---|
