@@ -32,7 +32,8 @@ function render(reset) {
   const main = root.querySelector('.main');
   const keep = !reset && main ? main.scrollTop : 0;
   let scr;
-  if (!G) scr = SCREENS.start;
+  if (UI.s === 'title') scr = SCREENS.title;
+  else if (!G) scr = SCREENS.start;
   else if (G.gameOver) scr = SCREENS.sacked;
   else if (G.seasonReview && UI.s !== 'review') { UI.s = 'review'; scr = SCREENS.review; }
   else scr = SCREENS[UI.s] || SCREENS.home;
@@ -179,7 +180,7 @@ ACT.continue = () => {
 
 function boot() {
   loadGame();
-  if (G) UI.s = 'home';
+  UI.s = 'title';
   render(true);
   initViewHistory();
 }

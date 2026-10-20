@@ -3,6 +3,7 @@
    entries contain small IDs; popup renderers and drafts stay on this device. */
 const VIEW_HISTORY = { ready: false, restoring: false, depth: 0, index: 0, views: new Map(), session: '', world: null, season: null, club: null, pending: false };
 const viewCopy = v => JSON.parse(JSON.stringify(v));
+const viewKey = (state, popup, admin) => JSON.stringify([state.s, state.p, state.tab, state.f, state.search, popup && popup.key, admin]);
 
 function viewSnapshot() {
   const state = {};
@@ -10,7 +11,7 @@ function viewSnapshot() {
   const layer = document.getElementById('layer');
   const popup = layer && !layer.hidden ? UI.popup : null;
   const admin = { club: ADM.club, q: ADM.q, qClub: ADM.qClub };
-  const key = JSON.stringify([UI.s, UI.p, UI.tab, UI.f, UI.search, popup && popup.key, admin]);
+  const key = viewKey(UI, popup, admin);
   const fields = [...document.querySelectorAll('#app input, #app select, #app textarea, #layer input, #layer select, #layer textarea')]
     .filter(el => el.id && el.type !== 'password' && !/key|token|secret/i.test(el.id))
     .map(el => ({ id: el.id, value: el.value, checked: el.checked }));
@@ -26,10 +27,15 @@ function initViewHistory() {
   const H = VIEW_HISTORY;
   H.session = Date.now().toString(36) + Math.random().toString(36).slice(2);
   H.world = G; H.season = G?.season; H.club = G?.club;
-  H.index = 0; H.views.clear(); H.views.set(0, viewSnapshot());
+  const current = viewSnapshot();
+  const title = { ...current, state: { ...current.state, s: 'title', p: {} }, popup: null, opts: null, fields: [], mainScroll: 0, sheetScroll: 0, bodyScroll: 0, liveFid: null };
+  title.key = viewKey(title.state, null, title.admin);
+  H.index = UI.s === 'title' ? 0 : 1; H.views.clear(); H.views.set(0, title);
+  if (H.index) H.views.set(1, current);
   // One same-document guard below the first view keeps ordinary Back in-game.
   history.replaceState(viewEntry(-1), '');
   history.pushState(viewEntry(0), '');
+  if (H.index) history.pushState(viewEntry(1), '');
   H.ready = true; H.pending = false;
 }
 

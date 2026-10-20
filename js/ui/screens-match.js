@@ -3,6 +3,39 @@
    New-game screen, matchday (pre-match with press conference and opposition report),
    the live 2D match, match report, season review and the sacked screen. */
 
+/* ---------- title ---------- */
+function titleSpeed() {
+  if (G?.settings?.speed) return G.settings.speed;
+  try { const n = +localStorage.getItem('futbol-manager:speed'); return [1, 2, 4].includes(n) ? n : 2; } catch { return 2; }
+}
+SCREENS.title = {
+  full: true,
+  render() {
+    return `<section class="title-screen" aria-label="Futbol Manager main menu">
+      <img class="title-photo" src="public/assets/title/stadium-celebration.webp" alt="A manager celebrating with his team in a packed stadium" fetchpriority="high">
+      <div class="title-shade"></div>
+      <h1 class="title-wordmark"><span>Futbol</span><small>Manager</small></h1>
+      <div class="title-menu">
+        <button class="title-play" data-a="titleStart">Start Game ${ICON.arrow}</button>
+        <button class="title-options" data-a="titleOptions">Options</button>
+        ${G ? `<p class="title-save">Continue as ${esc(G.manager)}</p>` : ''}
+      </div>
+    </section>`;
+  },
+};
+ACT.titleStart = () => go(G ? 'home' : 'start');
+ACT.titleOptions = () => sheet(`<h3 class="sh-t">Options</h3>
+  <h4 class="lbl">Match speed</h4><div class="seg">${[1, 2, 4].map(n => `<button class="${titleSpeed() === n ? 'on' : ''}" data-a="titleSpeed" data-v="${n}">${n}x</button>`).join('')}</div>
+  ${G ? '<button class="btn wide" data-a="go" data-s="settings">Game settings</button>' : ''}
+  <button class="btn pri wide" data-a="closeSheet">Done</button>`, { key: 'title-options', restore: () => ACT.titleOptions() });
+ACT.titleSpeed = ds => {
+  const speed = +ds.v;
+  if (![1, 2, 4].includes(speed)) return;
+  try { localStorage.setItem('futbol-manager:speed', speed); } catch { /* The selection still works for this career. */ }
+  if (G) { G.settings.speed = speed; saveGame(); }
+  ACT.titleOptions();
+};
+
 /* ---------- start ---------- */
 const START = { club: 'GUN', name: '', avatar: 1 };
 function startBadge(c, size) {
@@ -17,6 +50,7 @@ SCREENS.start = {
     const diff = i => (i < 5 ? 1 : i < 10 ? 2 : i < 15 ? 3 : 4);
     const sel = CLUBS.find(c => c.id === START.club);
     return `<div class="start">
+      <button class="link back" data-a="back">‹ Back</button>
       <header class="st-hero"><div class="eyebrow">${seasonLabelRaw(START_SEASON)} · ${LEAGUE_NAME}</div><h1 class="logo">Futbol<br>Manager</h1><p>Pick a club, build a squad, win the league.</p></header>
       ${hasSave() ? '<button class="btn pri wide" data-a="resume">Continue your career</button>' : ''}
       <div class="field"><label for="mgr">Manager name</label><input id="mgr" type="text" maxlength="28" placeholder="Your name" value="${esc(START.name)}" data-c="mgr"></div>
@@ -36,7 +70,9 @@ ACT.resume = () => { if (loadGame()) go('home'); };
 ACT.startGame = () => {
   const n = document.getElementById('mgr');
   START.name = (n && n.value.trim()) || START.name;
+  const speed = titleSpeed();
   newGame(START.club, START.name || 'The Boss', START.avatar);
+  G.settings.speed = speed; saveGame();
   go('home');
 };
 

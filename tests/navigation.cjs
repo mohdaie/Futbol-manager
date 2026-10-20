@@ -29,12 +29,14 @@ const assert = require('node:assert/strict');
     await page.route('**/outside', r => r.fulfill({ body: '<h1>Outside the game</h1>', contentType: 'text/html' }));
     await page.goto(base + '/outside');
     await page.goto(base + '/');
+    await page.locator('[data-a="titleStart"]').click();
     await page.locator('[data-a="startGame"]').click();
     check('New career starts on dashboard', (await state()).screen, 'home');
     await back(); await back();
-    check('Repeated browser Back at root stays in game', await page.locator('.dash-h').count(), 1);
+    check('Repeated browser Back at root stays in game', await page.locator('.title-screen').count(), 1);
     check('Root guard preserves URL', page.url(), base + '/');
 
+    await page.locator('[data-a="titleStart"]').click();
     await page.locator('.tabs2 [data-s="squad"]').click();
     await page.locator('[data-a="sqL"][data-v="R"]').click();
     await page.locator('[data-a="sqF"][data-v="GK"]').click();

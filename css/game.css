@@ -558,3 +558,19 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .notes li.good { color: var(--good); }
 .kv b .muted { font-style: normal; font-size: 11px; font-weight: 600; }
 .kv b .link { font: inherit; color: var(--amber); text-align: left; }
+
+/* ---------- cinematic title ---------- */
+.title-screen { position: relative; height: 100%; min-height: 0; overflow: hidden; isolation: isolate; background: #0b111d; color: #fff; }
+.title-photo, .title-shade { position: absolute; inset: 0; width: 100%; height: 100%; }
+.title-photo { object-fit: cover; object-position: 50% 60%; }
+.title-shade { background: linear-gradient(180deg, rgba(4,9,17,.32), transparent 38%, transparent 62%, rgba(3,8,12,.82)); }
+.title-wordmark { position: absolute; top: clamp(38px, 8.5vh, 88px); left: 0; right: 0; margin: 0; text-align: center; text-shadow: 0 2px 20px rgba(0,0,0,.2); }
+.title-wordmark span { display: block; font-size: clamp(38px, 10vw, 50px); font-weight: 800; letter-spacing: -.055em; line-height: 1.1; }
+.title-wordmark small { display: block; margin-top: 10px; padding-left: .42em; font-size: 11px; font-weight: 500; letter-spacing: .42em; text-transform: uppercase; }
+.title-menu { position: absolute; left: 28px; right: 28px; bottom: max(30px, env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; }
+.title-play, .title-options { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+.title-play { position: relative; background: #fff; color: #10151c; box-shadow: 0 5px 24px rgba(0,0,0,.12); }
+.title-play svg { position: absolute; right: 18px; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.title-options { border: 1px solid rgba(255,255,255,.45); background: rgba(6,12,18,.18); backdrop-filter: blur(8px); }
+.title-save { margin: 3px 0 0; color: rgba(255,255,255,.7); text-align: center; font-size: 10px; }
+@media (max-height: 550px) { .title-wordmark { top: 24px; } .title-menu { bottom: 14px; gap: 7px; } .title-play, .title-options { min-height: 40px; } }

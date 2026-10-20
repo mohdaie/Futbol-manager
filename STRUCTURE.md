@@ -33,11 +33,13 @@ js/ui/screens-hub.js       Home, News, More, Fixtures, Table, Stats, Club, Setti
 js/ui/screens-squad.js     Squad (first team / reserves / U18s), player profile, Tactics, Training, Medical, Youth
 js/ui/screens-market.js    Transfers (search, shortlist, scouting, pitches, bids, history),
                            offers, contracts, Finances, Staff, Board
-js/ui/screens-match.js     Start, Pre-match, Live match, Match report, Season review, Sacked
+js/ui/screens-match.js     Title menu, career setup, Pre-match, Live match, Match report, Season review, Sacked
 js/ui/screens-admin.js     Admin page: edit clubs and players, move time, tune the engine, maintenance
 ```
 
 The scripts are classic `<script>` tags that share one global scope, so the load order in `index.html` matters. Core comes first, then engine, systems and UI.
+
+**Title menu.** Every launch opens the stadium artwork with Start Game and Options. Start Game resumes the loaded career, or opens manager/club setup when there is no save. Options sets match speed (also remembered for a new career) and links to game settings for existing careers. The title screen remains the root Back destination.
 
 ## 2. The game loop
 
