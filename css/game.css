@@ -574,3 +574,5 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .title-options { border: 1px solid rgba(255,255,255,.45); background: rgba(6,12,18,.18); backdrop-filter: blur(8px); }
 .title-save { margin: 3px 0 0; color: rgba(255,255,255,.7); text-align: center; font-size: 10px; }
 @media (max-height: 550px) { .title-wordmark { top: 24px; } .title-menu { bottom: 14px; gap: 7px; } .title-play, .title-options { min-height: 40px; } }
+
+.brain-modes .grow small { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.45; }

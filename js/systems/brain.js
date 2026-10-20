@@ -153,6 +153,7 @@ function brainDecide(M, S) {
 }
 
 const teacherReady = () => aiReady('jev', 'manager');
+const brainModeAvailable = mode => mode === 'rules' || (mode === 'learned' ? !!activeVersion() : mode === 'teacher' ? teacherReady() : mode === 'hybrid' && (!!activeVersion() || teacherReady()));
 
 async function askTeacher(M, S, f) {
   const B = brain();
@@ -205,7 +206,7 @@ function activateVersion(id) {
   B.active = id;
   const v = activeVersion();
   if (v && G) G.tune = { ...v.tune };
-  if (!v && B.mode !== 'rules') B.mode = 'rules';
+  if (!v && B.mode === 'learned') B.mode = 'rules';
   brainSave(); saveGame();
 }
 

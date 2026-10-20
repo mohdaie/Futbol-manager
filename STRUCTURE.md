@@ -189,6 +189,8 @@ Computer managers make a tactical decision at half-time and at 60, 70 and 80 min
 4. **Test.** A head-to-head plays the draft against the engine in use, each pairing twice with the sides swapped, and reports points per game.
 5. **Release.** Approving saves the draft as a version, which also stores the Engine tab's tuning, and puts it in use. Rolling back is one tap.
 
+**Mode availability:** Learned engine needs an approved version. Teacher needs Jev configured for Computer managers and can start without a version. Hybrid is available with Jev or an approved version, falling back to the rules when needed. DeepSeek second opinions run when Jev confidence is below the threshold; press questions are generated separately. DeepSeek now uses its own `futbol-deepseek` relay in musab-agents and shares the diagnostics table. Its key and feature switches remain under your control.
+
 **Modes for real matches:**
 
 | Mode | What happens |

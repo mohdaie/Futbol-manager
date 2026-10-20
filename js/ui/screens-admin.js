@@ -276,9 +276,9 @@ function aiTab(svc) {
   return `<div class="card"><h3>${I.name}</h3><p class="muted">${I.role}</p>
       ${svc === 'jev' ? '<p class="note">Test connection uses the key and settings currently entered below. If Direct mode is blocked by your browser or the API, choose Personal relay with your own relay URL.</p>' : ''}
       <label class="tgl"><input id="ai-on" type="checkbox" ${c.on ? 'checked' : ''}><span>Use ${svc === 'jev' ? 'Jev' : 'DeepSeek'} in the game</span></label>
-      <div class="field"><label>Connection</label><div class="seg">${[['direct', 'Direct'], ...(svc === 'jev' ? [['relay', 'Personal relay']] : []), ['proxy', 'Server key']].map(([k, n]) => `<button class="${c.mode === k ? 'on' : ''}" data-a="aiMode" data-svc="${svc}" data-v="${k}">${n}</button>`).join('')}</div></div>
-      ${c.mode !== 'proxy' ? fld(`API key <small>(saved: ${esc(masked)})</small>`, `<input id="ai-key" type="password" autocomplete="off" placeholder="Paste a new key to replace it">`) + `<p class="muted">Get a key at ${I.console}. ${c.mode === 'relay' ? 'Your saved key is sent securely through your own relay to Jev. Use only a relay you control.' : 'Your personal key stays in this browser. Direct requests may be blocked by the API.'}</p>` : ''}
-      ${c.mode !== 'direct' ? fld('Relay base URL', `<input id="ai-proxy" type="url" value="${esc(c.proxy)}" placeholder="https://your-project.supabase.co/functions/v1/futbol-jev">`) + `<p class="muted">${c.mode === 'relay' ? 'Personal relay forwards your own saved key. It must be deployed before testing.' : 'Your server supplies the API key; the browser does not send one.'}</p>` : ''}
+      <div class="field"><label>Connection</label><div class="seg">${[['direct', 'Direct'], ['relay', 'Personal relay'], ['proxy', 'Server key']].map(([k, n]) => `<button class="${c.mode === k ? 'on' : ''}" data-a="aiMode" data-svc="${svc}" data-v="${k}">${n}</button>`).join('')}</div></div>
+      ${c.mode !== 'proxy' ? fld(`API key <small>(saved: ${esc(masked)})</small>`, `<input id="ai-key" type="password" autocomplete="off" placeholder="Paste a new key to replace it">`) + `<p class="muted">Get a key at ${I.console}. ${c.mode === 'relay' ? 'Your saved key is sent securely through your own relay to the AI service. Use only a relay you control.' : 'Your personal key stays in this browser. Direct requests may be blocked by the API.'}</p>` : ''}
+      ${c.mode !== 'direct' ? fld('Relay base URL', `<input id="ai-proxy" type="url" value="${esc(c.proxy)}" placeholder="https://your-project.supabase.co/functions/v1/futbol-${svc === 'jev' ? 'jev' : 'deepseek'}">`) + `<p class="muted">${c.mode === 'relay' ? 'Personal relay forwards your own saved key. It must be deployed before testing.' : 'Your server supplies the API key; the browser does not send one.'}</p>` : ''}
       <div class="two">
         ${fld('Model', selectHtml('ai-model', svc === 'jev' ? JEV_MODELS : DS_MODELS, c.model, ''))}
         ${fld('Timeout (ms)', num('ai-timeout', c.timeout, 500, 'min="500"'))}
@@ -360,13 +360,14 @@ ADMIN_TABS.brain = () => {
   const srcRows = Object.entries(st.bySrc).sort((a, b) => b[1].n - a[1].n).map(([k, s]) => `<div class="kvrow"><span>${SRC_NAME[k] || k} · ${s.n} decisions</span><b class="${s.sum / s.n > 0.05 ? 'good' : s.sum / s.n < -0.05 ? 'bad' : ''}">${(s.sum / s.n >= 0 ? '+' : '') + (s.sum / s.n).toFixed(2)}</b></div>`).join('');
   const buckets = Object.keys(B.draft).map(k => ({ k, s: bucketScores(B.draft, k) })).filter(x => x.s.n >= 3).sort((a, b) => b.s.n - a.s.n).slice(0, 12);
   return `<div class="card"><h3>How it works</h3><p class="muted">Computer managers make a decision at half-time and at 60, 70 and 80 minutes. Every decision and its result is recorded on this device. The engine learns which choice works best in each situation. New engine versions are only used after you approve them.</p>
-      <div class="kv"><div><small>Teacher (Jev)</small><b class="${teacher ? 'good' : ''}">${teacher ? 'Ready' : 'Off'}</b></div><div><small>Second opinion (DeepSeek)</small><b class="${second ? 'good' : ''}">${second ? 'Ready' : 'Off'}</b></div>
+      <div class="kv"><div><small>Teacher (Jev)</small><b class="${teacher ? 'good' : ''}">${teacher ? 'Configured' : 'Off'}</b></div><div><small>Second opinion (DeepSeek)</small><b class="${second ? 'good' : ''}">${second ? 'Configured' : 'Off'}</b></div>
       <div><small>Engine in use</small><b>${V ? esc(V.name) : 'Built-in rules'}</b></div><div><small>Teacher calls saved by hybrid</small><b>${B.saved.skipped}</b></div></div>
+      <div class="btns"><button class="btn sm" data-a="tab" data-key="adm" data-v="jev">Jev settings</button><button class="btn sm" data-a="tab" data-key="adm" data-v="ds">DeepSeek settings</button></div>
       ${!teacher ? '<p class="note">No teacher is connected, so the engine learns from outcomes only (the training camp tries options and keeps what works). Connect Jev in the Jev AI tab and tick “Computer managers” to add a teacher. If direct browser requests fail, configure a server proxy.</p>' : ''}</div>
 
     <div class="card"><h3>Mode for real matches</h3>
-      <div class="list">${BRAIN_MODES.map(([k, n, d]) => `<button class="row act ${B.mode === k ? 'sel' : ''}" data-a="brMode" data-v="${k}" ${k !== 'rules' && !V ? 'disabled' : ''}><span class="grow"><b>${n}</b><small>${d}</small></span>${B.mode === k ? '<span class="tag good">On</span>' : ''}</button>`).join('')}</div>
-      ${!V ? '<p class="muted">Approve an engine version below to unlock the other modes.</p>' : ''}
+      <div class="list brain-modes">${BRAIN_MODES.map(([k, n, d]) => `<button class="row act ${B.mode === k ? 'sel' : ''}" data-a="brMode" data-v="${k}" ${brainModeAvailable(k) ? '' : 'disabled'}><span class="grow"><b>${n}</b><small>${d}</small></span>${B.mode === k ? '<span class="tag good">On</span>' : ''}</button>`).join('')}</div>
+      ${!V ? '<p class="muted">Learned engine needs an approved version. Teacher needs Jev enabled with Computer managers selected. Hybrid can use Jev before a version is approved.</p>' : ''}
       <p class="muted">The AI is only asked during your live matches. Background results and instant results always use the approved engine or the rules.</p>
       <div class="two">${fld('Min. decisions before trusting a situation', num('brMinN', B.minN, 1, 'min="2" max="100"'))}${fld('Ask DeepSeek when Jev confidence is below', num('brConf', B.conf, 0.05, 'min="0" max="1"'))}${fld('Training camp exploring rate (0-1)', num('brExp', B.explore, 0.05, 'min="0" max="1"'))}</div>
       <button class="btn" data-a="brSaveSet">Save settings</button></div>
@@ -397,7 +398,7 @@ ADMIN_TABS.brain = () => {
       <button class="btn ghost ${ADM.confirm === 'brainReset' ? 'bad' : ''}" data-a="brReset">${ADM.confirm === 'brainReset' ? 'Tap again: forget everything learned' : 'Reset the brain'}</button></div>`;
 };
 
-ACT.brMode = ds => { brain().mode = ds.v; brainSave(); toast('Mode: ' + BRAIN_MODES.find(m => m[0] === ds.v)[1]); render(); };
+ACT.brMode = ds => { if (!brainModeAvailable(ds.v)) return toast('Configure the required AI or approve an engine version first.'); brain().mode = ds.v; brainSave(); toast('Mode: ' + BRAIN_MODES.find(m => m[0] === ds.v)[1]); render(); };
 ACT.brSaveSet = () => { const B = brain(); B.minN = clamp(Math.round(nval('brMinN')), 2, 100); B.conf = clamp(nval('brConf'), 0, 1); B.explore = clamp(nval('brExp'), 0, 1); brainSave(); toast('Brain settings saved.'); render(); };
 ACT.brCamp = async ds => {
   const n = +ds.n, useT = teacherReady() && !!(document.getElementById('brUseT') || {}).checked;

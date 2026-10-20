@@ -7,6 +7,7 @@
    so exporting a save never leaks an API key. */
 
 const AI_KEY = 'futbol-manager:ai';
+const DS_RELAY_URL = 'https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-deepseek';
 const JEV_RELAY_URL = 'https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-jev';
 
 // Prices in US$ per 1M tokens, checked Oct 2026. DeepSeek peak = Mon-Fri 01:00-04:00 and 06:00-10:00 UTC.
@@ -27,7 +28,7 @@ const AI_FEATURES = {
 function aiDefaults() {
   return {
     jev: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: JEV_RELAY_URL, model: 'jev-latest', timeout: 10000, budget: 2, feat: {} },
-    ds: { on: false, mode: 'direct', key: '', proxy: '', base: 'https://api.deepseek.com', model: 'deepseek-flash', thinking: false, maxTokens: 300, temp: 0.9, timeout: 20000, budget: 3, feat: {} },
+    ds: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: DS_RELAY_URL, base: 'https://api.deepseek.com', model: 'deepseek-flash', thinking: false, maxTokens: 300, temp: 0.9, timeout: 20000, budget: 3, feat: {} },
     usage: {}, log: [],
   };
 }
@@ -45,6 +46,8 @@ function aiCfg() {
         AICFG.jev.mode = 'relay'; AICFG.jev.proxy = JEV_RELAY_URL; AICFG.jev.timeout = Math.max(10000, AICFG.jev.timeout);
       }
       AICFG.jev.relaySetup = 1;
+      if (s.ds && !s.ds.relaySetup && s.ds.mode === 'direct' && (!s.ds.base || s.ds.base.replace(/\/$/, '') === 'https://api.deepseek.com')) { AICFG.ds.mode = 'relay'; AICFG.ds.proxy = DS_RELAY_URL; }
+      AICFG.ds.relaySetup = 1;
     }
   } catch (e) { /* storage blocked: keep defaults for this session */ }
   return AICFG;
@@ -130,7 +133,7 @@ async function jevAsk(state, questions, note = 'request', opts = {}) {
 async function dsChat(messages, note = 'request', opts = {}) {
   const c = aiCfg().ds;
   aiGuard('ds');
-  const base = (c.mode === 'proxy' ? c.proxy : c.base).replace(/\/$/, '');
+  const base = (c.mode === 'direct' ? c.base : c.proxy).replace(/\/$/, '').replace(/\/chat\/completions$/, '');
   const headers = c.mode === 'proxy' ? {} : { Authorization: 'Bearer ' + c.key };
   const body = { model: c.model, messages, max_tokens: opts.maxTokens || c.maxTokens, thinking: { type: c.thinking ? 'enabled' : 'disabled' } };
   if (!c.thinking) body.temperature = c.temp;
