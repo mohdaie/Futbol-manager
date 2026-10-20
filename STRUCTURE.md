@@ -84,7 +84,8 @@ Continue
 The effects are kept small so the engine stays near real football: about 2.8 goals per game, around 41% home wins and 25% draws over full simulated seasons.
 
 **Back navigation.** Browser Back (including Android gestures), the header Back button,
-popup Back/close/scrim and Escape retrace pages, tabs and nested popups. History
+popup Back/scrim and Escape retrace pages, tabs and nested popups. The X button
+dismisses the entire popup chain to its underlying page. History
 keeps UI state, scroll positions and unsubmitted form text in memory; it never
 restores `G` or replays game actions. At the first view, ordinary Back stays in
 the game. Reloading, loading a different career, changing jobs or starting a

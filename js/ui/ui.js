@@ -74,7 +74,7 @@ function sheet(html, opts = {}) {
     const layer = document.getElementById('layer');
     UI.sheetOpts = opts;
     UI.popup = { key: opts.key || html, restore: opts.restore || (() => sheet(html, opts)), valid: opts.valid };
-    layer.innerHTML = `<div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sh-x" data-a="closeSheet" aria-label="Back">×</button><div class="sh-body">${html}</div></section>`;
+    layer.innerHTML = `<div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sh-x" data-a="dismissSheet" aria-label="Close">×</button><div class="sh-body">${html}</div></section>`;
     layer.hidden = false;
   });
 }
@@ -164,6 +164,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventD
 ACT.go = ds => go(ds.s, { ...ds });
 ACT.back = () => backView();
 ACT.closeSheet = () => closeSheet();
+ACT.dismissSheet = () => dismissPopup();
 ACT.tab = ds => { UI.tab[ds.key] = ds.v; render(); };
 ACT.continue = () => {
   if (!G) return;

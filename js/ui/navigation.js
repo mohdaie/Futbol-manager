@@ -76,6 +76,21 @@ function backView() {
   history.back();
 }
 
+// X dismisses the entire popup chain; Back still visits one view at a time.
+function dismissPopup() {
+  const H = VIEW_HISTORY;
+  if (document.getElementById('layer').hidden || H.pending) return;
+  rememberView();
+  let target = H.index;
+  while (target > 0 && H.views.get(target)?.popup) target--;
+  if (H.ready && target < H.index) {
+    H.pending = true;
+    history.go(target - H.index);
+    return;
+  }
+  viewAction(() => { const opts = UI.sheetOpts; hideSheet(); if (opts?.onClose) opts.onClose(); });
+}
+
 function restoreView(view) {
   const H = VIEW_HISTORY;
   H.restoring = true;
