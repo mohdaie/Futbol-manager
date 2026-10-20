@@ -1,0 +1,3 @@
+[functions.futbol-jev]
+# Jev authenticates each caller's personal API key, not a Supabase user JWT.
+verify_jwt = false

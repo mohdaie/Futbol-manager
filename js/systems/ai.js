@@ -88,7 +88,7 @@ async function aiFetch(url, body, headers, timeout) {
     return data;
   } catch (e) {
     if (e.name === 'AbortError') throw new Error(`No reply within ${timeout / 1000}s.`);
-    if (e instanceof TypeError) throw new Error('Could not reach the AI server. Check your internet connection and URL. Direct browser requests may be blocked (CORS); try “Through my server” with your own proxy URL.');
+    if (e instanceof TypeError) throw new Error('Could not reach the AI server. Check your internet connection and URL. Direct browser requests may be blocked (CORS); use a relay you control.');
     throw e;
   } finally { clearTimeout(timer); }
 }
@@ -96,13 +96,13 @@ async function aiFetch(url, body, headers, timeout) {
 // True when a service is switched on, has a key or proxy, and (optionally) a feature is ticked.
 function aiReady(svc, feat) {
   const c = aiCfg()[svc];
-  return !!(c.on && (c.mode === 'direct' ? c.key : c.proxy) && (!feat || c.feat[feat]));
+  return !!(c.on && (c.mode === 'direct' ? c.key : c.mode === 'relay' ? c.key && c.proxy : c.proxy) && (!feat || c.feat[feat]));
 }
 
 function aiGuard(svc) {
   const c = aiCfg()[svc];
-  if (c.mode === 'direct' && !c.key) throw new Error('Add an API key first.');
-  if (c.mode === 'proxy' && !c.proxy) throw new Error('Add a proxy URL first.');
+  if (c.mode !== 'proxy' && !c.key) throw new Error('Add an API key first.');
+  if (c.mode !== 'direct' && !c.proxy) throw new Error('Add a proxy URL first.');
   if (aiUsage(svc).cost >= c.budget) throw new Error(`Monthly budget of $${c.budget} reached. Raise it to continue.`);
 }
 
@@ -110,7 +110,7 @@ function aiGuard(svc) {
 async function jevAsk(state, questions, note = 'request', opts = {}) {
   const c = aiCfg().jev;
   aiGuard('jev');
-  const url = c.mode === 'proxy' ? c.proxy.replace(/\/$/, '') + '/v1/systemone' : 'https://api.typesafe.ai/v1/systemone';
+  const url = c.mode === 'direct' ? 'https://api.typesafe.ai/v1/systemone' : c.proxy.replace(/\/$/, '').replace(/\/v1\/systemone$/, '') + '/v1/systemone';
   const headers = c.mode === 'proxy' ? {} : { Authorization: 'Bearer ' + c.key };
   const t0 = performance.now();
   try {
