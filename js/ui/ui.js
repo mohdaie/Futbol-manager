@@ -8,7 +8,14 @@ const SCREENS = {};  // name -> { render(p) -> html, after?(p), full?: bool, tit
 const ACT = {};      // click actions: ACT[name](dataset, el)
 const CHG = {};      // change actions: CHG[name](value, dataset, el)
 
-const NAV = [['home', 'Home', 'M3 11 12 4l9 7v9h-6v-6H9v6H3z'], ['squad', 'Squad', 'M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM8 12a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm8 2c-3 0-7 1.5-7 4v2h14v-2c0-2.5-4-4-7-4zM8 14c-.4 0-.9 0-1.4.1A4.6 4.6 0 0 1 8 18v2H1v-2c0-2 4-4 7-4z'], ['tactics', 'Tactics', 'M4 3h16v18H4zM4 12h16M12 3v3M12 18v3M9 12a3 3 0 0 0 6 0'], ['transfers', 'Transfers', 'M4 8h13l-3-3M20 16H7l3 3'], ['more', 'More', 'M4 6h16M4 12h16M4 18h16']];
+const NAV = [['home', 'Dashboard'], ['squad', 'Squad'], ['tactics', 'Tactics'], ['training', 'Training'], ['news', 'News'], ['transfers', 'Transfers'], ['finance', 'Finance'], ['more', 'More']];
+const ICON = {
+  ball: '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#fff"/><path d="M20 11.5l7 5-2.7 8.2h-8.6L13 16.5z" fill="#22082F"/><path d="M20 2.2v9.3M27 16.5l8.6-3M24.3 24.7l5.4 7.6M15.7 24.7l-5.4 7.6M13 16.5l-8.6-3" stroke="#22082F" stroke-width="2"/><path d="M11 3.6l2.2 4.8M29 3.6l-2.2 4.8M37.9 21l-4.7 2.6M2.1 21l4.7 2.6M17 37.8l3-4.3 3 4.3" stroke="#22082F" stroke-width="2" fill="none"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
+  cal: '<svg class="cal" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+};
 
 function go(s, p = {}) {
   if (UI.s === 'match' && s !== 'match') stopLive();
@@ -34,17 +41,24 @@ function render(reset) {
 }
 
 function shell(body) {
-  const c = userClub(), unread = G.news.filter(n => !n.read).length;
+  const c = userClub(), unread = G.news.filter(n => !n.read).length, reports = G.scout.reports.length;
   const fx = userFixture(), matchNow = fx && !played(fx);
-  const cur = ['news', 'fixtures', 'table', 'stats', 'finance', 'training', 'medical', 'youth', 'staff', 'board', 'club', 'settings', 'history', 'admin'].includes(UI.s) ? 'more' : UI.s;
+  const cur = NAV.some(n => n[0] === UI.s) ? UI.s : 'more';
   return `<div class="app">
     <header class="top">
-      <button class="top-club" data-a="go" data-s="club" aria-label="Club overview">${badge(c.id, 30)}<span><b>${esc(c.name)}</b><small>${esc(phaseLabel())} · ${fmtDate(weekDate(G.week), false)}</small></span></button>
-      <button class="top-money" data-a="go" data-s="finance"><small>Balance</small><b class="${c.bal < 0 ? 'bad' : ''}">${money(c.bal)}</b></button>
+      <div class="brand">${ICON.ball}<span>${GAME_NAME}</span></div>
+      <div class="top-icons">
+        <button class="iconbtn" data-a="go" data-s="news" aria-label="News, ${unread} unread">${ICON.bell}${unread ? '<i class="dot"></i>' : ''}</button>
+        <button data-a="go" data-s="club" aria-label="Your club and manager">${avatarImg(G.avatar)}</button>
+      </div>
     </header>
+    <nav class="tabs2">${NAV.map(([k, n]) => `<button class="${cur === k ? 'on' : ''}" data-a="go" data-s="${k}">${n}</button>`).join('')}</nav>
+    <div class="subbar"><button data-a="go" data-s="club">${badge(c.id, 20)}<b>${esc(c.name)}</b><span>· ${esc(phaseLabel())}</span></button><span>${ICON.cal}${fmtDate(weekDate(G.week), false)}</span></div>
     <main class="main">${body}<div class="spacer"></div></main>
-    ${UI.s === 'admin' ? '' : `<button class="fab ${matchNow ? 'match' : ''}" data-a="continue">${matchNow ? 'Matchday' : 'Continue'}<span aria-hidden="true">›</span></button>`}
-    <nav class="nav">${NAV.map(([k, n, d]) => `<button class="${cur === k ? 'on' : ''}" data-a="go" data-s="${k}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span>${n}</span>${k === 'home' && unread ? `<i class="dot">${unread > 9 ? '9+' : unread}</i>` : ''}</button>`).join('')}</nav>
+    ${UI.s === 'admin' ? '' : `<div class="bottombar">
+      <button class="bb-sum" data-a="go" data-s="news">${ICON.doc}<span>${unread} news · ${reports} report${reports === 1 ? '' : 's'}</span></button>
+      <button class="cta ${matchNow ? 'match' : ''}" data-a="continue">${matchNow ? 'Matchday' : 'Continue'}${ICON.arrow}</button>
+    </div>`}
   </div>`;
 }
 
@@ -75,7 +89,7 @@ function badge(cid, size = 28) {
   const c = G.clubs[cid];
   if (!c) return '';
   const code = c.code || c.id, txt = isLight(c.c1) ? '#141414' : '#FFFFFF';
-  return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="${code.length > 2 ? 11.5 : 13}" font-weight="800" fill="${txt}" font-family="Saira Condensed, sans-serif">${code}</text></svg>`;
+  return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="${code.length > 2 ? 11.5 : 13}" font-weight="800" fill="${txt}" font-family="Plus Jakarta Sans, sans-serif">${code}</text></svg>`;
 }
 const avatarImg = (n, cls = '') => `<img class="av ${cls}" src="${avatarSrc(n)}" alt="Manager ${AVATARS.includes(+n) ? +n : 1}" width="320" height="320" loading="lazy" decoding="async">`;
 function avatarPicker(cur, act) {

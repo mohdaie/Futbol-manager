@@ -7,7 +7,7 @@
 const START = { club: 'GUN', name: '', avatar: 1 };
 function startBadge(c, size) {
   const txt = isLight(c.c1) ? '#141414' : '#FFFFFF';
-  return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="11.5" font-weight="800" fill="${txt}" font-family="Saira Condensed, sans-serif">${c.id}</text></svg>`;
+  return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="11.5" font-weight="800" fill="${txt}" font-family="Plus Jakarta Sans, sans-serif">${c.id}</text></svg>`;
 }
 SCREENS.start = {
   full: true,
