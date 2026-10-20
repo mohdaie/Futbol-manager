@@ -373,3 +373,23 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
   - Temperamental players swing more, and determined, professional and model-citizen players shrug off setbacks. A high-leadership captain steadies the team.
   - Swings fade over about an hour, count in every duel through `pForm`, and only last for the match; the result changes real morale at full time.
 - **Pass credit:** background passes that aren't animated are credited to the players who make them, so each player's pass count is realistic.
+
+## AI-assisted staff, stage 1: assistant manager (2026.10.20.8, `staff.js`)
+- **Where:** "Ask for advice" on the pre-match screen and the Tactics screen.
+- **What he does:** plays the coming match through many times with the game's own engine, using both real squads, the opponent's likely tactic, fatigue, morale, home advantage and weather. Nothing is saved (`simFixture()`, fixture id -1). Then:
+  - **Predicts** win/draw/loss and the likely score.
+  - **Tries other styles** (best-suited first), with the XI re-picked for each formation, and recommends one if it is worth at least 0.1 points per game more.
+  - **Gives reasons** from game data (`matchFacts()`): strength of the two elevens, tactic fit, condition and rest days, morale, missing players, their high line against our pace, their press, weather and home advantage.
+- **Rating limits** (Assistant staff rating, 1–20):
+
+| What | How the rating changes it |
+|---|---|
+| Run-throughs per tactic | 6 + 1.5 × rating |
+| Styles tried | 1 + rating / 5 |
+| Prediction error | ± (20 − rating) × 0.6 percentage points |
+| Reasons given | 1 + rating / 4 |
+| Precision | Exact numbers only from about 9–10 upwards |
+
+- **Optional AI wording:** DeepSeek can word the advice (AI settings: "Staff advice in words"), from the computed facts only. `staffTextValid()` rejects any text with a number, player or club not in the facts, and the built-in wording is used instead.
+- **Learning record:** `G.staffLog` stores each piece of advice (prediction, recommended and current style, rating), whether you followed it (style at kick-off) and the result (points, goals, xG difference). `assistantRecord()` shows how often he called the result right and points per game with and without his advice. It is shown on the assistant card and the Staff screen.
+- **Later stages:** this record becomes the learning data for staff (stage 5).

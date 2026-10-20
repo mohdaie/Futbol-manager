@@ -169,7 +169,10 @@ ACT.budget = ds => { if (!adjustBudgets(+ds.v)) toast('Not enough budget to move
 SCREENS.staff = {
   render() {
     const row = (s, hire) => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>${s.role} · age ${s.age} · ${wageFmt(s.wage)}</small></span><span class="rt ${s.rating >= 15 ? 'good' : s.rating < 8 ? 'bad' : ''}">${s.rating}</span>${hire ? `<button class="btn sm" data-a="hire" data-id="${s.id}">Hire</button>` : `<button class="btn sm ghost" data-a="fire" data-id="${s.id}">Release</button>`}</div>`;
+    const rec = typeof assistantRecord === 'function' ? assistantRecord() : null;
     return `<h1 class="h1">Staff</h1>
+      <div class="card"><h3>AI-assisted staff</h3><p class="muted">Your assistant manager advises before each match: he plays it through with the game's own engine and recommends a tactic. The better his rating, the more options he tries and the more accurate he is. Advice and results are recorded.</p>
+        ${rec ? `<div class="kv"><div><small>Results called right</small><b>${rec.accuracy}% of ${rec.n}</b></div><div><small>Tactic advice followed</small><b>${rec.nf ? rec.followed + ' pts/game' : '-'}</b></div><div><small>Advice not followed</small><b>${rec.ni ? rec.ignored + ' pts/game' : '-'}</b></div></div>` : '<p class="muted">No advice recorded yet. Ask him on the pre-match screen.</p>'}</div>
       ${Object.keys(STAFF_ROLES).map(role => `<div class="sec-h"><h2>${role}s</h2><span class="muted">${staffOf(role).length}/${STAFF_ROLES[role]} · ${STAFF_DESC[role]}</span></div><div class="list">${staffOf(role).map(s => row(s)).join('') || '<p class="muted">Vacant</p>'}</div>`).join('')}
       <div class="sec-h"><h2>Available to hire</h2><span class="muted">Refreshes every six weeks</span></div>
       <div class="list">${G.staffPool.map(s => row(s, true)).join('')}</div>`;

@@ -22,7 +22,7 @@ const DS_MODELS = [['deepseek-flash', 'deepseek-flash (cheapest, recommended)'],
 // Game features each service can drive. Saved now; wired in when each feature is built.
 const AI_FEATURES = {
   jev: [['manager', 'Computer managers: in-match changes'], ['react', 'Player and press reactions to what you say'], ['transfer', 'Transfer decisions (accept, counter, join)'], ['advice', 'Assistant tactical advice']],
-  ds: [['second', 'Second opinion when Jev is unsure (manager decisions)'], ['press', 'Press conference questions'], ['talks', 'Player conversation replies'], ['report', 'Match reports'], ['news', 'News stories and rumours']],
+  ds: [['second', 'Second opinion when Jev is unsure (manager decisions)'], ['press', 'Press conference questions'], ['talks', 'Player conversation replies'], ['report', 'Match reports'], ['staff', 'Staff advice in words (assistant manager)'], ['news', 'News stories and rumours']],
 };
 
 function aiDefaults() {
