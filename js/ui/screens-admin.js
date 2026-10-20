@@ -137,6 +137,8 @@ function admPlayerSheet(pid) {
       ${fld('Morale', num('apMor', p.mor, 1, 'min="0" max="100"'))}${fld('Condition', num('apCond', Math.round(p.cond), 1, 'min="0" max="100"'))}
       ${fld('Sharpness', num('apShp', p.shp, 1, 'min="0" max="100"'))}${fld('Wage (£/week)', num('apWage', p.wage, 100))}
       ${fld('Contract ends (June)', num('apCon', p.con, 1))}${fld('Personality', selectHtml('apPers', PERSONALITIES, p.pers, ''))}
+      ${fld('Height (cm)', num('apHt', p.ht, 1, 'min="155" max="210"'))}${fld('Weight (kg)', num('apWt', p.wt, 1, 'min="45" max="120"'))}
+      ${fld('Ambition (1-20)', num('apAmb', p.amb, 1, 'min="1" max="20"'))}
     </div>
     <h4 class="lbl">Attributes (1-20)</h4>
     <div class="adattrs">${ATTRS.map((a, i) => `<label><span>${a[1]}</span>${num('apAt' + i, p.at[i], 1, 'min="1" max="20"')}</label>`).join('')}</div>
@@ -152,6 +154,7 @@ ACT.admPSave = ds => {
   p.pos = val('apPos'); p.nat = val('apNat'); p.pers = val('apPers');
   p.alt = p.alt.filter(x => x !== p.pos);
   p.age = clamp(nval('apAge'), 15, 45);
+  p.ht = clamp(nval('apHt'), 155, 210); p.wt = clamp(nval('apWt'), 45, 120); p.amb = clamp(nval('apAmb'), 1, 20);
   p.mor = clamp(nval('apMor'), 0, 100); p.cond = clamp(nval('apCond'), 0, 100); p.shp = clamp(nval('apShp'), 0, 100);
   p.wage = Math.max(0, nval('apWage')); p.con = nval('apCon');
   ATTRS.forEach((a, i) => { p.at[i] = clamp(Math.round(nval('apAt' + i)), 1, 20); });

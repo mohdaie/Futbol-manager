@@ -13,6 +13,8 @@ js/core/data.js            STATIC DATA: clubs, nations, names, attributes, forma
 js/core/rosters.js         ROSTERS: the 20 real-based squads (level, name, position, age,
                            nation, foot, contract, value). Ratings come from market value.
 js/core/players.js         player generation, ratings, position fit, value, wages
+js/core/bio.js             personal details (height, weight, character, ambition, favourite
+                           person and manager), club managers, and how they affect the game
 js/core/state.js           the game state object G, new-game world build, save/load,
                            news, auto-pick, squad helpers
 js/core/calendar.js        weeks and dates, fixture generator, transfer windows, league table
@@ -99,6 +101,21 @@ Everything lives in one JSON-safe object, saved to `localStorage` after each wee
 | `history`, `trophies` | past seasons and awards |
 
 ## 4. Systems in brief
+
+**Player page.** The big number is the player's rating out of 100 (current ability at his main position), with a remark from Raw to World class. The stars and remark below it show potential. The hexagon sums up the attributes on six sides. Outfielders show Attacking, Technical, Speed, Physical, Defending and Mental. Keepers show Shot stopping, Handling, One on ones, Distribution, Positioning and Mental. Keepers only list GK as a position. Everything you can do with a player sits behind one **Actions** button, grouped by category: Motivate, Squad, Training and Contract for your players; Transfer and Scouting for others. To add an action, add an item to `PLAYER_ACTIONS` in screens-squad.js.
+
+**Personal details** (Personal tab, `bio.js`). Every player has these details, and each one changes the game:
+| Detail | Effect |
+|---|---|
+| Height | Heading power in the air (`aerial()`): who attacks set pieces, set-piece finishing and defending. Taller keepers concede up to 4% fewer goals per shot (`gkReach()`). |
+| Weight | Body mass index changes how fast he tires in matches (`fatigueMul()`, ±6–12%). |
+| Nationality | A foreign player with no team-mates from his country slowly loses morale. With compatriots he settles. |
+| Character | Development speed, contract demands, reaction to criticism, and card risk (Temperamental 1.5×, Professional and Model Citizen 0.8×). |
+| Favourite person | Another player. If they are at the same club he is happier every week. He is more willing to join a club where they play, and asks for less. Moving his favourite person in or out changes his morale by 6. |
+| Favourite manager | Playing for him makes him happier and he develops 8% faster. After a good season with regular games, your players may name you their favourite manager. Players who call you their favourite are easier and cheaper to sign. |
+| Ambition (1–20) | Development speed (−9% to +10%) and wage demands. He also needs a bigger step up before he will join you. A very ambitious player at a club below his level slowly loses morale. |
+
+Older saves get personal details and club managers when they load (`ensureWorld()`). For other clubs' players, character and ambition stay hidden until scout knowledge reaches 50%.
 
 **Squads and levels.** Every player has a level: `A` first team, `R` reserves (under-21), `Y` U18s (`LEVELS` in data.js, `lvlOf()` in players.js). Only the first team is picked for league matches; reserves step in when fewer than 16 first-teamers are fit. First-team rosters come from Transfermarkt's 2026/27 squads (read with Firecrawl), renamed into different names with a similar sound (Bukayo Saka becomes Kayode Bako). Each player keeps his age, nationality and position. Ratings come from market value (`ratingFromValue()`). Where a club's real youth list was short or not available, `fillLevel()` in state.js generates the rest of the reserves and U18s to 20 each. Positions are filled first, ages are 18 to 21 for reserves and 15 to 17 for U18s, and better clubs get higher potential. At each season end, U18s who turn 19 move to the reserves. Computer clubs promote or release reserves aged 23, promote their best reserves before signing free agents, and refill both youth levels. Signed players join the first team.
 

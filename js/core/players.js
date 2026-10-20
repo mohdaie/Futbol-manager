@@ -66,6 +66,7 @@ function genPlayer(o) {
     st: newStats(), car: { a: 0, g: 0 }, status: (o.lvl || (o.youth ? 'Y' : 'A')) === 'A' ? '' : 'Prospect', listed: false, lvl: o.lvl || (o.youth ? 'Y' : 'A'), prev: null,
   };
   p.pa = clamp(Math.round(o.pa ?? p.ca), p.ca, 97);
+  genBio(p);
   return p;
 }
 

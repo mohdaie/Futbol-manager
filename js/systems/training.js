@@ -19,7 +19,7 @@ function bumpAttr(p, dir, focusKeys) {
 function develop(p, q, focusKeys, im) {
   const a = p.age, gap = p.pa - p.ca;
   const ageF = a <= 18 ? 1.7 : a <= 20 ? 1.45 : a <= 22 ? 1.15 : a <= 24 ? 0.85 : a <= 27 ? 0.45 : a <= 29 ? 0.15 : 0;
-  const persF = ['Professional', 'Determined', 'Ambitious', 'Model Citizen'].includes(p.pers) ? 1.15 : p.pers === 'Laid Back' ? 0.85 : 1;
+  const persF = (['Professional', 'Determined', 'Ambitious', 'Model Citizen'].includes(p.pers) ? 1.15 : p.pers === 'Laid Back' ? 0.85 : 1) * devMul(p);
   const playF = 0.7 + (p.shp / 100) * 0.5;
   if (gap > 0) {
     const pUp = clamp((gap / 120) * ageF * (0.7 + q / 30) * im * playF * persF, 0, 0.85);
@@ -50,6 +50,9 @@ function weeklyTraining(playedThisWeek) {
   const q = coach * 0.7 + facility * 0.3;
   const im = [0.8, 1, 1.2][T.intensity] * (T.focus === 'rec' ? 0.4 : 1);
   const userSet = new Set(userClub().squad);
+  // nationality counts per club, for settling in
+  const nats = {};
+  Object.values(G.players).forEach(p => { const n = nats[p.club] || (nats[p.club] = {}); n[p.nat] = (n[p.nat] || 0) + 1; });
 
   Object.values(G.players).forEach(p => {
     const mine = userSet.has(p.id);
@@ -72,7 +75,8 @@ function weeklyTraining(playedThisWeek) {
     const quality = mine ? q : c && c.rep ? 6 + (c.rep - 60) / 4 : 8;
     develop(p, quality, keys, mine ? im : 1);
     // morale drifts back toward neutral
-    p.mor = Math.round(p.mor + (62 - p.mor) * 0.06);
+    if (p.fpn == null) linkBio(p);
+    p.mor = clamp(Math.floor(p.mor + (62 - p.mor) * 0.06 + moraleDrift(p, nats[p.club] || {}) + R()), 0, 100); // random rounding so small weekly pushes add up
   });
   T.fam = clamp(T.fam + (T.focus === 'tac' ? 5 : 2), 0, 100);
 }

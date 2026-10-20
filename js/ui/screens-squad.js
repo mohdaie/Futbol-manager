@@ -33,43 +33,98 @@ function playerSheet(pid) {
   const groups = p.pos === 'GK' ? ['G', 'M', 'P'] : ['T', 'M', 'P'];
   let body = '';
   if (t === 'attr') {
-    const best = POSITIONS.map(pos => [pos, ovrAt(p, pos)]).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    body = `<div class="attrs">${groups.map(g => `<div><h4 class="lbl">${ATTR_GROUPS[g]}</h4>${ATTRS.map((a, i) => (a[2] === g ? `<div class="at"><span>${a[1]}</span><b class="${attrClass(seenAttr(p, i).hi)}">${seenAttr(p, i).txt}</b></div>` : '')).join('')}</div>`).join('')}</div>
+    const best = p.pos === 'GK' ? [['GK', ovrAt(p, 'GK')]] : POSITIONS.filter(pos => pos !== 'GK').map(pos => [pos, ovrAt(p, pos)]).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    body = `${playerHex(p)}<div class="attrs">${groups.map(g => `<div><h4 class="lbl">${ATTR_GROUPS[g]}</h4>${ATTRS.map((a, i) => (a[2] === g ? `<div class="at"><span>${a[1]}</span><b class="${attrClass(seenAttr(p, i).hi)}">${seenAttr(p, i).txt}</b></div>` : '')).join('')}</div>`).join('')}</div>
       ${mine || knowOf(p) >= 70 ? `<h4 class="lbl">Best positions</h4><div class="chips">${best.map(([pos, v]) => `<span class="chip static">${pos} ${v}</span>`).join('')}</div>` : `<p class="note">Scout knowledge ${knowOf(p)}%. Attribute ranges narrow as your scouts watch him.</p>`}`;
+  } else if (t === 'bio') {
+    const known = mine || knowOf(p) >= 50, fp = G.players[p.fp], ftIn = Math.round(p.ht / 2.54);
+    const fmClub = Object.values(G.clubs).find(c => c.mgr && c.mgr === p.fmn);
+    body = `<div class="kv">
+        <div><small>Height</small><b>${(p.ht / 100).toFixed(2)} m <i class="muted">${Math.floor(ftIn / 12)}'${ftIn % 12}"</i></b></div>
+        <div><small>Weight</small><b>${p.wt} kg</b></div>
+        <div><small>Nationality</small><b>${natName(p.nat)}</b></div>
+        <div><small>Ambition</small><b>${known ? ambLabel(p.amb) : 'Unknown'}</b></div>
+        <div><small>Favourite person</small><b>${fp ? `<button class="link" data-a="player" data-id="${fp.id}">${esc(p.fpn)}</button>` : esc(p.fpn) + (p.fp ? ' (retired)' : '')}</b>${fp ? `<span>${esc(clubName(fp.club))}</span>` : ''}</div>
+        <div><small>Favourite manager</small><b>${p.fmn === G.manager ? 'You' : esc(p.fmn)}</b>${fmClub ? `<span>${esc(fmClub.name)}</span>` : ''}</div></div>
+      <div class="card"><h4 class="lbl">Character · ${known ? p.pers : 'Unknown'}</h4><p class="muted">${known ? CHARACTER[p.pers] : 'Scout him to learn about his character and ambition.'}</p></div>
+      <h4 class="lbl">How this affects him</h4>
+      <ul class="notes">${(known ? bioNotes(p) : bioNotes(p).filter(n => !/ambitio/i.test(n[0]))).map(([txt, k]) => `<li class="${k}">${esc(txt)}</li>`).join('') || '<li>Nothing stands out.</li>'}</ul>`;
   } else if (t === 'stats') {
     const row = (lbl, s) => `<tr><td class="l">${lbl}</td><td>${s.a}</td><td>${s.g}</td><td>${s.as ?? '-'}</td><td>${s.a ? (s.rt / s.a).toFixed(2) : '-'}</td></tr>`;
     body = `<div class="tablewrap"><table class="tbl"><thead><tr><th class="l">Season</th><th>Apps</th><th>Gls</th><th>Ast</th><th>Avg</th></tr></thead><tbody>${row(seasonLabel(), p.st)}${p.prev ? row(p.prev.season, p.prev) : ''}<tr><td class="l">Career (in game)</td><td>${p.car.a}</td><td>${p.car.g}</td><td>-</td><td>-</td></tr></tbody></table></div>
-      <div class="kv"><div><small>Player of the match</small><b>${p.st.mom}</b></div><div><small>Yellow / red</small><b>${p.st.yc} / ${p.st.rc}</b></div><div><small>Clean sheets</small><b>${p.st.cs}</b></div><div><small>Personality</small><b>${p.pers}</b></div></div>`;
+      <div class="kv"><div><small>Player of the match</small><b>${p.st.mom}</b></div><div><small>Yellow / red</small><b>${p.st.yc} / ${p.st.rc}</b></div><div><small>Clean sheets</small><b>${p.st.cs}</b></div></div>`;
   } else {
     const yl = p.con - G.season;
     body = `<div class="kv"><div><small>Value</small><b>${money(pValue(p))}</b></div><div><small>Wage</small><b>${p.club === 'FA' ? 'Unattached' : wageFmt(p.wage)}</b></div>
-      <div><small>Contract ends</small><b>${p.club === 'FA' ? '-' : 'June ' + (p.con)}${p.club !== 'FA' && yl <= 1 ? ' <em class="tag warn">Expiring</em>' : ''}</b></div><div><small>${mine ? 'Squad status' : 'Asking price'}</small><b>${mine ? p.status : p.club === 'FA' ? 'Free' : knowOf(p) >= 50 ? '~' + money(askingPrice(p)) : 'Unknown'}</b></div></div>`;
+      <div><small>Contract ends</small><b>${p.club === 'FA' ? '-' : 'June ' + (p.con)}${p.club !== 'FA' && yl <= 1 ? ' <em class="tag warn">Expiring</em>' : ''}</b></div><div><small>${mine ? 'Squad status' : 'Asking price'}</small><b>${mine ? p.status : p.club === 'FA' ? 'Free' : knowOf(p) >= 50 ? '~' + money(askingPrice(p)) : 'Unknown'}</b></div>
+      ${mine ? `<div><small>Squad</small><b>${LEVELS[lvlOf(p)]}</b></div><div><small>Training focus</small><b>${INDIV_FOCUS[G.training.indiv[p.id] || 'none']}</b></div>` : ''}</div>`;
   }
-  let actions;
-  if (mine) {
-    actions = `<div class="btns">
-      <button class="btn" data-a="talkOpen" data-id="${p.id}">Talk</button>
-      <button class="btn" data-a="contract" data-id="${p.id}" data-mode="renew">New contract</button>
-      <button class="btn" data-a="listToggle" data-id="${p.id}">${p.listed ? 'Remove from list' : 'Transfer list'}</button>
-      ${Object.keys(LEVELS).filter(k => k !== lvlOf(p) && (k !== 'Y' || p.age <= 18)).map(k => `<button class="btn ${k === 'A' ? 'pri' : ''}" data-a="setLvl" data-id="${p.id}" data-v="${k}">${k === 'A' ? 'Promote to first team' : 'Move to ' + LEVELS[k].toLowerCase()}</button>`).join('')}
-      <button class="btn ghost ${UI.tab.rel === p.id ? 'bad' : ''}" data-a="release" data-id="${p.id}">${UI.tab.rel === p.id ? 'Confirm release' : 'Release'}</button></div>
-      <div class="two"><div class="field"><label>Squad status</label>${selectHtml('st-' + p.id, ['Key player', 'First team', 'Rotation', 'Backup', 'Prospect'], p.status, 'pStatus', `data-id="${p.id}"`)}</div>
-      <div class="field"><label>Individual training</label>${selectHtml('it-' + p.id, Object.entries(INDIV_FOCUS), G.training.indiv[p.id] || 'none', 'indiv', `data-id="${p.id}"`)}</div></div>`;
-  } else {
-    actions = `<div class="btns"><button class="btn pri" data-a="offer" data-id="${p.id}">${p.club === 'FA' ? 'Offer contract' : 'Make an offer'}</button>
-      <button class="btn" data-a="shortlist" data-id="${p.id}">${G.shortlist.includes(p.id) ? 'Remove from shortlist' : 'Add to shortlist'}</button>
-      ${knowOf(p) < 95 ? `<button class="btn ghost" data-a="scoutOne" data-id="${p.id}">Scout report (£10k)</button>` : ''}</div>`;
-  }
+  const actions = `<div class="btns"><button class="btn pri wide" data-a="pActions" data-id="${p.id}">Actions</button></div>`;
   sheet(`<div class="phead">
       <div class="pnum" style="--k1:${G.clubs[p.club].c1}">${p.no || '-'}</div>
       <div class="grow"><h3 class="sh-t">${esc(fullName(p))}</h3><p class="muted">${POS_NAME[p.pos]}${p.alt.length ? ' / ' + p.alt.join(', ') : ''} · ${p.age} · ${natName(p.nat)} · ${p.foot} foot${mine ? ' · ' + LEVELS[lvlOf(p)] : ''}</p>
         <p class="pclub">${badge(p.club, 18)} ${esc(clubName(p.club))}${p.inj ? ` · <em class="tag bad">${esc(p.inj.n)}, ${p.inj.w} wk</em>` : ''}${p.ban ? ' · <em class="tag bad">Suspended</em>' : ''}</p></div>
-      <div class="pov">${ovrPill(so.v, so.txt)}<small>Potential</small>${starHtml(pot)}</div></div>
+      <div class="pov"><small>Rating</small>${ovrPill(so.v, so.txt)}<em>${so.txt === '??' ? 'Unknown' : ratingRemark(so.v)}</em><small>Potential</small>${starHtml(pot)}<em>${potRemark(pot)}</em></div></div>
     ${mine ? `<div class="meters"><div><small>Condition</small>${bar(p.cond, condClass(p.cond))}</div><div><small>Morale · ${morLabel(p.mor)}</small>${bar(p.mor, morClass(p.mor))}</div><div><small>Match sharpness</small>${bar(p.shp)}</div></div>` : ''}
-    ${tabs('ps', [['attr', 'Attributes'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
+    ${tabs('ps', [['attr', 'Attributes'], ['bio', 'Personal'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
     ${body}${actions}`, { onClose: () => render() });
 }
 ACT.psTab = ds => { UI.tab.ps = ds.v; playerSheet(+ds.id); };
+
+/* ---------- player actions ----------
+   Grouped by category. To add an action, add an item to a category's items(p):
+   { n: label, d: short description, run: () => ..., off: reason it can't be used now, on: marks the current choice, confirm: true asks for a second tap }.
+   Add a category with { k, n, d, mine: true for your players / false for others, items }. */
+const TALKS = [['praise', 'Praise his recent form', 'Lifts morale if he has played well'], ['crit', 'Criticise his recent form', 'Tough players respond; others may sulk'], ['time', 'Promise more playing time', 'He will expect minutes over the next two months'], ['future', 'Ask about his future', 'Find out if he is happy to stay']];
+const PLAYER_ACTIONS = [
+  { k: 'motivate', n: 'Motivate', d: 'Talk to him about form, playing time and his future', mine: true,
+    items: p => TALKS.map(([k, n, d]) => ({ n, d, off: p.talked === G.week ? 'You already spoke to him this week' : '', run: () => ACT.talk1({ id: p.id, k }) })) },
+  { k: 'squad', n: 'Squad', d: 'Squad level and squad status', mine: true,
+    items: p => [
+      ...Object.keys(LEVELS).filter(k => k !== lvlOf(p)).map(k => ({ n: k === 'A' ? 'Promote to first team' : 'Move to ' + (k === 'Y' ? 'U18s' : 'reserves'), d: k === 'Y' && p.age > 18 ? '' : k === 'A' ? 'He can be picked for league matches' : 'He will not be picked for league matches', off: k === 'Y' && p.age > 18 ? 'Only players aged 18 or under' : '', run: () => ACT.setLvl({ id: p.id, v: k }) })),
+      ...SQUAD_STATUSES.map(s => ({ n: 'Status: ' + s, d: 'Sets how much playing time he expects', on: p.status === s, run: () => { CHG.pStatus(s, { id: p.id }); actionsSheet(p.id, 'squad'); } })),
+    ] },
+  { k: 'training', n: 'Training', d: 'Individual training focus', mine: true,
+    items: p => Object.entries(INDIV_FOCUS).map(([k, n]) => ({ n, d: k === 'none' ? 'Follows the team plan only' : 'Extra work on ' + n.toLowerCase() + ' attributes', on: (G.training.indiv[p.id] || 'none') === k, run: () => { CHG.indiv(k, { id: p.id }); actionsSheet(p.id, 'training'); } })) },
+  { k: 'contract', n: 'Contract', d: 'New deal, transfer list or release', mine: true,
+    items: p => [
+      { n: 'Offer a new contract', d: 'Contract ends June ' + p.con, run: () => ACT.contract({ id: p.id, mode: 'renew' }) },
+      { n: p.listed ? 'Remove from transfer list' : 'Add to transfer list', d: p.listed ? 'Clubs stop bidding' : 'Clubs are told he is available (lowers his morale)', run: () => ACT.listToggle({ id: p.id }) },
+      { n: 'Release', d: 'Pays up his contract', confirm: true, run: () => { const comp = releasePlayer(p); closeSheet(true); toast(`${pname(p)} released. Paid ${money(comp)} in compensation.`); render(); } },
+    ] },
+  { k: 'transfer', n: 'Transfer', d: 'Make an offer or track him', mine: false,
+    items: p => [
+      { n: p.club === 'FA' ? 'Offer contract' : 'Make an offer', d: p.club === 'FA' ? 'He is a free agent' : 'Bid for him', run: () => ACT.offer({ id: p.id }) },
+      { n: G.shortlist.includes(p.id) ? 'Remove from shortlist' : 'Add to shortlist', d: 'Keep track of him in Transfers', run: () => ACT.shortlist({ id: p.id }) },
+    ] },
+  { k: 'scouting', n: 'Scouting', d: 'Learn more about him', mine: false,
+    items: p => [{ n: 'Scout report (£10k)', d: 'Knowledge ' + knowOf(p) + '%', off: knowOf(p) >= 95 ? 'You already know him fully' : '', run: () => ACT.scoutOne({ id: p.id }) }] },
+];
+const SQUAD_STATUSES = ['Key player', 'First team', 'Rotation', 'Backup', 'Prospect'];
+const actionCats = p => PLAYER_ACTIONS.filter(c => c.mine === (p.club === G.club));
+
+function actionsSheet(pid, cat) {
+  const p = G.players[pid], cats = actionCats(p), c = cats.find(x => x.k === cat);
+  const head = `<button class="link back" data-a="${c ? 'pActions' : 'player'}" data-id="${p.id}">‹ ${c ? 'Actions' : esc(pname(p))}</button>
+    <h3 class="sh-t">${c ? c.n : 'Actions'} <small>${esc(fullName(p))}</small></h3>`;
+  const rows = c
+    ? c.items(p).map((it, i) => {
+      const ask = it.confirm && UI.tab.pconf === p.id + c.k + i;
+      return `<button class="row act ${it.on ? 'sel' : ''}" data-a="pAct" data-id="${p.id}" data-k="${c.k}" data-i="${i}" ${it.off ? 'disabled' : ''}>
+        <span class="grow"><b class="${ask ? 'bad' : ''}">${ask ? 'Tap again to confirm: ' + it.n : it.n}</b><small>${it.off || it.d || ''}</small></span>${it.on ? '<span class="xitag">Current</span>' : '<span class="chev">›</span>'}</button>`;
+    }).join('')
+    : cats.map(x => `<button class="row act" data-a="pActions" data-id="${p.id}" data-k="${x.k}"><span class="grow"><b>${x.n}</b><small>${x.d}</small></span><span class="chev">›</span></button>`).join('');
+  sheet(`${head}<div class="list">${rows}</div>`, { onClose: () => render() });
+}
+ACT.pActions = ds => { UI.tab.pconf = null; actionsSheet(+ds.id, ds.k); };
+ACT.pAct = ds => {
+  const p = G.players[+ds.id], c = actionCats(p).find(x => x.k === ds.k), it = c && c.items(p)[+ds.i];
+  if (!it || it.off) return;
+  const key = p.id + c.k + ds.i;
+  if (it.confirm && UI.tab.pconf !== key) { UI.tab.pconf = key; return actionsSheet(p.id, c.k); }
+  UI.tab.pconf = null;
+  it.run();
+};
 ACT.shortlist = ds => { const id = +ds.id; G.shortlist = G.shortlist.includes(id) ? G.shortlist.filter(x => x !== id) : [...G.shortlist, id]; playerSheet(id); };
 ACT.scoutOne = ds => { const p = G.players[+ds.id]; if (scoutPlayer(p)) { toast('Report filed. Knowledge now ' + knowOf(p) + '%.'); } else toast('Not enough money for a scout report.'); playerSheet(p.id); };
 ACT.listToggle = ds => { const p = G.players[+ds.id]; p.listed = !p.listed; if (p.listed) p.mor = clamp(p.mor - 6, 0, 100); toast(p.listed ? 'Transfer listed. Clubs will be told he is available.' : 'Removed from the transfer list.'); playerSheet(p.id); };
@@ -79,7 +134,7 @@ ACT.setLvl = ds => {
   p.lvl = to; p.youth = false;
   if (to === 'A') { p.status = 'Prospect'; p.wage = Math.max(p.wage, 1500); addNews('club', `${fullName(p)} promoted`, `${fullName(p)} moves up from the ${LEVELS[from].toLowerCase()} to the first-team squad.`); }
   if (from === 'A') { G.tactics.slots = G.tactics.slots.map(id => (id === p.id ? null : id)); G.tactics.bench = (G.tactics.bench || []).filter(id => id !== p.id); p.mor = clamp(p.mor - 10, 0, 100); }
-  toast(`${pname(p)} moved to the ${LEVELS[to].toLowerCase()}.`); closeSheet(true); render();
+  toast(`${pname(p)} moved to the ${to === 'Y' ? 'U18s' : LEVELS[to].toLowerCase()}.`); closeSheet(true); render();
 };
 ACT.release = ds => {
   const p = G.players[+ds.id];
@@ -91,12 +146,6 @@ ACT.release = ds => {
 CHG.pStatus = (v, ds) => { const p = G.players[+ds.id]; const old = p.status; p.status = v; const rank = s => ['Key player', 'First team', 'Rotation', 'Backup', 'Prospect'].indexOf(s); if (rank(v) > rank(old)) p.mor = clamp(p.mor - 8, 0, 100); toast(`${pname(p)} is now ${v.toLowerCase()}.`); };
 CHG.indiv = (v, ds) => { G.training.indiv[+ds.id] = v; toast('Individual training updated.'); };
 
-ACT.talkOpen = ds => {
-  const p = G.players[+ds.id];
-  if (p.talked === G.week) return toast(`You already spoke to ${pname(p)} this week.`);
-  sheet(`<h3 class="sh-t">Talk to ${esc(pname(p))}</h3><p class="muted">Morale: ${morLabel(p.mor)}. Season average rating ${p.st.a ? avgRating(p).toFixed(2) : 'not set yet'}.</p>
-    <div class="list">${[['praise', 'Praise his recent form'], ['crit', 'Criticise his recent form'], ['time', 'Promise more playing time'], ['future', 'Ask how he feels about his future']].map(([k, n]) => `<button class="row act" data-a="talk1" data-id="${p.id}" data-k="${k}"><span class="grow"><b>${n}</b></span><span class="chev">›</span></button>`).join('')}</div>`, { onClose: () => render() });
-};
 ACT.talk1 = ds => {
   const p = G.players[+ds.id], r = avgRating(p) || 6.7;
   p.talked = G.week;
