@@ -8,6 +8,7 @@ const SPEED_MS = { 1: 1400, 2: 700, 4: 300 };
 let LIVE = null;
 
 function startLive(fx) {
+  if (LIVE && !LIVE.done && LIVE.fid === fx.id) return go('match');
   const M = createMatch(fx);
   const bottom = M.sides[0].user ? 0 : 1;
   M.live = true;
@@ -37,6 +38,7 @@ function bindLive() {
   const L = LIVE;
   if (!L) return;
   const cv = document.getElementById('pitch');
+  if (!cv || UI.s !== 'match') return;
   const wrap = cv.parentElement;
   const dpr = window.devicePixelRatio || 1;
   const w = wrap.clientWidth, h = wrap.clientHeight, ar = 0.68;
@@ -303,7 +305,7 @@ function openTeamTalk(L) {
   const tip = scored.sort((a, b) => b[1] - a[1])[0][0];
   sheet(`<h3 class="sh-t">Half-time team talk</h3>
     <p class="muted">${clubName(S.cid)} ${S.st.g} - ${O.st.g} ${clubName(O.cid)}. Assistant suggests: <b>${TEAM_TALKS.find(t => t.k === tip).n}</b>.</p>
-    <div class="list">${TEAM_TALKS.map(t => `<button class="row act" data-a="talk" data-k="${t.k}"><span class="grow"><b>${t.n}</b><small>${t.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`, { onClose: () => { if (LIVE && LIVE.overlay && LIVE.overlay.stay) { LIVE.overlay = null; LIVE.paused = false; updateBoard(LIVE); } } });
+    <div class="list">${TEAM_TALKS.map(t => `<button class="row act" data-a="talk" data-k="${t.k}"><span class="grow"><b>${t.n}</b><small>${t.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`, { key: 'live:halftime', restore: () => openTeamTalk(L), valid: () => LIVE === L && !L.done && L.M.min === 45 && !!L.overlay?.stay, onClose: () => { if (LIVE && LIVE.overlay && LIVE.overlay.stay) { LIVE.overlay = null; LIVE.paused = false; updateBoard(LIVE); } } });
 }
 
 function applyTalk(k) {
@@ -352,6 +354,7 @@ function onFullTime(L) {
 
 function openLiveSheet(kind) {
   const L = LIVE, M = L.M, S = M.sides[L.bottom], O = M.sides[1 - L.bottom];
+  const opts = { key: 'live:' + kind, restore: () => openLiveSheet(kind), valid: () => LIVE === L && !L.done };
   if (kind === 'stats') {
     const [H, W] = M.sides, tot = H.st.pos + W.st.pos || 1;
     const row = (lbl, a, b) => `<div class="cmp"><b>${a}</b><span>${lbl}</span><b>${b}</b></div>`;
@@ -359,12 +362,12 @@ function openLiveSheet(kind) {
     sheet(`<h3 class="sh-t">Match stats</h3>
       <div class="cmp head"><b>${esc(clubName(H.cid))}</b><span></span><b>${esc(clubName(W.cid))}</b></div>
       ${row('Possession', Math.round(H.st.pos / tot * 100) + '%', Math.round(W.st.pos / tot * 100) + '%')}${row('Shots', H.st.sh, W.st.sh)}${row('On target', H.st.sot, W.st.sot)}${row('Expected goals', H.st.xg.toFixed(2), W.st.xg.toFixed(2))}${row('Corners', H.st.co, W.st.co)}${row('Fouls', H.st.fo, W.st.fo)}${row('Yellow cards', H.st.yc, W.st.yc)}${row('Red cards', H.st.rc, W.st.rc)}
-      <div class="two"><div><h4 class="lbl">${esc(clubName(H.cid))}</h4>${rat(H)}</div><div><h4 class="lbl">${esc(clubName(W.cid))}</h4>${rat(W)}</div></div>`);
+      <div class="two"><div><h4 class="lbl">${esc(clubName(H.cid))}</h4>${rat(H)}</div><div><h4 class="lbl">${esc(clubName(W.cid))}</h4>${rat(W)}</div></div>`, opts);
     return;
   }
   if (kind === 'shouts') {
     const active = M.shout ? `<p class="note">Active: ${SHOUTS.find(s => s.k === M.shout.k).n} until ${M.shout.until}'</p>` : '';
-    sheet(`<h3 class="sh-t">Touchline shouts</h3>${active}<div class="list">${SHOUTS.map(s => `<button class="row act" data-a="shout" data-k="${s.k}" ${M.shout ? 'disabled' : ''}><span class="grow"><b>${s.n}</b><small>${s.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`);
+    sheet(`<h3 class="sh-t">Touchline shouts</h3>${active}<div class="list">${SHOUTS.map(s => `<button class="row act" data-a="shout" data-k="${s.k}" ${M.shout ? 'disabled' : ''}><span class="grow"><b>${s.n}</b><small>${s.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`, opts);
     return;
   }
   if (kind === 'tactics') {
@@ -372,7 +375,7 @@ function openLiveSheet(kind) {
       <div class="field"><label>In possession</label>${selectHtml('lt-ip', Object.keys(FORMATIONS), S.ip, 'liveShape')}</div>
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       ${INSTRUCTIONS.map(ins => `<div class="field"><label>${ins.n}</label><div class="seg">${ins.o.map((o, i) => `<button class="${S[ins.k] === i ? 'on' : ''}" data-a="liveIns" data-k="${ins.k}" data-v="${i}">${o}</button>`).join('')}</div></div>`).join('')}
-      <p class="muted">Changes apply to this match only. Your saved tactic stays as it is.</p>`);
+      <p class="muted">Changes apply to this match only. Your saved tactic stays as it is.</p>`, opts);
     return;
   }
   if (kind === 'subs') {
@@ -382,6 +385,6 @@ function openLiveSheet(kind) {
     sheet(`<h3 class="sh-t">Substitutions <small>${5 - S.subs} left · ${Math.max(0, 3 - S.wins)} windows</small></h3>
       <p class="muted">${L.subSel ? 'Now pick a replacement from the bench.' : 'Pick a player to take off.'}</p>
       <h4 class="lbl">On the pitch</h4><div class="list">${on}</div>
-      <h4 class="lbl">Bench</h4><div class="list">${bench || '<p class="muted">No substitutes left.</p>'}</div>`);
+      <h4 class="lbl">Bench</h4><div class="list">${bench || '<p class="muted">No substitutes left.</p>'}</div>`, opts);
   }
 }

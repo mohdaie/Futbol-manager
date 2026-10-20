@@ -80,7 +80,7 @@ SCREENS.prematch = {
         ${warn.length ? `<ul class="warns">${warn.slice(0, 4).map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '<p class="muted">No selection problems.</p>'}
         <button class="btn wide" data-a="go" data-s="tactics">Edit tactics</button></div>
       <div class="card press"><h3>Press conference</h3>${pc.done ? `<p class="muted">Done. ${esc(pc.said)}</p>` : `<p class="q">“${esc(Q.q)}”</p><div class="list">${Q.a.map((a, k) => `<button class="row act" data-a="pressA" data-k="${k}"><span class="grow">${esc(a[0])}</span><span class="chev">›</span></button>`).join('')}</div><button class="link" data-a="pressSkip">Send the assistant instead</button>`}</div>
-      <div class="btns col"><button class="btn pri wide big" data-a="kickoff">Kick off</button><button class="btn wide ghost" data-a="instant">Instant result</button></div>`;
+      <div class="btns col"><button class="btn pri wide big" data-a="kickoff">${LIVE && !LIVE.done && LIVE.fid === fx.id ? 'Resume match' : 'Kick off'}</button><button class="btn wide ghost" data-a="instant">Instant result</button></div>`;
   },
 };
 ACT.pressA = ds => {
@@ -97,6 +97,7 @@ ACT.kickoff = () => { const fx = userFixture(); if (fx && !played(fx)) startLive
 ACT.instant = () => {
   const fx = userFixture();
   if (!fx || played(fx)) return;
+  if (LIVE && !LIVE.done && LIVE.fid === fx.id) { go('match'); return liveInstant(); }
   playUserInstant(fx);
   go('post', { fid: fx.id });
 };
@@ -109,7 +110,7 @@ SCREENS.match = {
     const [H, W] = LIVE.M.sides;
     return `<div class="mscr">
       <div class="sb">
-        <div class="sb-t">${badge(H.cid, 22)}<b>${esc(clubName(H.cid))}</b></div>
+        <div class="sb-t"><button class="iconbtn" data-a="back" aria-label="Back">${ICON.back}</button>${badge(H.cid, 22)}<b>${esc(clubName(H.cid))}</b></div>
         <div class="sb-m"><b id="sbScore">0 - 0</b><span id="sbClock">0'</span></div>
         <div class="sb-t r"><b>${esc(clubName(W.cid))}</b>${badge(W.cid, 22)}</div>
       </div>

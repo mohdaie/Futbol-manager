@@ -93,7 +93,7 @@ function offerSheet(msg) {
     <div class="stepper"><button class="btn" data-a="feeStep" data-v="${-step * 4}">−−</button><button class="btn" data-a="feeStep" data-v="${-step}">−</button><b>${money(N.fee)}</b><button class="btn" data-a="feeStep" data-v="${step}">+</button><button class="btn" data-a="feeStep" data-v="${step * 4}">++</button></div>
     <p class="muted c">Transfer budget ${money(G.fin.tb)}</p>
     ${msg ? `<p class="note">${esc(msg.text)}</p>${msg.counter ? `<button class="btn wide" data-a="feeSet" data-v="${msg.counter}">Match their price: ${money(msg.counter)}</button>` : ''}` : ''}
-    <button class="btn pri wide" data-a="sendBid">Submit offer</button>`, { onClose: () => render() });
+    <button class="btn pri wide" data-a="sendBid">Submit offer</button>`, { key: 'offer:' + p.id, restore: () => offerSheet(msg), valid: () => !!G?.players[p.id] && G.players[p.id].club !== G.club, onClose: () => render() });
 }
 ACT.feeStep = ds => { UI.neg.fee = Math.max(0, roundMoney(UI.neg.fee + +ds.v)); offerSheet(); };
 ACT.feeSet = ds => { UI.neg.fee = +ds.v; ACT.sendBid(); };
@@ -119,7 +119,7 @@ function contractSheet(pid, fee, mode, msg) {
     <h4 class="lbl">Squad status promise</h4><div class="chips">${['Key player', 'First team', 'Rotation', 'Backup', 'Prospect'].map(s => `<button class="chip ${C.status === s ? 'on' : ''}" data-a="cStatus" data-v="${s}">${s}</button>`).join('')}</div>
     <p class="muted">Wage budget: ${wageFmt(clubWageBill(userClub()))} used of ${wageFmt(G.fin.wb)}. Promising a bigger role lowers the wage demand.</p>
     ${msg ? `<p class="note">${esc(msg)}</p>` : ''}
-    <button class="btn pri wide" data-a="sendContract">Offer contract</button>`, { onClose: () => render() });
+    <button class="btn pri wide" data-a="sendContract">Offer contract</button>`, { key: 'contract:' + pid + ':' + mode, restore: () => contractSheet(pid, fee, mode, msg), valid: () => !C.closed && C.tries < 4 && !!G?.players[pid] && (mode === 'renew' || G.players[pid].club !== G.club), onClose: () => render() });
 }
 ACT.wStep = ds => { UI.con.wage = Math.max(300, roundWage(UI.con.wage + +ds.v)); contractSheet(UI.con.pid, UI.con.fee, UI.con.mode); };
 ACT.cYears = ds => { UI.con.years = +ds.v; contractSheet(UI.con.pid, UI.con.fee, UI.con.mode); };
@@ -128,10 +128,10 @@ ACT.sendContract = () => {
   const C = UI.con, res = offerContract(C.pid, C.wage, C.years, C.status, C.fee, C.mode);
   if (res.ok) {
     G.news.forEach(n => { if (n.action && n.action.t === 'renew' && n.action.pid === C.pid) n.done = true; });
-    UI.con = null; UI.neg = null; closeSheet(true); toast(res.msg); saveGame(); render(); return;
+    C.closed = true; UI.con = null; UI.neg = null; closeSheet(true); toast(res.msg); saveGame(); render(); return;
   }
   C.tries++;
-  if (C.tries >= 4 && !res.msg.startsWith('The board')) { UI.con = null; closeSheet(true); toast('Talks have broken down. The player has walked away for now.'); render(); return; }
+  if (C.tries >= 4 && !res.msg.startsWith('The board')) { C.closed = true; UI.con = null; closeSheet(true); toast('Talks have broken down. The player has walked away for now.'); render(); return; }
   contractSheet(C.pid, C.fee, C.mode, res.msg + (C.tries >= 2 ? ` Patience is running out (${4 - C.tries} tries left).` : ''));
 };
 

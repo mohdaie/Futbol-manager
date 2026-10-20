@@ -67,7 +67,7 @@ function playerSheet(pid) {
       <div class="pov"><small>Rating</small>${ovrPill(so.v, so.txt)}<em>${so.txt === '??' ? 'Unknown' : ratingRemark(so.v)}</em><small>Potential</small>${starHtml(pot)}<em>${potRemark(pot)}</em></div></div>
     ${mine ? `<div class="meters"><div><small>Condition</small>${bar(p.cond, condClass(p.cond))}</div><div><small>Morale · ${morLabel(p.mor)}</small>${bar(p.mor, morClass(p.mor))}</div><div><small>Match sharpness</small>${bar(p.shp)}</div></div>` : ''}
     ${tabs('ps', [['attr', 'Attributes'], ['bio', 'Personal'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
-    ${body}${actions}`, { onClose: () => render() });
+    ${body}${actions}`, { key: 'player:' + pid, restore: () => playerSheet(pid), valid: () => !!G?.players[pid], onClose: () => render() });
 }
 ACT.psTab = ds => { UI.tab.ps = ds.v; playerSheet(+ds.id); };
 
@@ -105,7 +105,7 @@ const actionCats = p => PLAYER_ACTIONS.filter(c => c.mine === (p.club === G.club
 
 function actionsSheet(pid, cat) {
   const p = G.players[pid], cats = actionCats(p), c = cats.find(x => x.k === cat);
-  const head = `<button class="link back" data-a="${c ? 'pActions' : 'player'}" data-id="${p.id}">‹ ${c ? 'Actions' : esc(pname(p))}</button>
+  const head = `<button class="link back" data-a="back" data-id="${p.id}">‹ ${c ? 'Actions' : esc(pname(p))}</button>
     <h3 class="sh-t">${c ? c.n : 'Actions'} <small>${esc(fullName(p))}</small></h3>`;
   const rows = c
     ? c.items(p).map((it, i) => {
@@ -114,7 +114,7 @@ function actionsSheet(pid, cat) {
         <span class="grow"><b class="${ask ? 'bad' : ''}">${ask ? 'Tap again to confirm: ' + it.n : it.n}</b><small>${it.off || it.d || ''}</small></span>${it.on ? '<span class="xitag">Current</span>' : '<span class="chev">›</span>'}</button>`;
     }).join('')
     : cats.map(x => `<button class="row act" data-a="pActions" data-id="${p.id}" data-k="${x.k}"><span class="grow"><b>${x.n}</b><small>${x.d}</small></span><span class="chev">›</span></button>`).join('');
-  sheet(`${head}<div class="list">${rows}</div>`, { onClose: () => render() });
+  sheet(`${head}<div class="list">${rows}</div>`, { key: 'actions:' + pid + ':' + (cat || ''), restore: () => actionsSheet(pid, cat), valid: () => !!G?.players[pid], onClose: () => render() });
 }
 ACT.pActions = ds => { UI.tab.pconf = null; actionsSheet(+ds.id, ds.k); };
 ACT.pAct = ds => {
@@ -213,7 +213,7 @@ ACT.slot = ds => {
   const where = p => (T.slots.includes(p.id) ? FORMATIONS[T.ip][T.slots.indexOf(p.id)][0] : T.bench.includes(p.id) ? 'SUB' : '');
   sheet(`<h3 class="sh-t">${POS_NAME[pos]}</h3>
     <h4 class="lbl">Role</h4><div class="chips">${ROLES[pos].map((r, k) => `<button class="chip ${T.roles[i] === k ? 'on' : ''}" data-a="role" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>
-    <h4 class="lbl">Player</h4><div class="list">${cands.map(p => `<button class="row act ${T.slots[i] === p.id ? 'sel' : ''}" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${available(p) ? '' : 'disabled'}><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${available(p) ? (where(p) ? 'Now: ' + where(p) : 'Not selected') : p.inj ? 'Injured' : 'Suspended'}</small></span>${condBar(p.cond)}${ovrPill(ovrAt(p, pos))}</button>`).join('')}</div>`, { onClose: () => render() });
+    <h4 class="lbl">Player</h4><div class="list">${cands.map(p => `<button class="row act ${T.slots[i] === p.id ? 'sel' : ''}" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${available(p) ? '' : 'disabled'}><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${available(p) ? (where(p) ? 'Now: ' + where(p) : 'Not selected') : p.inj ? 'Injured' : 'Suspended'}</small></span>${condBar(p.cond)}${ovrPill(ovrAt(p, pos))}</button>`).join('')}</div>`, { key: 'slot:' + i, restore: () => ACT.slot({ i }), onClose: () => render() });
 };
 ACT.role = ds => { G.tactics.roles[+ds.i] = +ds.k; ACT.slot(ds); };
 ACT.pickSlot = ds => { assignSlot(+ds.i, +ds.id); closeSheet(true); render(); };
@@ -222,7 +222,7 @@ ACT.benchSlot = ds => {
   const cands = seniorSquad(G.club).filter(p => available(p) && !T.slots.includes(p.id) && !T.bench.includes(p.id)).sort((a, b) => b.ca - a.ca);
   sheet(`<h3 class="sh-t">${i >= 0 ? 'Replace ' + esc(pname(G.players[T.bench[i]])) : 'Add a substitute'}</h3>
     ${i >= 0 ? `<button class="btn ghost wide" data-a="benchDrop" data-i="${i}">Remove from the bench</button>` : ''}
-    <div class="list">${cands.map(p => `<button class="row act" data-a="benchPick" data-i="${i}" data-id="${p.id}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${p.status}</small></span>${condBar(p.cond)}${ovrPill(p.ca)}</button>`).join('') || empty('Nobody available', 'Every fit player is already in the matchday squad.')}</div>`, { onClose: () => render() });
+    <div class="list">${cands.map(p => `<button class="row act" data-a="benchPick" data-i="${i}" data-id="${p.id}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${p.status}</small></span>${condBar(p.cond)}${ovrPill(p.ca)}</button>`).join('') || empty('Nobody available', 'Every fit player is already in the matchday squad.')}</div>`, { key: 'bench:' + i, restore: () => ACT.benchSlot({ i }), onClose: () => render() });
 };
 ACT.benchPick = ds => { const T = G.tactics, i = +ds.i; if (i >= 0) T.bench[i] = +ds.id; else T.bench.push(+ds.id); closeSheet(true); render(); };
 ACT.benchDrop = ds => { G.tactics.bench.splice(+ds.i, 1); closeSheet(true); render(); };

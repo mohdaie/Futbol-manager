@@ -145,7 +145,7 @@ function admPlayerSheet(pid) {
     <div class="btns"><button class="btn sm" data-a="admAttrAll" data-v="1">All +1</button><button class="btn sm" data-a="admAttrAll" data-v="-1">All −1</button></div>
     ${fld('Move to club', selectHtml('apClub', clubs, p.club, ''))}
     <div class="btns"><button class="btn pri" data-a="admPSave" data-id="${p.id}">Save player</button><button class="btn" data-a="admPHeal" data-id="${p.id}">Heal and clear ban</button>
-      <button class="btn ghost ${ADM.confirm === 'del' + p.id ? 'bad' : ''}" data-a="admPDel" data-id="${p.id}">${ADM.confirm === 'del' + p.id ? 'Tap again to delete' : 'Delete player'}</button></div>`, { onClose: () => render() });
+      <button class="btn ghost ${ADM.confirm === 'del' + p.id ? 'bad' : ''}" data-a="admPDel" data-id="${p.id}">${ADM.confirm === 'del' + p.id ? 'Tap again to delete' : 'Delete player'}</button></div>`, { key: 'edit-player:' + pid, restore: () => admPlayerSheet(pid), valid: () => !!G?.players[pid], onClose: () => render() });
 }
 ACT.admAttrAll = ds => ATTRS.forEach((a, i) => { const el = document.getElementById('apAt' + i); el.value = clamp(Number(el.value) + Number(ds.v), 1, 20); });
 ACT.admPSave = ds => {

@@ -10,6 +10,7 @@ const CHG = {};      // change actions: CHG[name](value, dataset, el)
 
 const NAV = [['home', 'Dashboard'], ['squad', 'Squad'], ['tactics', 'Tactics'], ['training', 'Training'], ['news', 'News'], ['transfers', 'Transfers'], ['finance', 'Finance'], ['more', 'More']];
 const ICON = {
+  back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
   ball: '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#fff"/><path d="M20 11.5l7 5-2.7 8.2h-8.6L13 16.5z" fill="#22082F"/><path d="M20 2.2v9.3M27 16.5l8.6-3M24.3 24.7l5.4 7.6M15.7 24.7l-5.4 7.6M13 16.5l-8.6-3" stroke="#22082F" stroke-width="2"/><path d="M11 3.6l2.2 4.8M29 3.6l-2.2 4.8M37.9 21l-4.7 2.6M2.1 21l4.7 2.6M17 37.8l3-4.3 3 4.3" stroke="#22082F" stroke-width="2" fill="none"/></svg>',
   bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
   cal: '<svg class="cal" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
@@ -18,10 +19,12 @@ const ICON = {
 };
 
 function go(s, p = {}) {
-  if (UI.s === 'match' && s !== 'match') stopLive();
-  closeSheet(true);
-  UI.s = s; UI.p = p;
-  render(true);
+  return viewAction(() => {
+    if (UI.s === 'match' && s !== 'match') stopLive();
+    hideSheet();
+    UI.s = s; UI.p = p;
+    render(true);
+  });
 }
 
 function render(reset) {
@@ -38,6 +41,7 @@ function render(reset) {
   const m2 = root.querySelector('.main');
   if (m2) m2.scrollTop = keep;
   if (scr.after) scr.after(UI.p);
+  syncViewHistory();
 }
 
 function shell(body) {
@@ -46,6 +50,7 @@ function shell(body) {
   const cur = NAV.some(n => n[0] === UI.s) ? UI.s : 'more';
   return `<div class="app">
     <header class="top">
+      <button class="iconbtn" data-a="back" aria-label="Back">${ICON.back}</button>
       <div class="brand">${ICON.ball}<span>${GAME_NAME}</span></div>
       <div class="top-icons">
         <button class="iconbtn" data-a="go" data-s="news" aria-label="News, ${unread} unread">${ICON.bell}${unread ? '<i class="dot"></i>' : ''}</button>
@@ -64,17 +69,24 @@ function shell(body) {
 
 /* ---------- sheets & toasts ---------- */
 function sheet(html, opts = {}) {
+  return viewAction(() => {
+    const layer = document.getElementById('layer');
+    UI.sheetOpts = opts;
+    UI.popup = { key: opts.key || html, restore: opts.restore || (() => sheet(html, opts)), valid: opts.valid };
+    layer.innerHTML = `<div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sh-x" data-a="closeSheet" aria-label="Back">×</button><div class="sh-body">${html}</div></section>`;
+    layer.hidden = false;
+  });
+}
+function hideSheet() {
   const layer = document.getElementById('layer');
-  UI.sheetOpts = opts;
-  layer.innerHTML = `<div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sh-x" data-a="closeSheet" aria-label="Close">×</button><div class="sh-body">${html}</div></section>`;
-  layer.hidden = false;
+  if (layer) { layer.hidden = true; layer.innerHTML = ''; }
+  UI.sheetOpts = null; UI.popup = null;
 }
 function closeSheet(silent) {
   const layer = document.getElementById('layer');
   if (!layer || layer.hidden) return;
-  layer.hidden = true; layer.innerHTML = '';
-  const o = UI.sheetOpts; UI.sheetOpts = null;
-  if (!silent && o && o.onClose) o.onClose();
+  if (!silent) return backView();
+  return viewAction(hideSheet);
 }
 let toastT = 0;
 function toast(msg) {
@@ -137,18 +149,19 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]');
   if (!el || el.disabled) return;
   const f = ACT[el.dataset.a];
-  if (f) { e.preventDefault(); f(el.dataset, el); }
+  if (f) { e.preventDefault(); viewAction(() => f(el.dataset, el)); }
 });
 document.addEventListener('change', e => {
   const el = e.target.closest('[data-c]');
   if (!el) return;
   const f = CHG[el.dataset.c];
   // deferred so a re-render never happens while the field is still blurring
-  if (f) { const v = el.type === 'checkbox' ? el.checked : el.value, ds = { ...el.dataset }; setTimeout(() => f(v, ds, el), 0); }
+  if (f) { const v = el.type === 'checkbox' ? el.checked : el.value, ds = { ...el.dataset }; setTimeout(() => { if (el.isConnected) viewAction(() => f(v, ds, el)); }, 0); }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); backView(); } });
 
 ACT.go = ds => go(ds.s, { ...ds });
+ACT.back = () => backView();
 ACT.closeSheet = () => closeSheet();
 ACT.tab = ds => { UI.tab[ds.key] = ds.v; render(); };
 ACT.continue = () => {
@@ -168,5 +181,6 @@ function boot() {
   loadGame();
   if (G) UI.s = 'home';
   render(true);
+  initViewHistory();
 }
 window.addEventListener('DOMContentLoaded', boot);

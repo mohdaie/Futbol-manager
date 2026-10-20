@@ -28,6 +28,7 @@ js/systems/ai.js           Jev and DeepSeek clients: settings, calls, budget gua
 js/systems/brain.js        learning engine for computer managers, engine versions, DeepSeek press library
 js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
 js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
+js/ui/navigation.js        browser/in-game Back history, view restoration, root guard
 js/ui/screens-hub.js       Home, News, More, Fixtures, Table, Stats, Club, Settings
 js/ui/screens-squad.js     Squad (first team / reserves / U18s), player profile, Tactics, Training, Medical, Youth
 js/ui/screens-market.js    Transfers (search, shortlist, scouting, pitches, bids, history),
@@ -79,6 +80,28 @@ Continue
 | **TV** | Televised games pay both clubs £0.6m extra |
 
 The effects are kept small so the engine stays near real football: about 2.8 goals per game, around 41% home wins and 25% draws over full simulated seasons.
+
+**Back navigation.** Browser Back (including Android gestures), the header Back button,
+popup Back/close/scrim and Escape retrace pages, tabs and nested popups. History
+keeps UI state, scroll positions and unsubmitted form text in memory; it never
+restores `G` or replays game actions. At the first view, ordinary Back stays in
+the game. Reloading, loading a different career, changing jobs or starting a
+new season starts fresh view history. Returning to an unfinished match resumes
+the existing simulation; a completed match opens its report.
+
+`viewAction()` groups each click/change into one navigation step. `go()` and
+`sheet()` also work outside event dispatch. Dynamic sheets supply a stable
+`key`, a read-only `restore` renderer and, when needed, a `valid` check in their
+options. Refreshing a sheet with the same key updates it without another step.
+Use `data-a="back"` for Back controls; `closeSheet(true)` completes an action
+and dismisses its sheet without replaying a previous action.
+
+For the mobile browser regression checks, install Playwright as a development
+tool (`npm install --no-save playwright` and `npx playwright install chromium`),
+then run `node tests/navigation.cjs`. The test serves the repo locally and
+uses a fresh browser profile, leaving your saved career untouched. An existing
+static server URL can be passed as the first argument; `CHROMIUM_PATH` can point
+to a preinstalled Chromium executable.
 
 ## 3. Game state (`G`)
 

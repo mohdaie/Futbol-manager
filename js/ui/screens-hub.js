@@ -99,7 +99,7 @@ ACT.news = ds => {
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;
   if (a && a.pid && G.players[a.pid] && a.t !== 'renew') actions += `<div class="btns"><button class="btn" data-a="player" data-id="${a.pid}">View ${esc(pname(G.players[a.pid]))}</button></div>`;
   if (a && n.done) actions += '<p class="note">Dealt with.</p>';
-  sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div><h3 class="sh-t">${esc(n.title)}</h3><p class="body">${esc(n.body)}</p>${actions}`, { onClose: () => render() });
+  sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div><h3 class="sh-t">${esc(n.title)}</h3><p class="body">${esc(n.body)}</p>${actions}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
 };
 ACT.bid = ds => {
   const n = G.news.find(x => x.id === +ds.id);
