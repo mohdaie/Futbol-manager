@@ -66,6 +66,7 @@ function weeklyTraining(playedThisWeek) {
       if (R() < risk) {
         const inj = pick(INJURIES.slice(0, 4));
         p.inj = { n: inj[0], w: ri(1, 3) };
+        G.flags.injN = (G.flags.injN || 0) + 1;
         addNews('club', pname(p) + ' hurt in training', `${fullName(p)} picked up a ${inj[0].toLowerCase()} in training and will miss ${p.inj.w} week${p.inj.w > 1 ? 's' : ''}.`);
       }
     }

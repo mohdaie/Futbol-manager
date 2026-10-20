@@ -15,7 +15,7 @@ SCREENS.admin = {
     const t = UI.tab.adm || 'over';
     return `<h1 class="h1">Admin</h1>
       <div class="banner open"><b>Live editing</b><span>Changes apply to this save at once. Export a backup in Settings first if you want to undo.</span></div>
-      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['jev', 'Jev AI'], ['ds', 'DeepSeek'], ['data', 'Data']], t)}
+      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['jev', 'Jev AI'], ['ds', 'DeepSeek'], ['data', 'Data']], t)}
       ${ADMIN_TABS[t]()}`;
   },
 };

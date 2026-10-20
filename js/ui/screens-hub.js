@@ -118,6 +118,7 @@ SCREENS.team = {
       ['tactics', 'Tactics', 'Line-up, shape and instructions'],
       ['fixtures', 'Fixtures', 'Your schedule and every round'],
       ['training', 'Training', 'Team focus and individual development'],
+      ['staffroom', 'Staff room', 'Advice from your assistant, analyst, coaches, physio and scouts'],
       ['staff', 'Staff', 'Coaches, scouts and physios'],
       ['medical', 'Medical center', 'Injuries and fatigue'],
       ['youth', 'Youth academy', 'Prospects and intake'],

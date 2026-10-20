@@ -393,3 +393,22 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - **Optional AI wording:** DeepSeek can word the advice (AI settings: "Staff advice in words"), from the computed facts only. `staffTextValid()` rejects any text with a number, player or club not in the facts, and the built-in wording is used instead.
 - **Learning record:** `G.staffLog` stores each piece of advice (prediction, recommended and current style, rating), whether you followed it (style at kick-off) and the result (points, goals, xG difference). `assistantRecord()` shows how often he called the result right and points per game with and without his advice. It is shown on the assistant card and the Staff screen.
 - **Later stages:** this record becomes the learning data for staff (stage 5).
+
+## AI-assisted staff, stages 2–5 (2026.10.20.9, `staff2.js`, `screens-staff.js`)
+- **Staff room (My Team > Staff room):** all staff advice in one place. The cards also appear on Training (coaches), Medical (physio), Transfers > Scout advice (scouts), the pre-match screen (opposition report) and the match report (analyst's view).
+- **Analyst:**
+  - `teamAnalysis()` lists strengths and weaknesses from recent matches against league averages: xG for and against, finishing, shots against, passing for possession sides, late goals, set-piece goals, tactic fit, weak positions and tiredness.
+  - `oppReport()` covers the opponent's style, recent goals and xG, possession, crossing and in-form player.
+  - `postMatchAnalysis()` stores tags per match (`G.analysis`), finds recurring patterns and gives one suggestion. The suggestion is judged by whether the problem comes back in the next match.
+  - Every league match now keeps compact stats (`fx.s`, `fx.sty`).
+  - Rating sets how many matches he looks at, how much he can see (late goals, set pieces and weak positions need 6–8+), whether numbers are exact, and how many findings he gives.
+- **Coaches:** `coachPlan()` picks a team focus and intensity, putting recovery first when fixtures are congested (rating 6+), then the analyst's main weakness, plus individual plans for young players with room to grow (their weakest area for their position). Judged after four weeks on squad attribute growth and injuries (`G.flags.injN`).
+- **Physio:** `physioAdvice()` lists squad players expected below 80% condition at kick-off, with relative injury risk (age, weight, fatigue). "Leave them out" removes them from the matchday squad. Judged on whether rested players got injured.
+- **Scouts:**
+  - `scoutAdvice()` works out needs: weak spots in the XI, ageing starters and positions with no cover.
+  - It recommends players the scouts know well enough (minimum knowledge falls with rating), within the transfer budget and wage room, who are likely to join, ranked by improvement, youth and price.
+  - Judged at season end: did the signed players play and rate well? Players recommended but not signed are tracked as "missed".
+- **Staff growth and learning:**
+  - Good outcomes give that role's staff experience; at season end experience becomes up to +2 rating (less for staff over 60).
+  - All outcomes feed a device-wide learning table (`futbol-manager:staff`). Admin > AI Staff saves versions and approves one; approved evidence is shown with advice and steers it (the assistant needs a bigger edge before recommending a switch if switches have not paid off).
+  - The table syncs to the cloud as a `staff` snapshot (futbol-brain function v4 accepts it).

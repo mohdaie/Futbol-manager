@@ -110,6 +110,7 @@ SCREENS.prematch = {
       <div class="card"><h3>Opposition report <small>Analyst ${analyst.toFixed(0)}/20</small></h3>
         <div class="kv"><div><small>League position</small><b>${orow.p ? ordinal(tbl.indexOf(orow) + 1) : '-'}</b></div><div><small>Form</small><b>${orow.form.length ? formChips(orow.form) : '-'}</b></div>
         <div><small>Likely shape</small><b>${analyst >= 8 ? opp.tac.ip + ' / ' + opp.tac.oop : 'Unknown'}</b></div><div><small>Pressing</small><b>${analyst >= 11 ? INSTRUCTIONS[4].o[opp.tac.press] : 'Unknown'}</b></div></div>
+        ${(() => { const l = oppReport(opp.id); return l.length ? `<ul class="notes">${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''; })()}
         <h4 class="lbl">Players to watch</h4><div class="list">${theirs.map(p => playerRow(p, '', { sub: POS_NAME[p.pos] })).join('')}</div></div>
       ${assistCard(fx)}
       <div class="card"><h3>Your line-up <small>${T.ip} · ${INSTRUCTIONS[0].o[T.ment]}</small></h3>
@@ -282,7 +283,7 @@ SCREENS.post = {
         <div class="vs">${badge(fx.h, 42)}<div class="vs-mid score"><b>${fx.hg} - ${fx.ag}</b></div>${badge(fx.a, 42)}</div>
         <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div>
         <div class="scorers"><span>${sc(0)}</span><span>${sc(1)}</span></div></section>
-      ${stats}${rats}
+      ${stats}${(() => { const a = (G.analysis || []).find(x => x.fid === fx.id); return a ? `<div class="card"><h3>Analyst's view <small>${a.r}/20</small></h3><ul class="notes">${a.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>${a.patterns.length ? `<p class="note">Keeps happening: ${a.patterns.map(x => { const [t, n] = x.split(':'); return `${PATTERN_TEXT[t] || t} (${n} recent matches)`; }).join('; ')}.</p>` : ''}${a.suggest ? `<p class="muted">Suggestion: ${esc(a.suggest.text)}</p>` : ''}</div>` : ''; })()}${rats}
       <div class="sec-h"><h2>Around the league</h2></div>
       <div class="list">${others.map(f => `<div class="row fxr"><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<span class="res">${played(f) ? f.hg + '-' + f.ag : 'v'}</span>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>
       <button class="btn pri wide" data-a="go" data-s="home">Back to the office</button>`;

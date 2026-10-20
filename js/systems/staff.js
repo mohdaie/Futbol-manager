@@ -85,7 +85,8 @@ async function assistantAdvice(fx, onStep = () => {}) {
     const noise = (20 - r) * 0.6, jig = v => clamp(Math.round(v * 100 + rf(-noise, noise)), 1, 98);
     let pw = jig(cur.w / cur.n), pd = jig(cur.d / cur.n), pl = Math.max(1, 100 - pw - pd);
     const facts = matchFacts(fx, r, oppTac);
-    const switchIt = best.k !== curKey && best.res.pts - cur.pts >= 0.1;
+    const ev = typeof staffEvidence === 'function' ? staffEvidence('assist|switch') : null;
+    const switchIt = best.k !== curKey && best.res.pts - cur.pts >= (ev && ev.mean < -0.15 ? 0.25 : 0.1);
     const adv = {
       fid: fx.id, week: G.week, season: G.season, r: Math.round(r), n, tried: results.map(x => x.k),
       pred: { w: pw, d: pd, l: pl, gf: +(cur.gf / cur.n).toFixed(1), ga: +(cur.ga / cur.n).toFixed(1) },
