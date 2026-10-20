@@ -262,7 +262,7 @@ Open it from **More → Admin**. Every change applies to the current save immedi
 
 ## 6. AI Brain (learning engine)
 
-Computer managers make a tactical decision at half-time and at 60, 70 and 80 minutes. They choose from five options: **attack, hold, defend, press, fresh legs** (`MGR_OPTIONS` in brain.js). The loop runs entirely on this device; there is no central logging.
+Computer managers make a tactical decision at half-time and at 60, 70 and 80 minutes. They choose from ten options (`MGR_OPTIONS` in brain.js; see In-match manager decisions below). Learning runs on this device and compact research data syncs to the private cloud storage (brain-cloud.js).
 
 1. **Record.** Every decision is logged with its situation, choice and source (Jev, DeepSeek, learned engine, rules or exploring). A situation is a bucket made of the minute, the score, relative strength, fatigue and red cards, giving 360 possible buckets.
 2. **Judge.** At full time each decision gets a score: goal difference gained after it, plus 1.5 × points gained compared with the score at that moment.
