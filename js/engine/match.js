@@ -10,7 +10,7 @@ const POS_ASSIST = { GK: .1, DL: 1, DR: 1, DC: .3, DM: .8, ML: 1.6, MR: 1.6, MC:
 
 const cAtt = p => { const a = p.at; return (a[A.fin] * 1.3 + a[A.dri] + a[A.pas] + a[A.vis] + a[A.fir] + a[A.pac] + a[A.cmp] + a[A.cro] * 0.5) / 7.8 * 5; };
 const cMid = p => { const a = p.at; return (a[A.pas] * 1.3 + a[A.vis] + a[A.dec] + a[A.fir] + a[A.wor] + a[A.sta] + a[A.tck] * 0.6 + a[A.cmp] * 0.6) / 7.5 * 5; };
-const cDef = p => { const a = p.at; return (a[A.tck] * 1.2 + a[A.mar] * 1.2 + a[A.pos] * 1.2 + a[A.hea] * 0.8 + a[A.str] * 0.7 + a[A.dec] + a[A.pac] * 0.6 + a[A.wor] * 0.5) / 7.2 * 5; };
+const cDef = p => { const a = p.at; return (a[A.tck] * 1.2 + a[A.mar] * 1.2 + a[A.pos] * 1.2 + aerial(p) * 0.8 + a[A.str] * 0.7 + a[A.dec] + a[A.pac] * 0.6 + a[A.wor] * 0.5) / 7.2 * 5; };
 
 // Map each in-possession slot to the nearest out-of-possession slot (GK to GK).
 function shapeMap(ipN, oopN) {
@@ -111,7 +111,7 @@ function drain(M, S) {
   S.on.forEach((id, i) => {
     if (!id) return;
     const p = G.players[id];
-    S.cond[id] = Math.max(15, S.cond[id] - rate * (1.5 - p.at[A.sta] / 20) * (i === 0 ? 0.3 : 1));
+    S.cond[id] = Math.max(15, S.cond[id] - rate * (1.5 - p.at[A.sta] / 20) * fatigueMul(p) * (i === 0 ? 0.3 : 1));
   });
 }
 
@@ -148,15 +148,15 @@ function shoot(M, S, O, ev, setPiece) {
   let sh = null;
   if (pen && S.pk) sh = cands.find(x => x.p.id === S.pk);
   if (pen && !sh) sh = cands.slice().sort((a, b) => (b.p.at[A.fin] + b.p.at[A.cmp]) - (a.p.at[A.fin] + a.p.at[A.cmp]))[0];
-  if (!sh) sh = wpick(cands, x => POS_SHOT[x.pos] * (1 + (roleOf(S, x.i).s || 0)) * (0.5 + x.p.at[A.fin] / 10));
+  if (!sh) sh = wpick(cands, x => POS_SHOT[x.pos] * (1 + (roleOf(S, x.i).s || 0)) * (0.5 + (setPiece ? aerial(x.p) : x.p.at[A.fin]) / 10));
   const q = R();
   let xg = pen ? 0.78 : setPiece ? rf(0.03, 0.16) : q < 0.05 ? rf(0.3, 0.6) : q < 0.25 ? rf(0.08, 0.25) : rf(0.02, 0.08);
   if (!pen) xg = clamp(xg * clamp(Math.pow(ratio, 0.35), 0.75, 1.3) * tune('xgScale') * M.mod.xg, 0.01, 0.9);
-  const a = sh.p.at, fin = setPiece ? (a[A.hea] + a[A.fin]) / 2 : a[A.fin];
-  const pg = xg * (0.75 + (fin - 10) / 30) * (1.25 - O.u.gk / 250) * (0.92 + 0.08 * a[A.cmp] / 10);
+  const a = sh.p.at, fin = setPiece ? (aerial(sh.p) + a[A.fin]) / 2 : a[A.fin];
+  const gkId = O.on[0];
+  const pg = xg * (0.75 + (fin - 10) / 30) * (1.25 - O.u.gk / 250) * (0.92 + 0.08 * a[A.cmp] / 10) * (1 - gkReach(G.players[gkId]));
   S.st.sh++; S.st.xg += xg;
   Object.assign(ev, { t: 'shot', pid: sh.p.id, xg, pen, sp: setPiece });
-  const gkId = O.on[0];
   if (R() < pg) {
     S.st.g++; S.st.sot++;
     ev.t = 'goal';
@@ -190,8 +190,8 @@ function foul(M, O, S, ev) {
   const f = wpick(cands, x => (LINE[x.pos] <= 2 ? 1.3 : 1) * (x.p.at[A.tck] < 10 ? 1.3 : 1));
   O.st.fo++;
   Object.assign(ev, { t: 'foul', pid: f.p.id, fside: O.idx });
-  const ycP = 0.14 * (1 + 0.3 * (O.press - 1)) * (1 - O.calm);
-  if (R() < 0.006) sendOff(M, O, f.p.id, ev);
+  const ycP = 0.14 * (1 + 0.3 * (O.press - 1)) * (1 - O.calm) * cardMul(f.p);
+  if (R() < 0.006 * cardMul(f.p)) sendOff(M, O, f.p.id, ev);
   else if (R() < ycP) {
     if (O.yc[f.p.id]) { sendOff(M, O, f.p.id, ev); ev.second = true; }
     else { O.yc[f.p.id] = 1; O.st.yc++; ev.t = 'yellow'; bumpRating(O, f.p.id, -0.3); }

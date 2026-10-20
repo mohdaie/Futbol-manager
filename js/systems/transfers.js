@@ -24,14 +24,14 @@ function askingPrice(p) {
 // Would the player consider joining your club?
 function interest(p) {
   const me = userClub(), from = G.clubs[p.club];
-  if (p.ca > me.rep + 6 && R() < 0.85 && !(from && from.rep < me.rep)) return { ok: false, msg: `${fullName(p)} does not see the ${me.name} as a step up.` };
+  if (p.ca > me.rep + 6 + joinPull(p) && R() < 0.85 && !(from && from.rep < me.rep)) return { ok: false, msg: `${fullName(p)} does not see the ${me.name} as a step up.` };
   if (from && !from.fa && from.rep > me.rep + 10 && isKeyPlayer(p)) return { ok: false, msg: `${fullName(p)} is settled at a bigger club and will not talk to you.` };
   return { ok: true };
 }
 
 function wageDemand(p, renew) {
   const me = userClub();
-  let w = wageFor(p, me.rep) * (renew ? 1.05 : 1.12);
+  let w = wageFor(p, me.rep) * (renew ? 1.05 : 1.12) * joinMul(p);
   if (p.pers === 'Ambitious') w *= 1.1;
   if (p.pers === 'Loyal' && renew) w *= 0.9;
   if (renew && p.status === 'Key player') w *= 1.08;
@@ -77,7 +77,9 @@ function offerContract(pid, wage, years, status, fee, mode) {
 
 // Signed players join the first team unless they are still U18 age.
 function moveClub(p, toId) {
+  const from = p.club;
   removeFromClub(p);
+  favPersonMoved(p, from, toId);
   p.lvl = p.age <= 17 ? 'Y' : 'A';
   addToClub(p, G.clubs[toId]);
 }

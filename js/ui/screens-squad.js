@@ -36,10 +36,23 @@ function playerSheet(pid) {
     const best = p.pos === 'GK' ? [['GK', ovrAt(p, 'GK')]] : POSITIONS.filter(pos => pos !== 'GK').map(pos => [pos, ovrAt(p, pos)]).sort((a, b) => b[1] - a[1]).slice(0, 4);
     body = `${playerHex(p)}<div class="attrs">${groups.map(g => `<div><h4 class="lbl">${ATTR_GROUPS[g]}</h4>${ATTRS.map((a, i) => (a[2] === g ? `<div class="at"><span>${a[1]}</span><b class="${attrClass(seenAttr(p, i).hi)}">${seenAttr(p, i).txt}</b></div>` : '')).join('')}</div>`).join('')}</div>
       ${mine || knowOf(p) >= 70 ? `<h4 class="lbl">Best positions</h4><div class="chips">${best.map(([pos, v]) => `<span class="chip static">${pos} ${v}</span>`).join('')}</div>` : `<p class="note">Scout knowledge ${knowOf(p)}%. Attribute ranges narrow as your scouts watch him.</p>`}`;
+  } else if (t === 'bio') {
+    const known = mine || knowOf(p) >= 50, fp = G.players[p.fp], ftIn = Math.round(p.ht / 2.54);
+    const fmClub = Object.values(G.clubs).find(c => c.mgr && c.mgr === p.fmn);
+    body = `<div class="kv">
+        <div><small>Height</small><b>${(p.ht / 100).toFixed(2)} m <i class="muted">${Math.floor(ftIn / 12)}'${ftIn % 12}"</i></b></div>
+        <div><small>Weight</small><b>${p.wt} kg</b></div>
+        <div><small>Nationality</small><b>${natName(p.nat)}</b></div>
+        <div><small>Ambition</small><b>${known ? ambLabel(p.amb) : 'Unknown'}</b></div>
+        <div><small>Favourite person</small><b>${fp ? `<button class="link" data-a="player" data-id="${fp.id}">${esc(p.fpn)}</button>` : esc(p.fpn) + (p.fp ? ' (retired)' : '')}</b>${fp ? `<span>${esc(clubName(fp.club))}</span>` : ''}</div>
+        <div><small>Favourite manager</small><b>${p.fmn === G.manager ? 'You' : esc(p.fmn)}</b>${fmClub ? `<span>${esc(fmClub.name)}</span>` : ''}</div></div>
+      <div class="card"><h4 class="lbl">Character · ${known ? p.pers : 'Unknown'}</h4><p class="muted">${known ? CHARACTER[p.pers] : 'Scout him to learn about his character and ambition.'}</p></div>
+      <h4 class="lbl">How this affects him</h4>
+      <ul class="notes">${(known ? bioNotes(p) : bioNotes(p).filter(n => !/ambitio/i.test(n[0]))).map(([txt, k]) => `<li class="${k}">${esc(txt)}</li>`).join('') || '<li>Nothing stands out.</li>'}</ul>`;
   } else if (t === 'stats') {
     const row = (lbl, s) => `<tr><td class="l">${lbl}</td><td>${s.a}</td><td>${s.g}</td><td>${s.as ?? '-'}</td><td>${s.a ? (s.rt / s.a).toFixed(2) : '-'}</td></tr>`;
     body = `<div class="tablewrap"><table class="tbl"><thead><tr><th class="l">Season</th><th>Apps</th><th>Gls</th><th>Ast</th><th>Avg</th></tr></thead><tbody>${row(seasonLabel(), p.st)}${p.prev ? row(p.prev.season, p.prev) : ''}<tr><td class="l">Career (in game)</td><td>${p.car.a}</td><td>${p.car.g}</td><td>-</td><td>-</td></tr></tbody></table></div>
-      <div class="kv"><div><small>Player of the match</small><b>${p.st.mom}</b></div><div><small>Yellow / red</small><b>${p.st.yc} / ${p.st.rc}</b></div><div><small>Clean sheets</small><b>${p.st.cs}</b></div><div><small>Personality</small><b>${p.pers}</b></div></div>`;
+      <div class="kv"><div><small>Player of the match</small><b>${p.st.mom}</b></div><div><small>Yellow / red</small><b>${p.st.yc} / ${p.st.rc}</b></div><div><small>Clean sheets</small><b>${p.st.cs}</b></div></div>`;
   } else {
     const yl = p.con - G.season;
     body = `<div class="kv"><div><small>Value</small><b>${money(pValue(p))}</b></div><div><small>Wage</small><b>${p.club === 'FA' ? 'Unattached' : wageFmt(p.wage)}</b></div>
@@ -53,7 +66,7 @@ function playerSheet(pid) {
         <p class="pclub">${badge(p.club, 18)} ${esc(clubName(p.club))}${p.inj ? ` · <em class="tag bad">${esc(p.inj.n)}, ${p.inj.w} wk</em>` : ''}${p.ban ? ' · <em class="tag bad">Suspended</em>' : ''}</p></div>
       <div class="pov"><small>Rating</small>${ovrPill(so.v, so.txt)}<em>${so.txt === '??' ? 'Unknown' : ratingRemark(so.v)}</em><small>Potential</small>${starHtml(pot)}<em>${potRemark(pot)}</em></div></div>
     ${mine ? `<div class="meters"><div><small>Condition</small>${bar(p.cond, condClass(p.cond))}</div><div><small>Morale · ${morLabel(p.mor)}</small>${bar(p.mor, morClass(p.mor))}</div><div><small>Match sharpness</small>${bar(p.shp)}</div></div>` : ''}
-    ${tabs('ps', [['attr', 'Attributes'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
+    ${tabs('ps', [['attr', 'Attributes'], ['bio', 'Personal'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
     ${body}${actions}`, { onClose: () => render() });
 }
 ACT.psTab = ds => { UI.tab.ps = ds.v; playerSheet(+ds.id); };

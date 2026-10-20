@@ -143,6 +143,7 @@ function retire(p) {
 }
 
 function rollover() {
+  seasonFavourites();
   const S = G.season, c = userClub(), left = [];
   Object.values(G.players).forEach(p => {
     const cl = G.clubs[p.club];
@@ -208,6 +209,8 @@ function takeJob(cid) {
   const old = G.club;
   G.club = cid;
   G.gameOver = null;
+  if (G.clubs[old]) G.clubs[old].mgr = genManagerName();
+  G.clubs[cid].mgr = G.manager;
   setupUserClub();
   G.board.conf = 60;
   addNews('club', `${G.manager} takes over at the ${clubName(cid)}`, `After leaving the ${clubName(old)}, ${G.manager} gets a fresh start. Objective: ${G.board.target.text.toLowerCase()}.`);

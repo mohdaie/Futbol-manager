@@ -555,3 +555,6 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .hex text { fill: var(--mute); font-size: 11px; font-weight: 600; font-family: var(--f-body); }
 .hex text tspan { fill: var(--chalk); font-weight: 800; }
 .back { align-self: flex-start; padding: 2px 0; }
+.notes li.good { color: var(--good); }
+.kv b .muted { font-style: normal; font-size: 11px; font-weight: 600; }
+.kv b .link { font: inherit; color: var(--amber); text-align: left; }

@@ -161,6 +161,7 @@ function newGame(clubId, manager, avatar) {
     G.know[p.id] = c.pl ? 45 : c.fa ? 20 : 10;
   });
 
+  ensureWorld();
   G.fixtures = genFixtures(plClubs());
   setupUserClub();
   addNews('club', 'Welcome to the ' + clubName(clubId), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${G.board.target.text.toLowerCase()}. The transfer budget is ${money(G.fin.tb)}.`, null);
@@ -270,7 +271,7 @@ function saveGame() {
 function loadGame() {
   try {
     const s = localStorage.getItem(SAVE_KEY);
-    if (s) { G = JSON.parse(s); return true; }
+    if (s) { G = JSON.parse(s); ensureWorld(); return true; }
   } catch (e) { /* storage blocked or corrupt */ }
   return false;
 }
