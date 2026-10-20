@@ -274,7 +274,7 @@ function aiTab(svc) {
     ? '<b>Recommended: jev-latest.</b> Jev 1.13 and 1.14 cost the same, so the stable alias is the best choice. Pin a version once you have tuned the game around its answers.'
     : '<b>Recommended: deepseek-flash with thinking off.</b> It is the cheapest DeepSeek model and is good enough for short football text. Thinking mode makes replies slower and several times more expensive, and this game does not need it.';
   return `<div class="card"><h3>${I.name}</h3><p class="muted">${I.role}</p>
-      ${svc === 'jev' ? '<p class="note">Checked Oct 2026: the TypeSafe server does not accept calls made directly from a web page on another site, so Direct mode will most likely fail with a connection error. Use “Through my server” with a small proxy. DeepSeek does accept direct browser calls.</p>' : ''}
+      ${svc === 'jev' ? '<p class="note">Test connection uses the key and settings currently entered below. If Direct mode is blocked by your browser or the API, use “Through my server” with your own proxy URL.</p>' : ''}
       <label class="tgl"><input id="ai-on" type="checkbox" ${c.on ? 'checked' : ''}><span>Use ${svc === 'jev' ? 'Jev' : 'DeepSeek'} in the game</span></label>
       <div class="field"><label>Connection</label><div class="seg">${[['direct', 'Direct (key in this browser)'], ['proxy', 'Through my server']].map(([k, n]) => `<button class="${c.mode === k ? 'on' : ''}" data-a="aiMode" data-svc="${svc}" data-v="${k}">${n}</button>`).join('')}</div></div>
       ${c.mode === 'direct'
@@ -291,7 +291,7 @@ function aiTab(svc) {
       <h4 class="lbl">Use it for</h4>
       ${AI_FEATURES[svc].map(([k, n]) => `<label class="tgl"><input type="checkbox" class="ai-feat" data-k="${k}" ${c.feat[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
       <p class="note">Connected now: ${svc === 'jev' ? 'computer managers' : 'second opinions and the press question library'} (see the AI Brain tab). The other ticks are saved for features still to come.</p>
-      <div class="btns"><button class="btn pri" data-a="aiSave" data-svc="${svc}">Save settings</button><button class="btn" data-a="aiTest" data-svc="${svc}">Test connection</button>${c.key ? `<button class="btn ghost" data-a="aiClearKey" data-svc="${svc}">Remove key</button>` : ''}</div>
+      <div class="btns"><button class="btn pri" data-a="aiSave" data-svc="${svc}">Save settings</button><button class="btn" data-a="aiTest" data-svc="${svc}" ${T?.pending ? 'disabled' : ''}>${T?.pending ? 'Testing…' : 'Test connection'}</button>${c.key ? `<button class="btn ghost" data-a="aiClearKey" data-svc="${svc}">Remove key</button>` : ''}</div>
       ${T ? `<div class="aitest ${T.ok ? 'ok' : 'bad'}">${T.html}</div>` : ''}</div>
     <div class="card"><h3>This month</h3><div class="kv">
       <div><small>Calls</small><b>${u.calls}${u.fails ? ` <em class="tag bad">${u.fails} failed</em>` : ''}</b></div><div><small>Average speed</small><b>${u.calls ? Math.round(u.ms / u.calls) + ' ms' : '-'}</b></div>
@@ -301,21 +301,24 @@ function aiTab(svc) {
     <div class="card"><h3>Price and choice</h3><p class="muted">${rec}</p>${pricing}<p class="muted">Prices checked October 2026 at ${I.docs}. The estimate assumes AI decisions in every league match plus your own press, talks and reports.</p></div>`;
 }
 
-ACT.aiMode = ds => { aiCfg()[ds.svc].mode = ds.v; aiSave(); render(); };
-ACT.aiSave = ds => {
-  const c = aiCfg()[ds.svc], el = id => document.getElementById(id);
+ACT.aiMode = ds => { readAISettings(ds.svc); aiCfg()[ds.svc].mode = ds.v; aiSave(); render(); };
+function readAISettings(svc) {
+  const c = aiCfg()[svc], el = id => document.getElementById(id);
   c.on = el('ai-on').checked;
-  if (el('ai-key') && el('ai-key').value.trim()) c.key = el('ai-key').value.trim();
+  if (el('ai-key') && el('ai-key').value.trim()) c.key = el('ai-key').value.trim().replace(/^Bearer\s+/i, '').trim();
   if (el('ai-proxy')) c.proxy = el('ai-proxy').value.trim();
   c.model = val('ai-model');
   c.timeout = Math.max(500, nval('ai-timeout'));
   c.budget = Math.max(0, nval('ai-budget'));
-  if (ds.svc === 'ds') {
+  if (svc === 'ds') {
     if (el('ai-base')) c.base = el('ai-base').value.trim() || 'https://api.deepseek.com';
     c.maxTokens = clamp(nval('ai-max'), 50, 4000); c.temp = clamp(nval('ai-temp'), 0, 2); c.thinking = el('ai-think').checked;
   }
   document.querySelectorAll('.ai-feat').forEach(x => { c.feat[x.dataset.k] = x.checked; });
-  toast(aiSave() ? 'AI settings saved.' : 'Could not save: browser storage is blocked here.'); render();
+  return aiSave();
+}
+ACT.aiSave = ds => {
+  toast(readAISettings(ds.svc) ? 'AI settings saved.' : 'Could not save: browser storage is blocked here.'); render();
 };
 ACT.aiClearKey = ds => { aiCfg()[ds.svc].key = ''; aiSave(); toast('Key removed from this browser.'); render(); };
 
@@ -323,7 +326,9 @@ const AI_TEST_STATE = 'Premier Division match, 67th minute. Home: Gunners 2, Awa
 ACT.aiTest = async ds => {
   const svc = ds.svc;
   ADM.aiTest = ADM.aiTest || {};
-  ADM.aiTest[svc] = { ok: true, html: 'Testing…' };
+  if (ADM.aiTest[svc]?.pending) return;
+  readAISettings(svc);
+  ADM.aiTest[svc] = { ok: true, pending: true, html: 'Testing…' };
   render();
   try {
     if (svc === 'jev') {
@@ -331,8 +336,9 @@ ACT.aiTest = async ds => {
         change: { type: 'choice', instructions: 'Best change for the away manager right now', criteria: { attack: 'Go more attacking and bring on a forward', hold: 'Keep the current approach', defend: 'Tighten up to limit the damage', press: 'Press higher to win the ball back' } },
         tired: { type: 'noul', instructions: 'The away midfield is exhausted' },
         fans: { type: 'score', instructions: 'How frustrated the away fans are', criteria: ['Calm', 'Uneasy', 'Angry'] },
-      }, 'Admin test');
-      const a = r.answers || {}, ch = a.change || {};
+      }, 'Admin test', { timeout: Math.max(10000, aiCfg().jev.timeout) });
+      if (!r.answers?.change?.choice) throw new Error('The server replied without a Jev decision. Check the proxy URL and selected model.');
+      const a = r.answers, ch = a.change;
       ADM.aiTest[svc] = { ok: true, html: `<b>Connected · ${esc(r.model || '')} · ${r.ms} ms</b><br>Manager change: <b>${esc(ch.choice)}</b> (confidence ${ch.confidence != null ? Math.round(ch.confidence * 100) + '%' : '-'})<br>Midfield exhausted: ${a.tired ? Math.round(a.tired.noul * 100) + '%' : '-'} · Fan frustration: ${a.fans ? a.fans.score : '-'} of 2` };
     } else {
       const r = await dsChat([
@@ -357,7 +363,7 @@ ADMIN_TABS.brain = () => {
   return `<div class="card"><h3>How it works</h3><p class="muted">Computer managers make a decision at half-time and at 60, 70 and 80 minutes. Every decision and its result is recorded on this device. The engine learns which choice works best in each situation. New engine versions are only used after you approve them.</p>
       <div class="kv"><div><small>Teacher (Jev)</small><b class="${teacher ? 'good' : ''}">${teacher ? 'Ready' : 'Off'}</b></div><div><small>Second opinion (DeepSeek)</small><b class="${second ? 'good' : ''}">${second ? 'Ready' : 'Off'}</b></div>
       <div><small>Engine in use</small><b>${V ? esc(V.name) : 'Built-in rules'}</b></div><div><small>Teacher calls saved by hybrid</small><b>${B.saved.skipped}</b></div></div>
-      ${!teacher ? '<p class="note">No teacher is connected, so the engine learns from outcomes only (the training camp tries options and keeps what works). Connect Jev in the Jev AI tab and tick “Computer managers” to add a teacher. Inside the Claude preview, AI calls are always blocked.</p>' : ''}</div>
+      ${!teacher ? '<p class="note">No teacher is connected, so the engine learns from outcomes only (the training camp tries options and keeps what works). Connect Jev in the Jev AI tab and tick “Computer managers” to add a teacher. If direct browser requests fail, configure a server proxy.</p>' : ''}</div>
 
     <div class="card"><h3>Mode for real matches</h3>
       <div class="list">${BRAIN_MODES.map(([k, n, d]) => `<button class="row act ${B.mode === k ? 'sel' : ''}" data-a="brMode" data-v="${k}" ${k !== 'rules' && !V ? 'disabled' : ''}><span class="grow"><b>${n}</b><small>${d}</small></span>${B.mode === k ? '<span class="tag good">On</span>' : ''}</button>`).join('')}</div>

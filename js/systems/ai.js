@@ -88,7 +88,7 @@ async function aiFetch(url, body, headers, timeout) {
     return data;
   } catch (e) {
     if (e.name === 'AbortError') throw new Error(`No reply within ${timeout / 1000}s.`);
-    if (e instanceof TypeError) throw new Error('Could not reach the server. Inside the Claude preview, outside connections are blocked; host the game on your own site, or the service may not allow direct browser calls (use a proxy).');
+    if (e instanceof TypeError) throw new Error('Could not reach the AI server. Check your internet connection and URL. Direct browser requests may be blocked (CORS); try “Through my server” with your own proxy URL.');
     throw e;
   } finally { clearTimeout(timer); }
 }
@@ -107,14 +107,14 @@ function aiGuard(svc) {
 }
 
 // Jev: questions = { id: { type: 'choice'|'score'|'noul', instructions, criteria } }
-async function jevAsk(state, questions, note = 'request') {
+async function jevAsk(state, questions, note = 'request', opts = {}) {
   const c = aiCfg().jev;
   aiGuard('jev');
   const url = c.mode === 'proxy' ? c.proxy.replace(/\/$/, '') + '/v1/systemone' : 'https://api.typesafe.ai/v1/systemone';
   const headers = c.mode === 'proxy' ? {} : { Authorization: 'Bearer ' + c.key };
   const t0 = performance.now();
   try {
-    const res = await aiFetch(url, { model: c.model, state, questions }, headers, c.timeout);
+    const res = await aiFetch(url, { model: c.model, state, questions }, headers, opts.timeout || c.timeout);
     const ms = Math.round(performance.now() - t0), inTok = (res.usage && res.usage.input_tokens) || 0;
     aiRecord('jev', true, ms, inTok, (res.usage && res.usage.output_tokens) || 0, inTok * AI_PRICES.jev.in / 1e6, note);
     return { ...res, ms };
