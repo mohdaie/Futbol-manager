@@ -51,6 +51,12 @@ function bindLive() {
   if (H > h) { H = h; W = h * ar; }
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  cv.onclick = e => {
+    const rc = cv.getBoundingClientRect(), mx = 8, px = (e.clientX - rc.left - mx) / (W - 2 * mx), py = (e.clientY - rc.top - mx) / (H - 2 * mx);
+    let best = null, bd = 0.06;
+    [0, 1].forEach(si => L.dots[si].forEach((d, i) => { if (d && L.M.sides[si].on[i]) { const dd = Math.hypot(d.x - px, (d.y - py) * 1.4); if (dd < bd) { bd = dd; best = [si, i]; } } }));
+    if (best) { L.sel = best; L.selId = L.M.sides[best[0]].on[best[1]]; openLiveSheet('pl'); }
+  };
   L.cv = cv; L.ctx = cv.getContext('2d'); L.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); L.W = W; L.H = H;
   if (!L.placed) {
     [0, 1].forEach(si => { L.dots[si] = teamTargets(L, si).map(t => (t ? { x: t[0], y: t[1] } : { x: 0.5, y: 0.5 })); });
@@ -84,6 +90,7 @@ function liveStep(L) {
   const evs = stepMatch(L.M, false);
   scriptEvents(L, evs);
   updateBoard(L, true);
+  if (UI.popup && UI.popup.key === 'live:pl') { const b = document.querySelector('#layer .sh-body'), h = plCardHtml(L); if (b && h) b.innerHTML = h; }
 }
 
 // Side si's point (x, y) in its own frame -> canvas (the user's side attacks upwards).
@@ -242,6 +249,15 @@ function draw(L) {
       if (L.carrier && L.carrier[0] === si && L.carrier[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
       g.fillText(String(G.players[id] ? G.players[id].no : ''), x, y + 0.5);
+      // Live markers: condition bar and match rating under the player.
+      const cond = S.cond[id] ?? 100, rt = S.rat[id] ?? 6.5, bw = r * 2, by = y + r + 3;
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - bw / 2, by, bw, 3);
+      g.fillStyle = cond >= 75 ? '#2BD46A' : cond >= 60 ? '#F5C518' : '#F43F5E'; g.fillRect(x - bw / 2, by, bw * cond / 100, 3);
+      g.font = `700 ${Math.round(r * 0.78)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      g.fillStyle = rt >= 7.5 ? '#7DF59E' : rt < 6 ? '#FF8A9B' : 'rgba(255,255,255,.9)';
+      g.fillText(rt.toFixed(1), x, by + 3 + r * 0.6);
+      g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r + 5, 0, Math.PI * 2); g.stroke(); }
     });
   });
   if (L.line != null) { // offside: the line of the second-last defender at the moment of the pass
@@ -394,13 +410,32 @@ function onFullTime(L) {
   updateBoard(L);
 }
 
+// The live player card (tap a player on the pitch). Refreshed every minute while open.
+function plCardHtml(L) {
+  const id = L.selId, si = L.M.sides.findIndex(X => X.on.includes(id) || X.off.includes(id) || X.reds.includes(id));
+  const X = L.M.sides[si], p = G.players[id];
+  if (!p || !X) return '';
+  const i = X.on.indexOf(id), pos = i >= 0 ? FORMATIONS[X.ip][i][0] : p.pos, s = X.ps[id] || {}, rt = X.rat[id] ?? 6.5, cond = Math.round(X.cond[id] ?? p.cond);
+  const mor = Math.round(liveMor(X, p)), sw = Math.round((X.mo && X.mo[id]) || 0), mine = X.user;
+  const row = (l, v) => `<div class="kvrow"><span>${l}</span><b>${v}</b></div>`;
+  return `<div class="phead"><div class="pnum" style="--k1:${(L.colors[si === L.bottom ? 0 : 1] || {}).f}">${p.no || '-'}</div>
+      <div class="grow"><h3 class="sh-t">${esc(fullName(p))}</h3><p class="muted">${POS_NAME[pos]}${i >= 0 ? ' · ' + esc(roleName(X, i)) : X.off.includes(id) ? ' · substituted' : ' · sent off'} · ${esc(clubName(X.cid))}</p></div>
+      <div class="pov"><small>Match rating</small><span class="ovr ${rt >= 7.5 ? 'o4' : rt >= 6.8 ? 'o3' : rt >= 6 ? 'o2' : 'o1'}">${rt.toFixed(1)}</span></div></div>
+    <div class="meters"><div><small>Condition ${cond}%</small>${bar(cond, condClass(cond))}</div><div><small>Morale · ${morLabel(mor)} ${sw > 1 ? '↑' : sw < -1 ? '↓' : ''}</small>${bar(mor, morClass(mor))}</div><div><small>Sharpness</small>${bar(p.shp)}</div></div>
+    <div class="card">${row('Passes', s.pa ? `${s.pc || 0}/${s.pa} (${Math.round((s.pc || 0) / s.pa * 100)}%)` : '0')}${row('Key passes', s.kp || 0)}${row('Dribbles', `${s.dw || 0}/${s.da || 0}`)}${row('Crosses', s.cr || 0)}
+      ${row('Tackles / interceptions', `${s.tk || 0} / ${s.int || 0}`)}${row('Aerial duels won', s.aer || 0)}${row('Blocks', s.blk || 0)}
+      ${row('Shots / on target', `${s.sh || 0} / ${s.sot || 0}`)}${pos === 'GK' ? row('Saves', s.sv || 0) : row('Offsides / fouls', `${s.off || 0} / ${s.fo || 0}`)}</div>
+    ${sw <= -6 ? `<p class="note">His head has gone down after what has happened in the match. A shout or a substitution may help.</p>` : sw >= 6 ? `<p class="muted">Full of confidence after how the match is going.</p>` : ''}
+    ${mine && i >= 0 ? `<div class="btns"><button class="btn" data-a="livePi" data-i="${i}">Player instructions</button><button class="btn" data-a="liveSubFor" data-id="${id}">Substitute</button></div>` : ''}`;
+}
+
 function openLiveSheet(kind) {
   const L = LIVE, M = L.M, S = M.sides[L.bottom], O = M.sides[1 - L.bottom];
   const opts = { key: 'live:' + kind, restore: () => openLiveSheet(kind), valid: () => LIVE === L && !L.done };
   if (kind === 'stats') {
     const [H, W] = M.sides, tot = H.st.pos + W.st.pos || 1;
     const row = (lbl, a, b) => `<div class="cmp"><b>${a}</b><span>${lbl}</span><b>${b}</b></div>`;
-    const rat = X => X.played.map(id => [G.players[id], X.rat[id]]).sort((a, b) => b[1] - a[1]).map(([p, r]) => `<div class="row sm"><span class="no">${p.no}</span><span class="grow">${esc(pname(p))}${X.off.includes(p.id) ? ' <small>off</small>' : ''}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></div>`).join('');
+    const rat = X => X.played.map(id => [G.players[id], X.rat[id]]).sort((a, b) => b[1] - a[1]).map(([p, r]) => `<button class="row sm act" data-a="livePl" data-id="${p.id}"><span class="no">${p.no}</span><span class="grow">${esc(pname(p))}${X.off.includes(p.id) ? ' <small>off</small>' : ''}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('');
     sheet(`<h3 class="sh-t">Match stats</h3>
       <div class="cmp head"><b>${esc(clubName(H.cid))}</b><span></span><b>${esc(clubName(W.cid))}</b></div>
       ${row('Possession', Math.round(H.st.pos / tot * 100) + '%', Math.round(W.st.pos / tot * 100) + '%')}${row('Shots', H.st.sh, W.st.sh)}${row('On target', H.st.sot, W.st.sot)}${row('Expected goals', H.st.xg.toFixed(2), W.st.xg.toFixed(2))}${row('Passes', H.st.pc + '/' + H.st.pa, W.st.pc + '/' + W.st.pa)}${row('Pass accuracy', Math.round(H.st.pc / (H.st.pa || 1) * 100) + '%', Math.round(W.st.pc / (W.st.pa || 1) * 100) + '%')}${row('Corners', H.st.co, W.st.co)}${row('Offsides', H.st.off || 0, W.st.off || 0)}${row('Fouls', H.st.fo, W.st.fo)}${row('Yellow cards', H.st.yc, W.st.yc)}${row('Red cards', H.st.rc, W.st.rc)}
@@ -421,6 +456,11 @@ function openLiveSheet(kind) {
       <h4 class="lbl">Player instructions</h4>
       <div class="list">${S.on.map((id, i) => { if (!id) return ''; const pos = FORMATIONS[S.ip][i][0], set = PLAYER_INS.filter(x => S.pi[i] && S.pi[i][x.k] != null && S.pi[i][x.k] !== 1); return `<button class="row act" data-a="livePi" data-i="${i}"><span class="pos">${pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}</b><small>${esc(roleName(S, i))}${set.length ? ' · ' + set.map(x => x.o[S.pi[i][x.k]]).join(', ') : ''}</small></span><span class="chev">›</span></button>`; }).join('')}</div>
       <p class="muted">Changes apply to this match only. Your saved tactic stays as it is.</p>`, opts);
+    return;
+  }
+  if (kind === 'pl') {
+    const html = plCardHtml(L);
+    if (html) sheet(html, { ...opts, onClose: () => { L.sel = null; } });
     return;
   }
   if (kind === 'pi') {
