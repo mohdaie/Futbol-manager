@@ -245,6 +245,10 @@ function finishMatch(M) {
   const [H, W] = M.sides;
   fx.hg = H.st.g; fx.ag = W.st.g;
   fx.goals = [].concat(...M.sides.map((S, si) => S.goals.map(g => [si, g.min, g.pid, g.pen ? 1 : 0]))).sort((a, b) => a[1] - b[1]);
+  // Compact stats for every league match (analyst reports): [possession %, shots, on target, xG, passes, completed, crosses, corners, set-piece goals], and each side's style.
+  const totPos = M.sides[0].st.pos + M.sides[1].st.pos || 1;
+  fx.s = M.sides.map(X => [Math.round(100 * X.st.pos / totPos), X.st.sh, X.st.sot, Math.round(X.st.xg * 100) / 100, X.st.pa || 0, X.st.pc || 0, X.st.cr || 0, X.st.co, M.log.filter(e => e.t === 'goal' && e.side === X.idx && (e.ck || e.fk)).length]);
+  fx.sty = M.sides.map(X => styleOf(X) || 'custom');
   let motm = null, best = 0;
   M.sides.forEach((S, si) => {
     const O = M.sides[1 - si], r = Math.sign(S.st.g - O.st.g);
@@ -282,6 +286,7 @@ function finishMatch(M) {
       const p = G.players[id];
       if (!p) return;
       p.inj = { n, w: wk };
+      if (S.user) G.flags.injN = (G.flags.injN || 0) + 1;
       if (S.user) addNews('club', pname(p) + ' injured', `${fullName(p)} suffered a ${n.toLowerCase()} and is expected to be out for ${wk} week${wk > 1 ? 's' : ''}.`);
     });
     // squad members who did not play feel the result a little
@@ -308,6 +313,7 @@ function finishMatch(M) {
     fx.pstats = M.sides.map(X => X.played.map(id => { const s = X.ps[id] || {}; return [id, s.pc || 0, s.pa || 0, s.kp || 0, s.dw || 0, s.tk || 0, s.int || 0, s.aer || 0, s.sh || 0, s.sot || 0]; }));
     boardAfterMatch(S.st.g, O.st.g, G.clubs[O.cid].rep, us === 0);
     if (typeof adviceResult === 'function') adviceResult(fx, S.st.g, O.st.g, S.st.xg, O.st.xg);
+    if (typeof postMatchAnalysis === 'function') postMatchAnalysis(M, fx);
     const opp = clubName(O.cid), sg = S.st.g, og = O.st.g;
     const head = sg > og ? `${clubName(G.club)} beat the ${opp} ${sg}-${og}` : sg < og ? `${clubName(G.club)} lose ${sg}-${og} to the ${opp}` : `${clubName(G.club)} held ${sg}-${og} by the ${opp}`;
     const scorers = S.goals.map(g => pname(G.players[g.pid]) + ' ' + g.min + "'").join(', ');

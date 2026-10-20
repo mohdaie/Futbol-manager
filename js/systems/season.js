@@ -14,6 +14,7 @@ function advanceWeek() {
   weeklyMedical();
   weeklyFinance();
   weeklyScouting();
+  staffWeekly();
   weeklyTransfers();
   weeklyContracts();
   monthly();
@@ -144,6 +145,7 @@ function retire(p) {
 
 function rollover() {
   seasonFavourites();
+  staffSeasonEnd();
   const S = G.season, c = userClub(), left = [];
   Object.values(G.players).forEach(p => {
     const cl = G.clubs[p.club];

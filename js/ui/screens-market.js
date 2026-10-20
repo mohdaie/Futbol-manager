@@ -8,12 +8,13 @@ SCREENS.transfers = {
     const t = UI.tab.tr || 'search', win = windowState();
     const head = `<h1 class="h1">Transfers</h1>
       <div class="banner ${win.open ? 'open' : ''}"><b>${win.label}${win.open ? ' · closes ' + win.closes : ''}</b><span>Budget ${money(G.fin.tb)} · Wages ${wageFmt(clubWageBill(userClub()))} of ${wageFmt(G.fin.wb)}</span></div>
-      ${tabs('tr', [['search', 'Search'], ['short', 'Shortlist'], ['scout', 'Scouting'], ['pitch', 'Pitches'], ['bids', 'Bids'], ['hist', 'History']], t)}`;
+      ${tabs('tr', [['advice', 'Scout advice'], ['search', 'Search'], ['short', 'Shortlist'], ['scout', 'Scouting'], ['pitch', 'Pitches'], ['bids', 'Bids'], ['hist', 'History']], t)}`;
     return head + TR_TABS[t]();
   },
 };
 
 const TR_TABS = {
+  advice() { return scoutCard(); },
   search() {
     const S = UI.search;
     const res = Object.values(G.players).filter(p => {

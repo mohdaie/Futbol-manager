@@ -288,6 +288,7 @@ SCREENS.training = {
     const mine = squadOf(G.club);
     const focused = mine.filter(p => T.indiv[p.id] && T.indiv[p.id] !== 'none');
     return `<h1 class="h1">Training</h1>
+      ${coachCard()}
       <div class="week">${days.map((d, i) => `<div class="${plan[i] === 'Match' ? 'm' : plan[i] === 'Rest' ? 'r' : ''}"><small>${d}</small><b>${plan[i]}</b></div>`).join('')}</div>
       <div class="sec-h"><h2>Weekly focus</h2></div>
       <div class="grid2">${TRAINING_FOCUS.map(f => `<button class="gcard ${T.focus === f.k ? 'on' : ''}" data-a="tfocus" data-v="${f.k}"><b>${f.n}</b><small>${f.d}</small></button>`).join('')}</div>
@@ -306,6 +307,7 @@ SCREENS.medical = {
   render() {
     const sq = seniorSquad(G.club), inj = sq.filter(p => p.inj).sort((a, b) => b.inj.w - a.inj.w), tired = sq.filter(p => !p.inj && p.cond < 80).sort((a, b) => a.cond - b.cond);
     return `<h1 class="h1">Medical centre</h1>
+      ${physioCard()}
       <div class="kv"><div><small>Physio quality</small><b>${staffAvg('Physio').toFixed(1)} / 20</b></div><div><small>Training load</small><b>${INTENSITY[G.training.intensity]}</b></div></div>
       <div class="sec-h"><h2>Injured</h2><span class="muted">${inj.length}</span></div>
       <div class="list">${inj.map(p => playerRow(p, `<span class="stat"><b>${p.inj.w}</b><small>wks</small></span>`, { noBadge: true, sub: p.inj.n })).join('') || empty('No injuries', 'The whole squad is available.')}</div>

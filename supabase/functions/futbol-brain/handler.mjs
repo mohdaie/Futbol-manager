@@ -20,6 +20,7 @@ function validateSnapshot(s) {
     settings: ['mode', 'minN', 'conf', 'explore', 'active', 'saved'],
     press: ['items'],
     config: ['app', 'engine', 'tune', 'mode', 'jevModel', 'dsModel', 'scoreVersion'],
+    staff: ['app', 'tables', 'records'],
   }[type];
   if (!keys || !only(s.data, keys)) return false;
   // Reject secret-bearing fields even inside a nested snapshot.

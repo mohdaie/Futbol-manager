@@ -54,6 +54,7 @@ function brainCloudCapture(B) {
   brainCloudSnapshot(C, 'settings', { mode: B.mode, minN: B.minN, conf: B.conf, explore: B.explore, active: B.active, saved: B.saved });
   B.versions.forEach(v => brainCloudSnapshot(C, 'version:' + v.id, { id: v.id, name: v.name, date: v.date, table: v.table, tune: v.tune || {}, buckets: v.buckets, decisions: v.decisions, ab: v.ab || null }));
   brainCloudSnapshot(C, 'press', { items: B.press });
+  if (typeof staffSnapshot === 'function') brainCloudSnapshot(C, 'staff', staffSnapshot());
   if (G) {
     const cfg = aiCfg(), engine = brainCloudEngine();
     brainCloudSnapshot(C, 'config:' + engine, { app: GAME_VERSION, engine, tune: G.tune || {}, mode: B.mode, jevModel: cfg.jev.model, dsModel: cfg.ds.model, scoreVersion: 1 });
