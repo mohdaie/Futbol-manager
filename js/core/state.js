@@ -15,7 +15,8 @@ const userClub = () => G.clubs[G.club];
 const clubName = id => (G.clubs[id] ? G.clubs[id].name : 'Free agent');
 const plClubs = () => CLUBS.map(c => c.id);
 const squadOf = id => G.clubs[id].squad.map(pid => G.players[pid]).filter(Boolean);
-const seniorSquad = id => squadOf(id).filter(p => !p.youth);
+const seniorSquad = id => squadOf(id).filter(p => lvlOf(p) === 'A');
+const levelSquad = (id, l) => squadOf(id).filter(p => lvlOf(p) === l);
 const clubWageBill = c => sum(c.squad, id => (G.players[id] ? G.players[id].wage : 0));
 const seasonLabel = (s = G.season) => s + '/' + String(s + 1).slice(2);
 
@@ -30,7 +31,8 @@ function addToClub(p, c) {
   p.club = c.id;
   assignNumber(c, p);
   c.squad.push(p.id);
-  if (!p.wage) p.wage = wageFor(p, c.rep);
+  const l = lvlOf(p);
+  if (!p.wage) p.wage = l === 'Y' ? roundWage(rf(300, 900)) : l === 'R' ? roundWage(Math.max(1500, wageFor(p, c.rep) * 0.5)) : wageFor(p, c.rep);
   if (!p.con) p.con = G.season + ri(1, 5);
   p.listed = false;
 }
@@ -69,12 +71,32 @@ function genYouth(c, quality) {
   const pos = pick(SQUAD_TEMPLATE);
   const age = ri(15, 17);
   const pa = clamp(quality + gauss() * 9 + (R() < 0.06 ? 12 : 0), 45, 95);
-  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, youth: true });
+  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, lvl: 'Y' });
   addToClub(p, c);
   p.wage = roundWage(rf(300, 900));
   p.con = G.season + 3;
   G.know[p.id] = 100;
   return p;
+}
+
+// Top up a club's reserves (R) or U18s (Y) to a target size with generated youngsters,
+// filling the positions the level is short of first. Bigger clubs have better prospects.
+const LEVEL_TEMPLATE = ['GK', 'GK', 'DC', 'DC', 'DC', 'DC', 'DL', 'DL', 'DR', 'DR', 'DM', 'DM', 'MC', 'MC', 'MC', 'AML', 'AMR', 'AMC', 'ST', 'ST'];
+function fillLevel(c, l, target) {
+  const have = levelSquad(c.id, l);
+  const need = LEVEL_TEMPLATE.slice();
+  have.forEach(p => { const i = need.indexOf(p.pos); if (i >= 0) need.splice(i, 1); });
+  for (let n = have.length; n < target; n++) {
+    const pos = need.length ? need.shift() : pick(LEVEL_TEMPLATE);
+    const age = l === 'Y' ? wpick([15, 16, 17], a => (a === 15 ? 2 : 4)) : wpick([18, 19, 20, 21], a => (a === 21 ? 2 : 4));
+    const nat = R() < 0.72 ? 'ENG' : pickNat(PL_NATS);
+    const pa = clamp(55 + (c.rep - 60) * 0.55 + gauss() * 8 + (R() < 0.05 ? 10 : 0), 45, 94);
+    const ca = l === 'Y' ? clamp(pa - rf(24, 36) + (age - 15) * 2, 28, 58) : clamp(pa - rf(14, 26) + (age - 18) * 1.5, 38, 68);
+    const p = genPlayer({ pos, ca, pa, age, nat, club: c.id, lvl: l });
+    addToClub(p, c);
+    p.con = G.season + (l === 'Y' ? ri(1, 3) : ri(1, 2));
+    if (c.id === G.club) G.know[p.id] = 100;
+  }
 }
 
 function staffName() { const n = pickNat({ ENG: 6, SCO: 2, ESP: 1, POR: 1, NED: 1, GER: 1, ITA: 1, FRA: 1 }); const [f, l] = genName(n); return f + ' ' + l; }
@@ -119,7 +141,11 @@ function newGame(clubId, manager, avatar) {
   CLUBS.forEach(c => {
     const cl = { ...c, squad: [], bal: Math.round(30e6 + Math.pow(Math.max(0, c.rep - 60), 2) * 0.25e6), tac: aiTactic(), pl: true };
     G.clubs[c.id] = cl;
-    genSquad(cl);
+    // Real-inspired squads where available, generated otherwise; reserves and U18s topped up to 20 each.
+    if (typeof ROSTERS !== 'undefined' && ROSTERS[c.id]) ROSTERS[c.id].forEach(row => addToClub(playerFromRoster(row, c.id), cl));
+    else genSquad(cl);
+    fillLevel(cl, 'R', 20);
+    fillLevel(cl, 'Y', 20);
   });
   FOREIGN.forEach((f, i) => {
     const id = 'F' + i;
@@ -156,17 +182,21 @@ function setupUserClub() {
   G.staff = [];
   Object.entries(STAFF_ROLES).forEach(([role, n]) => { for (let i = 0; i < (role === 'Coach' || role === 'Scout' ? 2 : 1); i++) G.staff.push(genStaffMember(role, c.rep)); });
   G.staffPool = genStaffPool(c.rep);
-  for (let i = 0; i < 6; i++) genYouth(c, 55 + G.board.facYouth * 1.6);
   G.ledger = emptyLedger();
   G.balHist = [c.bal];
 }
 
 function rankSquadStatus(c) {
-  const ps = c.squad.map(id => G.players[id]).filter(p => !p.youth).sort((a, b) => b.ca - a.ca);
+  const all = c.squad.map(id => G.players[id]);
+  all.filter(p => lvlOf(p) !== 'A').forEach(p => { p.status = 'Prospect'; });
+  const ps = all.filter(p => lvlOf(p) === 'A').sort((a, b) => b.ca - a.ca);
   ps.forEach((p, i) => {
     if (p.age <= 20 && i > 14) p.status = 'Prospect';
     else p.status = i < 4 ? 'Key player' : i < 11 ? 'First team' : i < 16 ? 'Rotation' : 'Backup';
   });
+  // the number-one keeper is a starter even though keepers rate lower than outfielders
+  const gk = ps.filter(p => p.pos === 'GK')[0];
+  if (gk && !['Key player', 'First team'].includes(gk.status)) gk.status = 'First team';
 }
 
 const available = p => p && !p.inj && !(p.ban > 0);
@@ -174,7 +204,9 @@ const available = p => p && !p.inj && !(p.ban > 0);
 // Greedy best XI for a formation, scarce positions first, plus a 9-man bench with a keeper.
 function autoPick(cid, formation, keep) {
   const slots = FORMATIONS[formation];
-  const pool = seniorSquad(cid).filter(available);
+  let pool = seniorSquad(cid).filter(available);
+  // short of fit first-team players: call up the best reserves
+  if (pool.length < 16) pool = pool.concat(levelSquad(cid, 'R').filter(available).sort((a, b) => b.ca - a.ca).slice(0, 16 - pool.length));
   const xi = Array(11).fill(null);
   const used = new Set();
   if (keep) keep.forEach((id, i) => { if (id && pool.some(p => p.id === id)) { xi[i] = id; used.add(id); } });
@@ -200,7 +232,7 @@ function autoPick(cid, formation, keep) {
 
 // Keep the user's lineup valid: drop departed, injured or banned players and fill gaps.
 function ensureUserLineup() {
-  const T = G.tactics, ok = id => { const p = G.players[id]; return p && p.club === G.club && !p.youth && available(p); };
+  const T = G.tactics, ok = id => { const p = G.players[id]; return p && p.club === G.club && lvlOf(p) !== 'Y' && available(p); };
   T.slots = T.slots.map(id => (ok(id) ? id : null));
   T.bench = T.bench.filter(ok).filter(id => !T.slots.includes(id));
   if (T.slots.some(x => !x) || T.bench.length < 7) {

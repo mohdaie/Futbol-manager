@@ -151,7 +151,7 @@ function rollover() {
     if (!cl || cl.fa) return;
     if (p.con <= S + 1) {
       if (p.club === G.club) {
-        if (p.youth) p.con = S + 3;
+        if (lvlOf(p) !== 'A') p.con = S + 3;
         else { moveClub(p, 'FA'); p.con = 0; left.push(fullName(p)); }
       } else if (R() < 0.7) p.con = S + 1 + ri(1, 3);
       else { moveClub(p, 'FA'); p.con = 0; }
@@ -164,7 +164,18 @@ function rollover() {
       retire(p);
     }
   });
-  squadOf(G.club).filter(p => p.youth && p.age >= 19).forEach(p => { p.youth = false; p.status = 'Prospect'; p.wage = Math.max(p.wage, 2000); });
+  // Academy graduation: U18s who turn 19 move up to the reserves at every club.
+  Object.values(G.players).forEach(p => { if (lvlOf(p) === 'Y' && p.age >= 19) { p.lvl = 'R'; p.youth = false; p.wage = Math.max(p.wage, 1500); } });
+  // Computer clubs: reserves at 23 either step up or are released; then refill both youth levels.
+  plClubs().forEach(id => {
+    const cl = G.clubs[id];
+    if (id !== G.club) levelSquad(id, 'R').filter(p => p.age >= 23).forEach(p => {
+      const worst = Math.min(...seniorSquad(id).map(x => x.ca));
+      if (p.ca >= worst) { p.lvl = 'A'; p.wage = wageFor(p, cl.rep); } else { moveClub(p, 'FA'); p.lvl = 'A'; p.con = 0; }
+    });
+    fillLevel(cl, 'R', 18);
+    fillLevel(cl, 'Y', 20);
+  });
   Object.values(G.clubs).filter(x => x.foreign && !x.fa).forEach(x => {
     while (x.squad.length < 16) { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (x.rep - 50) * 0.6 - rf(0, 8), pa: 0, age: ri(17, 24), nat: R() < 0.75 ? x.nat : pickNat(PL_NATS), club: x.id }); p.pa = clamp(p.ca + ri(3, 18), p.ca, 95); addToClub(p, x); G.know[p.id] = 10; }
   });

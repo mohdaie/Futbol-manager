@@ -10,6 +10,8 @@ css/game.css               all styling (design tokens are at the top)
 js/core/util.js            random numbers, maths, money/date formatting
 js/core/data.js            STATIC DATA: clubs, nations, names, attributes, formations,
                            roles, instructions, training, press questions, talks, shouts
+js/core/rosters.js         ROSTERS: the 20 real-based squads (level, name, position, age,
+                           nation, foot, contract, value). Ratings come from market value.
 js/core/players.js         player generation, ratings, position fit, value, wages
 js/core/state.js           the game state object G, new-game world build, save/load,
                            news, auto-pick, squad helpers
@@ -25,7 +27,7 @@ js/systems/brain.js        learning engine for computer managers, engine version
 js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
 js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
 js/ui/screens-hub.js       Home, News, More, Fixtures, Table, Stats, Club, Settings
-js/ui/screens-squad.js     Squad, player profile, Tactics, Training, Medical, Youth
+js/ui/screens-squad.js     Squad (first team / reserves / U18s), player profile, Tactics, Training, Medical, Youth
 js/ui/screens-market.js    Transfers (search, shortlist, scouting, pitches, bids, history),
                            offers, contracts, Finances, Staff, Board
 js/ui/screens-match.js     Start, Pre-match, Live match, Match report, Season review, Sacked
@@ -97,6 +99,8 @@ Everything lives in one JSON-safe object, saved to `localStorage` after each wee
 | `history`, `trophies` | past seasons and awards |
 
 ## 4. Systems in brief
+
+**Squads and levels.** Every player has a level: `A` first team, `R` reserves (under-21), `Y` U18s (`LEVELS` in data.js, `lvlOf()` in players.js). Only the first team is picked for league matches; reserves step in when fewer than 16 first-teamers are fit. First-team rosters come from Transfermarkt's 2026/27 squads (read with Firecrawl), renamed into different names with a similar sound (Bukayo Saka becomes Kayode Bako). Each player keeps his age, nationality and position. Ratings come from market value (`ratingFromValue()`). Where a club's real youth list was short or not available, `fillLevel()` in state.js generates the rest of the reserves and U18s to 20 each. Positions are filled first, ages are 18 to 21 for reserves and 15 to 17 for U18s, and better clubs get higher potential. At each season end, U18s who turn 19 move to the reserves. Computer clubs promote or release reserves aged 23, promote their best reserves before signing free agents, and refill both youth levels. Signed players join the first team.
 
 **Players.** Attributes use the classic 1-20 scale across technical, mental, physical and goalkeeping groups. Each position weights the attributes differently (`WEIGHTS` in data.js) to produce a rating out of 100. Position fit ranges from natural (1.0) through alternate positions (0.97) to badly out of position (0.6, or 0.3 for an outfield player in goal).
 

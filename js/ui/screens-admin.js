@@ -62,7 +62,7 @@ const ADMIN_TABS = {
     return `<div class="two">${fld('Name', `<input id="adQ" type="search" value="${esc(ADM.q)}" placeholder="Search any player" data-c="admQ">`)}${fld('Club', selectHtml('adQc', [['ALL', 'All clubs'], ...Object.values(G.clubs).map(c => [c.id, c.name])], ADM.qClub, 'admQc'))}</div>
       <button class="btn wide" data-a="admNew">Create a player for your club</button>
       <p class="muted">Showing ${res.length} players by rating. Tap one to edit. Ratings here are exact.</p>
-      <div class="list">${res.map(p => `<button class="row act" data-a="admPlayer" data-id="${p.id}"><span class="rb">${badge(p.club, 20)}</span><span class="pos">${p.pos}</span><span class="grow"><b>${esc(fullName(p))}</b><small>${p.age} yrs · ${esc(clubName(p.club))}${p.youth ? ' · academy' : ''}</small></span><span class="stat"><b>${p.ca}</b><small>pot ${p.pa}</small></span></button>`).join('') || empty('No players found', 'Try another name or club.')}</div>`;
+      <div class="list">${res.map(p => `<button class="row act" data-a="admPlayer" data-id="${p.id}"><span class="rb">${badge(p.club, 20)}</span><span class="pos">${p.pos}</span><span class="grow"><b>${esc(fullName(p))}</b><small>${p.age} yrs · ${esc(clubName(p.club))}${lvlOf(p) !== 'A' ? ' · ' + LEVELS[lvlOf(p)] : ''}</small></span><span class="stat"><b>${p.ca}</b><small>pot ${p.pa}</small></span></button>`).join('') || empty('No players found', 'Try another name or club.')}</div>`;
   },
 
   time() {
@@ -132,7 +132,7 @@ function admPlayerSheet(pid) {
   sheet(`<h3 class="sh-t">Edit ${esc(fullName(p))}</h3><p class="muted">Rating ${p.ca} as ${p.pos}. Rating is recalculated from the attributes when you save.</p>
     <div class="two">
       ${fld('First name', `<input id="apFn" type="text" value="${esc(p.fn)}">`)}${fld('Last name', `<input id="apLn" type="text" value="${esc(p.ln)}">`)}
-      ${fld('Position', selectHtml('apPos', POSITIONS, p.pos, ''))}${fld('Nationality', selectHtml('apNat', Object.keys(NATIONS).map(k => [k, NATIONS[k].n]), p.nat, ''))}
+      ${fld('Position', selectHtml('apPos', POSITIONS, p.pos, ''))}${fld('Nationality', selectHtml('apNat', Object.keys(COUNTRY).sort((a, b) => natName(a).localeCompare(natName(b))).map(k => [k, natName(k)]), p.nat, ''))}
       ${fld('Age', num('apAge', p.age, 1, 'min="15" max="45"'))}${fld('Potential (1-100)', num('apPa', p.pa, 1, 'min="1" max="100"'))}
       ${fld('Morale', num('apMor', p.mor, 1, 'min="0" max="100"'))}${fld('Condition', num('apCond', Math.round(p.cond), 1, 'min="0" max="100"'))}
       ${fld('Sharpness', num('apShp', p.shp, 1, 'min="0" max="100"'))}${fld('Wage (£/week)', num('apWage', p.wage, 100))}
@@ -168,7 +168,7 @@ ACT.admPDel = ds => {
   ADM.confirm = ''; retire(G.players[+ds.id]); saveGame(); closeSheet(true); toast('Player deleted.'); render();
 };
 ACT.admNew = () => sheet(`<h3 class="sh-t">Create a player</h3><p class="muted">Joins your first-team squad with generated attributes.</p>
-  <div class="two">${fld('Position', selectHtml('anPos', POSITIONS, 'ST', ''))}${fld('Nationality', selectHtml('anNat', Object.keys(NATIONS).map(k => [k, NATIONS[k].n]), 'ENG', ''))}
+  <div class="two">${fld('Position', selectHtml('anPos', POSITIONS, 'ST', ''))}${fld('Nationality', selectHtml('anNat', Object.keys(COUNTRY).sort((a, b) => natName(a).localeCompare(natName(b))).map(k => [k, natName(k)]), 'ENG', ''))}
   ${fld('Age', num('anAge', 21, 1, 'min="15" max="40"'))}${fld('Rating (30-94)', num('anCa', 75, 1, 'min="30" max="94"'))}${fld('Potential', num('anPa', 85, 1, 'min="30" max="97"'))}</div>
   <button class="btn pri wide" data-a="admCreate">Create player</button>`);
 ACT.admCreate = () => {
@@ -233,7 +233,7 @@ ACT.admBulk = ds => {
     fresh: () => { mine.forEach(p => { p.cond = 100; }); return 'Everyone at full condition.'; },
     happy: () => { mine.forEach(p => { p.mor = 85; }); return 'Squad morale set to 85.'; },
     sharp: () => { mine.forEach(p => { p.shp = 100; }); return 'Everyone fully sharp.'; },
-    youth: () => { for (let i = 0; i < 3; i++) genYouth(userClub(), 60 + G.board.facYouth * 1.6); return '3 academy players added.'; },
+    youth: () => { for (let i = 0; i < 3; i++) genYouth(userClub(), 60 + G.board.facYouth * 1.6); return '3 U18 players added.'; },
     reveal: () => { Object.keys(G.players).forEach(id => { G.know[id] = 100; }); return 'Every player fully scouted.'; },
     fa: () => { for (let i = 0; i < 10; i++) { const p = genFreeAgent(); G.know[p.id] = 20; } return '10 free agents added.'; },
     healAll: () => { Object.values(G.players).forEach(p => { p.inj = null; }); return 'All injuries healed.'; },

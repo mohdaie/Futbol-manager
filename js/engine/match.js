@@ -316,7 +316,7 @@ function finishMatch(M) {
       if (S.user) addNews('club', pname(p) + ' injured', `${fullName(p)} suffered a ${n.toLowerCase()} and is expected to be out for ${wk} week${wk > 1 ? 's' : ''}.`);
     });
     // squad members who did not play feel the result a little
-    if (S.user) squadOf(S.cid).forEach(p => { if (!S.played.includes(p.id) && !p.youth) p.mor = clamp(p.mor + r * 1.5 - (p.status === 'Key player' ? 2 : 0), 0, 100); });
+    if (S.user) squadOf(S.cid).forEach(p => { if (!S.played.includes(p.id) && lvlOf(p) === 'A') p.mor = clamp(p.mor + r * 1.5 - (p.status === 'Key player' ? 2 : 0), 0, 100); });
   });
   if (motm) { G.players[motm].st.mom++; fx.motm = motm; }
 

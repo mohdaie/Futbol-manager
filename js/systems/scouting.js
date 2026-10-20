@@ -39,7 +39,7 @@ function scoutGrade(p) {
 const GRADE_NOTE = { A: 'Would walk into your first team.', B: 'Would compete for a starting place.', C: 'Squad depth or one for the future.', D: 'Not good enough for your squad.' };
 
 function matchesAssignment(p, a) {
-  if (p.club === G.club || p.youth) return false;
+  if (p.club === G.club) return false;
   if (a.region !== 'Everywhere' && regionOf(p) !== a.region) return false;
   if (a.pos !== 'Any' && p.pos !== a.pos) return false;
   if (p.age > a.maxAge) return false;

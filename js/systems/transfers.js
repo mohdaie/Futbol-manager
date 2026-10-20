@@ -6,7 +6,7 @@
 function isKeyPlayer(p) {
   const c = G.clubs[p.club];
   if (!c || c.fa) return false;
-  const ranked = c.squad.map(id => G.players[id]).filter(x => x && !x.youth).sort((a, b) => b.ca - a.ca);
+  const ranked = c.squad.map(id => G.players[id]).filter(x => x && lvlOf(x) === 'A').sort((a, b) => b.ca - a.ca);
   return ranked.indexOf(p) < 11;
 }
 
@@ -75,8 +75,10 @@ function offerContract(pid, wage, years, status, fee, mode) {
   return { ok: true, msg: `${fullName(p)} joins the ${userClub().name}${fee ? ' for ' + money(fee) : ' on a free transfer'}.` };
 }
 
+// Signed players join the first team unless they are still U18 age.
 function moveClub(p, toId) {
   removeFromClub(p);
+  p.lvl = p.age <= 17 ? 'Y' : 'A';
   addToClub(p, G.clubs[toId]);
 }
 
@@ -139,6 +141,8 @@ function weeklyTransfers() {
     if (id === G.club) return;
     const c = G.clubs[id];
     while (seniorSquad(id).length < 22) {
+      const res = levelSquad(id, 'R').sort((a, b) => b.ca - a.ca)[0];
+      if (res && res.ca >= 58) { res.lvl = 'A'; res.wage = Math.max(res.wage, wageFor(res, c.rep) * 0.7); continue; }
       const fa = squadOf('FA').filter(p => p.ca >= 55).sort((a, b) => b.ca - a.ca)[0];
       if (fa) { moveClub(fa, id); fa.wage = wageFor(fa, c.rep); fa.con = G.season + ri(1, 3); }
       else { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (c.rep - 50) * 0.6 - 6, age: ri(20, 29), nat: pickNat(PL_NATS), club: id }); addToClub(p, c); G.know[p.id] = 40; }
@@ -159,7 +163,7 @@ function aiMarket() {
     const pos = FORMATIONS[c.tac.ip][worst][0];
     const pool = Object.values(G.players).filter(p => {
       const sc = G.clubs[p.club];
-      return p.pos === pos && !p.youth && p.club !== G.club && p.club !== c.id && p.ca > wv + 2 && p.age <= 30 && sc && sc.rep <= c.rep + 4 && (sc.fa || askingPrice(p) <= c.bal * 0.4);
+      return p.pos === pos && lvlOf(p) !== 'Y' && p.club !== G.club && p.club !== c.id && p.ca > wv + 2 && p.age <= 30 && sc && sc.rep <= c.rep + 4 && (sc.fa || askingPrice(p) <= c.bal * 0.4);
     });
     if (!pool.length) continue;
     const p = wpick(pool, x => Math.pow(1.1, x.ca - 60));
@@ -197,7 +201,7 @@ function agentPitch() {
   const pos = slots[worst][0], me = userClub();
   const pool = Object.values(G.players).filter(p => {
     const c = G.clubs[p.club];
-    return !p.youth && p.club !== G.club && (p.pos === pos || p.alt.includes(pos)) && p.ca >= wv - 2 && p.ca <= wv + 10 && c.rep <= me.rep + 6 && (c.fa || askingPrice(p) <= G.fin.tb * 1.3) && !G.pitches.some(x => x.pid === p.id);
+    return lvlOf(p) !== 'Y' && p.club !== G.club && (p.pos === pos || p.alt.includes(pos)) && p.ca >= wv - 2 && p.ca <= wv + 10 && c.rep <= me.rep + 6 && (c.fa || askingPrice(p) <= G.fin.tb * 1.3) && !G.pitches.some(x => x.pid === p.id);
   });
   if (!pool.length) return;
   const p = wpick(pool, x => Math.pow(1.1, x.ca - 60));
