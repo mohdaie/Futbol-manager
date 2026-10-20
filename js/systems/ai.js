@@ -7,6 +7,7 @@
    so exporting a save never leaks an API key. */
 
 const AI_KEY = 'futbol-manager:ai';
+const JEV_RELAY_URL = 'https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-jev';
 
 // Prices in US$ per 1M tokens, checked Oct 2026. DeepSeek peak = Mon-Fri 01:00-04:00 and 06:00-10:00 UTC.
 const AI_PRICES = {
@@ -25,7 +26,7 @@ const AI_FEATURES = {
 
 function aiDefaults() {
   return {
-    jev: { on: false, mode: 'direct', key: '', proxy: '', model: 'jev-latest', timeout: 3000, budget: 2, feat: {} },
+    jev: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: JEV_RELAY_URL, model: 'jev-latest', timeout: 10000, budget: 2, feat: {} },
     ds: { on: false, mode: 'direct', key: '', proxy: '', base: 'https://api.deepseek.com', model: 'deepseek-flash', thinking: false, maxTokens: 300, temp: 0.9, timeout: 20000, budget: 3, feat: {} },
     usage: {}, log: [],
   };
@@ -40,6 +41,10 @@ function aiCfg() {
       ['jev', 'ds'].forEach(k => { AICFG[k] = { ...AICFG[k], ...(s[k] || {}) }; });
       AICFG.usage = s.usage || {};
       AICFG.log = s.log || [];
+      if (s.jev && !s.jev.relaySetup && s.jev.mode === 'direct') {
+        AICFG.jev.mode = 'relay'; AICFG.jev.proxy = JEV_RELAY_URL; AICFG.jev.timeout = Math.max(10000, AICFG.jev.timeout);
+      }
+      AICFG.jev.relaySetup = 1;
     }
   } catch (e) { /* storage blocked: keep defaults for this session */ }
   return AICFG;
@@ -88,7 +93,7 @@ async function aiFetch(url, body, headers, timeout) {
     return data;
   } catch (e) {
     if (e.name === 'AbortError') throw new Error(`No reply within ${timeout / 1000}s.`);
-    if (e instanceof TypeError) throw new Error('Could not reach the AI server. Check your internet connection and URL. Direct browser requests may be blocked (CORS); try “Through my server” with your own proxy URL.');
+    if (e instanceof TypeError) throw new Error('Could not reach the AI server. Check your internet connection and URL. Direct browser requests may be blocked (CORS); use a relay you control.');
     throw e;
   } finally { clearTimeout(timer); }
 }
@@ -96,13 +101,13 @@ async function aiFetch(url, body, headers, timeout) {
 // True when a service is switched on, has a key or proxy, and (optionally) a feature is ticked.
 function aiReady(svc, feat) {
   const c = aiCfg()[svc];
-  return !!(c.on && (c.mode === 'direct' ? c.key : c.proxy) && (!feat || c.feat[feat]));
+  return !!(c.on && (c.mode === 'direct' ? c.key : c.mode === 'relay' ? c.key && c.proxy : c.proxy) && (!feat || c.feat[feat]));
 }
 
 function aiGuard(svc) {
   const c = aiCfg()[svc];
-  if (c.mode === 'direct' && !c.key) throw new Error('Add an API key first.');
-  if (c.mode === 'proxy' && !c.proxy) throw new Error('Add a proxy URL first.');
+  if (c.mode !== 'proxy' && !c.key) throw new Error('Add an API key first.');
+  if (c.mode !== 'direct' && !c.proxy) throw new Error('Add a proxy URL first.');
   if (aiUsage(svc).cost >= c.budget) throw new Error(`Monthly budget of $${c.budget} reached. Raise it to continue.`);
 }
 
@@ -110,7 +115,7 @@ function aiGuard(svc) {
 async function jevAsk(state, questions, note = 'request', opts = {}) {
   const c = aiCfg().jev;
   aiGuard('jev');
-  const url = c.mode === 'proxy' ? c.proxy.replace(/\/$/, '') + '/v1/systemone' : 'https://api.typesafe.ai/v1/systemone';
+  const url = c.mode === 'direct' ? 'https://api.typesafe.ai/v1/systemone' : c.proxy.replace(/\/$/, '').replace(/\/v1\/systemone$/, '') + '/v1/systemone';
   const headers = c.mode === 'proxy' ? {} : { Authorization: 'Bearer ' + c.key };
   const t0 = performance.now();
   try {
