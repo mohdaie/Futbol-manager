@@ -163,6 +163,26 @@ Everything lives in one JSON-safe object, saved to `localStorage` after each wee
   - "When the ball is won: Counter" starts fast breaks; "Regroup" blunts them.
 - **Fouls and cards:** tackles from lost dribbles and off-ball fouls (Temperamental, Tackle harder, low Anticipation). Card chance falls with captain leadership and the Calm shout.
 - **Penalties:** fouls in the box on dribbles and at crosses.
+- **Tactic fit** (`tacticFit()`, `FIT_AREAS` in pitch.js): every instruction asks something of the players.
+
+| Area | Turned on by | Attributes it needs |
+|---|---|---|
+| Pressing | High press, or counter-press after losing the ball | Work Rate, Stamina, Pace, Teamwork, Anticipation |
+| Short passing and possession | Short passing or patient tempo | Passing, First Touch, Composure, Decisions, Vision |
+| Counter-attacking | Counter after winning the ball | Pace, Off the Ball, Finishing up front |
+| Long balls and second balls | Direct passing | Heading, height, Strength up front; Work Rate in midfield |
+| High defensive line | High line | Defenders' Pace, Anticipation, Teamwork; a sweeper keeper |
+| Deep defensive line | Deep line | Positioning, Heading, Marking |
+| Wide play and crossing | Wide attacking width | Crossing, Dribbling, Pace out wide; Heading in the box |
+
+  - **How it's scored:** each area compares those attributes with the players' own general level, so it measures suitability rather than quality (quality already counts in every duel). It's shown as a % on the Tactics screen, and per player on Player instructions.
+  - **Effects scale with fit and can turn negative:** counter-press regains, pressing's effect on the opponent's passing and its fatigue cost, possession and ball retention from short or patient play, how often counters and through balls succeed, the space behind a high line, and long-ball and second-ball success.
+  - **No style has a built-in advantage.** A mismatched tactic costs more than it gains.
+  - **Test** (same squad given different attribute profiles):
+    - A pressing or physical squad gets the most points from gegenpressing, counter-attack or long ball.
+    - A technical squad gets nothing from long ball (0.5 points per game against about 1.0).
+    - A quick squad gets nothing from gegenpressing over Balanced.
+- **Results follow squad strength.** League averages are only a sanity check. For example, against an even opponent the home side wins about 40%; when much stronger it wins 60–70% and outshoots the opponent by about 16 to 9.
 - **Tactical styles** (`STYLES`) are presets of the team instructions, shape and roles:
   - Gegenpressing
   - Tiki-taka
@@ -173,7 +193,7 @@ Everything lives in one JSON-safe object, saved to `localStorage` after each wee
   - Shooting, dribbling, passing risk, crossing
   - Forward runs, width
   - Pressing, tackling, marking
-- **Calibration** (380-match runs): about 2.7–2.9 goals, 29 shots, 3.2 yellow cards, 0.3 penalties, 3–4 offsides, 21 fouls and 10 corners per match. Pass completion is about 84%, and home sides win about 43%.
+- **League-average sanity check** (380-match runs; individual matches depend on the two squads): about 2.6–3.0 goals, 25 shots, 3.4 yellow cards, 0.3 penalties, 3–4 offsides, 23 fouls and 9 corners per match. Pass completion is about 84%.
 - **2D view:** shows key moments only, as in Football Manager. Each step of `ev.seq` is replayed: the ball travels the action's path, the players involved move to it, and everyone else stands at `positions()`. Quiet minutes pass quickly. The offside line is drawn. Speeds are 1x, 2x (default) and 4x.
 
 **Captain, set pieces and keeper roles** (match.js). These details affect matches:

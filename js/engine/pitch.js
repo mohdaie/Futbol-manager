@@ -124,3 +124,69 @@ function offsideLine(O, oPos) {
   O.on.forEach((id, i) => { if (id && i !== 0 && oPos[i]) deep = Math.max(deep, oPos[i][1]); });
   return Math.min(0.5, 1 - deep); // never offside in your own half
 }
+
+/* ---------- tactic fit ----------
+   How well the players suit what the tactic asks of them. Each area compares the attributes it needs
+   with the players' own general level (their profile), plus a little absolute quality.
+   About 0 = neutral, +1 = built for it, -1 = wrong players. The engine scales every tactical effect by it,
+   so a style only works when the players suit it, and backfires when they don't. */
+const FIT_AREAS = {
+  press: { n: 'Pressing', need: 'Work Rate, Stamina, Pace, Teamwork, Anticipation', on: T => (T.press ?? 1) === 2 || (T.lost ?? 1) === 2,
+    w: { wor: 1, sta: 0.8, pac: 0.6, tea: 0.6, ant: 0.5, agi: 0.3 }, line: { 1: 0.6, 2: 1, 3: 1.1, 4: 1.3, 5: 1.3 } },
+  poss: { n: 'Short passing and possession', need: 'Passing, First Touch, Composure, Decisions, Vision, Teamwork', on: T => (T.pass ?? 1) === 0 || (T.tempo ?? 1) === 0,
+    w: { pas: 1, fir: 0.8, cmp: 0.8, dec: 0.6, vis: 0.5, tea: 0.4 }, line: { 1: 0.8, 2: 1.3, 3: 1.3, 4: 1, 5: 0.8 } },
+  counter: { n: 'Counter-attacking', need: 'Pace, Off the Ball, Finishing, Decisions up front; Vision and Passing behind them', on: T => (T.won ?? 1) === 2,
+    w: { pac: 1, otb: 0.8, fin: 0.6, dec: 0.4, dri: 0.3, vis: 0.3, pas: 0.3 }, line: { 1: 0.2, 2: 0.5, 3: 0.8, 4: 1.3, 5: 1.4 } },
+  long: { n: 'Long balls and second balls', need: 'Heading, Strength and height up front; Work Rate in midfield; Passing behind', on: T => (T.pass ?? 1) === 2,
+    w: { hea: 1, str: 0.8, wor: 0.5, pas: 0.4, agi: -0.2 }, line: { 1: 0.4, 2: 0.6, 3: 0.8, 4: 1.2, 5: 1.6 } },
+  line: { n: 'High defensive line', need: 'Pace, Anticipation, Teamwork of the defenders (and a sweeper keeper)', on: T => (T.line ?? 1) === 2,
+    w: { pac: 1, ant: 0.8, tea: 0.6, pos: 0.4 }, line: { 1: 1.5, 2: 0.5 } },
+  deep: { n: 'Deep defensive line', need: 'Positioning, Heading, Marking, Strength of the defenders', on: T => (T.line ?? 1) === 0,
+    w: { pos: 1, hea: 0.8, mar: 0.8, str: 0.4 }, line: { 1: 1.5, 2: 0.6 } },
+  width: { n: 'Wide play and crossing', need: 'Crossing, Dribbling, Pace out wide; Heading in the box', on: T => (T.width ?? 1) === 2,
+    w: { cro: 1, dri: 0.6, pac: 0.5, hea: 0.4 }, line: { 1: 0.5, 2: 0.3, 3: 1, 4: 1.2, 5: 0.8 }, wide: true },
+};
+const OUTFIELD_KEYS = ATTRS.filter(a => a[2] !== 'G').map(a => a[0]);
+// get(i, k): attribute value of the player in slot i. Returns { area: score } for every area, plus per-slot scores.
+function tacticFit(T, get) {
+  const ip = FORMATIONS[T.ip], out = {}, slots = {};
+  const slotsOn = (T.on || []).map((id, i) => (id && i ? i : -1)).filter(i => i > 0);
+  const general = i => OUTFIELD_KEYS.reduce((t, k) => t + get(i, k), 0) / OUTFIELD_KEYS.length;
+  Object.entries(FIT_AREAS).forEach(([a, F]) => {
+    let s = 0, n = 0;
+    slotsOn.forEach(i => {
+      const pos = ip[i][0], ln = LINE[pos];
+      let wt = F.line[ln] || 0;
+      if (F.wide) wt *= ip[i][1] < 0.25 || ip[i][1] > 0.75 ? 1.6 : LINE[pos] >= 4 ? 0.8 : 0.4;
+      if (a === 'press') wt *= 1 + Math.max(0, beh(T, i, 'pr')) * 0.5;
+      if (a === 'long' && ln >= 4) wt *= 1 + Math.max(0, beh(T, i, 'aer'));
+      if (!wt) return;
+      let v = 0, tw = 0;
+      Object.entries(F.w).forEach(([k, w]) => { v += get(i, k) * w; tw += Math.abs(w); });
+      v /= tw;
+      if (a === 'long' || a === 'deep') { const p = G.players[T.on[i]]; v += clamp(((p && p.ht) || 182) - 182, -10, 12) / 6 * (ln >= 4 || a === 'deep' ? 1 : 0); }
+      const sc = clamp((v - general(i)) / 2.5 + (v - 13) / 8, -1.5, 1.5);
+      (slots[i] || (slots[i] = {}))[a] = sc;
+      s += sc * wt; n += wt;
+    });
+    if (a === 'line' && beh(T, 0, 'sweep') > 0 && T.on && T.on[0]) { s += clamp((get(0, 'one') + get(0, 'pac') - 26) / 6, -1, 1) * 0.8; n += 0.8; }
+    out[a] = n ? clamp(s / n, -1.2, 1.2) : 0;
+  });
+  return { area: out, slots };
+}
+const fitPct = v => Math.round(clamp(50 + v * 35, 3, 98));
+// Fit of a side in a match, from current form (condition, morale) as well as attributes.
+function sideFit(S) {
+  const f = tacticFit(S, (i, k) => (S.form && S.form.length ? av(S, i, k) : (G.players[S.on[i]] || { at: [] }).at[A[k]] || 10));
+  S.fit = f.area;
+  return f;
+}
+// For the Tactics screen: the active areas with fit %, plus a warning for poor ones.
+function tacticReport(T) {
+  const f = tacticFit({ ...T, on: T.slots }, (i, k) => { const p = G.players[T.slots[i]]; return p ? p.at[A[k]] : 8; });
+  const active = Object.entries(FIT_AREAS).filter(([, F]) => F.on(T)).map(([a, F]) => ({ a, n: F.n, need: F.need, pct: fitPct(f.area[a]) }));
+  // The weakest area matters most: one big gap undermines the whole tactic.
+  const overall = active.length ? Math.round(0.6 * active.reduce((t, x) => t + x.pct, 0) / active.length + 0.4 * Math.min(...active.map(x => x.pct))) : null;
+  const perSlot = i => { const s = f.slots[i]; if (!s) return null; const ks = active.map(x => x.a).filter(a => s[a] != null); return ks.length ? fitPct(ks.reduce((t, a) => t + s[a], 0) / ks.length) : null; };
+  return { active, overall, perSlot };
+}

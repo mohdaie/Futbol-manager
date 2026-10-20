@@ -576,3 +576,6 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 @media (max-height: 550px) { .title-wordmark { top: 24px; } .title-menu { bottom: 14px; gap: 7px; } .title-play, .title-options { min-height: 40px; } }
 
 .brain-modes .grow small { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.45; }
+.fitrow { display: grid; grid-template-columns: 1fr 70px auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.fitrow span { display: flex; flex-direction: column; min-width: 0; }
+.fitrow small { color: var(--mute); font-size: 10.5px; }
