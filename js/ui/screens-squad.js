@@ -13,7 +13,7 @@ SCREENS.squad = {
     return `<h1 class="h1">Squad <small>${seniorSquad(G.club).length} players</small></h1>
       <div class="chips">${[['ALL', 'All'], ['GK', 'Keepers'], ['DEF', 'Defence'], ['MID', 'Midfield'], ['ATT', 'Attack']].map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="sqF" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="sortbar"><span class="muted">Sort</span>${[['pos', 'Position'], ['ovr', 'Rating'], ['age', 'Age'], ['cond', 'Condition'], ['mor', 'Morale'], ['val', 'Value']].map(([k, n]) => `<button class="${s === k ? 'on' : ''}" data-a="sqS" data-v="${k}">${n}</button>`).join('')}</div>
-      <div class="list">${list.map(p => playerRow(p, `${xi.has(p.id) ? '<span class="xi">XI</span>' : ''}${condBar(p.cond)}`, { noBadge: true, sub: s === 'val' ? money(pValue(p)) : p.status + ' · ' + morLabel(p.mor) })).join('')}</div>`;
+      <div class="list">${list.map(p => playerRow(p, `${xi.has(p.id) ? '<span class="xitag">XI</span>' : ''}${condBar(p.cond)}`, { noBadge: true, sub: s === 'val' ? money(pValue(p)) : p.status + ' · ' + morLabel(p.mor) })).join('')}</div>`;
   },
 };
 ACT.sqF = ds => { UI.f.squad = ds.v; render(); };

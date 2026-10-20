@@ -7,7 +7,7 @@
 const START = { club: 'GUN', name: '', avatar: 1 };
 function startBadge(c, size) {
   const txt = isLight(c.c1) ? '#141414' : '#FFFFFF';
-  return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="11.5" font-weight="800" fill="${txt}" font-family="Saira Condensed, sans-serif">${c.id}</text></svg>`;
+  return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="11.5" font-weight="800" fill="${txt}" font-family="Plus Jakarta Sans, sans-serif">${c.id}</text></svg>`;
 }
 SCREENS.start = {
   full: true,
@@ -41,6 +41,19 @@ ACT.startGame = () => {
 };
 
 /* ---------- pre-match ---------- */
+function conditionsCard(fx) {
+  const us = restDays(G.club, fx), oppId = fx.h === G.club ? fx.a : fx.h, them = restDays(oppId, fx), W = WEATHER[(fx.wx || {}).k] || WEATHER.clear;
+  const tired = seniorSquad(G.club).filter(p => !p.inj && G.tactics.slots.includes(p.id) && p.cond < 75);
+  const restTxt = d => (d == null ? 'first match' : d + ' days');
+  const notes = [W.d];
+  if ((fx.t || '15:00') < '13:00') notes.push(KICKOFF_NOTES.early);
+  if ((fx.t || '15:00') >= '19:00') notes.push(KICKOFF_NOTES.evening);
+  if (fx.tv) notes.push('Televised: both clubs earn ' + money(TV_FEE) + ' extra.');
+  return `<div class="card"><h3>Conditions</h3>
+    <div class="kv"><div><small>Kick-off</small><b>${fxWhen(fx)}</b></div><div><small>Weather</small><b>${wxLabel(fx.wx)}</b></div>
+      <div><small>Your rest</small><b class="${us != null && us <= 3 ? 'warn' : ''}">${restTxt(us)}</b></div><div><small>Their rest</small><b class="${them != null && them <= 3 ? 'warn' : ''}">${restTxt(them)}</b></div></div>
+    <ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}${tired.length ? `<li class="warn">${tired.length} starter${tired.length > 1 ? 's are' : ' is'} below 75% condition: ${esc(tired.map(pname).join(', '))}. Consider rotating.</li>` : ''}</ul></div>`;
+}
 SCREENS.prematch = {
   render() {
     const fx = userFixture();
@@ -54,9 +67,10 @@ SCREENS.prematch = {
     T.slots.forEach((id, i) => { const p = G.players[id]; if (!p) warn.push(`No player at ${ip[i][0]}.`); else if (fam(p, ip[i][0]) < 0.9) warn.push(`${pname(p)} is out of position at ${ip[i][0]}.`); else if (p.cond < 75) warn.push(`${pname(p)} is tired (${p.cond}%).`); });
     const pc = G.press[fx.id] || (G.press[fx.id] = { Q: pickPress(), done: false }), Q = pc.Q || PRESS[pc.q];
     return `<section class="hero" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
-        <div class="eyebrow">${esc(phaseLabel())} · ${fmtDate(matchDate(fx.w))} · ${esc(G.clubs[fx.h].ground)}</div>
+        <div class="eyebrow">${esc(phaseLabel())} · ${fxWhen(fx)} · ${esc(G.clubs[fx.h].ground)}</div>
         <div class="vs">${badge(fx.h, 58)}<div class="vs-mid"><b>v</b></div>${badge(fx.a, 58)}</div>
         <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div></section>
+      ${conditionsCard(fx)}
       <div class="card"><h3>Opposition report <small>Analyst ${analyst.toFixed(0)}/20</small></h3>
         <div class="kv"><div><small>League position</small><b>${orow.p ? ordinal(tbl.indexOf(orow) + 1) : '-'}</b></div><div><small>Form</small><b>${orow.form.length ? formChips(orow.form) : '-'}</b></div>
         <div><small>Likely shape</small><b>${analyst >= 8 ? opp.tac.ip + ' / ' + opp.tac.oop : 'Unknown'}</b></div><div><small>Pressing</small><b>${analyst >= 11 ? INSTRUCTIONS[4].o[opp.tac.press] : 'Unknown'}</b></div></div>
@@ -83,9 +97,7 @@ ACT.kickoff = () => { const fx = userFixture(); if (fx && !played(fx)) startLive
 ACT.instant = () => {
   const fx = userFixture();
   if (!fx || played(fx)) return;
-  const M = createMatch(fx);
-  while (!M.ended) stepMatch(M, true);
-  finishMatch(M); finishRound();
+  playUserInstant(fx);
   go('post', { fid: fx.id });
 };
 
@@ -102,6 +114,7 @@ SCREENS.match = {
         <div class="sb-t r"><b>${esc(clubName(W.cid))}</b>${badge(W.cid, 26)}</div>
       </div>
       <div class="poss"><span class="pbar"><i id="sbPoss" style="width:50%"></i></span><small id="sbPossTxt"></small></div>
+      ${(() => { const f = G.fixtures.find(x => x.id === LIVE.fid); return f && f.wx ? `<div class="mcond">${fxWhen(f)} · ${wxLabel(f.wx)}${f.tv ? ' · TV' : ''}</div>` : ''; })()}
       <div class="pitchwrap"><canvas id="pitch" aria-label="Live match view"></canvas></div>
       <ol id="feed" class="feed" aria-live="polite"></ol>
       <div id="ftBar" class="ftbar" hidden><button class="btn pri wide" data-a="toPost">Match report</button></div>
@@ -169,9 +182,9 @@ SCREENS.post = {
       const us = fx.h === G.club ? 0 : 1;
       rats = `<div class="sec-h"><h2>Player ratings</h2></div><div class="list">${fx.ratings[us].filter(([id]) => G.players[id]).sort((x, y) => y[1] - x[1]).map(([id, r]) => `<button class="row act" data-a="player" data-id="${id}"><span class="pos">${G.players[id].pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}</b>${fx.motm === id ? ' <em class="tag good">Player of the match</em>' : ''}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('')}</div>`;
     }
-    const others = G.fixtures.filter(f => f.w === fx.w && f.id !== fx.id);
+    const others = G.fixtures.filter(f => f.r === fx.r && f.id !== fx.id).sort(fxSort);
     return `<section class="hero rep" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
-        <div class="eyebrow">Full time · ${fmtDate(matchDate(fx.w))}${fx.att ? ' · Att ' + fx.att.toLocaleString('en-GB') : ''}</div>
+        <div class="eyebrow">Full time · ${fxWhen(fx)}${fx.wx ? ' · ' + wxLabel(fx.wx) : ''}${fx.att ? ' · Att ' + fx.att.toLocaleString('en-GB') : ''}</div>
         <div class="vs">${badge(fx.h, 52)}<div class="vs-mid score"><b>${fx.hg} - ${fx.ag}</b></div>${badge(fx.a, 52)}</div>
         <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div>
         <div class="scorers"><span>${sc(0)}</span><span>${sc(1)}</span></div></section>

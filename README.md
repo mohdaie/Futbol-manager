@@ -16,6 +16,7 @@ Your career saves automatically in the browser. Use Settings → Export save to 
 - Transfers with scouting fog of war, player search, agent pitches, bids and contract talks.
 - Training, medical centre, youth academy, finances, staff, board and fans, news and inbox.
 - A live 2D match with commentary, substitutions, shouts and half-time team talks, plus instant results.
+- A real fixture calendar: Friday to Monday and midweek kick-off times, TV games, cup weekends and international breaks. Rest days, weather and kick-off time affect fitness, injuries and results.
 - **Admin page** (More → Admin): edit clubs and players, move time forward, tune the match engine, connect Jev and DeepSeek, and the **AI Brain**, a learning engine for computer managers with versions you approve.
 
 The full design, file map and how to extend it are in [STRUCTURE.md](STRUCTURE.md).

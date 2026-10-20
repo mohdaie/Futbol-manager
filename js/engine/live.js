@@ -201,7 +201,7 @@ function draw(L) {
   g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(X(0.5), Y(0.5), 1.8, 0, Math.PI * 2); g.fill();
 
   const r = Math.max(7, W * 0.026);
-  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${Math.round(r * 1.05)}px "Saira Condensed", system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
   [1 - L.bottom, L.bottom].forEach(si => {
     const S = L.M.sides[si], col = L.colors[si === L.bottom ? 0 : 1];
     S.on.forEach((id, i) => {
@@ -211,7 +211,7 @@ function draw(L) {
       g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); g.fill();
       g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = 2;
       g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
-      if (L.carrier && L.carrier[0] === si && L.carrier[1] === i) { g.strokeStyle = '#FFE08A'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
+      if (L.carrier && L.carrier[0] === si && L.carrier[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
       g.fillText(String(G.players[id] ? G.players[id].no : ''), x, y + 0.5);
     });
@@ -223,11 +223,11 @@ function draw(L) {
 
   if (L.overlay) {
     const o = L.overlay;
-    g.fillStyle = 'rgba(8,16,22,.62)'; g.fillRect(0, H / 2 - 44, W, 88);
-    g.fillStyle = o.card === 'red' ? '#F0605D' : o.card === 'yellow' ? '#F2C14E' : '#FFB547';
-    g.font = `800 ${Math.round(W * 0.12)}px "Saira Condensed", system-ui, sans-serif`;
+    g.fillStyle = 'rgba(34,8,47,.7)'; g.fillRect(0, H / 2 - 44, W, 88);
+    g.fillStyle = o.card === 'red' ? '#F0605D' : o.card === 'yellow' ? '#F2C14E' : '#2DE2EE';
+    g.font = `800 ${Math.round(W * 0.12)}px "Plus Jakarta Sans", system-ui, sans-serif`;
     g.fillText(o.big, W / 2, H / 2 - 8);
-    g.fillStyle = '#EAF2EE'; g.font = `600 ${Math.round(W * 0.045)}px "Barlow", system-ui, sans-serif`;
+    g.fillStyle = '#EAF2EE'; g.font = `600 ${Math.round(W * 0.045)}px "Plus Jakarta Sans", system-ui, sans-serif`;
     g.fillText(o.small || '', W / 2, H / 2 + 26);
   }
 }

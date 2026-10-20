@@ -3,40 +3,72 @@
    Home dashboard, news & inbox, the More menu, fixtures, league table,
    stats leaders, club overview and settings. */
 
+// Morale face: green smile, amber flat, red frown.
+function moodFace(m) {
+  const cls = m > 62 ? 'good' : m > 42 ? 'warn' : 'bad', col = { good: '#2BD46A', warn: '#F5C518', bad: '#F43F5E' }[cls];
+  const mouth = cls === 'good' ? 'M7.5 13.5q4.5 4 9 0' : cls === 'warn' ? 'M8 14.5h8' : 'M7.5 16q4.5-4 9 0';
+  const label = m > 80 ? 'Great' : m > 62 ? 'Happy' : m > 42 ? 'Okay' : 'Low';
+  return `<span class="mood ${cls}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="${col}"/><circle cx="8.5" cy="9.5" r="1.4" fill="#22082F"/><circle cx="15.5" cy="9.5" r="1.4" fill="#22082F"/><path d="${mouth}" stroke="#22082F" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>${label}</span>`;
+}
+
 SCREENS.home = {
   render() {
     const c = userClub(), fx = nextUserFixture(), tbl = leagueTable();
     const pos = tbl.findIndex(r => r.id === G.club) + 1, row = tbl[pos - 1];
-    const win = windowState(), sq = seniorSquad(G.club);
-    let hero = '';
+    const conf = G.board.conf;
+
+    const clubCard = `<section class="clubcard">
+      <div class="cc-top"><div class="cc-badge">${badge(c.id, 54)}</div>
+        <div class="cc-name"><b>${esc(c.name)}</b><small>${LEAGUE_NAME} · ${seasonLabel()}</small></div>
+        <button class="cc-link" data-a="go" data-s="club">Club overview <span aria-hidden="true">→</span></button></div>
+      <div class="cc-stats"><div><small>Position</small><b>${row.p ? ordinal(pos) : '-'}</b></div><div><small>Points</small><b>${row.pts}</b></div><div><small>Played</small><b>${row.p}</b></div></div>
+      <div class="cc-form"><span>Recent form</span>${row.form.length ? formChips(row.form) : '<span>No matches yet</span>'}</div>
+      <button class="cc-conf" data-a="go" data-s="board"><span>Board confidence</span>${bar(conf)}<b>${conf}%</b></button>
+    </section>`;
+
+    let next = '';
     if (fx) {
-      const opp = fx.h === G.club ? fx.a : fx.h, home = fx.h === G.club, orow = tbl.find(r => r.id === opp);
-      const oPos = tbl.indexOf(orow) + 1;
-      hero = `<section class="hero" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
-        <div class="eyebrow">${fx.w === G.week ? 'This week' : 'Next match'} · ${esc(phaseLabel(fx.w))}</div>
-        <div class="vs">${badge(fx.h, 58)}<div class="vs-mid"><span class="ha">${home ? 'Home' : 'Away'}</span><b>v</b><small>${fmtDate(matchDate(fx.w))}</small></div>${badge(fx.a, 58)}</div>
-        <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div>
-        <div class="vs-meta"><span>Opponent ${orow.p ? ordinal(oPos) : 'unranked'}</span>${orow.form.length ? formChips(orow.form) : '<span class="muted">No form yet</span>'}</div>
-        ${fx.w === G.week ? '<button class="btn pri wide" data-a="continue">Go to matchday</button>' : ''}
+      const home = fx.h === G.club, opp = home ? fx.a : fx.h, orow = tbl.find(r => r.id === opp);
+      const days = fxDayNo(fx) - todayNo(), rest = restDays(G.club, fx);
+      next = `<section class="dcard" ${fx.w === G.week ? 'data-a="continue" role="button"' : ''}>
+        <div class="dcard-h"><h2>Next match</h2><span class="pill">${days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days'}</span></div>
+        <div class="nm"><div class="nm-team">${badge(fx.h, 40)}<span>${esc(clubName(fx.h))}</span></div>
+          <div class="nm-mid"><b>vs</b>${fxWhen(fx)}<br>${home ? 'Home' : 'Away'} · League${fx.tv ? ' · TV' : ''}</div>
+          <div class="nm-team r">${badge(fx.a, 40)}<span>${esc(clubName(fx.a))}</span></div></div>
+        <div class="nm-cond"><span>${wxLabel(fx.wx)}</span><span>${rest == null ? 'First match' : rest + " days' rest"}</span>${rest != null && rest <= 3 ? '<span class="warnc">Tight turnaround</span>' : ''}</div>
+        <div class="nm-form"><span>Opponent form</span>${orow.form.length ? formChips(orow.form) : '<span>No matches yet</span>'}</div>
       </section>`;
-    } else hero = `<section class="hero"><div class="eyebrow">Season complete</div><p>No fixtures left this season.</p></section>`;
-    const injured = sq.filter(p => p.inj).length, mor = avg(sq, p => p.mor);
-    const wageUse = Math.round(clubWageBill(c) / G.fin.wb * 100);
-    const latest = G.news.slice(0, 4);
-    return `<button class="mgrstrip" data-a="go" data-s="board">${avatarImg(G.avatar, 'av-sm')}<span class="grow"><b>${esc(G.manager)}</b><small>Manager ${G.avatar || 1} · ${esc(c.name)} · ${esc(G.board.target.text)}</small></span><span class="chev">›</span></button>
-      ${hero}
-      <div class="tiles">
-        <button class="tile" data-a="go" data-s="table"><small>League position</small><b>${row.p ? ordinal(pos) : '-'}</b><span>${row.pts} pts · GD ${row.gf - row.ga >= 0 ? '+' : ''}${row.gf - row.ga}</span></button>
-        <button class="tile" data-a="go" data-s="board"><small>Board confidence</small><b>${G.board.conf}<i>%</i></b>${bar(G.board.conf, G.board.conf < 30 ? 'bad' : G.board.conf < 55 ? 'warn' : 'good')}</button>
-        <button class="tile" data-a="go" data-s="finance"><small>Transfer budget</small><b>${money(G.fin.tb)}</b><span>Wages at ${wageUse}% of budget</span></button>
-        <button class="tile" data-a="go" data-s="squad"><small>Squad morale</small><b class="${morClass(mor)}">${morLabel(mor)}</b><span>${injured} injured · ${sq.length} players</span></button>
-        <button class="tile" data-a="go" data-s="training"><small>Training</small><b>${TRAINING_FOCUS.find(f => f.k === G.training.focus).n}</b><span>Tactical familiarity ${G.training.fam}%</span></button>
-        <button class="tile ${win.open ? 'hot' : ''}" data-a="go" data-s="transfers"><small>${win.label}</small><b>${win.open ? 'Open' : 'Closed'}</b><span>${win.open ? 'Closes ' + win.closes : 'Free agents only'}</span></button>
-      </div>
+    } else next = `<section class="dcard"><div class="dcard-h"><h2>Next match</h2></div><p class="muted">No fixtures left this season.</p></section>`;
+
+    const sort = UI.f.dash || 'xi', xi = G.tactics.slots.map(id => G.players[id]).filter(Boolean);
+    const rows = sort === 'cond' ? xi.slice().sort((a, b) => a.cond - b.cond) : sort === 'mor' ? xi.slice().sort((a, b) => a.mor - b.mor) : xi;
+    const ip = FORMATIONS[G.tactics.ip];
+    const players = `<section class="dcard">
+      <div class="dcard-h"><div><h2>Player stats</h2><small>First team · ${seniorSquad(G.club).length} players</small></div>
+        ${selectHtml('dashSort', [['xi', 'Line-up'], ['cond', 'Lowest health'], ['mor', 'Lowest morale']], sort, 'dashSort')}</div>
+      <table class="ptable"><thead><tr><th>Player</th><th>Pos</th><th>Health</th><th>Morale</th></tr></thead><tbody>
+      ${rows.map(p => { const slot = G.tactics.slots.indexOf(p.id); const hc = p.inj ? 'bad' : p.cond >= 85 ? 'good' : p.cond >= 65 ? 'warn' : 'bad'; return `<tr data-a="player" data-id="${p.id}"><td>${esc(pname(p))}</td><td class="ppos">${slot >= 0 ? ip[slot][0] : p.pos}</td><td><span class="hb">${bar(p.inj ? 0 : p.cond, hc)}<b>${p.inj ? 'INJ' : Math.round(p.cond) + '%'}</b></span></td><td>${moodFace(p.mor)}</td></tr>`; }).join('')}
+      </tbody></table>
+      <button class="dlink" data-a="go" data-s="squad">View full squad <span class="chev">›</span></button>
+    </section>`;
+
+    const bill = clubWageBill(c), free = G.fin.wb - bill, h = G.balHist;
+    const month = h.length >= 2 ? h[h.length - 1] - h[Math.max(0, h.length - 5)] : null;
+    const health = c.bal < 0 ? ['In debt', 'bad'] : free < 0 ? ['Over wage budget', 'warn'] : ['Healthy', 'good'];
+    const finance = `<section class="dcard" data-a="go" data-s="finance" role="button">
+      <div class="dcard-h"><h2>Finance</h2><span class="pill ${health[1] === 'good' ? 'good' : ''}">${health[0]}</span></div>
+      <div class="fin"><div><small>Transfer budget</small><b>${money(G.fin.tb)}</b></div><div><small>Wages / week</small><b>${money(bill)}</b></div>
+        <div><small>Available wage budget</small><b class="${free < 0 ? 'bad' : ''}">${money(free)} / week</b></div><div><small>Club balance</small><b class="${c.bal < 0 ? 'bad' : ''}">${money(c.bal)}</b></div></div>
+      ${month == null ? '<div class="profit"><span class="muted">Monthly profit shows after a few weeks.</span></div>' : `<div class="profit ${month < 0 ? 'neg' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${month < 0 ? 'M3 7l7 7 4-4 7 7M21 11v6h-6' : 'M3 17l7-7 4 4 7-7M21 13V7h-6'}"/></svg>Monthly ${month < 0 ? 'loss' : 'profit'} ${month < 0 ? '' : '+'}${money(month)}</div>`}
+    </section>`;
+
+    return `<div class="dash-h"><h1 class="h1">Dashboard</h1></div>
+      ${clubCard}${next}${players}${finance}
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="go" data-s="news">All news</button></div>
-      <div class="list">${latest.map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
+      <div class="list">${G.news.slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
   },
 };
+CHG.dashSort = v => { UI.f.dash = v; render(); };
 
 const NEWS_CATS = [['all', 'All'], ['inbox', 'Inbox'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Club'], ['league', 'League']];
 function newsRow(n) {
@@ -77,7 +109,7 @@ ACT.bid = ds => {
 
 SCREENS.more = {
   render() {
-    const items = [['news', 'News & inbox', 'Results, transfers, board messages'], ['fixtures', 'Fixtures', 'Your schedule and every round'], ['table', 'League table', LEAGUE_NAME + ' standings'], ['stats', 'Stats leaders', 'Goals, assists, ratings'], ['training', 'Training', 'Weekly focus and intensity'], ['medical', 'Medical centre', 'Injuries and fatigue'], ['youth', 'Youth academy', 'Prospects and intake'], ['finance', 'Finances', 'Budgets, income and costs'], ['staff', 'Staff', 'Coaches, scouts, physios'], ['board', 'Board & fans', 'Confidence and requests'], ['club', 'Club', 'Stadium, history, trophies'], ['settings', 'Settings', 'Save, speed, new game']];
+    const items = [['fixtures', 'Fixtures', 'Your schedule and every round'], ['table', 'League table', LEAGUE_NAME + ' standings'], ['stats', 'Stats leaders', 'Goals, assists, ratings'], ['medical', 'Medical centre', 'Injuries and fatigue'], ['youth', 'Youth academy', 'Prospects and intake'], ['staff', 'Staff', 'Coaches, scouts, physios'], ['board', 'Board & fans', 'Confidence and requests'], ['club', 'Club', 'Stadium, history, trophies'], ['settings', 'Settings', 'Save, speed, new game']];
     if (adminAllowed()) items.push(['admin', 'Admin', 'Edit the game world and tune the engine']);
     return `<h1 class="h1">Club menu</h1><div class="grid2">${items.map(([s, n, d]) => `<button class="gcard" data-a="go" data-s="${s}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>`;
   },
@@ -93,13 +125,13 @@ SCREENS.fixtures = {
         const home = f.h === G.club, opp = home ? f.a : f.h;
         let res = '<span class="res">-</span>';
         if (played(f)) { const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg; res = `<span class="res r${us > them ? 'W' : us < them ? 'L' : 'D'}">${f.hg}-${f.ag}</span>`; }
-        return `<button class="row act" ${played(f) ? `data-a="go" data-s="post" data-fid="${f.id}"` : 'disabled'}><span class="rd">${f.r + 1}</span>${badge(opp, 22)}<span class="grow"><b>${esc(clubName(opp))}</b><small>${home ? 'Home' : 'Away'} · ${fmtDate(matchDate(f.w), false)}</small></span>${res}</button>`;
+        return `<button class="row act" ${played(f) ? `data-a="go" data-s="post" data-fid="${f.id}"` : 'disabled'}><span class="rd">${f.r + 1}</span>${badge(opp, 22)}<span class="grow"><b>${esc(clubName(opp))}</b><small>${home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}</small></span>${res}</button>`;
       }).join('')}</div>`;
     } else {
       const cur = G.fixtures.filter(f => f.w >= G.week)[0], r = UI.tab.round ?? (cur ? cur.r : 37);
-      const list = G.fixtures.filter(f => f.r === +r);
-      body = `<div class="field"><label for="rsel">Round</label>${selectHtml('rsel', Array.from({ length: 38 }, (_, i) => [i, 'Matchweek ' + (i + 1) + ' · ' + fmtDate(matchDate(roundWeek(i)), false)]), r, 'round')}</div>
-        <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<span class="res">${played(f) ? f.hg + '-' + f.ag : 'v'}</span>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>`;
+      const list = G.fixtures.filter(f => f.r === +r).sort(fxSort);
+      body = `<div class="field"><label for="rsel">Round</label>${selectHtml('rsel', Array.from({ length: 38 }, (_, i) => [i, 'Matchweek ' + (i + 1) + (SCHEDULE[i].mid ? ' (midweek)' : '') + ' · ' + fmtDate(weekDate(roundWeek(i)), false)]), r, 'round')}</div>
+        <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="fxt">${fxWhen(f).replace(/ \d+ \w+ ·/, '')}${f.tv ? '<em>TV</em>' : ''}</span><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<span class="res">${played(f) ? f.hg + '-' + f.ag : 'v'}</span>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>`;
     }
     return `<h1 class="h1">Fixtures</h1>${tabs('fx', [['ours', 'Our fixtures'], ['all', 'All rounds']], t)}${body}`;
   },

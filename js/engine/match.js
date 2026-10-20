@@ -37,11 +37,20 @@ function buildSide(cid, idx) {
     banned: c.squad.filter(id => G.players[id] && G.players[id].ban > 0), u: null, map: shapeMap(tac.ip, tac.oop), boost: 0, guard: 0, calm: 0,
   };
   xi.concat(bench).forEach(id => { if (id) { S.cond[id] = G.players[id].cond; S.rat[id] = 6.5; } });
+  S.startCond = avg(xi.filter(Boolean), id => G.players[id].cond);
   return S;
 }
 
+// Conditions for one match: weather plus kick-off time.
+function matchMods(fx) {
+  const w = (fx.wx && WEATHER[fx.wx.k]) || {}, t = fx.t || '15:00';
+  return { drain: w.drain || 1, xg: w.xg || 1, shot: (w.shot || 1) * (t < '13:00' ? 0.98 : 1), foul: w.foul || 1, inj: w.inj || 1, wind: w.wind || 1, home: t >= '19:00' ? 1.03 : 1 };
+}
+
 function createMatch(fx) {
-  const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, sides: [buildSide(fx.h, 0), buildSide(fx.a, 1)], log: [], shout: null };
+  // Real fixtures: players recover for the days since their last match before teams are picked.
+  if (fx.id > 0 && fx.w != null) [fx.h, fx.a].forEach(cid => squadOf(cid).forEach(p => recoverTo(p, fxDayNo(fx))));
+  const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0), buildSide(fx.a, 1)], log: [], shout: null };
   M.sides.forEach(S => calcUnits(S));
   return M;
 }
@@ -77,7 +86,7 @@ function possShare(H, W) {
   return a / (a + b);
 }
 
-function shotChance(S, O) {
+function shotChance(M, S, O) {
   const ratio = S.u.att / O.u.def;
   let p = tune('shotBase') * Math.pow(ratio, 1.1);
   p *= 1 + 0.08 * (S.ment - 2);
@@ -91,12 +100,14 @@ function shotChance(S, O) {
   p *= 1.12 - 0.03 * Math.min(O.u.nDef, 6);
   p *= (S.u.n / 11) * Math.sqrt(11 / Math.max(7, O.u.n));
   p *= 1 + S.boost - O.guard;
-  if (S.idx === 0) p *= tune('homeShot'); // home advantage
+  if (S.idx === 0) p *= tune('homeShot') * M.mod.home; // home advantage, louder at night
+  p *= M.mod.shot;
+  if (S.pass === 2 || S.width === 2) p *= M.mod.wind;
   return clamp(p, 0.04, 0.75);
 }
 
-function drain(S) {
-  const rate = tune('fatigue') + 0.06 * (S.press - 1) + 0.03 * (S.tempo - 1);
+function drain(M, S) {
+  const rate = (tune('fatigue') + 0.06 * (S.press - 1) + 0.03 * (S.tempo - 1)) * M.mod.drain;
   S.on.forEach((id, i) => {
     if (!id) return;
     const p = G.players[id];
@@ -110,15 +121,18 @@ function simMinute(M) {
   M.min++;
   const [H, W] = M.sides, evs = [];
   if (M.min % 5 === 0 || M.dirty) { calcUnits(H); calcUnits(W); M.dirty = false; }
-  drain(H); drain(W);
+  drain(M, H); drain(M, W);
   if (M.shout && M.min >= M.shout.until) { const S = M.sides[M.shout.side]; S.boost = 0; S.guard = 0; S.calm = 0; M.shout = null; }
   const s = R() < possShare(H, W) ? 0 : 1, S = M.sides[s], O = M.sides[1 - s];
   S.st.pos++;
   const ev = { min: M.min, side: s, t: 'poss' };
   evs.push(ev);
-  if (R() < shotChance(S, O)) shoot(M, S, O, ev, false);
-  else if (R() < tune('foulRate')) foul(M, O, S, ev);
-  if (R() < tune('injuryRate')) { const X = pick(M.sides); const e = injury(M, X); if (e) evs.push(e); }
+  if (R() < shotChance(M, S, O)) shoot(M, S, O, ev, false);
+  else if (R() < tune('foulRate') * M.mod.foul) foul(M, O, S, ev);
+  // Injuries: more likely in bad weather and for sides that started tired (fixture congestion).
+  M.sides.forEach(X => {
+    if (R() < (tune('injuryRate') / 2) * M.mod.inj * (1 + Math.max(0, 85 - (X.startCond ?? 100)) / 30)) { const e = injury(M, X); if (e) evs.push(e); }
+  });
   if (M.min % 15 === 0) M.sides.forEach(X => X.on.forEach(id => bumpRating(X, id, gauss() * 0.07)));
   if (M.min === 45) ev.ht = true;
   if (M.min >= 90 + M.added) { M.ended = true; ev.ft = true; }
@@ -137,7 +151,7 @@ function shoot(M, S, O, ev, setPiece) {
   if (!sh) sh = wpick(cands, x => POS_SHOT[x.pos] * (1 + (roleOf(S, x.i).s || 0)) * (0.5 + x.p.at[A.fin] / 10));
   const q = R();
   let xg = pen ? 0.78 : setPiece ? rf(0.03, 0.16) : q < 0.05 ? rf(0.3, 0.6) : q < 0.25 ? rf(0.08, 0.25) : rf(0.02, 0.08);
-  if (!pen) xg = clamp(xg * clamp(Math.pow(ratio, 0.35), 0.75, 1.3) * tune('xgScale'), 0.01, 0.9);
+  if (!pen) xg = clamp(xg * clamp(Math.pow(ratio, 0.35), 0.75, 1.3) * tune('xgScale') * M.mod.xg, 0.01, 0.9);
   const a = sh.p.at, fin = setPiece ? (a[A.hea] + a[A.fin]) / 2 : a[A.fin];
   const pg = xg * (0.75 + (fin - 10) / 30) * (1.25 - O.u.gk / 250) * (0.92 + 0.08 * a[A.cmp] / 10);
   S.st.sh++; S.st.xg += xg;
@@ -198,7 +212,7 @@ function sendOff(M, S, id, ev) {
 function injury(M, S) {
   const cands = onPitch(S);
   if (!cands.length) return null;
-  const x = pick(cands), inj = pick(INJURIES);
+  const x = wpick(cands, c => 1.7 - (S.cond[c.p.id] ?? 100) / 100), inj = pick(INJURIES);
   const physio = S.user ? staffAvg('Physio') : 10;
   const wk = Math.max(1, Math.round(rf(inj[1], inj[2]) * (1.25 - physio / 40)));
   S.injuries.push([x.p.id, wk, inj[0]]);
@@ -308,7 +322,7 @@ function finishMatch(M) {
 
   // money: TV for both, gate for the home side
   const hc = G.clubs[fx.h], ac = G.clubs[fx.a];
-  const tv = 0.9e6;
+  const tv = 0.9e6 + (fx.tv ? TV_FEE : 0);
   const fans = fx.h === G.club ? G.board.fans : 60;
   const att = Math.round(hc.cap * clamp(0.82 + fans / 600 + ac.rep / 1000, 0.6, 1));
   const gate = Math.round(att * (25 + hc.rep * 0.35));

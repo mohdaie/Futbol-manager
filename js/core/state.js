@@ -108,7 +108,7 @@ function aiTactic() {
 
 function newGame(clubId, manager, avatar) {
   G = {
-    v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, nextId: 1,
+    v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,
     players: {}, clubs: {}, fixtures: [], news: [], know: {}, shortlist: [],
     scout: { assign: [], reports: [] }, pitches: [], offers: [], tHist: [],
     fin: null, board: null, staff: [], staffPool: [], tactics: null,
