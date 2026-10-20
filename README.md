@@ -2,8 +2,6 @@
 
 A football manager game for the browser, designed for a phone held in portrait. Plain HTML, CSS and JavaScript with no build step and no dependencies.
 
-The working title in the game is **Touchline Gaffer**.
-
 ## Play
 
 - **Online:** turn on GitHub Pages for this repo (Settings → Pages → Deploy from a branch → `main`, folder `/ (root)`). The game is then at `https://mohdaie.github.io/Futbol-manager/`.
@@ -32,4 +30,4 @@ Set them up in Admin → Jev AI and Admin → DeepSeek. Keys are stored only in 
 
 ## Assets
 
-`public/assets/managers/` holds five comic-style manager portraits (see its README). The game does not use them yet.
+`public/assets/managers/` holds five comic-style manager portraits (see its README). The game shows them as **Manager 1 to 5**: you pick one on the start screen and can change it in Settings. It loads the small WebP copies in `public/assets/managers/small/` (320 px, about 20 KB each) rather than the 1.5 MB originals.

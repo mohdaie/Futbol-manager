@@ -4,7 +4,7 @@
    and squad helpers (auto-pick, wage bill, squad status). */
 
 let G = null;
-const SAVE_KEY = 'touchline-gaffer:v1';
+const SAVE_KEY = 'futbol-manager:v1';
 
 // First 11 are starters, next 11 rotation, last 3 youngsters.
 const SQUAD_TEMPLATE = ['GK', 'DL', 'DC', 'DC', 'DR', 'DM', 'MC', 'MC', 'AML', 'AMR', 'ST', 'GK', 'DL', 'DC', 'DC', 'DR', 'DM', 'MC', 'AMC', 'AML', 'AMR', 'ST', 'GK', 'MC', 'ST'];
@@ -106,9 +106,9 @@ function aiTactic() {
   return { ip, oop, ment: 2, tempo: 1, width: 1, press: ri(0, 2), line: 1, pass: 1 };
 }
 
-function newGame(clubId, manager) {
+function newGame(clubId, manager, avatar) {
   G = {
-    v: 1, manager: manager || 'The Gaffer', club: clubId, season: START_SEASON, week: 0, nextId: 1,
+    v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, nextId: 1,
     players: {}, clubs: {}, fixtures: [], news: [], know: {}, shortlist: [],
     scout: { assign: [], reports: [] }, pitches: [], offers: [], tHist: [],
     fin: null, board: null, staff: [], staffPool: [], tactics: null,

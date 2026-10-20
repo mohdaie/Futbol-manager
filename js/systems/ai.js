@@ -6,7 +6,7 @@
    Settings live in their own browser storage key, never inside the game save,
    so exporting a save never leaks an API key. */
 
-const AI_KEY = 'touchline-gaffer:ai';
+const AI_KEY = 'futbol-manager:ai';
 
 // Prices in US$ per 1M tokens, checked Oct 2026. DeepSeek peak = Mon-Fri 01:00-04:00 and 06:00-10:00 UTC.
 const AI_PRICES = {

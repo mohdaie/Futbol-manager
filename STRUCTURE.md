@@ -1,4 +1,4 @@
-# Touchline Gaffer: game structure
+# Futbol Manager: game structure
 
 A browser football manager built for a phone held in portrait. Plain HTML, CSS and JavaScript with no build step and no libraries. To play it, open `index.html` from any static web server, or use the published artifact.
 
@@ -111,7 +111,7 @@ Open it from **More → Admin**. Every change applies to the current save immedi
 | DeepSeek | The same for DeepSeek, plus base URL, max reply length, temperature and thinking mode. |
 | Data | Squad fixes (heal injuries, clear bans, full condition, morale, sharpness, add academy players), money, reveal every player, add free agents, news clean-up, delete save |
 
-**AI services:** settings are stored under their own browser key (`touchline-gaffer:ai`), never inside the game save, so an exported save never contains an API key. `jevAsk(state, questions)` and `dsChat(messages)` in `ai.js` are the two functions game features will call. Recommended picks: **jev-latest** ($0.042 per 1M input tokens, output free) and **deepseek-flash with thinking off** ($0.15-0.30 per 1M input, $0.60-1.20 per 1M output). A full season costs well under $1 for both together. DeepSeek accepts direct browser calls. Jev does not, so it needs a proxy, and a proxy is the right setup for real players anyway because it keeps the key off their devices.
+**AI services:** settings are stored under their own browser key (`futbol-manager:ai`), never inside the game save, so an exported save never contains an API key. `jevAsk(state, questions)` and `dsChat(messages)` in `ai.js` are the two functions game features will call. Recommended picks: **jev-latest** ($0.042 per 1M input tokens, output free) and **deepseek-flash with thinking off** ($0.15-0.30 per 1M input, $0.60-1.20 per 1M output). A full season costs well under $1 for both together. DeepSeek accepts direct browser calls. Jev does not, so it needs a proxy, and a proxy is the right setup for real players anyway because it keeps the key off their devices.
 
 **Access control:** `adminAllowed()` at the top of `screens-admin.js` returns `true` for everyone. To restrict the page later, make it return `true` only after your own check. It hides both the More menu entry and the page. Because the game runs entirely in the browser, a check in this file only hides the page. Real protection needs a server login (for example Supabase Auth) and server-side saves.
 
@@ -142,7 +142,7 @@ Computer managers make a tactical decision at half-time and at 60, 70 and 80 min
 
 **Press library:** DeepSeek writes press questions with three answers and their effects, clamped to −3 to +3. Once you approve them, they join the built-in questions and are used offline.
 
-Brain data uses its own browser key (`touchline-gaffer:brain`) and is kept across careers. The decision log holds up to 2,000 entries, while the learned table keeps everything.
+Brain data uses its own browser key (`futbol-manager:brain`) and is kept across careers. The decision log holds up to 2,000 entries, while the learned table keeps everything.
 
 ## 7. How the FM26 features map to this game
 

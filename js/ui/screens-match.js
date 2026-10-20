@@ -4,7 +4,7 @@
    the live 2D match, match report, season review and the sacked screen. */
 
 /* ---------- start ---------- */
-const START = { club: 'GUN', name: '' };
+const START = { club: 'GUN', name: '', avatar: 1 };
 function startBadge(c, size) {
   const txt = isLight(c.c1) ? '#141414' : '#FFFFFF';
   return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="11.5" font-weight="800" fill="${txt}" font-family="Saira Condensed, sans-serif">${c.id}</text></svg>`;
@@ -17,9 +17,11 @@ SCREENS.start = {
     const diff = i => (i < 5 ? 1 : i < 10 ? 2 : i < 15 ? 3 : 4);
     const sel = CLUBS.find(c => c.id === START.club);
     return `<div class="start">
-      <header class="st-hero"><div class="eyebrow">${seasonLabelRaw(START_SEASON)} · ${LEAGUE_NAME}</div><h1 class="logo">Touchline<br>Gaffer</h1><p>Pick a club, build a squad, win the league.</p></header>
+      <header class="st-hero"><div class="eyebrow">${seasonLabelRaw(START_SEASON)} · ${LEAGUE_NAME}</div><h1 class="logo">Futbol<br>Manager</h1><p>Pick a club, build a squad, win the league.</p></header>
       ${hasSave() ? '<button class="btn pri wide" data-a="resume">Continue your career</button>' : ''}
       <div class="field"><label for="mgr">Manager name</label><input id="mgr" type="text" maxlength="28" placeholder="Your name" value="${esc(START.name)}" data-c="mgr"></div>
+      <h2 class="lbl">Choose your manager</h2>
+      ${avatarPicker(START.avatar, 'pickAvatar')}
       <h2 class="lbl">Choose your club</h2>
       <div class="clubs">${order.map((c, i) => `<button class="club ${START.club === c.id ? 'on' : ''}" data-a="pickClub" data-id="${c.id}" style="--k1:${c.c1}">${startBadge(c, 34)}<span class="grow"><b>${c.name}</b><small>${c.city} · ${exp(i)}</small></span><span class="diff d${diff(i)}" title="Difficulty">${['', 'Easy', 'Normal', 'Hard', 'Very hard'][diff(i)]}</span></button>`).join('')}</div>
       <div class="st-go"><button class="btn pri wide big" data-a="startGame">Take charge of the ${sel.name}</button></div>
@@ -28,12 +30,13 @@ SCREENS.start = {
 };
 const seasonLabelRaw = s => s + '/' + String(s + 1).slice(2);
 ACT.pickClub = ds => { START.club = ds.id; render(); };
+ACT.pickAvatar = ds => { START.avatar = +ds.v; render(); };
 CHG.mgr = v => { START.name = v.trim(); };
 ACT.resume = () => { if (loadGame()) go('home'); };
 ACT.startGame = () => {
   const n = document.getElementById('mgr');
   START.name = (n && n.value.trim()) || START.name;
-  newGame(START.club, START.name || 'The Gaffer');
+  newGame(START.club, START.name || 'The Boss', START.avatar);
   go('home');
 };
 
@@ -187,7 +190,7 @@ SCREENS.review = {
     if (!r) return '<button class="btn" data-a="go" data-s="home">Continue</button>';
     const aw = (t, a, unit) => (a ? `<div class="row"><span class="grow"><b>${t}</b><small>${esc(a.name)} · ${esc(clubName(a.club))}</small></span><span class="stat"><b>${unit === 'g' ? a.v : a.r}</b><small>${unit === 'g' ? 'goals' : 'avg'}</small></span></div>` : '');
     return `<div class="start review">
-      <header class="st-hero"><div class="eyebrow">Season review · ${r.season}</div><h1 class="logo">${ordinal(r.pos)}<br><small>${r.pts} points</small></h1><p>${esc(r.verdict)}</p></header>
+      <header class="st-hero">${avatarImg(G.avatar, 'av-hero')}<div class="eyebrow">Season review · ${r.season}</div><h1 class="logo">${ordinal(r.pos)}<br><small>${r.pts} points</small></h1><p>${esc(r.verdict)}</p></header>
       <div class="card"><div class="kvrow"><span>Champions</span><b>${esc(clubName(r.champ))}</b></div><div class="kvrow"><span>Objective</span><b>${esc(r.target)}</b></div><div class="kvrow"><span>Prize money</span><b>${money(r.ledger.prize)}</b></div></div>
       <div class="list">${aw('Golden Boot', r.boot, 'g')}${aw('Player of the Season', r.best, 'r')}${aw('Young Player of the Season', r.young, 'r')}</div>
       <p class="muted">Contracts that ran out have ended, older players may have retired, and every player is a year older.</p>
@@ -202,7 +205,7 @@ SCREENS.sacked = {
   render() {
     const o = G.gameOver;
     return `<div class="start review">
-      <header class="st-hero"><div class="eyebrow">Statement from the board</div><h1 class="logo">Sacked</h1><p>${esc(o.reason)}</p></header>
+      <header class="st-hero">${avatarImg(G.avatar, 'av-hero sad')}<div class="eyebrow">Statement from the board</div><h1 class="logo">Sacked</h1><p>${esc(o.reason)}</p></header>
       <h2 class="lbl">Job offers</h2>
       <div class="clubs">${o.offers.map(id => `<button class="club" data-a="takeJob" data-id="${id}" style="--k1:${G.clubs[id].c1}">${badge(id, 34)}<span class="grow"><b>${esc(clubName(id))}</b><small>${esc(expectationFor(id).text)}</small></span><span class="chev">›</span></button>`).join('')}</div>
       <button class="btn wide ghost" data-a="newGame2">Start a new career</button></div>`;

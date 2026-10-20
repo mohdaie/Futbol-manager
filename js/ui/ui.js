@@ -77,6 +77,10 @@ function badge(cid, size = 28) {
   const code = c.code || c.id, txt = isLight(c.c1) ? '#141414' : '#FFFFFF';
   return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="${code.length > 2 ? 11.5 : 13}" font-weight="800" fill="${txt}" font-family="Saira Condensed, sans-serif">${code}</text></svg>`;
 }
+const avatarImg = (n, cls = '') => `<img class="av ${cls}" src="${avatarSrc(n)}" alt="Manager ${AVATARS.includes(+n) ? +n : 1}" width="320" height="320" loading="lazy" decoding="async">`;
+function avatarPicker(cur, act) {
+  return `<div class="avpick" role="radiogroup" aria-label="Manager portrait">${AVATARS.map(n => `<button class="avopt ${+cur === n ? 'on' : ''}" role="radio" aria-checked="${+cur === n}" data-a="${act}" data-v="${n}">${avatarImg(n)}<span>Manager ${n}</span></button>`).join('')}</div>`;
+}
 const condBar = c => `<span class="mbar ${condClass(c)}" title="Condition ${Math.round(c)}%"><i style="width:${clamp(Math.round(c), 0, 100)}%"></i></span>`;
 const bar = (v, cls = '') => `<span class="bar ${cls}"><i style="width:${clamp(Math.round(v), 0, 100)}%"></i></span>`;
 const ovrPill = (v, txt) => `<span class="ovr ${v >= 82 ? 'o4' : v >= 74 ? 'o3' : v >= 65 ? 'o2' : 'o1'}">${txt ?? v}</span>`;

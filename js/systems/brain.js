@@ -12,7 +12,7 @@
    DeepSeek can give a second opinion. Without either, the training camp explores options
    and learns purely from outcomes. Everything is stored on this device only. */
 
-const BRAIN_KEY = 'touchline-gaffer:brain';
+const BRAIN_KEY = 'futbol-manager:brain';
 const CHECKPOINTS = [46, 60, 70, 80];
 const MGR_OPTIONS = {
   attack: 'Go more attacking and bring on an attacker',

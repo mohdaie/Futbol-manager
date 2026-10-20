@@ -23,7 +23,8 @@ SCREENS.home = {
     const injured = sq.filter(p => p.inj).length, mor = avg(sq, p => p.mor);
     const wageUse = Math.round(clubWageBill(c) / G.fin.wb * 100);
     const latest = G.news.slice(0, 4);
-    return `${hero}
+    return `<button class="mgrstrip" data-a="go" data-s="board">${avatarImg(G.avatar, 'av-sm')}<span class="grow"><b>${esc(G.manager)}</b><small>Manager ${G.avatar || 1} · ${esc(c.name)} · ${esc(G.board.target.text)}</small></span><span class="chev">›</span></button>
+      ${hero}
       <div class="tiles">
         <button class="tile" data-a="go" data-s="table"><small>League position</small><b>${row.p ? ordinal(pos) : '-'}</b><span>${row.pts} pts · GD ${row.gf - row.ga >= 0 ? '+' : ''}${row.gf - row.ga}</span></button>
         <button class="tile" data-a="go" data-s="board"><small>Board confidence</small><b>${G.board.conf}<i>%</i></b>${bar(G.board.conf, G.board.conf < 30 ? 'bad' : G.board.conf < 55 ? 'warn' : 'good')}</button>
@@ -130,7 +131,7 @@ SCREENS.stats = {
 SCREENS.club = {
   render() {
     const c = userClub(), B = G.board;
-    return `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 64)}<div><h1 class="h1">${esc(c.name)}</h1><p class="muted">${esc(c.city)} · Manager ${esc(G.manager)}</p></div></section>
+    return `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 64)}${avatarImg(G.avatar, 'av-sm')}<div><h1 class="h1">${esc(c.name)}</h1><p class="muted">${esc(c.city)} · Manager ${esc(G.manager)}</p></div></section>
       <div class="kv">
         <div><small>Stadium</small><b>${esc(c.ground)}</b></div><div><small>Capacity</small><b>${c.cap.toLocaleString('en-GB')}</b></div>
         <div><small>Reputation</small><b>${Math.round(c.rep)} / 100</b></div><div><small>Training facilities</small><b>Level ${B.facTrain}</b></div>
@@ -147,6 +148,7 @@ SCREENS.settings = {
   render() {
     const exp = UI.tab.export;
     return `<h1 class="h1">Settings</h1>
+      <div class="card"><h3>Manager portrait</h3>${avatarPicker(G.avatar || 1, 'setAvatar')}</div>
       <div class="card"><h3>Default match speed</h3><div class="seg">${[1, 2, 4].map(s => `<button class="${G.settings.speed === s ? 'on' : ''}" data-a="speed" data-v="${s}">${s}x</button>`).join('')}</div></div>
       <div class="card"><h3>Save game</h3><p class="muted">The game saves itself in this browser after every week and match. Clearing site data removes it, so export a copy to keep a backup.</p>
         <div class="btns"><button class="btn" data-a="saveNow">Save now</button><button class="btn" data-a="exportSave">Export save</button><button class="btn" data-a="importOpen">Import save</button></div>
@@ -154,6 +156,7 @@ SCREENS.settings = {
       <div class="card danger"><h3>New game</h3><p class="muted">Starts a new career and deletes the current save.</p><button class="btn ${UI.tab.confirmNew ? 'bad' : ''}" data-a="newGame">${UI.tab.confirmNew ? 'Tap again to delete and restart' : 'Start a new game'}</button></div>`;
   },
 };
+ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to Manager ' + ds.v + '.'); render(); };
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
 ACT.saveNow = () => toast(saveGame() ? 'Game saved.' : 'Saving failed. Browser storage is blocked here, so export your save instead.');
 ACT.exportSave = () => { UI.tab.export = btoa(unescape(encodeURIComponent(JSON.stringify(G)))); render(); };
