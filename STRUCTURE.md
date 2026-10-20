@@ -19,8 +19,10 @@ js/core/state.js           the game state object G, new-game world build, save/l
                            news, auto-pick, squad helpers
 js/core/playtime.js        per-career active time, session counts and background pause
 js/core/calendar.js        weeks and dates, fixture generator, transfer windows, league table
-js/engine/match.js         match simulation (minute by minute), subs, AI manager, results
-js/engine/live.js          2D canvas match: dots, ball, commentary, team talks, shouts
+js/engine/pitch.js         tactical styles, role behaviour, player instructions, positions() and the offside line
+js/engine/sim.js           match engine v2: each minute's chain of player-against-player actions (ev.seq)
+js/engine/match.js         match setup, team summary units, subs, AI manager, results
+js/engine/live.js          2D canvas match: replays ev.seq (key moments), commentary, team talks, shouts
 js/systems/training.js     weekly training, development and decline, injuries, recovery
 js/systems/finance.js      weekly income and costs, moving money between budgets
 js/systems/scouting.js     knowledge and fog of war, scout assignments, reports
@@ -138,6 +140,41 @@ Everything lives in one JSON-safe object, saved to `localStorage` after each wee
 ## 4. Systems in brief
 
 **Player page.** The big number is the player's rating out of 100 (current ability at his main position), with a remark from Raw to World class. The stars and remark below it show potential. The hexagon sums up the attributes on six sides. Outfielders show Attacking, Technical, Speed, Physical, Defending and Mental. Keepers show Shot stopping, Handling, One on ones, Distribution, Positioning and Mental. Keepers only list GK as a position. Everything you can do with a player sits behind one **Actions** button, grouped by category: Motivate, Squad, Training and Contract for your players; Transfer and Scouting for others. To add an action, add an item to `PLAYER_ACTIONS` in screens-squad.js.
+
+**Match engine v2** (`pitch.js`, `sim.js`, 2026.10.20.4).
+- **Each minute:** the side with the ball (from midfield control, passing and tempo, plus home advantage) plays a chain of actions.
+- **The actions:** pass, through ball, long ball, dribble, cross, shot. A safe "keep the ball" pass continues the move for patient sides.
+- **Choosing:** the player on the ball weighs the options he has, using his Decisions, Vision and Flair, his role behaviour (`ROLE_B`), his player instructions and the team instructions.
+- **Duels:** every action is decided between the players actually involved. The receiver or carrier faces the nearest defender, standing where `positions()` puts them. The table below shows the attributes each one uses.
+- **Physical attributes** fall with condition. Experience adds composure and decisions, and weight adds strength.
+
+| Action | Attacker | Defender |
+|---|---|---|
+| Pass | Passing, Vision, Composure under pressure, receiver's First Touch | Anticipation, Positioning, Marking; closeness; Mark tighter |
+| Through ball | Passing, Vision, Teamwork, risky passing. Then a race: runner's Pace, First Touch, Off the Ball | Anticipation, Positioning. Race: defender's Pace, Anticipation, Agility, or a sweeper keeper's One on Ones and Pace |
+| Long ball | Passing or Kicking, then the target's Heading + height, Strength and hold-up | Heading + height, Strength, Positioning |
+| Dribble | Dribbling, Agility, Pace, Flair, First Touch, Strength (hold-up) | Tackling, Agility, Pace, Anticipation, Tackle harder |
+| Cross | Crossing (weak foot −2), then the target's Heading + height, Strength, Off the Ball | Keeper may claim (Handling + height). Heading + height, Strength, Marking |
+| Shot | Chance quality from distance and angle, pressure, weak foot, header or one-on-one. Then Finishing (or heading or free-kick skill) and Composure | Blocks (Positioning, Anticipation). Keeper rating, One on Ones, height |
+
+- **Offside:** precise. The line is the deepest outfield defender (`offsideLine()`). The runner's position when the ball is played depends on his Off the Ball, Decisions and Anticipation against the back line's Teamwork and Anticipation and the line height. He is offside only if he is beyond the line. There is no VAR.
+- **Transitions:**
+  - "When the ball is lost: Counter-press" tries to win it straight back high up the pitch (Work Rate, pressing).
+  - "When the ball is won: Counter" starts fast breaks; "Regroup" blunts them.
+- **Fouls and cards:** tackles from lost dribbles and off-ball fouls (Temperamental, Tackle harder, low Anticipation). Card chance falls with captain leadership and the Calm shout.
+- **Penalties:** fouls in the box on dribbles and at crosses.
+- **Tactical styles** (`STYLES`) are presets of the team instructions, shape and roles:
+  - Gegenpressing
+  - Tiki-taka
+  - Balanced
+  - Counter-attack
+  - Long ball
+- **Player instructions** (`PLAYER_INS`) are stored per position in `G.tactics.pi`:
+  - Shooting, dribbling, passing risk, crossing
+  - Forward runs, width
+  - Pressing, tackling, marking
+- **Calibration** (380-match runs): about 2.7–2.9 goals, 29 shots, 3.2 yellow cards, 0.3 penalties, 3–4 offsides, 21 fouls and 10 corners per match. Pass completion is about 84%, and home sides win about 43%.
+- **2D view:** shows key moments only, as in Football Manager. Each step of `ev.seq` is replayed: the ball travels the action's path, the players involved move to it, and everyone else stands at `positions()`. Quiet minutes pass quickly. The offside line is drawn. Speeds are 1x, 2x (default) and 4x.
 
 **Captain, set pieces and keeper roles** (match.js). These details affect matches:
 - **Captain:** his leadership (1–20) moves the whole team's strength by about ±3% while he is on the pitch, and a high-leadership captain cuts card risk. If he is off the pitch, the best leader on the pitch has half the effect.
@@ -265,6 +302,6 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - **Rename clubs or recolour them:** edit `CLUBS` in `data.js` (`name`, `c1`, `c2`, `rep`, `ground`).
 - **Add a formation:** add 11 `[pos, x, y]` slots to `FORMATIONS`, with the GK first and y = 1 at your own goal line.
 - **Add a role:** append to `ROLES[pos]` with `a`, `m`, `d` (unit leans) and `s` (shot share).
-- **Rebalance the engine:** change `shotChance()` and `shoot()` in `match.js`, then run a season with `quickSim` over `G.fixtures` and check goals per game.
+- **Rebalance the engine:** change the weights in `chooseAction()` and the bases in `sim.js`, or `xgScale`, `foulRate` and `cornerShot` in `TUNE_DEFAULTS`. Then run the admin test season and check the targets in the engine section.
 - **Add a screen:** register `SCREENS.name = { render(p) { return html; } }` and add click handlers to `ACT`. Link to it with `data-a="go" data-s="name"`.
 - **Change money:** `wageFor()` and `pValue()` in players.js, `sponsorWeekly()` and `opsWeekly()` in finance.js, and gate and TV money in `finishMatch()`.

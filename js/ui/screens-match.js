@@ -195,6 +195,7 @@ ACT.subIn = ds => {
   L.subSel = null;
   reopenLive('subs');
 };
+ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`); reopenLive('tactics'); };
 ACT.liveIns = ds => { const S = liveSide(); S[ds.k] = +ds.v; LIVE.M.dirty = true; reopenLive('tactics'); };
 CHG.liveShape = (v, ds, el) => {
   const S = liveSide(), k = el.id === 'lt-ip' ? 'ip' : 'oop';
@@ -215,7 +216,7 @@ SCREENS.post = {
     if (fx.stats) {
       const [h, a] = fx.stats, tot = h.pos + a.pos || 1;
       const row = (l, x, y) => `<div class="cmp"><b>${x}</b><span>${l}</span><b>${y}</b></div>`;
-      stats = `<div class="card">${row('Possession', Math.round(h.pos / tot * 100) + '%', Math.round(a.pos / tot * 100) + '%')}${row('Shots', h.sh, a.sh)}${row('On target', h.sot, a.sot)}${row('Expected goals', h.xg.toFixed(2), a.xg.toFixed(2))}${row('Corners', h.co, a.co)}${row('Fouls', h.fo, a.fo)}${row('Cards', h.yc + '/' + h.rc, a.yc + '/' + a.rc)}</div>`;
+      stats = `<div class="card">${row('Possession', Math.round(h.pos / tot * 100) + '%', Math.round(a.pos / tot * 100) + '%')}${row('Shots', h.sh, a.sh)}${row('On target', h.sot, a.sot)}${row('Expected goals', h.xg.toFixed(2), a.xg.toFixed(2))}${row('Pass accuracy', h.pa ? Math.round(h.pc / h.pa * 100) + '%' : '-', a.pa ? Math.round(a.pc / a.pa * 100) + '%' : '-')}${row('Corners', h.co, a.co)}${row('Offsides', h.off || 0, a.off || 0)}${row('Fouls', h.fo, a.fo)}${row('Cards', h.yc + '/' + h.rc, a.yc + '/' + a.rc)}</div>`;
       const us = fx.h === G.club ? 0 : 1;
       rats = `<div class="sec-h"><h2>Player ratings</h2></div><div class="list">${fx.ratings[us].filter(([id]) => G.players[id]).sort((x, y) => y[1] - x[1]).map(([id, r]) => `<button class="row act" data-a="player" data-id="${id}"><span class="pos">${G.players[id].pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}</b>${fx.motm === id ? ' <em class="tag good">Player of the match</em>' : ''}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('')}</div>`;
     }

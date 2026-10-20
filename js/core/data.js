@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.20.3';
+const GAME_VERSION = '2026.10.20.4';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -173,6 +173,8 @@ const INSTRUCTIONS = [
   { k: 'pass', n: 'Passing', o: ['Short', 'Mixed', 'Direct'] },
   { k: 'press', n: 'Pressing', o: ['Low block', 'Mid block', 'High press'] },
   { k: 'line', n: 'Defensive line', o: ['Deep', 'Standard', 'High'] },
+  { k: 'lost', n: 'When the ball is lost', o: ['Regroup', 'Balanced', 'Counter-press'] },
+  { k: 'won', n: 'When the ball is won', o: ['Hold shape', 'Balanced', 'Counter'] },
 ];
 
 const TRAINING_FOCUS = [
@@ -231,7 +233,7 @@ const TV_FEE = 0.6e6; // extra per club for a televised match
 // Match engine tuning. The admin page can override these per save (G.tune).
 const TUNE_DEFAULTS = {
   shotBase: { v: 0.285, min: 0.1, max: 0.5, step: 0.01, n: 'Shot chance per possession minute' },
-  xgScale: { v: 1, min: 0.5, max: 2, step: 0.05, n: 'Chance quality (xG) multiplier' },
+  xgScale: { v: 0.74, min: 0.5, max: 2, step: 0.05, n: 'Chance quality (xG) multiplier' },
   homeShot: { v: 1.06, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: shots' },
   homePoss: { v: 1.04, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: possession' },
   fatigue: { v: 0.38, min: 0.1, max: 0.8, step: 0.02, n: 'Fatigue per minute' },
