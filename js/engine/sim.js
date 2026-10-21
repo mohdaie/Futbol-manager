@@ -334,11 +334,18 @@ function carrierDecide(M, s, i, o = {}) {
     const risk = clamp(passRisk(M, s, p.x, p.y, tx, ty, air) + len * (0.003 + (20 - pas) * 0.0006) + (air ? 0.12 + aerialContest(M, s, j, tx, ty) : 0) + press * 0.08 - (ac(S, j, 'fir') - 10) * 0.006, 0.02, 0.95);
     const [, rpress] = recvPressure(M, s, tx, ty);
     // A free team-mate close by under pressure deep: the short escape out of the press.
-    const val = threat(s, tx, ty) * (1 - rpress * 0.45) * (!air && oy > 0.6 && press > 0.4 && rpress < 0.3 && len < 25 ? 1.3 : 1);
+    // Out of the press: a ground ball to a free team-mate past two or more pressers (a press-breaking pass) is
+    // what a pressed side looks for first; a free short option close by is also worth more than usual.
+    let esc = 1;
+    if (!air && oy > 0.55 && press > 0.4 && rpress < 0.35) {
+      const beat = sim.P[1 - s].filter((z, n) => z && n && hyp(z.x - p.x, z.y - p.y) < 12 && (z.y - ty) * fwdY(s) < 0).length;
+      esc = beat >= 2 && (ty - p.y) * fwdY(s) > 8 ? 1.6 : len < 25 ? 1.3 : 1;
+    }
+    const val = threat(s, tx, ty) * (1 - rpress * 0.45) * esc;
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > (20 - vis) / 160) return; // he sees the flag coming (poor Vision misses it now and then)
-    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk, rpress });
+    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk, rpress, esc });
     // Through ball into the space in behind for a player making a run.
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
     if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03))) {
@@ -553,6 +560,13 @@ function secondBallSupport(M, s, i, j, x, y, flight) {
     q.tx = clamp(x + dx, 1, PW - 1); q.ty = clamp(y + dy * fw, 1, PL - 1);
     q.sup = sim.t + flight + 2.5; q.run = sim.t + flight + 1;
   });
+  // The defender nearest the landing point attacks the ball (a centre-back challenging the target man).
+  {
+    const OP0 = sim.P[1 - s];
+    let dj = -1, dd = 30;
+    for (let n = 1; n < OP0.length; n++) { const q = OP0[n]; if (q) { const d = hyp(q.x - x, q.y - y); if (d < dd) { dd = d; dj = n; } } }
+    if (dj > 0) { const q = OP0[dj]; q.tx = x; q.ty = clamp(y - fw * 0.8, 1, PL - 1); q.sup = sim.t + flight + 1; q.run = sim.t + flight + 1; }
+  }
   // The defending side reacts too: its two nearest midfielders drop on to the landing zone, goal-side, to
   // contest the second ball (Anticipation reads it earlier: a closer starting spot).
   const O = M.sides[1 - s], OP = sim.P[1 - s];
@@ -921,6 +935,13 @@ function targets(M, all) {
           if (own && role >= 2 && role <= 3) { const dx = X - own.x, dy = Y - own.y; if (dx * dx + dy * dy > 484) { const k = clamp(0.1 + ac(S, i, 'tea') * 0.015, 0.1, 0.45); X += (own.x - X) * k; Y += (own.y - Y) * k; } } // Teamwork: comes to help
           // Late runs into the box when the ball is wide in the final third.
           if (!droppingNine && by < 18 / PL && (bx < 0.25 || bx > 0.75) && role >= 3 && R() < ac(S, i, 'otb') / 30) { const sp = boxSpot(s, i); X = sp[0]; Y = sp[1]; }
+          // Direct play (long passing) building from the back: the midfielder further from the ball pushes up near
+          // the target man for the knock-down and second ball; the nearer one stays short as the escape pass.
+          if ((S.pass ?? 1) === 2 && role === 3 && by > 0.55) {
+            const mids = ip.map((q, n) => LINE[q[0]] === 3 && P[n] ? n : -1).filter(n => n > 0), far = mids.sort((a, b) => hyp(P[b].x - B.x, P[b].y - B.y) - hyp(P[a].x - B.x, P[a].y - B.y))[0];
+            const tg = ip.map((q, n) => LINE[q[0]] === 5 && P[n] ? n : -1).filter(n => n > 0)[0];
+            if (i === far && tg) { X += (P[tg].x - X) * 0.4; Y = P[tg].y - fw * 10; }
+          }
           // Find space near that spot (Off the Ball, Anticipation).
           else if (own && role >= 2 && Math.abs(Y - own.y) < 40) [X, Y] = findSpace(M, s, i, X, Y, own, line);
         }

@@ -39,7 +39,8 @@ function describe(sel) {
   for (let k = 0; k < sel.length; k += 2) {
     const f = sel[k], bx = f[2], by = f[3], bz = f[4], os = f[5], oi = f[6], rs = f[7];
     const near = [0, 1].map(s => { let n = 0; for (let i = 0; i < 11; i++) { const x = f[8 + (s * 11 + i) * 2], y = f[9 + (s * 11 + i) * 2]; if (x != null && Math.hypot(x - bx, y - by) < 12) n++; } return n; });
-    const who = rs ? 'restart ' + rs : os >= 0 ? side(os) + ' ' + res.pos[os][oi] + ' on the ball' : bz > 1 ? 'ball in the air' : 'loose ball';
+    const g = sel[k + 1] || f, moving = Math.hypot(g[2] - bx, g[3] - by) > 2.5; // over 5 m/s: a pass, not a loose ball
+    const who = rs ? 'restart ' + rs : os >= 0 ? side(os) + ' ' + res.pos[os][oi] + ' on the ball' : bz > 1 ? 'ball in the air' : moving ? 'ground pass' : 'loose ball';
     const line = `${(f[1] - t0).toFixed(0)}s ${who}, ${where(bx, by)}; within 12 m: blue ${near[res.p]}, red ${near[1 - res.p]}`;
     if (line.split(';')[0] !== last || k % 6 === 0) out.push(line);
     last = line.split(';')[0];
