@@ -44,6 +44,10 @@ function render(reset) {
   ENTITY_INDEX = null;
   const root = document.getElementById('app');
   const main = root.querySelector('.main');
+  const sameScreen = root.dataset.screen === UI.s;
+  const rails = !reset && sameScreen ? [...root.querySelectorAll('.tabs,.chips,.sortbar,.seg')].map(el => el.scrollLeft) : null;
+  const focused = !reset && sameScreen && root.contains(document.activeElement) ? document.activeElement : null;
+  const focus = focused ? { tag:focused.tagName, id:focused.id, data:{...focused.dataset}, value:focused.value, start:focused.selectionStart, end:focused.selectionEnd } : null;
   const keep = !reset && main ? main.scrollTop : 0;
   let scr;
   if (UI.s === 'title') scr = SCREENS.title;
@@ -57,8 +61,20 @@ function render(reset) {
   const m2 = root.querySelector('.main');
   if (m2) m2.scrollTop = keep;
   const rail = root.querySelector('.team-sections'), active = rail?.querySelector('.on');
-  if (active) rail.scrollLeft = Math.max(0, active.offsetLeft - (rail.clientWidth - active.offsetWidth) / 2);
+  if (active && !rails) rail.scrollLeft = Math.max(0, active.offsetLeft - (rail.clientWidth - active.offsetWidth) / 2);
   if (scr.after) scr.after(UI.p);
+  if (rails) root.querySelectorAll('.tabs,.chips,.sortbar,.seg').forEach((el,i) => { el.scrollLeft=rails[i] || 0; });
+  if (focus && (focus.id || Object.keys(focus.data).length)) {
+    const next=[...root.querySelectorAll(focus.tag)].find(el => focus.id ? el.id===focus.id : Object.entries(focus.data).every(([k,v]) => el.dataset[k]===v));
+    if (next && !next.disabled) {
+      if (['TEXTAREA'].includes(focus.tag) || focus.tag==='INPUT' && ['text','search'].includes(next.type)) next.value=focus.value;
+      next.focus({preventScroll:true});
+      if (focus.start!=null && next.setSelectionRange) next.setSelectionRange(focus.start,focus.end);
+    }
+  }
+  if (m2) m2.scrollTop=keep;
+  if (root.dataset.screen && !sameScreen && UI.s!=='match') (m2 || root.firstElementChild)?.classList.add('ui-enter');
+  root.dataset.screen=UI.s;
   rememberScreen();
   syncViewHistory();
 }
@@ -105,6 +121,7 @@ function shell(body) {
 /* ---------- sheets & toasts ---------- */
 function sheet(html, opts = {}) {
   return viewAction(() => {
+    clearSheetExit();
     const layer = document.getElementById('layer');
     const panel = !layer.hidden && opts.key && UI.popup?.key === opts.key ? layer.querySelector('.sheet') : null;
     const body = panel?.querySelector('.sh-body'), focused = body?.contains(document.activeElement) ? document.activeElement : null;
@@ -133,8 +150,23 @@ function sheet(html, opts = {}) {
     }
   });
 }
+function clearSheetExit() {
+  document.querySelectorAll('.sheet-exit').forEach(el => el.remove());
+}
 function hideSheet() {
   const layer = document.getElementById('layer');
+  clearSheetExit();
+  if (layer && !layer.hidden && layer.querySelector('.sheet')?.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Dismiss the real dialog synchronously for history/focus. Only an inert,
+    // aria-hidden visual copy finishes the exit; a new dialog cancels it.
+    const ghost=layer.cloneNode(true); ghost.removeAttribute('id'); ghost.className='sheet-exit';
+    ghost.inert=true; ghost.setAttribute('aria-hidden','true');
+    ghost.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    document.body.appendChild(ghost);
+    ghost.querySelector('.scrim').animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'});
+    const exit=ghost.querySelector('.sheet').animate([{transform:'translate(-50%,0)',opacity:1},{transform:'translate(-50%,12px)',opacity:0}],{duration:120,easing:'ease-in',fill:'forwards'});
+    exit.finished.then(()=>ghost.remove(),()=>ghost.remove());
+  }
   if (layer) { layer.hidden = true; layer.innerHTML = ''; }
   UI.sheetOpts = null; UI.popup = null;
 }
@@ -144,12 +176,14 @@ function closeSheet(silent) {
   if (!silent) return backView();
   return viewAction(hideSheet);
 }
-let toastT = 0;
+let toastT = 0, toastHideT = 0;
 function toast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.hidden = false; t.classList.add('show');
-  clearTimeout(toastT);
-  toastT = setTimeout(() => { t.classList.remove('show'); setTimeout(() => { t.hidden = true; }, 250); }, 2600);
+  clearTimeout(toastT); clearTimeout(toastHideT);
+  t.textContent = msg;
+  if (t.hidden) { t.hidden=false; t.classList.remove('show'); void t.offsetWidth; }
+  t.classList.add('show');
+  toastT = setTimeout(() => { t.classList.remove('show'); toastHideT=setTimeout(() => { t.hidden=true; }, 160); },2600);
 }
 
 /* ---------- components ---------- */
