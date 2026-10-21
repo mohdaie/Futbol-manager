@@ -700,15 +700,21 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .aiq { margin: 6px 0 8px; padding: 8px 12px; border-left: 3px solid var(--amber); background: rgba(127,127,127,.1); border-radius: 0 8px 8px 0; font-style: italic; }
 
 /* Assistant's daily club briefing */
-.assistant-brief { border-top: 3px solid var(--amber); }
-.assistant-brief .dcard-h small { display: block; margin-top: 4px; opacity: .65; }
+.assistant-compact { display: grid; gap: 5px; padding: 10px 12px; border-top: 3px solid var(--amber); }
+.brief-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.brief-top h2 { margin: 0; font-size: 13px; }
+.brief-top .btn { min-height: 32px; flex-shrink: 0; padding: 5px 10px; font-size: 11px; }
+.brief-counts { font-size: 11px; line-height: 18px; white-space: nowrap; }
+.brief-preview { display: block; width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; line-height: 20px; color: var(--mute); }
+.brief-preview .entity-link { display: inline; font-size: inherit; }
+.assistant-report .dcard-h small { display: block; margin-top: 4px; opacity: .65; }
 .brief-summary { font-size: 14px; line-height: 1.6; margin: 12px 0; }
 .brief-priority { display: grid; gap: 5px; width: 100%; padding: 12px; border: 1px solid #F5C51855; border-radius: 12px; background: #F5C5180B; text-align: left; }
 .brief-priority > small { color: var(--warn); }
 .brief-priority > span, .brief-department > p { font-size: 12px; line-height: 1.5; opacity: .8; }
-.assistant-brief .lbl { margin: 12px 0 7px; font-size: 11px; }
-.assistant-brief .chips { flex-wrap: wrap; overflow: visible; gap: 6px; }
-.assistant-brief .chip { white-space: normal; text-align: left; font-size: 11px; min-height: 36px; padding: 8px 10px; }
+.assistant-report .lbl { margin: 12px 0 7px; font-size: 11px; }
+.assistant-report .chips { flex-wrap: wrap; overflow: visible; gap: 6px; }
+.assistant-report .chip { white-space: normal; text-align: left; font-size: 11px; min-height: 36px; padding: 8px 10px; }
 .brief-attention .chip { border-color: #F5C51866; }
 .brief-healthy .chip { border-color: #2BD46A55; }
 .brief-details { margin-top: 14px; font-size: 12px; }
