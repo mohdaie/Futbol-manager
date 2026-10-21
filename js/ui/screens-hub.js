@@ -30,13 +30,13 @@ SCREENS.home = {
     if (fx) {
       const home = fx.h === G.club, opp = home ? fx.a : fx.h, orow = tbl.find(r => r.id === opp);
       const days = fxDayNo(fx) - todayNo(), rest = restDays(G.club, fx);
-      next = `<section class="dcard" ${fx.w === G.week ? 'data-a="continue" role="button"' : ''}>
+      next = `<section class="dcard">
         <div class="dcard-h"><h2>Next match</h2><span class="pill">${days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days'}</span></div>
         <div class="nm"><div class="nm-team">${badge(fx.h, 32)}<span>${esc(clubName(fx.h))}</span></div>
           <div class="nm-mid"><b>vs</b>${fxWhen(fx)}<br>${home ? 'Home' : 'Away'} · League${fx.tv ? ' · TV' : ''}</div>
           <div class="nm-team r">${badge(fx.a, 32)}<span>${esc(clubName(fx.a))}</span></div></div>
         <div class="nm-cond"><span>${wxLabel(fx.wx)}</span><span>${rest == null ? 'First match' : rest + " days' rest"}</span>${rest != null && rest <= 3 ? '<span class="warnc">Tight turnaround</span>' : ''}</div>
-        <div class="nm-form"><span>Opponent form</span>${orow.form.length ? formChips(orow.form) : '<span>No matches yet</span>'}</div>
+        <div class="nm-form"><span>Opponent form</span>${orow.form.length ? formChips(orow.form) : '<span>No matches yet</span>'}</div><div class="btns">${clubLink(opp, 'Opposition dashboard', 'btn sm')}<button class="btn sm" data-a="fixturePage" data-id="${fx.id}">Match preview</button>${fx.w === G.week ? '<button class="btn sm" data-a="continue">Continue to matchday</button>' : ''}</div>
       </section>`;
     } else next = `<section class="dcard"><div class="dcard-h"><h2>Next match</h2></div><p class="muted">No fixtures left this season.</p></section>`;
 
@@ -97,9 +97,8 @@ ACT.news = ds => {
   const a = n.action;
   if (a && !n.done && a.t === 'bid') actions = `<div class="btns"><button class="btn pri" data-a="bid" data-id="${n.id}" data-c2="accept">Accept ${money(a.fee)}</button><button class="btn" data-a="bid" data-id="${n.id}" data-c2="counter">Ask for ${money(roundMoney(a.fee * 1.2))}</button><button class="btn ghost" data-a="bid" data-id="${n.id}" data-c2="reject">Reject</button></div>`;
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;
-  if (a && a.pid && G.players[a.pid] && a.t !== 'renew') actions += `<div class="btns"><button class="btn" data-a="player" data-id="${a.pid}">View ${esc(pname(G.players[a.pid]))}</button></div>`;
   if (a && n.done) actions += '<p class="note">Dealt with.</p>';
-  sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div><h3 class="sh-t">${esc(n.title)}</h3><p class="body">${esc(n.body)}</p>${actions}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
+  sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div><h3 class="sh-t">${esc(n.title)}</h3><p class="body">${esc(n.body)}</p>${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
 };
 ACT.bid = ds => {
   const n = G.news.find(x => x.id === +ds.id);
@@ -124,6 +123,7 @@ SCREENS.team = {
       ['youth', 'Youth academy', 'Prospects and intake'],
       ['stats', 'Stats', 'Goals, assists and ratings'],
       ['table', 'League table', LEAGUE_NAME + ' standings'],
+      ['clubs', 'Club directory', 'Browse every club and its squad'],
     ]);
   },
 };
@@ -188,17 +188,12 @@ SCREENS.fixtures = {
     let body = '';
     if (t === 'ours') {
       const list = G.fixtures.filter(f => f.h === G.club || f.a === G.club).sort((a, b) => a.w - b.w);
-      body = `<div class="list">${list.map(f => {
-        const home = f.h === G.club, opp = home ? f.a : f.h;
-        let res = '<span class="res">-</span>';
-        if (played(f)) { const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg; res = `<span class="res r${us > them ? 'W' : us < them ? 'L' : 'D'}">${f.hg}-${f.ag}</span>`; }
-        return `<button class="row act" ${played(f) ? `data-a="go" data-s="post" data-fid="${f.id}"` : 'disabled'}><span class="rd">${f.r + 1}</span>${badge(opp, 22)}<span class="grow"><b>${esc(clubName(opp))}</b><small>${home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}</small></span>${res}</button>`;
-      }).join('')}</div>`;
+      body = `<div class="list">${list.map(f => fixtureLinks(f, G.club)).join('')}</div>`;
     } else {
       const cur = G.fixtures.filter(f => f.w >= G.week)[0], r = UI.tab.round ?? (cur ? cur.r : 37);
       const list = G.fixtures.filter(f => f.r === +r).sort(fxSort);
       body = `<div class="field"><label for="rsel">Round</label>${selectHtml('rsel', Array.from({ length: 38 }, (_, i) => [i, 'Matchweek ' + (i + 1) + (SCHEDULE[i].mid ? ' (midweek)' : '') + ' · ' + fmtDate(weekDate(roundWeek(i)), false)]), r, 'round')}</div>
-        <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="fxt">${fxWhen(f).replace(/ \d+ \w+ ·/, '')}${f.tv ? '<em>TV</em>' : ''}</span><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<span class="res">${played(f) ? f.hg + '-' + f.ag : 'v'}</span>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>`;
+        <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="fxt">${fxWhen(f).replace(/ \d+ \w+ ·/, '')}${f.tv ? '<em>TV</em>' : ''}</span><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<button class="res" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '-' + f.ag : 'v'}</button>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>`;
     }
     return `<h1 class="h1">Fixtures</h1>${tabs('fx', [['ours', 'Our fixtures'], ['all', 'All rounds']], t)}${body}`;
   },
@@ -208,7 +203,7 @@ CHG.round = v => { UI.tab.round = +v; render(); };
 SCREENS.table = {
   render() {
     const tbl = leagueTable();
-    return `<h1 class="h1">${LEAGUE_NAME}</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p>
+    return `<h1 class="h1">${LEAGUE_NAME}</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p><button class="btn sm" data-a="go" data-s="clubs">Browse all clubs</button>
       <div class="tablewrap"><table class="tbl"><thead><tr><th>#</th><th class="l">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th><th class="hide-s">Form</th></tr></thead><tbody>
       ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${i < 4 ? 'z1' : i < 6 ? 'z2' : i === 6 ? 'z3' : i >= 17 ? 'z4' : ''}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td><td class="hide-s">${formChips(r.form)}</td></tr>`).join('')}
       </tbody></table></div>

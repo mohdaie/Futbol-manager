@@ -72,7 +72,7 @@ const TR_TABS = {
       <div class="list">${listed.map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`, { noBadge: true })).join('') || empty('Nobody listed', 'List players from their profile to invite bids.')}</div>`;
   },
   hist() {
-    return `<div class="list">${G.tHist.slice(0, 60).map(t => `<div class="row tx ${t.to === G.club || t.from === G.club ? 'me' : ''}"><span class="grow"><b>${esc(t.name)}</b><small>${fmtDate(t.date, false)} · ${esc(clubName(t.from))} → ${esc(clubName(t.to))}</small></span><span class="stat"><b>${t.fee ? money(t.fee) : 'Free'}</b></span></div>`).join('') || empty('No transfers yet', 'Completed deals across the league appear here.')}</div>`;
+    return `<div class="list">${G.tHist.slice(0, 60).map(t => `<div class="row tx ${t.to === G.club || t.from === G.club ? 'me' : ''}"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><span class="stat"><b>${t.fee ? money(t.fee) : 'Free'}</b></span></div>`).join('') || empty('No transfers yet', 'Completed deals across the league appear here.')}</div>`;
   },
 };
 CHG.sf = (v, ds) => { UI.search[ds.k] = ds.n ? +v : v; render(); };

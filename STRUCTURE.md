@@ -35,6 +35,7 @@ js/systems/season.js       weekly turn, monthly awards, youth intake, board, sea
 js/systems/lab.js          Admin "Run test season": league averages against targets, results by style and by tactic fit
 js/ui/crests.js            shared club artwork renderer and generated shield fallback
 js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
+js/ui/links.js             shared player/club links, related news actions, club directory and opposition dashboards
 js/ui/dayrun.js            Continue: the calendar moves day by day and stops on matchday or important news
 js/ui/navigation.js        browser/in-game Back history, view restoration, root guard
 js/ui/screens-hub.js       Dashboard, News, My Team, Facilities, More, Game Status,
@@ -466,3 +467,10 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - Ratings from value: the age boost for older players now stops at 35 (`ratingFromValue()`), so a 41-year-old with a small value is no longer world class. Affects a few Premier League veterans in new games too.
 - **Refresh** returns to the screen you were on (sessionStorage, this tab only; a live match returns to the pre-match screen). Opening the game in a new tab shows the title.
 - **Daily saves:** the day-by-day calendar saves after every day.
+
+## Connected navigation and club dashboards (2026.10.21.7)
+- Player and club mentions in rendered text open their profile/dashboard across news, advice, tables, reports and live commentary. `linkEntities()` runs after page, sheet and commentary rendering. It uses escaped text nodes and whole names, skips existing controls/form fields, and asks which player when names are ambiguous. Player rows have separate profile and club-badge buttons; selection/substitution rows offer a separate Profile button.
+- News includes Related buttons for mentioned players/clubs and relevant transfer shortlist, scouting, medical, training, squad, tactics, finance, board, league and match-report destinations. Bid/renewal actions remain available. Add to shortlist saves immediately and opens Transfers > Shortlist without duplicating a player.
+- My Team > Club directory (also from League Table) includes all 33 clubs and free agents. `clubview` takes `{cid, section, level}` and shows the club dashboard, first team/reserves/U18s, fixtures/results and transfer activity. Opposition ratings retain scouting ranges; overseas results are explicitly unavailable because those leagues are not simulated. Your management controls stay on their existing pages.
+- Fixture names and crests open clubs; fixture Preview/score buttons open a preview or report. Reports with saved ratings can switch between both teams. Browser Back and refresh preserve club/squad context using the existing navigation system; no save migration is required.
+- Focused mobile regression: `node tests/links.cjs` and `node tests/navigation.cjs` (390×844; `CHROMIUM_PATH` may point at an installed Chromium).

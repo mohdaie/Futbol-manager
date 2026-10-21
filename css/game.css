@@ -138,6 +138,18 @@ img.crest-art { object-fit: contain; max-width: none; vertical-align: middle; }
 .grow > .tag { align-self: flex-start; }
 .prow .grow { display: block; }
 .prow .grow small { display: block; }
+.linked-prow { padding-top: 0; padding-bottom: 0; }
+.player-main { display: flex; align-items: center; flex: 1; gap: 8px; min-width: 0; min-height: 44px; padding: 6px 0; }
+.entity-link { display: inline; font: inherit; color: inherit; text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.entity-link:hover, .entity-link:focus-visible { color: var(--amber); }
+.entity-link:focus-visible, .crest-link:focus-visible, .player-main:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.entity-link.rb, .crest-link { display: inline-flex; align-items: center; justify-content: center; flex: none; min-height: 32px; min-width: 28px; }
+.related-actions { margin-bottom: 12px; }
+.related-actions .btn { white-space: normal; }
+.fxr .entity-link { font-size: inherit; }
+.choice-row { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); padding-right: 8px; }
+.choice-row > .row { flex: 1; width: auto; border: 0; }
+.choice-row > .btn { flex: none; }
 .chev { color: var(--mute); font-size: 17px; flex: none; }
 .pos { flex: none; width: 30px; text-align: center; padding: 2.5px 0; border-radius: 5px; background: var(--night); border: 1px solid var(--line); font-family: var(--f-disp); font-weight: 700; font-size: 11px; letter-spacing: .03em; }
 .no { flex: none; width: 20px; text-align: center; font-family: var(--f-disp); font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }

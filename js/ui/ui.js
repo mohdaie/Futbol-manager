@@ -10,7 +10,7 @@ const CHG = {};      // change actions: CHG[name](value, dataset, el)
 
 const NAV = [['home', 'Dashboard'], ['news', 'News'], ['team', 'My Team'], ['transfers', 'Transfers'], ['facilities', 'Facilities'], ['more', 'More']];
 const NAV_GROUPS = {
-  team: ['squad', 'tactics', 'pinstr', 'staffroom', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'prematch', 'match', 'post'],
+  team: ['squad', 'tactics', 'pinstr', 'staffroom', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'clubs', 'clubview', 'prematch', 'match', 'post'],
   facilities: ['finance', 'board', 'club'],
 };
 const ICON = {
@@ -33,6 +33,7 @@ function go(s, p = {}) {
 
 function render(reset) {
   syncPlaytime();
+  ENTITY_INDEX = null;
   const root = document.getElementById('app');
   const main = root.querySelector('.main');
   const keep = !reset && main ? main.scrollTop : 0;
@@ -44,6 +45,7 @@ function render(reset) {
   else scr = SCREENS[UI.s] || SCREENS.home;
   const body = scr.render(UI.p);
   root.innerHTML = scr.full ? `<div class="app full">${body}</div>` : shell(body);
+  linkEntities(root);
   const m2 = root.querySelector('.main');
   if (m2) m2.scrollTop = keep;
   if (scr.after) scr.after(UI.p);
@@ -97,6 +99,7 @@ function sheet(html, opts = {}) {
     UI.sheetOpts = opts;
     UI.popup = { key: opts.key || html, restore: opts.restore || (() => sheet(html, opts)), valid: opts.valid };
     layer.innerHTML = `<div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sh-x" data-a="dismissSheet" aria-label="Close">×</button><div class="sh-body">${html}</div></section>`;
+    linkEntities(layer);
     layer.hidden = false;
   });
 }
@@ -157,11 +160,13 @@ function selectHtml(id, opts, cur, chg, ds = '') {
 function playerRow(p, extra = '', opts = {}) {
   const mine = p.club === G.club, so = mine ? { v: p.ca, txt: p.ca } : seenOvr(p);
   const tags = [p.inj ? '<em class="tag bad">INJ</em>' : '', p.ban > 0 ? '<em class="tag bad">SUS</em>' : '', p.listed ? '<em class="tag warn">LIST</em>' : '', G.shortlist.includes(p.id) && !mine ? '<em class="tag">★</em>' : ''].join('');
-  return `<button class="row act prow" data-a="player" data-id="${p.id}">
-    ${opts.noBadge ? `<span class="no">${p.no || ''}</span>` : `<span class="rb">${badge(p.club, 20)}</span>`}
+  return `<div class="row act prow linked-prow">
+    ${opts.noBadge ? '' : clubLink(p.club, badge(p.club, 20), 'rb')}
+    <button class="player-main" data-a="player" data-id="${p.id}">
+    ${opts.noBadge ? `<span class="no">${p.no || ''}</span>` : ''}
     <span class="pos">${p.pos}</span>
     <span class="grow"><b>${esc(pname(p))}</b> ${tags}<small>${p.age} yrs · ${opts.sub ?? (mine ? morLabel(p.mor) : esc(clubName(p.club)))}</small></span>
-    ${extra}${ovrPill(so.v, so.txt)}</button>`;
+    ${extra}${ovrPill(so.v, so.txt)}</button></div>`;
 }
 
 /* ---------- dispatch ---------- */
