@@ -255,6 +255,8 @@ SCREENS.match = {
       <div class="mctl">
         <button id="btnPause" data-a="pause">Pause</button>
         <button id="btnSpeed" data-a="speedCycle">2x</button>
+        <button id="btnHl" data-a="hlCycle">Extended</button>
+        <button id="btnCam" data-a="camCycle">Follow</button>
         <button data-a="liveSheet" data-k="tactics">Tactics</button>
         <button data-a="liveSheet" data-k="subs">Subs</button>
         <button data-a="liveSheet" data-k="shouts">Shouts</button>
@@ -268,6 +270,8 @@ window.addEventListener('resize', () => { if (UI.s === 'match' && LIVE) bindLive
 
 const liveSide = () => LIVE.M.sides[LIVE.bottom];
 ACT.pause = () => { const L = LIVE; if (!L || L.done || (L.overlay && L.overlay.stay)) return; L.paused = !L.paused; updateBoard(L); };
+ACT.hlCycle = () => { G.settings.hl = { key: 'ext', ext: 'full', full: 'key' }[G.settings.hl || 'ext']; if (LIVE && LIVE.mq) LIVE.mq.segs = segments(LIVE.M.marks || [], LIVE.mq.t0); updateBoard(LIVE); toast('Highlights: ' + HL[G.settings.hl]); };
+ACT.camCycle = () => { G.settings.cam = (G.settings.cam || 'follow') === 'follow' ? 'full' : 'follow'; updateBoard(LIVE); };
 ACT.speedCycle = () => { G.settings.speed = { 1: 2, 2: 4, 4: 1 }[G.settings.speed] || 2; updateBoard(LIVE); };
 ACT.instant2 = () => { if (LIVE && !LIVE.done) liveInstant(); };
 ACT.toPost = () => { const fid = LIVE.fid; go('post', { fid }); LIVE = null; };

@@ -1,26 +1,26 @@
 'use strict';
 /* ===== live.js =====
-   The 2D match: canvas pitch, player dots, ball animation, commentary,
-   team talks, touchline shouts, in-match tactics and substitutions.
-   Key moments only (as in Football Manager): the engine's action chain for a minute
-   (ev.seq from sim.js) is replayed step by step; quiet minutes pass quickly.
-   Movement is visual only (the engine has already decided what happens): players run at their own pace
-   with momentum, the defending back line holds a line, attackers stay onside until they make a run, and the
-   ball goes to where a team-mate is or is running to.
+   The 2D match: the engine's own positions (M.frames, recorded every half second by sim.js) drawn on a
+   pitch with a camera that follows the ball, highlight levels (key, extended, full), commentary, team talks,
+   touchline shouts, in-match tactics and substitutions.
    The match in progress is kept in the save (G.live) every minute, so leaving the screen, refreshing,
    or saving and loading resumes it at the same minute instead of restarting it. */
 
-const SPEED_MS = { 1: 1000, 2: 520, 4: 260 };
-// Duration of each action, relative to one speed unit.
-const ACT_DUR = { pass: 0.75, thru: 0.95, long: 1.15, cross: 1.05, drib: 0.95, shot: 0.55, head: 0.5, clear: 0.8, tackle: 0.5, foul: 0.6, regain: 0.5 };
-const ACT_ARC = { long: 0.05, cross: 0.045, clear: 0.04 };
+// Playback speed: seconds of football per real second at 1x, 2x and 4x.
+const SPEED_RATE = { 1: 2, 2: 4, 4: 8 };
+// Highlight levels: what is shown of each minute (the rest is skipped, the clock runs on).
+const HL = { key: 'Key', ext: 'Extended', full: 'Full' };
+const HL_MARKS = {
+  key: { goal: [12, 4], shot: [10, 3], pen: [6, 14], card: [6, 4], offside: [6, 3] },
+  ext: { goal: [14, 4], shot: [12, 3], pen: [6, 14], card: [6, 4], offside: [6, 3], corner: [2, 12], fk: [2, 10], attack: [5, 9], chance: [7, 4] },
+};
 let LIVE = null;
 
 function newLive(M, fid) {
   const bottom = M.sides[0].user ? 0 : 1;
   M.live = true;
   M.onAsync = evs => evs.forEach(e => { if (LIVE && LIVE.M === M) pushFeed(LIVE, e.t === 'sub' ? 'info' : 'tac', commLine(LIVE, e), e.side); });
-  LIVE = { M, G, fid, bottom, ball: { x: 0.5, y: 0.5 }, q: [], cur: null, poss: 0, t: 0, last: 0, paused: false, hold: 0, dots: [[], []], disp: [0, 0], feed: [], overlay: null, done: false, raf: 0, cv: null, ctx: null, W: 0, H: 0, placed: false, subSel: null, colors: null, pins: {}, due: {}, focus: null, kick: true, line: null, carrier: null };
+  LIVE = { M, G, fid, bottom, mq: null, t: 0, last: 0, paused: false, hold: 0, dots: [[], []], ball: { x: PW / 2, y: PL / 2, z: 0 }, own: [-1, -1], disp: [M.sides[0].st.g, M.sides[1].st.g], feed: [], overlay: null, done: false, raf: 0, cv: null, ctx: null, W: 0, H: 0, subSel: null, colors: null, line: null, cam: { x: PW / 2, y: PL / 2, s: 0 } };
   LIVE.colors = kitColors(M.sides[bottom].cid, M.sides[1 - bottom].cid);
   return LIVE;
 }
@@ -35,8 +35,10 @@ function startLive(fx) {
 // Keep the match in the save. Called between minutes, when the screen is left and when the page is hidden.
 function liveKeep(L = LIVE) {
   if (!L || L.done || L.G !== G || !G) return;
-  G.live = { fid: L.fid, M: L.M, poss: L.poss, feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
+  const fr = L.M.frames; L.M.frames = null; // frames of the minute on screen are not needed to resume
+  G.live = { fid: L.fid, M: L.M, feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
   saveGame();
+  L.M.frames = fr;
 }
 // Pick the match up from the save at the minute it reached. It waits paused until Play.
 function liveFromSave(fx) {
@@ -46,14 +48,12 @@ function liveFromSave(fx) {
   if (liveOn(fx)) return true;
   const L = newLive(K.M, fx.id), M = L.M;
   L.disp = [M.sides[0].st.g, M.sides[1].st.g];
-  L.poss = K.poss || 0; L.feed = K.feed || []; L.kick = false; L.paused = !M.ended;
+  L.feed = K.feed || []; L.paused = !M.ended;
   pushFeed(L, 'info', `Match resumed at ${M.min}'. Press Play to carry on.`);
   return true;
 }
 window.addEventListener('pagehide', () => liveKeep());
 document.addEventListener('visibilitychange', () => { if (document.hidden) liveKeep(); });
-
-const tickMs = () => SPEED_MS[G.settings.speed] || 700;
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 const colDist = (a, b) => { const x = hexRgb(a), y = hexRgb(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
@@ -68,33 +68,50 @@ function kitColors(uid, oid) {
   return [{ f: u.c1, s: u.c2, gk: '#F4D35E' }, { f: of, s: os, gk: '#9AD1D4' }];
 }
 
+/* ---------- screen and camera ----------
+   Your side always attacks upwards. The camera follows the ball (G.settings.cam 'follow', about 60 m of the
+   pitch in view, with a mini-map) or shows the whole pitch ('full'). */
+const view = (L, X, Y) => (L.bottom === 0 ? [X, Y] : [PW - X, PL - Y]);
+function camScale(L) { return (G.settings.cam || 'follow') === 'full' ? Math.min((L.W - 16) / PW, (L.H - 16) / PL) : L.H / 60; }
+const sx = (L, vx) => L.W / 2 + (vx - L.cam.x) * L.cam.s;
+const sy = (L, vy) => L.H / 2 + (vy - L.cam.y) * L.cam.s;
+function moveCam(L, dt, snap) {
+  const s = camScale(L), full = (G.settings.cam || 'follow') === 'full';
+  const [bx, by] = view(L, L.ball.x, L.ball.y), hw = L.W / 2 / s, hh = L.H / 2 / s;
+  let tx = full ? PW / 2 : clamp(bx, Math.min(PW / 2, hw - 3), Math.max(PW / 2, PW + 3 - hw)), ty = full ? PL / 2 : clamp(by, Math.min(PL / 2, hh - 4), Math.max(PL / 2, PL + 4 - hh));
+  const k = snap ? 1 : Math.min(1, dt / 320);
+  L.cam.x += (tx - L.cam.x) * k; L.cam.y += (ty - L.cam.y) * k; L.cam.s += (s - L.cam.s) * (snap || !L.cam.s ? 1 : Math.min(1, dt / 200));
+}
+
 function bindLive() {
   const L = LIVE;
   if (!L) return;
   const cv = document.getElementById('pitch');
   if (!cv || UI.s !== 'match') return;
-  const wrap = cv.parentElement;
-  const dpr = window.devicePixelRatio || 1;
-  const w = wrap.clientWidth, h = wrap.clientHeight, ar = 0.68;
-  let W = w, H = w / ar;
-  if (H > h) { H = h; W = h * ar; }
+  const wrap = cv.parentElement, dpr = window.devicePixelRatio || 1;
+  const W = wrap.clientWidth, H = Math.max(200, wrap.clientHeight);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   cv.onclick = e => {
-    const rc = cv.getBoundingClientRect(), mx = 8, px = (e.clientX - rc.left - mx) / (W - 2 * mx), py = (e.clientY - rc.top - mx) / (H - 2 * mx);
-    let best = null, bd = 0.06;
-    [0, 1].forEach(si => L.dots[si].forEach((d, i) => { if (d && L.M.sides[si].on[i]) { const dd = Math.hypot(d.x - px, (d.y - py) * 1.4); if (dd < bd) { bd = dd; best = [si, i]; } } }));
+    const rc = cv.getBoundingClientRect(), px = e.clientX - rc.left, py = e.clientY - rc.top;
+    let best = null, bd = Math.max(16, L.cam.s * 2.5);
+    [0, 1].forEach(si => L.dots[si].forEach((d, i) => { if (!d || !L.M.sides[si].on[i]) return; const [vx, vy] = view(L, d.x, d.y), dd = Math.hypot(sx(L, vx) - px, sy(L, vy) - py); if (dd < bd) { bd = dd; best = [si, i]; } }));
     if (best) { L.sel = best; L.selId = L.M.sides[best[0]].on[best[1]]; openLiveSheet('pl'); }
   };
   L.cv = cv; L.ctx = cv.getContext('2d'); L.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); L.W = W; L.H = H;
-  if (!L.placed) {
-    const tg = liveTargets(L);
-    [0, 1].forEach(si => { L.dots[si] = tg[si].map(t => (t ? { x: t[0], y: t[1], vx: 0, vy: 0 } : { x: 0.5, y: 0.5, vx: 0, vy: 0 })); });
-    L.placed = true;
-  }
+  if (!L.dots[0].length) placeFromSim(L);
+  moveCam(L, 0, true);
   updateBoard(L);
   renderFeed(L);
   if (!L.raf) { L.last = 0; L.raf = requestAnimationFrame(liveFrame); }
+}
+// Before the first minute (or after resuming): where the engine has everyone now.
+function placeFromSim(L) {
+  const sim = L.M.sim;
+  if (!sim) { if (typeof simInit === 'function') simInit(L.M); }
+  const P = L.M.sim.P;
+  L.dots = [0, 1].map(s => P[s].map(p => (p ? { x: p.x, y: p.y } : null)));
+  Object.assign(L.ball, { x: L.M.sim.B.x, y: L.M.sim.B.y, z: 0 });
 }
 
 function stopLive() { if (LIVE && LIVE.raf) cancelAnimationFrame(LIVE.raf); if (LIVE) { LIVE.raf = 0; liveKeep(LIVE); } }
@@ -102,329 +119,191 @@ function stopLive() { if (LIVE && LIVE.raf) cancelAnimationFrame(LIVE.raf); if (
 function liveFrame(ts) {
   const L = LIVE;
   if (!L || !L.cv || !document.body.contains(L.cv)) { if (L) L.raf = 0; return; }
-  const dt = Math.min(64, ts - (L.last || ts)); L.lastDt = dt;
+  const dt = Math.min(64, ts - (L.last || ts));
   L.last = ts; L.t += dt;
   if (!L.paused) {
     if (L.hold > 0) L.hold -= dt;
-    else if (L.cur || L.q.length) advanceBall(L, dt);
+    else if (L.mq) playMinuteView(L, dt);
     else if (!L.M.ended) liveStep(L);
     else if (!L.done) onFullTime(L);
   }
   if (L.overlay) { L.overlay.t -= dt; if (L.overlay.t <= 0 && !L.overlay.stay) L.overlay = null; }
-  moveDots(L, dt);
+  moveCam(L, dt);
   draw(L);
   L.raf = requestAnimationFrame(liveFrame);
 }
 
+// The next minute: the engine plays it, then the screen shows it (or the highlights of it).
 function liveStep(L) {
   liveKeep(L); // everything up to this minute has been shown
-  const evs = stepMatch(L.M, false);
-  scriptEvents(L, evs);
-  updateBoard(L, true);
+  const evs = stepMatch(L.M, false), M = L.M, fr = M.frames || [];
+  const t0 = fr.length ? fr[0][0] - TICK : 0;
+  const timed = evs.filter(e => e.tt != null).sort((a, b) => a.tt - b.tt), now = evs.filter(e => e.tt == null && e.t !== 'poss');
+  L.mq = { min: M.min, fr, t0, p: 0, ev: timed, ei: 0, segs: segments(M.marks || [], t0), skip: 0, main: evs[0], marks: (M.marks || []).slice(), mi: 0 };
+  now.forEach(e => pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'sub' ? 'info' : 'tac', commLine(L, e), e.side));
+  updateBoard(L);
   if (UI.popup && UI.popup.key === 'live:pl') { const b = document.querySelector('#layer .sh-body'), h = plCardHtml(L); if (b && h) b.innerHTML = h; }
 }
-
-// Side si's point (x, y) in its own frame -> canvas (the user's side attacks upwards).
-const toCanvas = (L, si, x, y) => (si === L.bottom ? [x, y] : [1 - x, 1 - y]);
-function slotOf(L, pid) {
-  for (const si of [0, 1]) { const i = L.M.sides[si].on.indexOf(pid); if (pid && i >= 0) return [si, i]; }
-  return null;
+// Parts of the minute to show, by highlight level: [from, to] in seconds of the minute.
+function segments(marks, t0) {
+  const hl = G.settings.hl || 'ext';
+  if (hl === 'full') return [[0, 60]];
+  const W = HL_MARKS[hl], out = [];
+  marks.forEach(m => { const w = W[m.k]; if (w && !(m.k === 'shot' && hl === 'key' && (m.xg || 0) < 0.05)) out.push([Math.max(0, m.t - t0 - w[0]), Math.min(60, m.t - t0 + w[1])]); });
+  out.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  out.forEach(s => { const l = merged[merged.length - 1]; if (l && s[0] <= l[1] + 1) l[1] = Math.max(l[1], s[1]); else merged.push(s.slice()); });
+  return merged;
 }
-/* ---------- movement ---------- */
-const PITCH_M = [68, 105];
-const timeK = () => 3 * 520 / tickMs(); // the replay runs about three times real time at 2x
-// Top speed in metres per animation millisecond: pace and agility, slower when tired.
-function topSpeed(L, S, id) {
-  const p = G.players[id], a = p ? p.at : null, cond = S.cond[id] ?? 100;
-  return (6.3 + (a ? a[A.pac] * 0.13 + a[A.agi] * 0.03 : 1.6)) * (0.8 + 0.2 * cond / 100) * timeK() / 1000;
-}
-// The offside line for attacking side a, in its own frame (attacking towards y = 0): the second-last
-// defender as he actually stands, the ball if it is further forward, never inside a's own half.
-function liveLine(L, a) {
-  const d = 1 - a, O = L.M.sides[d];
-  let deep = 0;
-  O.on.forEach((id, i) => { const p = L.dots[d][i]; if (id && i > 0 && p) deep = Math.max(deep, toCanvas(L, d, p.x, p.y)[1]); });
-  return Math.min(0.5, 1 - deep, toCanvas(L, a, L.ball.x, L.ball.y)[1]);
-}
-function pinPoint(L, pin) { return Array.isArray(pin) ? pin : [L.ball.x + (pin.ox || 0), L.ball.y + (pin.oy || 0)]; }
-// Where each player wants to be (canvas frame). The shape follows where the ball is going (L.focus),
-// not every frame of its flight, so players read the play instead of chasing the ball.
-function liveTargets(L) {
-  const f = L.focus || L.ball;
-  const own = [0, 1].map(si => {
-    const S = L.M.sides[si], att = L.poss === si, [bx, by] = toCanvas(L, si, f.x, f.y);
-    const q = positions(S, att && !L.kick, bx, by);
-    if (!att) { // the back line holds a line
-      const back = q.map((p, i) => (p && i && LINE[FORMATIONS[S.ip][i][0]] === 1 ? i : -1)).filter(i => i > 0);
-      const h = Math.min(avg(back, i => q[i][1]), Math.max(by + 0.1, 0.8)); // no deeper than needed
-      back.forEach(i => { q[i][1] = h + (q[i][1] - h) * 0.2; });
-    }
-    // A compact team: nobody more than about 40 metres behind the ball (the back line steps up behind the play).
-    q.forEach((p, i) => { if (p && i) p[1] = Math.min(p[1], Math.max(by, 0.2) + (att ? 0.4 : 0.36)); });
-    if (L.kick) q.forEach((p, i) => { if (p && i) p[1] = Math.max(p[1], att ? 0.505 : 0.56); });
-    return q;
-  });
-  const a = L.poss;
-  if (!L.kick && (a === 0 || a === 1)) {
-    // Stay onside until the run is on: behind the line as it stands and where it is heading.
-    const d = 1 - a;
-    let deep = 0;
-    own[d].forEach((p, i) => { if (p && i) deep = Math.max(deep, p[1]); });
-    const line = Math.max(liveLine(L, a), Math.min(0.5, 1 - deep, toCanvas(L, a, L.ball.x, L.ball.y)[1]));
-    own[a].forEach((p, i) => { if (p && i && !L.pins[a + ':' + i]) p[1] = Math.max(p[1], line + 0.022); });
+// Play the minute: inside a highlight the frames run at the chosen speed; between highlights the clock jumps on.
+function playMinuteView(L, dt) {
+  const q = L.mq, inSeg = q.segs.find(s => q.p >= s[0] && q.p < s[1]);
+  if (inSeg) q.p = Math.min(inSeg[1], q.p + dt / 1000 * (SPEED_RATE[G.settings.speed] || 4));
+  else {
+    q.skip += dt;
+    if (q.skip < 90) return;
+    q.skip = 0;
+    const nx = q.segs.find(s => s[0] > q.p);
+    q.p = nx ? nx[0] : 60;
+    if (nx) { setFrame(L, q.p, true); } // cut to the start of the next highlight
   }
-  return own.map((q, si) => q.map((p, i) => {
-    if (!p) return null;
-    const pin = L.pins[si + ':' + i];
-    if (pin) return pinPoint(L, pin);
-    const t = L.t / 1000 + i * 1.7 + si * 3;
-    return toCanvas(L, si, p[0] + Math.sin(t * 0.6) * 0.004, p[1] + Math.cos(t * 0.5) * 0.003);
-  }));
+  setFrame(L, q.p);
+  // Commentary and big moments as their time comes.
+  while (q.ei < q.ev.length && q.ev[q.ei].tt <= q.p) liveEvent(L, q.ev[q.ei++]);
+  while (q.mi < q.marks.length && q.marks[q.mi].t - q.t0 <= q.p) liveMark(L, q.marks[q.mi++]);
+  if (q.p >= 60) endMinute(L);
 }
-
-// Players accelerate, run and slow down into position. A player on the ball stays with it; a receiver
-// times his run to arrive with the pass (L.due).
-function moveDots(L, dt) {
-  const tg = liveTargets(L);
-  [0, 1].forEach(si => {
-    const S = L.M.sides[si];
-    tg[si].forEach((t, i) => {
-      if (!t) return;
-      const d = L.dots[si][i] || (L.dots[si][i] = { x: t[0], y: t[1], vx: 0, vy: 0 }), key = si + ':' + i, pin = L.pins[key];
-      if (pin && pin.hold) { const b = Math.min(1, dt / 40); d.x += (t[0] - d.x) * b; d.y += (t[1] - d.y) * b; d.vx = d.vy = 0; return; }
-      const dx = (t[0] - d.x) * PITCH_M[0], dy = (t[1] - d.y) * PITCH_M[1], dist = Math.hypot(dx, dy);
-      const top = topSpeed(L, S, S.on[i]);
-      let want = Math.min(pin ? top : top * (dist > 10 ? 0.9 : 0.6), dist / 260);
-      const due = L.due[key];
-      if (pin && due > L.t) want = Math.max(want, Math.min(dist / (due - L.t), top * 1.6));
-      const vx = dist > 0.05 ? dx / dist * want : 0, vy = dist > 0.05 ? dy / dist * want : 0, k = Math.min(1, dt / 140);
-      d.vx = (d.vx || 0) + (vx - (d.vx || 0)) * k; d.vy = (d.vy || 0) + (vy - (d.vy || 0)) * k;
-      d.x += d.vx * dt / PITCH_M[0]; d.y += d.vy * dt / PITCH_M[1];
-    });
-  });
-  // Players don't stand on top of each other: ease apart anyone closer than about 3 metres.
-  const all = [];
-  [0, 1].forEach(si => L.dots[si].forEach((d, i) => { if (d && L.M.sides[si].on[i] && !L.pins[si + ':' + i]?.hold) all.push(d); }));
-  for (let a = 0; a < all.length; a++) for (let b = a + 1; b < all.length; b++) {
-    const p = all[a], q = all[b], dx = (q.x - p.x) * PITCH_M[0], dy = (q.y - p.y) * PITCH_M[1], m = Math.hypot(dx, dy);
-    if (m >= 3.2 || m < 1e-6) continue;
-    const push = Math.min(1, dt / 120) * (3.2 - m) / 2 / m;
-    p.x -= dx * push / PITCH_M[0]; p.y -= dy * push / PITCH_M[1]; q.x += dx * push / PITCH_M[0]; q.y += dy * push / PITCH_M[1];
+// Positions at second p of the minute, between the two nearest frames.
+function setFrame(L, p, snap) {
+  const q = L.mq, fr = q.fr;
+  if (!fr.length) return;
+  const t = q.t0 + p;
+  let k = Math.min(fr.length - 1, Math.max(0, Math.floor((t - fr[0][0]) / TICK)));
+  while (k > 0 && fr[k][0] > t) k--;
+  const a = fr[k], b = fr[Math.min(fr.length - 1, k + 1)], u = b[0] > a[0] ? clamp((t - a[0]) / (b[0] - a[0]), 0, 1) : 0;
+  const lerp = (i) => (a[i] == null ? null : b[i] == null ? a[i] : a[i] + (b[i] - a[i]) * u);
+  L.ball.x = lerp(1); L.ball.y = lerp(2); L.ball.z = lerp(3); L.own = [a[4], a[5]]; L.rs = a[6];
+  for (let s = 0; s < 2; s++) for (let i = 0; i < 11; i++) {
+    const x = lerp(7 + (s * 11 + i) * 2), y = lerp(8 + (s * 11 + i) * 2);
+    L.dots[s][i] = x == null ? null : { x, y };
   }
+  if (snap) moveCam(L, 0, true);
 }
-// How long a player needs to reach a point at full speed (animation ms).
-function reachMs(L, key, pt) {
-  const [si, i] = key.split(':').map(Number), d = L.dots[si][i], S = L.M.sides[si];
-  return d ? Math.hypot((pt[0] - d.x) * PITCH_M[0], (pt[1] - d.y) * PITCH_M[1]) / topSpeed(L, S, S.on[i]) : 0;
-}
-// A team-mate to pass to in a quiet spell: someone 10-30 metres away, mostly sideways or forwards.
-function quietTarget(L, si) {
-  const S = L.M.sides[si], from = L.ball, fwd = si === L.bottom ? -1 : 1, c = [];
-  S.on.forEach((id, i) => {
-    const d = L.dots[si][i]; if (!id || !i || !d) return;
-    const m = Math.hypot((d.x - from.x) * PITCH_M[0], (d.y - from.y) * PITCH_M[1]);
-    if (m > 6 && m < 32) c.push([i, (1 + Math.max(0, (d.y - from.y) * fwd) * 4) * (m > 10 ? 1 : 0.4)]);
-  });
-  if (!c.length) return null;
-  let r = R() * c.reduce((t, x) => t + x[1], 0);
-  return c.find(x => (r -= x[1]) <= 0)?.[0] ?? c[0][0];
-}
-
-// Short commentary for the steps of a key moment.
-// Short commentary for the steps of a key moment: [text, side it is about].
-function stepLine(L, st) {
-  const n = id => (id && G.players[id] ? pname(G.players[id]) : ''), o = 1 - st.s;
-  if (st.k === 'thru' && st.res === 'ok') return [`${n(st.pid)} slides a pass in behind for ${n(st.to)}.`, st.s];
-  if (st.k === 'drib' && st.res === 'ok' && st.oid) return [`${n(st.pid)} skips past ${n(st.oid)}.`, st.s];
-  if (st.k === 'drib' && st.res === 'lost' && st.oid) return [`${n(st.oid)} wins the ball off ${n(st.pid)}.`, o];
-  if (st.k === 'cross' && st.res === 'claim') return [`${n(st.oid)} comes out and claims the cross.`, o];
-  if (st.k === 'long' && st.res === 'ok') return [`Long ball forward, ${n(st.to)} wins the header.`, st.s];
-  if (st.flick) return [`${n(st.pid)} flicks it on for ${n(st.to)}.`, st.s];
-  if (st.k === 'regain') return [`The ${clubName(L.M.sides[st.s].cid)} win it straight back high up the pitch.`, st.s];
-  if ((st.k === 'pass' || st.k === 'thru') && st.res === 'lost' && st.oid) return [`${n(st.oid)} intercepts.`, o];
-  if (st.k === 'tackle') return [G.players[st.pid] && G.players[st.pid].pos === 'GK' ? `${n(st.pid)} rushes off his line to stop the run.` : `${n(st.pid)} gets back to stop the run.`, st.s];
-  return ['', null];
-}
-
-function scriptEvents(L, evs) {
-  const M = L.M, T = tickMs(), ev = evs[0];
-  L.q.push({ fn: () => { L.poss = ev.side; L.pins = {}; L.due = {}; L.line = null; L.kick = false; } });
-  const told = new Set();
-  const foulLine = e => {
-    told.add(e);
-    if (e.t === 'yellow' || e.t === 'red') {
-      L.q.push({ fn: () => { pushFeed(L, e.t, commLine(L, e), e.fside); L.overlay = { big: e.t === 'red' ? 'RED CARD' : 'YELLOW', small: pname(G.players[e.pid]), t: 1100, card: e.t }; } });
-      L.q.push({ hold: 1000 });
-    } else L.q.push({ fn: () => pushFeed(L, 'info', commLine(L, e), e.fside) });
-  };
-  if (ev.key && ev.seq && ev.seq.length) {
-    if (ev.counter) L.q.push({ fn: () => pushFeed(L, 'info', `The ${clubName(M.sides[ev.side].cid)} break forward quickly.`, ev.side) });
-    ev.seq.forEach((st, k) => {
-      const from = toCanvas(L, st.s, st.x0, st.y0), actor = slotOf(L, st.pid), recv = slotOf(L, st.to), opp = slotOf(L, st.oid);
-      const onBall = ['drib', 'shot', 'head', 'foul', 'regain'].includes(st.k), goalSide = s => (s === L.bottom ? 0.022 : -0.022);
-      let to = toCanvas(L, st.s, st.x1, st.y1), rkey = null;
-      if (k === 0 && actor && !onBall) {
-        // The move starts with the ball being worked to the first player where he stands.
-        L.q.push({ fn: () => { L.pins = { [actor.join(':')]: from }; L.carrier = actor; L.focus = { x: from[0], y: from[1] }; } });
-        L.q.push({ x: from[0], y: from[1], d: T * 0.5, rk: actor.join(':') });
-      }
-      if (st.res === 'offside' && recv) {
-        // Caught beyond the line as the pass is played.
-        L.q.push({ fn: () => { L.pins = { [recv.join(':')]: toCanvas(L, st.s, st.x1, st.line - 0.025) }; if (actor) L.pins[actor.join(':')] = { ox: 0, oy: 0, hold: true }; } });
-        L.q.push({ hold: T * 0.6 });
-      }
-      L.q.push({ fn: () => {
-        const keep = {};
-        // A normal pass goes to where the receiver can take it onside.
-        if (st.k === 'pass' && recv) { const a = toCanvas(L, st.s, to[0], to[1]); to = toCanvas(L, st.s, a[0], Math.max(a[1], liveLine(L, st.s) + 0.012)); }
-        if (actor) keep[actor.join(':')] = st.k === 'drib' ? { ox: 0, oy: 0, hold: true } : [L.ball.x, L.ball.y];
-        if (recv) keep[recv.join(':')] = to;
-        if (opp) keep[opp.join(':')] = st.k === 'drib' ? { ox: 0, oy: goalSide(opp[0]) } : [to[0] + (to[0] < 0.5 ? 0.025 : -0.025), to[1] + goalSide(opp[0])];
-        rkey = recv && !onBall ? recv.join(':') : null;
-        // Intercepted or claimed: the ball goes to the defender who gets to it.
-        if (opp && st.k !== 'drib' && (st.res === 'lost' || st.res === 'claim')) { rkey = opp.join(':'); to = keep[rkey]; }
-        if (st.k === 'cross') { // runners attack the near post, the penalty spot and the far post
-          const near = st.x0 < 0.5 ? -1 : 1, spots = [[0.5 + near * 0.06, 0.065], [0.5, 0.11], [0.5 - near * 0.08, 0.075]];
-          const S = L.M.sides[st.s], runners = S.on.map((id, i) => (id && i && id !== st.pid && id !== st.to && LINE[FORMATIONS[S.ip][i][0]] >= 3 ? i : -1)).filter(i => i > 0);
-          runners.sort((a, b) => L.dots[st.s][a].y * (st.s === L.bottom ? 1 : -1) - L.dots[st.s][b].y * (st.s === L.bottom ? 1 : -1));
-          runners.slice(0, 3).forEach((i, n) => { keep[st.s + ':' + i] = toCanvas(L, st.s, spots[n][0], spots[n][1]); });
-        }
-        L.pins = keep; L.carrier = actor; L.focus = { x: to[0], y: to[1] };
-        if (st.k !== 'clear' && st.k !== 'tackle' && st.k !== 'foul') L.poss = st.s;
-        if (st.res === 'offside') { L.line = toCanvas(L, st.s, 0, st.line)[1]; }
-        const [txt, ts] = stepLine(L, st); if (txt) pushFeed(L, 'info', txt, ts);
-      } });
-      L.q.push({ to: () => to, d: T * (ACT_DUR[st.k] || 0.8), arc: ACT_ARC[st.k] || 0, rkf: () => rkey, carry: st.k === 'drib' && actor ? actor.join(':') : null });
-      if (st.res === 'offside') {
-        L.q.push({ fn: () => { pushFeed(L, 'info', commLine(L, ev), 1 - ev.side); L.overlay = { big: 'OFFSIDE', small: pname(G.players[ev.pid]), t: 1200, flag: true }; } });
-        L.q.push({ hold: 1200 });
-      }
-      if (st.k === 'foul') { const e = evs.find(x => ['foul', 'yellow', 'red'].includes(x.t) && x.pid === st.pid && x !== ev && !told.has(x)); if (e) foulLine(e); }
-      if (st.res === 'lost' && k === ev.seq.length - 1) L.q.push({ fn: () => { L.poss = 1 - st.s; } });
-    });
-    const shotEv = ['goal', 'save', 'miss'].includes(ev.t);
-    if (ev.t === 'goal') {
-      L.q.push({ fn: () => { L.disp[ev.side]++; updateBoard(L); pushFeed(L, 'goal', commLine(L, ev), ev.side); L.overlay = { big: 'GOAL', small: pname(G.players[ev.pid]) + ' ' + ev.min + "'", t: 1900, side: ev.side }; } });
-      L.q.push({ hold: 1900 });
-      L.q.push({ fn: () => { L.poss = 1 - ev.side; L.pins = {}; L.carrier = null; L.kick = true; L.focus = { x: 0.5, y: 0.5 }; } });
-      L.q.push({ x: 0.5, y: 0.5, d: 350 });
-      L.q.push({ hold: 900 }); // back to their own halves for the restart
-    } else if (shotEv) {
-      L.q.push({ fn: () => pushFeed(L, 'chance', commLine(L, ev), ev.side) });
-      L.q.push({ hold: 350 });
-    }
-  } else {
-    // A quiet minute: a couple of passes between team-mates.
-    for (let n = 0; n < 2; n++) {
-      let rk = null;
-      L.q.push({ fn: () => {
-        const i = quietTarget(L, ev.side); rk = i == null ? null : ev.side + ':' + i;
-        L.pins = {}; L.carrier = rk ? [ev.side, i] : null;
-        if (rk) { const d = L.dots[ev.side][i]; L.pins[rk] = [d.x, d.y]; L.focus = { x: d.x, y: d.y }; }
-      } });
-      L.q.push({ to: () => (rk ? L.pins[rk] : [L.ball.x, L.ball.y]), d: T * 0.4, rkf: () => rk });
-    }
-    if (R() < 0.08) L.q.push({ fn: () => pushFeed(L, 'info', fillerLine(L, ev), ev.side) });
+function liveEvent(L, e) {
+  const M = L.M;
+  if (e.t === 'goal') {
+    L.disp[e.side]++; updateBoard(L);
+    pushFeed(L, 'goal', commLine(L, e), e.side);
+    L.overlay = { big: e.pen ? 'PENALTY GOAL' : 'GOAL', small: pname(G.players[e.pid]) + ' ' + e.min + "'", t: 2200, side: e.side };
+    L.hold = 1600;
+    return;
   }
-  evs.forEach(e => { if (!told.has(e) && (e.t === 'yellow' || e.t === 'red' || (e.t === 'foul' && e !== ev))) foulLine(e); });
-  evs.slice(1).filter(e => !['yellow', 'red', 'foul'].includes(e.t)).forEach(e => L.q.push({ fn: () => {
-    pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'tac' ? 'tac' : 'info', commLine(L, e), e.side);
-    if (e.t === 'inj' && M.sides[e.side].user) { L.paused = true; updateBoard(L); toast(`${pname(G.players[e.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
-  } }));
-  if (ev.ht) L.q.push({ fn: () => { L.kick = true; L.pins = {}; L.carrier = null; L.focus = { x: 0.5, y: 0.5 }; L.ball.x = 0.5; L.ball.y = 0.5; L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); } });
-}
-
-function advanceBall(L, dt) {
-  if (!L.cur) {
-    const c = L.q.shift();
-    if (c.fn) { c.fn(); return; }
-    if (c.hold) { L.hold = c.hold; return; }
-    c.sx = L.ball.x; c.sy = L.ball.y; c.e = 0;
-    if (c.to) [c.x, c.y] = c.to();
-    if (c.rkf) c.rk = c.rkf();
-    // The pass waits for the run: it arrives with the receiver, within reason.
-    if (c.rk) {
-      const lim = c.d * 2.4, need = reachMs(L, c.rk, [c.x, c.y]) * 1.05;
-      if (need > lim) { // too far to get there: played to where he can reach
-        const [si, i] = c.rk.split(':').map(Number), d = L.dots[si][i], f = lim / need;
-        c.x = d.x + (c.x - d.x) * f; c.y = d.y + (c.y - d.y) * f;
-        if (Array.isArray(L.pins[c.rk])) L.pins[c.rk] = [c.x, c.y];
-        L.focus = { x: c.x, y: c.y };
-      }
-      c.d = clamp(need, c.d, lim); L.due[c.rk] = L.t + c.d;
-    }
-    if (c.carry) c.d = clamp(reachMs(L, c.carry, [c.x, c.y]) * 1.25, c.d, c.d * 2);
-    L.cur = c;
+  if (e.t === 'yellow' || e.t === 'red') {
+    pushFeed(L, e.t, commLine(L, e), e.fside);
+    L.overlay = { big: e.t === 'red' ? 'RED CARD' : 'YELLOW', small: pname(G.players[e.pid]), t: 1200, card: e.t };
+    L.hold = 600; return;
   }
-  const c = L.cur;
-  c.e += dt;
-  const k = Math.min(1, c.e / c.d), s = c.arc ? k : k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-  L.ball.x = c.sx + (c.x - c.sx) * s; L.ball.y = c.sy + (c.y - c.sy) * s;
-  L.ball.h = c.arc ? Math.sin(Math.PI * k) * c.arc : 0;
-  if (k >= 1) { L.cur = null; L.ball.h = 0; }
+  if (e.t === 'offside') {
+    pushFeed(L, 'info', commLine(L, e), 1 - e.side);
+    L.overlay = { big: 'OFFSIDE', small: pname(G.players[e.pid]), t: 1200, flag: true };
+    L.line = e.line != null ? { y: e.line, until: L.t + 1600 } : null;
+    L.hold = 500; return;
+  }
+  if (e.t === 'save' || e.t === 'miss' || e.t === 'shot') { const txt = commLine(L, e); if (txt) pushFeed(L, 'chance', txt, e.side); return; }
+  if (e.t === 'foul') { if (e.pen) { pushFeed(L, 'info', `Penalty! ${pname(G.players[e.pid])} brings his man down.`, e.side); L.overlay = { big: 'PENALTY', small: clubName(M.sides[e.side].cid), t: 1400 }; } else if (R() < 0.35) pushFeed(L, 'info', commLine(L, e), e.fside); return; }
+  if (e.t === 'inj') { pushFeed(L, 'inj', commLine(L, e), e.side); return; }
+  const txt = commLine(L, e); if (txt) pushFeed(L, 'info', txt, e.side);
 }
+function liveMark(L, m) {
+  const tn = 'The ' + clubName(L.M.sides[m.s].cid);
+  if (m.k === 'corner') pushFeed(L, 'info', `Corner to ${tn.toLowerCase().replace('the ', 'the ')}.`, m.s);
+  if (m.k === 'chance' && R() < 0.5) pushFeed(L, 'info', `${tn} are through on goal!`, m.s);
+}
+// The minute is over: half time, an injury to one of yours, or full time.
+function endMinute(L) {
+  const q = L.mq, M = L.M, main = q.main;
+  L.mq = null;
+  if (q.ev.length === 0 && R() < 0.05) pushFeed(L, 'info', fillerLine(L, { side: M.sim ? M.sim.poss : 0 }));
+  const inj = q.ev.concat(main ? [main] : []).find(e => e.t === 'inj' && M.sides[e.side].user);
+  if (inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[inj.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
+  if (main && main.ht) { L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
+}
+// Injury events from the engine have no time in the minute: shown at once.
 
+/* ---------- drawing ---------- */
 function draw(L) {
-  const g = L.ctx, W = L.W, H = L.H, m = 8;
-  const X = x => m + x * (W - 2 * m), Y = y => m + y * (H - 2 * m), pw = W - 2 * m, ph = H - 2 * m;
-  for (let i = 0; i < 12; i++) { g.fillStyle = i % 2 ? '#24804F' : '#2A8A56'; g.fillRect(0, (H / 12) * i, W, H / 12 + 1); }
-  g.strokeStyle = 'rgba(255,255,255,.62)'; g.lineWidth = 1.4;
-  g.strokeRect(m, m, pw, ph);
-  g.beginPath(); g.moveTo(m, Y(0.5)); g.lineTo(W - m, Y(0.5)); g.stroke();
-  g.beginPath(); g.arc(X(0.5), Y(0.5), pw * 0.135, 0, Math.PI * 2); g.stroke();
+  const g = L.ctx, W = L.W, H = L.H, s = L.cam.s, X = vx => sx(L, vx), Y = vy => sy(L, vy);
+  g.fillStyle = '#1E6F43'; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 14; i++) { g.fillStyle = i % 2 ? '#24804F' : '#2A8A56'; const y0 = Y(i * PL / 14), y1 = Y((i + 1) * PL / 14); g.fillRect(X(-3), y0, (PW + 6) * s, y1 - y0 + 1); }
+  g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = Math.max(1, s * 0.12);
+  g.strokeRect(X(0), Y(0), PW * s, PL * s);
+  g.beginPath(); g.moveTo(X(0), Y(PL / 2)); g.lineTo(X(PW), Y(PL / 2)); g.stroke();
+  g.beginPath(); g.arc(X(PW / 2), Y(PL / 2), 9.15 * s, 0, Math.PI * 2); g.stroke();
   [0, 1].forEach(end => {
-    const dir = end ? -1 : 1, y0 = end ? H - m : m;
-    g.strokeRect(X(0.5 - 0.296), y0, pw * 0.593, dir * ph * 0.157);
-    g.strokeRect(X(0.5 - 0.135), y0, pw * 0.269, dir * ph * 0.052);
-    g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(X(0.5), y0 + dir * ph * 0.105, 1.6, 0, Math.PI * 2); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(X(0.5 - 0.054), end ? y0 : y0 - 6, pw * 0.108, 6);
-    g.strokeRect(X(0.5 - 0.054), end ? y0 : y0 - 6, pw * 0.108, 6);
+    const y0 = end ? PL : 0, d = end ? -1 : 1;
+    g.strokeRect(X(PW / 2 - 20.16), Y(y0), 40.32 * s, d * 16.5 * s);
+    g.strokeRect(X(PW / 2 - 9.16), Y(y0), 18.32 * s, d * 5.5 * s);
+    g.fillStyle = 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(X(PW / 2), Y(y0 + d * 11), Math.max(1.2, s * 0.2), 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(X(PW / 2), Y(y0 + d * 11), 9.15 * s, end ? Math.PI * 1.2 : Math.PI * 0.2, end ? Math.PI * 1.8 : Math.PI * 0.8); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(X(PW / 2 - 3.66), Y(y0), 7.32 * s, -d * 2 * s);
+    g.strokeRect(X(PW / 2 - 3.66), Y(y0), 7.32 * s, -d * 2 * s);
   });
-  g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(X(0.5), Y(0.5), 1.8, 0, Math.PI * 2); g.fill();
-
-  const r = Math.max(7, W * 0.026);
-  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+  if (L.line && L.t < L.line.until) { // offside line
+    const [, vy] = view(L, 0, L.line.y);
+    g.save(); g.strokeStyle = '#F2C14E'; g.lineWidth = 2; g.setLineDash([6, 4]); g.beginPath(); g.moveTo(X(0), Y(vy)); g.lineTo(X(PW), Y(vy)); g.stroke(); g.restore();
+  }
+  const r = Math.max(6, s * 1.05);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
   [1 - L.bottom, L.bottom].forEach(si => {
     const S = L.M.sides[si], col = L.colors[si === L.bottom ? 0 : 1];
     S.on.forEach((id, i) => {
-      if (!id) return;
-      const d = L.dots[si][i]; if (!d) return;
-      const x = X(d.x), y = Y(d.y), gk = i === 0;
+      const d = L.dots[si][i]; if (!id || !d) return;
+      const [vx, vy] = view(L, d.x, d.y), x = X(vx), y = Y(vy), gk = i === 0;
+      if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
       g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); g.fill();
       g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = 2;
       g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
-      if (L.carrier && L.carrier[0] === si && L.carrier[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
-      g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
-      g.fillText(String(G.players[id] ? G.players[id].no : ''), x, y + 0.5);
-      // Live markers: condition bar and match rating under the player.
-      const cond = S.cond[id] ?? 100, rt = S.rat[id] ?? 6.5, bw = r * 2, by = y + r + 3;
-      g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - bw / 2, by, bw, 3);
-      g.fillStyle = cond >= 75 ? '#2BD46A' : cond >= 60 ? '#F5C518' : '#F43F5E'; g.fillRect(x - bw / 2, by, bw * cond / 100, 3);
-      g.font = `700 ${Math.round(r * 0.78)}px "Plus Jakarta Sans", system-ui, sans-serif`;
-      g.fillStyle = rt >= 7.5 ? '#7DF59E' : rt < 6 ? '#FF8A9B' : 'rgba(255,255,255,.9)';
-      g.fillText(rt.toFixed(1), x, by + 3 + r * 0.6);
-      g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
       if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r + 5, 0, Math.PI * 2); g.stroke(); }
+      g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
+      g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      g.fillText(String(G.players[id] ? G.players[id].no : ''), x, y + 0.5);
+      if (s > 7) { // names when zoomed in
+        g.font = `600 ${Math.round(r * 0.72)}px "Plus Jakarta Sans", system-ui, sans-serif`; g.fillStyle = 'rgba(255,255,255,.88)';
+        g.fillText(G.players[id] ? G.players[id].ln : '', x, y + r + r * 0.75);
+      }
     });
   });
-  if (L.line != null) { // offside: the line of the second-last defender at the moment of the pass
-    g.save(); g.strokeStyle = '#F2C14E'; g.lineWidth = 2; g.setLineDash([6, 4]);
-    g.beginPath(); g.moveTo(m, Y(L.line)); g.lineTo(W - m, Y(L.line)); g.stroke(); g.restore();
-  }
-  const bx = X(L.ball.x), byy = Y(L.ball.y), lift = (L.ball.h || 0) * H, br = 3.8 + (L.ball.h || 0) * 40;
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(bx + 1.5, byy + 2, 3.6, 0, Math.PI * 2); g.fill();
+  // The ball, lifted by its height, with its shadow on the grass.
+  const [bvx, bvy] = view(L, L.ball.x, L.ball.y), bx = X(bvx), by = Y(bvy), z = L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
-  g.beginPath(); g.arc(bx, byy - lift, br, 0, Math.PI * 2); g.fill(); g.stroke();
-
+  g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
+  if ((G.settings.cam || 'follow') === 'follow') miniMap(L);
   if (L.overlay) {
     const o = L.overlay;
     g.fillStyle = 'rgba(34,8,47,.7)'; g.fillRect(0, H / 2 - 44, W, 88);
     g.fillStyle = o.card === 'red' ? '#F0605D' : o.card === 'yellow' || o.flag ? '#F2C14E' : '#2DE2EE';
-    g.font = `800 ${Math.round(W * 0.12)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    g.font = `800 ${Math.round(W * 0.11)}px "Plus Jakarta Sans", system-ui, sans-serif`;
     g.fillText(o.big, W / 2, H / 2 - 8);
     g.fillStyle = '#EAF2EE'; g.font = `600 ${Math.round(W * 0.045)}px "Plus Jakarta Sans", system-ui, sans-serif`;
     g.fillText(o.small || '', W / 2, H / 2 + 26);
   }
+}
+// The whole pitch in a corner, with the area the camera shows.
+function miniMap(L) {
+  const g = L.ctx, w = Math.round(L.W * 0.2), h = Math.round(w * PL / PW), x0 = L.W - w - 8, y0 = 8, k = w / PW;
+  g.fillStyle = 'rgba(10,30,18,.72)'; g.fillRect(x0, y0, w, h);
+  g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1; g.strokeRect(x0, y0, w, h);
+  g.beginPath(); g.moveTo(x0, y0 + h / 2); g.lineTo(x0 + w, y0 + h / 2); g.stroke();
+  [L.bottom, 1 - L.bottom].forEach(si => {
+    g.fillStyle = L.colors[si === L.bottom ? 0 : 1].f;
+    L.dots[si].forEach(d => { if (!d) return; const [vx, vy] = view(L, d.x, d.y); g.fillRect(x0 + vx * k - 1.5, y0 + vy * k - 1.5, 3, 3); });
+  });
+  const [bvx, bvy] = view(L, L.ball.x, L.ball.y);
+  g.fillStyle = '#FFF'; g.beginPath(); g.arc(x0 + bvx * k, y0 + bvy * k, 2, 0, Math.PI * 2); g.fill();
+  const s = L.cam.s, hw = L.W / 2 / s, hh = L.H / 2 / s;
+  g.strokeStyle = 'rgba(45,226,238,.8)'; g.strokeRect(x0 + (L.cam.x - hw) * k, y0 + (L.cam.y - hh) * k, hw * 2 * k, hh * 2 * k);
 }
 
 function updateBoard(L) {
@@ -432,17 +311,16 @@ function updateBoard(L) {
   if (!el('sbScore')) return;
   const M = L.M, [H, W] = M.sides;
   el('sbScore').textContent = L.disp[0] + ' - ' + L.disp[1];
-  const min = M.min > 90 ? '90+' + (M.min - 90) : String(M.min);
-  el('sbClock').textContent = (L.done ? 'FT' : min + "'");
+  const mn = L.mq ? L.mq.min : M.min;
+  el('sbClock').textContent = L.done ? 'FT' : (mn > 90 ? '90+' + (mn - 90) : String(mn)) + "'";
   const tot = H.st.pos + W.st.pos || 1;
   el('sbPoss').style.width = Math.round((H.st.pos / tot) * 100) + '%';
   el('sbPossTxt').textContent = Math.round((H.st.pos / tot) * 100) + '% possession ' + Math.round((W.st.pos / tot) * 100) + '%';
-  const pb = el('btnPause');
-  if (pb) pb.textContent = L.paused ? 'Play' : 'Pause';
-  const sp = el('btnSpeed');
-  if (sp) sp.textContent = G.settings.speed + 'x';
-  const ft = el('ftBar');
-  if (ft) ft.hidden = !L.done;
+  const pb = el('btnPause'); if (pb) pb.textContent = L.paused ? 'Play' : 'Pause';
+  const sp = el('btnSpeed'); if (sp) sp.textContent = G.settings.speed + 'x';
+  const hl = el('btnHl'); if (hl) hl.textContent = HL[G.settings.hl || 'ext'];
+  const cm = el('btnCam'); if (cm) cm.textContent = (G.settings.cam || 'follow') === 'full' ? 'Full pitch' : 'Follow';
+  const ft = el('ftBar'); if (ft) ft.hidden = !L.done;
 }
 
 // Commentary: the newest line is a full-width bar in the colour of the team it is about; a goal flashes.
@@ -475,6 +353,7 @@ function commLine(L, ev) {
   const fk = ev.fk ? 'Free kick. ' : ev.ck ? 'Corner. ' : '';
   switch (ev.t) {
     case 'goal': return ev.pen ? `Penalty to ${tn}. ${n(ev.pid)} sends the keeper the wrong way. ${L.disp.join('-')}.` : `${fk}${n(ev.pid)} scores for ${tn}${ev.aid ? ', set up by ' + n(ev.aid) : ''}. ${L.disp.join('-')}.`;
+    case 'shot': return `${n(ev.pid)} ${ev.sp ? 'rises to head it' : 'lets fly'}...`;
     case 'save': return `${fk}${n(ev.pid)} forces a save from ${O.on[0] ? n(O.on[0]) : 'the keeper'}.${ev.corner ? ' Corner.' : ''}`;
     case 'miss':
       if (ev.block) return `${fk}${n(ev.pid)} ${pick(['has a shot blocked', 'sees his shot charged down', 'shoots straight into a defender'])}.${ev.corner ? ' Corner.' : ''}`;
@@ -546,7 +425,7 @@ function applyShout(k) {
 function liveInstant() {
   const L = LIVE, M = L.M;
   while (!M.ended) stepMatch(M, true);
-  L.q = []; L.cur = null; L.hold = 0; L.paused = false;
+  L.mq = null; L.hold = 0; L.paused = false;
   L.disp = [M.sides[0].st.g, M.sides[1].st.g];
   closeSheet();
   onFullTime(L);
