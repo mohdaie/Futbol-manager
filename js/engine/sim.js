@@ -297,7 +297,7 @@ function passRisk(M, s, ax, ay, bx, by, air) {
 function reads(S) {
   if (S._rc) return S._rc;
   const a = new Float32Array(11);
-  for (let j = 0; j < 11; j++) a[j] = 1.4 + (ac(S, j, 'ant') + ac(S, j, 'pos')) * 0.07;
+  for (let j = 0; j < 11; j++) a[j] = 1.4 + (ac(S, j, 'ant') + ac(S, j, 'pos')) * 0.06 + ac(S, j, 'mar') * 0.025;
   return (S._rc = a);
 }
 // Options for the player on the ball, each with a value; he picks one, better decision makers more reliably.
@@ -602,7 +602,7 @@ function airDuel(M, fl) {
   if (gk && fl.k === 'cross' && gyOwn < 0.11 && R() < 0.22 * ac(O, 0, 'han') / 12) { pstat(O, 0, 'cl'); return giveBall(M, o, 0); }
   if (!A.length && !D.length) return; // nobody there: it drops
   const aScore = A.length ? aerialAt(S, A[0][0]) * 0.7 + ac(S, A[0][0], 'str') * 0.2 + ac(S, A[0][0], 'otb') * 0.1 - A[0][1] * 0.8 + ((fl.del || 10) - 10) * 0.3 : -9;
-  const dScore = D.length ? aerialAt(O, D[0][0]) * 0.7 + ac(O, D[0][0], 'str') * 0.2 + ac(O, D[0][0], 'mar') * 0.1 - D[0][1] * 0.8 : -9;
+  const dScore = D.length ? aerialAt(O, D[0][0]) * 0.7 + ac(O, D[0][0], 'str') * 0.15 + ac(O, D[0][0], 'mar') * 0.2 - D[0][1] * 0.8 : -9;
   const win = A.length && (!D.length || duelRoll(M, 'aerial', toOwn(s, B.x, B.y)[1], aScore + 10, dScore + 10, 0.45, 1, S, O));
   if (!win) {
     const j = D[0][0];
@@ -689,9 +689,9 @@ function blockArrives(M, fl) {
 function receive(M, s, j, fl, d) {
   const S = M.sides[s], sim = M.sim, B = sim.B;
   if (B.offSet && B.offS === s && (B.offSet & (1 << j))) { B.offSet = 0; return offside(M, s, j, fl); }
-  const [, press] = recvPressure(M, s, B.x, B.y);
-  const sp = hyp(B.vx, B.vy), air = B.z > 0.8;
-  const ctrl = clamp(0.93 + (ac(S, j, 'fir') - 10) * 0.012 - press * 0.13 - Math.max(0, sp - 16) * 0.012 - (air ? 0.06 : 0), 0.45, 0.99);
+  const [, press] = recvPressure(M, s, B.x, B.y), [, mk] = pressureOn(M, s, j);
+  const sp = hyp(B.vx, B.vy), air = B.z > 0.8, mq = mk > 0 ? (ac(M.sides[1 - s], mk, 'mar') - 10) * 0.03 : 0; // his marker's Marking
+  const ctrl = clamp(0.93 + (ac(S, j, 'fir') - 10) * 0.012 - press * (0.13 + mq) - Math.max(0, sp - 16) * 0.012 - (air ? 0.06 : 0), 0.45, 0.99);
   const roll = R();
   if (roll < ctrl) {
     pressTrigger(M, s, j, fl, roll > ctrl - 0.15);
@@ -851,9 +851,11 @@ function targets(M, all) {
         for (let k = 1; k < T.length; k++) { const q = T[k]; if (!q) continue; const dx = q.x - X, dy = q.y - Y, d2 = dx * dx + dy * dy; if (d2 < md) { md = d2; m = k; } }
         if (m > 0) {
           const q = T[m], qy = s === 0 ? q.y / PL : 1 - q.y / PL, danger = qy > 0.55; // near our goal (their attack)
-          const tight = (danger ? 2.2 : 3.6) - (ac(S, i, 'mar') - 10) * 0.1 - bh(S, i, 'mk') * 0.8 - attention(S, M.sides[1 - s].on[m]) * 0.4;
-          const L = hyp(gx - q.x, gy - q.y) || 1, t2 = Math.max(1, tight);
-          const mx = q.x + (gx - q.x) / L * t2, my = q.y + (gy - q.y) / L * t2;
+          // Marking reads where his man is going (and stays goal-side of that), rather than standing on his toes.
+          const tight = (danger ? 2.2 : 3.6) - bh(S, i, 'mk') * 0.8 - attention(S, M.sides[1 - s].on[m]) * 0.4;
+          const lead = clamp((ac(S, i, 'mar') - 4) * 0.06, 0, 1), px = q.x + q.vx * lead, py = q.y + q.vy * lead;
+          const L = hyp(gx - px, gy - py) || 1, t2 = Math.max(1, tight);
+          const mx = px + (gx - px) / L * t2, my = py + (gy - py) / L * t2;
           const w = clamp((danger ? 0.55 : 0.35) + ac(S, i, 'pos') * 0.02 + (ac(S, i, 'tea') - 10) * 0.012 + bh(S, i, 'mk') * 0.15, 0.2, 0.92);
           X += (mx - X) * w; Y += (my - Y) * w;
         }
@@ -911,8 +913,8 @@ function movePlayers(M) {
       if (carrier) { const O = sim.P[1 - s]; for (let j = 0; j < O.length; j++) { const q = O[j]; if (q && (q.x - p.x) * (q.x - p.x) + (q.y - p.y) * (q.y - p.y) < 9 && (q.y - p.y) * fwdY(s) > -0.5) { top *= 0.55; break; } } }
       // Sprint only when it matters: on the ball, making a run, pressing, going for a loose ball, a restart, or
       // getting back goal-side; otherwise jog into position (most of a match is jogging).
-      const urgent = carrier || p.run > sim.t || p.eng === sim.t || p.chase === sim.t || sim.t < (p.want || 0) || (rs && d > 12) || (sim.poss !== s && (p.y - ty) * fwdY(s) > 15);
-      let want = urgent ? top : Math.min(top * 0.5, d / 2);
+      const urgent = carrier || p.run > sim.t || p.eng === sim.t || p.chase === sim.t || sim.t < (p.want || 0) || (rs && d > 12) || (sim.poss !== s && (p.y - ty) * fwdY(s) > 21 - ac(M.sides[s], i, 'wor') * 0.6);
+      let want = urgent ? top : Math.min(top * (0.4 + ac(M.sides[s], i, 'wor') * 0.01), d / 2); // Work Rate: gets into position
       if (want > d / 0.6) want = d / 0.6;
       const vx = d > 0.2 ? dx / d * want : 0, vy = d > 0.2 ? dy / d * want : 0;
       const ddx = vx - p.vx, ddy = vy - p.vy, dv = Math.sqrt(ddx * ddx + ddy * ddy), lim = sp[i * 2 + 1] * dt;
@@ -991,7 +993,7 @@ function trackRuns(M, s, o, OP, gx, gy) {
     let m = -1, md = 14;
     for (let j = 1; j < OP.length; j++) { const q = OP[j]; if (!q || q.eng === sim.t) continue; const d = hyp(q.x - r.x, q.y - r.y); if (d < md) { md = d; m = j; } }
     if (m < 0) continue;
-    const q = OP[m], px = r.x + r.vx * 0.8, py = r.y + r.vy * 0.8, L2 = hyp(gx - px, gy - py) || 1, lead = 1.2 + (12 - ac(O, m, 'mar')) * 0.08;
+    const q = OP[m], px = r.x + r.vx * 0.8, py = r.y + r.vy * 0.8, L2 = hyp(gx - px, gy - py) || 1, lead = 1.4;
     q.tx = px + (gx - px) / L2 * lead; q.ty = py + (gy - py) / L2 * lead; q.eng = sim.t;
   }
 }
