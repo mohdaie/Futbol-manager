@@ -474,3 +474,6 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - My Team > Club directory (also from League Table) includes all 33 clubs and free agents. `clubview` takes `{cid, section, level}` and shows the club dashboard, first team/reserves/U18s, fixtures/results and transfer activity. Opposition ratings retain scouting ranges; overseas results are explicitly unavailable because those leagues are not simulated. Your management controls stay on their existing pages.
 - Fixture names and crests open clubs; fixture Preview/score buttons open a preview or report. Reports with saved ratings can switch between both teams. Browser Back and refresh preserve club/squad context using the existing navigation system; no save migration is required.
 - Focused mobile regression: `node tests/links.cjs` and `node tests/navigation.cjs` (390×844; `CHROMIUM_PATH` may point at an installed Chromium).
+
+## My Team opens Squad (2026.10.21.8)
+- My Team routes directly to Squad, including older saved `team` views. All eleven team sections appear in a horizontal tab row above the section content, with the active tab brought into view. The former grid of menu cards is removed; section routes, Back history and squad filters remain intact.

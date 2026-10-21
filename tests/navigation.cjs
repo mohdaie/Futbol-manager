@@ -38,6 +38,12 @@ const assert = require('node:assert/strict');
 
     await page.locator('[data-a="titleStart"]').click();
     await page.locator('.tabs2 [data-s="team"]').click();
+    check('My Team opens Squad directly', (await state()).screen, 'squad');
+    check('Team sections appear as top tabs', await page.locator('.team-sections button').count(), 11);
+    await page.locator('.team-sections [data-s="tactics"]').click();
+    check('Top tabs open team sections', (await state()).screen, 'tactics');
+    await appBack();
+    check('Back returns to squad from team tabs', (await state()).screen, 'squad');
     await page.locator('.main [data-s="squad"]').click();
     await page.locator('[data-a="sqL"][data-v="R"]').click();
     await page.locator('[data-a="sqF"][data-v="GK"]').click();
