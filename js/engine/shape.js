@@ -51,8 +51,12 @@ function restSlots(T, bx, carrier = -1) {
 
 // Rulebook layer 2: a position has a job in this phase. Width comes from
 // selected roles; no preset silently converts the attack into a fixed formation.
-function positionJobs(T, raw, bx, by, phase) {
-  const f = FORMATIONS[T.ip], final = phase === 'create' || phase === 'finish';
+// lines (optional, own frame): the opponent's back line and midfield line, so that players can take the space
+// between them (rulebook 1.3, 3.2-3.5, 6.5, 6.6). Without them (tactics screen, demo) the anchors are used.
+function positionJobs(T, raw, bx, by, phase, lines = null) {
+  const f = FORMATIONS[T.ip], final = phase === 'create' || phase === 'finish', build = phase === 'build';
+  // The pocket between the opponent's midfield and back lines, kept onside (just short of the back line).
+  const pocket = lines && lines.mid - lines.back > 8 / 105 ? clamp(lines.back + (lines.mid - lines.back) * 0.45, lines.back + 3 / 105, 0.9) : null;
   const jobs = [], positions = raw.map((q, i) => {
     if (!q) { jobs[i] = null; return null; }
     const role = roleName(T, i), slot = f[i], side = slot[1] < .5 ? -1 : 1;
@@ -61,26 +65,32 @@ function positionJobs(T, raw, bx, by, phase) {
     if (i === 0) {
       job = 'Support behind the centre-backs';
       y = phase === 'build' ? .94 - (role === 'Ball-Playing Keeper' ? .025 : 0) : .91;
-    } else if (slot[0] === 'DC') job = phase === 'build' ? 'Split to build from the keeper' : 'Hold rest defence';
-    else if (role === 'Inverted Full-Back' && phase !== 'build') {
-      x = .5 + side * .15; y = clamp(by + .1, .34, .72); job = 'Invert beside the pivot';
-    } else if (role === 'Wing-Back' && phase !== 'build') {
-      x = .5 + side * .42; y = clamp(by - .05, .10, .48); job = 'Hold width high';
+    } else if (slot[0] === 'DC') {
+      // 6.2: in build-up the centre-backs split towards the edges of the box, about 15-20 m out.
+      if (build) { x = .5 + side * .21; y = clamp(Math.min(by + .02, 1 - 16 / 105), 1 - 24 / 105, 1 - 14 / 105); job = 'Split to build from the keeper'; }
+      else job = 'Hold rest defence';
+    } else if (role === 'Inverted Full-Back') {
+      // 6.3: steps inside beside the 6, in build-up too (that is what makes the 2-3 to play out).
+      x = .5 + side * .15; y = build ? 1 - 30 / 105 : clamp(by + .1, .34, .72); job = 'Invert beside the pivot';
+    } else if (role === 'Wing-Back') {
+      x = .5 + side * .43; y = build ? 1 - 38 / 105 : clamp(by - .05, .10, .48); job = 'Hold width high';
     } else if (role === 'Full-Back') {
       job = final && near ? 'Overlap on the ball side' : 'Support width / cover the far side';
+      if (build) { x = .5 + side * .44; y = 1 - 32 / 105; job = 'Give width higher up in build-up'; } // 6.3
       if (final && near) y = clamp(by + .03, .10, .38);
     } else if (slot[0] === 'DM') {
-      job = phase === 'build' ? 'Show in front of the centre-backs' : 'Screen behind the ball';
-      y = clamp(by + .07, .34, .8);
+      job = build ? 'Show in front of the centre-backs' : 'Screen behind the ball';
+      y = build ? 1 - 27 / 105 : clamp(by + .07, .34, .8); // 6.4: shows between the pressers, in front of the centre-backs
     } else if (['Box-to-Box', 'Mezzala', 'Playmaker', 'Ball-Winner'].includes(role) && slot[0] === 'MC') {
       x = half; job = 'Receive on the half-turn in the half-space';
+      if (!final && pocket != null) { y = role === 'Playmaker' ? lerp(y, pocket, .5) : pocket; job = 'Receive between the lines in the half-space'; }
       if (final) {
         if (role === 'Box-to-Box') { x = .5 + side * .09; y = 20 / 105; job = 'Arrive at the box edge'; }
         else if (role === 'Mezzala') { y = 18 / 105; job = 'Run through the wide channel'; }
         else { y = 28 / 105; job = 'Link the pivot and the attack'; }
       }
     } else if (slot[0] === 'AMC' && phase !== 'build') {
-      y = final ? 24 / 105 : clamp(by - .18, 24 / 105, .42); job = 'Receive between the lines / Zone 14';
+      y = final ? 24 / 105 : pocket != null ? pocket : clamp(by - .18, 24 / 105, .42); job = 'Receive between the lines / Zone 14';
       if (role === 'Shadow Striker' && final) { y = 11 / 105; job = 'Run past the nine'; }
     } else if (['Winger', 'Wide Midfielder'].includes(role)) {
       job = 'Hold the wide lane';
@@ -92,8 +102,8 @@ function positionJobs(T, raw, bx, by, phase) {
       if (final) y = role === 'Inside Forward' ? 15 / 105 : 25 / 105;
     } else if (slot[0] === 'ST') {
       job = 'Pin the last line / provide depth';
-      if (role === 'False Nine' && phase !== 'build') {
-        y = final ? 24 / 105 : clamp(by - .16, 24 / 105, .43); job = 'Drop into Zone 14 / link play';
+      if (role === 'False Nine') {
+        y = final ? 24 / 105 : pocket != null ? pocket : clamp(by - .16, 24 / 105, .43); job = 'Drop into Zone 14 / link play';
       } else if (final) { y = role === 'Target Forward' ? 14 / 105 : 9 / 105; }
     }
     jobs[i] = job;
@@ -102,14 +112,17 @@ function positionJobs(T, raw, bx, by, phase) {
   return { positions, jobs };
 }
 
-function attackPlan(T, bx, by, carrier = -1) {
+function attackPlan(T, bx, by, carrier = -1, lines = null) {
   const phase = teamPhase(T, true, bx, by);
-  const work = positionJobs(T, positions(T, true, bx, by), bx, by, phase), pos = work.positions;
+  const work = positionJobs(T, positions(T, true, bx, by), bx, by, phase, lines), pos = work.positions;
   if (carrier > 0 && pos[carrier]) pos[carrier] = [bx, by]; // measure the carrier where the ball actually is
   const rest = phase === 'build' ? { back: [], screen: [] } : restSlots(T, bx, carrier);
   // Move the cover with the ball as a unit. Keep the role's lateral anchor;
   // never invent a winger to repair an empty lane in the manager's setup.
-  rest.back.forEach(i => { pos[i][1] = clamp(by + 14 / 105, 0.5, 0.94); });
+  // 3.7 / 5.4: the team squeezes up behind the ball; how far the back line goes is the defensive-line instruction
+  // (a high line follows the ball to about 10 m into the opponent's half).
+  const top = [0.55, 0.48, 0.42][T.line ?? 1];
+  rest.back.forEach(i => { pos[i][1] = clamp(by + 14 / 105, top, 0.94); });
   rest.screen.forEach(i => { pos[i][1] = clamp(by + 5 / 105, 0.34, 0.94); });
   if (phase === 'progress' || phase === 'create') {
     const cover = [...rest.back, ...rest.screen], unit = pos.map((q, i) => q && i > 0 && !cover.includes(i) ? i : -1).filter(i => i > 0);
@@ -171,8 +184,8 @@ function blockPlan(T, bx, by) {
   return { positions: pos, phase, rest: { back: [], screen: [] } };
 }
 
-function teamPlan(T, has, bx, by, carrier = -1) {
-  return has ? attackPlan(T, bx, by, carrier) : blockPlan(T, bx, by);
+function teamPlan(T, has, bx, by, carrier = -1, lines = null) {
+  return has ? attackPlan(T, bx, by, carrier, lines) : blockPlan(T, bx, by);
 }
 
 // Measurements, not promises about the individual movements over the anchors.

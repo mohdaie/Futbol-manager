@@ -340,3 +340,24 @@ Clips: `docs/flow-clips/final/` (+ `.txt` timelines), showreel `docs/flow-clips/
 
 Known gaps (next, from the rulebook): box at cross arrival averages 1.6 attackers (7.2 says 3+: the late 8 from
 deep); passes per team ~750 (real ~450-550); offsides ~1.7 (real ~4); match simulation ~0.55 s in a browser.
+
+## Analysis loop, iteration 2 (2026-10-21, not released)
+
+Owner's loop: fix, simulate, analyse, report, fix again. Reports: `docs/analysis/2026-10-21-gegen-v-tiki/` (1) and
+`docs/analysis/2026-10-21-iteration-2/` (2). Tools: `scripts/match-analysis.cjs` (records a half: chains, goals,
+chance values, frames), `scripts/analysis-render.cjs` (average positions, freeze-frames),
+`scripts/analysis-summary.cjs` (line heights, keeper passes, lofted backward balls).
+
+- Shape (3.2-3.7, 6.2-6.6): build-up positions, players take the space between the opponent's lines, the back line
+  squeezes up behind the ball, centre-backs step in with the ball.
+- Shot quality (7.5, `chanceAt` / `xgAt`): distance, goal-mouth angle, goal visible past keeper and defenders,
+  bodies in the triangle, pressure, header. The structure follows professional shot models; the coefficients are
+  our own, fitted to public reference values. No third-party data is copied into the game.
+- Defending: keeper on the line to the ball and resetting at full speed (6.1); box marking goal-side and tight at
+  full speed (4.8); first defender blocks goal-side in shooting range (4.8); delay near the box (4.5); midfielders
+  pass runners on at the back line (4.7); through balls need time (7.1).
+- Taken out after measuring: style "prefer" for negative values, direct "go early", lofted-back ban, sweeper rush.
+- Calibration: `ENG.xg` 1, `ENG.fin` 0.85. League on three seeded worlds (100 each): goals 2.51-2.97, shots 25-28,
+  on target 7.8-8.9, draws 22-36%.
+- Measuring: compare engines on the same seeded worlds (a browser run with a fixed `Math.random` seed); one
+  unseeded world can differ by a goal a match, and 30 two-club matches carry about +/-0.5 goals of noise.

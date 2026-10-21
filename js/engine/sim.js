@@ -39,7 +39,7 @@ function duelRoll(M, t, y, a, d, base, close = 1, S = null, O = null) {
 const COHESION_K = 0.35;
 const PHYS = new Set(['pac', 'sta', 'agi', 'str']);
 // Engine levers for league averages only (calibrated with Admin > Run test season).
-const ENG = { xg: 1.1, shoot: 1, foul: 1.1, intercept: 1.1, offFoul: 0.06, keepShot: 0.12, carry: 1, carryRisk: 1, thr: 0.28, sharp: 60, touch: 1.1, tackleFoul: 0.05, cross: 0.45, fin: 1.1 };
+const ENG = { xg: 1, shoot: 1, foul: 1.1, intercept: 1.1, offFoul: 0.06, keepShot: 0.12, carry: 1, carryRisk: 1, thr: 0.28, sharp: 60, touch: 1.1, tackleFoul: 0.05, cross: 0.45, fin: 0.85 };
 
 // Form of each player this minute: morale, condition, sharpness, position fit, captain.
 function refreshForm(M, S) {
@@ -87,10 +87,18 @@ function shapeOf(M, s, has, bx, by) {
   if (!(S._shape instanceof Map)) S._shape = new Map(); // caches are rebuilt after loading a saved match
   const carrier = has && M.sim && M.sim.B.os === s ? M.sim.B.oi : -1;
   const qx = Math.round(clamp(bx, 0, 1) * 68), qy = Math.ceil(clamp(by, 0, 1) * 105);
-  const restart = !!M.sim?.rs, key = [has, qx, qy, carrier, restart].join('|');
+  // The opponent's back and midfield lines (in our frame, rounded to 3 m) so we can play between them.
+  let lines = null;
+  if (has && M.sim) {
+    const O = M.sides[1 - s], ys = M.sim.P[1 - s].map((q, j) => q && j ? { y: toOwn(s, q.x, q.y)[1], row: LINE[FORMATIONS[O.oop][(O.map || shapeMap(O.ip, O.oop))[j]][0]] } : null).filter(Boolean);
+    const avg = a => a.length ? a.reduce((t, q) => t + q.y, 0) / a.length : NaN, r3 = v => Math.round(v * 35) / 35;
+    const back = avg(ys.filter(q => q.row === 1)), mid = avg(ys.filter(q => q.row === 2 || q.row === 3));
+    if (Number.isFinite(back) && Number.isFinite(mid)) lines = { back: r3(back), mid: r3(mid) };
+  }
+  const restart = !!M.sim?.rs, key = [has, qx, qy, carrier, restart, lines ? lines.back + ':' + lines.mid : ''].join('|');
   let plan = S._shape.get(key);
   if (!plan) {
-    plan = teamPlan(S, has, qx / 68, qy / 105, carrier);
+    plan = teamPlan(S, has, qx / 68, qy / 105, carrier, lines);
     if (restart) plan.phase = 'restart';
     S._shape.set(key, plan);
   }
@@ -109,7 +117,6 @@ const fwdY = s => (s === 0 ? -1 : 1);                       // direction of atta
 const toOwn = (s, X, Y) => (s === 0 ? [X / PW, Y / PL] : [1 - X / PW, 1 - Y / PL]);
 const toWorld = (s, x, y) => (s === 0 ? [x * PW, y * PL] : [(1 - x) * PW, (1 - y) * PL]);
 const dGoal = (s, X, Y) => Math.hypot(X - PW / 2, Y - goalY(s));
-const angGoal = (s, X, Y) => Math.max(0.2, 1 - Math.abs(X - PW / 2) / Math.max(4, Math.abs(Y - goalY(s))) * 0.55);
 const hyp = Math.hypot;
 // Distance from point P to segment AB (returned), and how far along it (SD.u, 0-1). No allocation: called a lot.
 const SD = { u: 0 };
@@ -123,7 +130,32 @@ function segD(px, py, ax, ay, bx, by) {
 }
 function segDist(px, py, ax, ay, bx, by) { const d = segD(px, py, ax, ay, bx, by); return [d, SD.u]; }
 // Chance quality from a spot (the xG model the league is calibrated on).
-const xgAt = (s, X, Y) => clamp(0.75 * Math.exp(-dGoal(s, X, Y) / 7.8) * angGoal(s, X, Y), 0.005, 0.7);
+// Rulebook 7.5 (1): the chance from distance and the goal-mouth angle, keeper set and nobody in the way (fitted to
+// public figures: ~0.4 from 6 m, ~0.22 from the spot, ~0.13 from the box edge, ~0.04 from 25 m or a tight angle).
+const goalAngle = (s, X, Y) => { const dy = Math.abs(Y - goalY(s)) || 0.01; return Math.abs(Math.atan2(dy, X - (PW / 2 - 3.66)) - Math.atan2(dy, X - (PW / 2 + 3.66))); };
+const xgAt = (s, X, Y) => { const d = Math.max(1, dGoal(s, X, Y)); return clamp(1 / (1 + Math.exp(9.31 + 0.237 * d - 3.41 * Math.log(d) - 3.86 * goalAngle(s, X, Y))), 0.005, 0.7); };
+// Rulebook 7.5 (2-5): what the shooter actually sees. The keeper and defenders between ball and goal hide part of
+// the goal mouth (compared with a keeper set on the line to goal); every body in the shooting triangle makes it
+// worse; a man on him hurries it; a header is worth well under half.
+function chanceAt(M, s, X, Y, o = {}) {
+  const d = Math.max(1, dGoal(s, X, Y)), gy = goalY(s), dy = gy - Y;
+  const pa = Math.atan2(dy, PW / 2 - 3.66 - X), pb = Math.atan2(dy, PW / 2 + 3.66 - X), lo = Math.min(pa, pb), hi = Math.max(pa, pb), th = hi - lo || 1e-3;
+  const shade = (c, half) => [Math.max(lo, c - half), Math.min(hi, c + half)];
+  // The reference keeper is set as 6.1 places him: 1.5 m off his line on the line to the ball (near post at most).
+  const kx = clamp(PW / 2 + (X - PW / 2) * 1.5 / Math.max(1.6, Math.abs(dy)), PW / 2 - 3.2, PW / 2 + 3.2), ky = gy - Math.sign(dy) * 1.5;
+  const ks = shade(Math.atan2(ky - Y, kx - X), Math.atan(1.2 / Math.max(0.5, hyp(kx - X, ky - Y)))), visSet = 1 - Math.max(0, ks[1] - ks[0]) / th;
+  const iv = []; let between = 0;
+  M.sim.P[1 - s].forEach((q, j) => {
+    if (!q || Math.abs(q.y - gy) >= Math.abs(dy)) return; // only those between him and the goal line
+    const r = Math.max(0.5, hyp(q.x - X, q.y - Y)), c = Math.atan2(q.y - Y, q.x - X), [a, b] = shade(c, Math.atan((j ? 0.4 : 1.2) / r));
+    if (b > a) iv.push([a, b]);
+    if (j && b > a) between++; // his body is in the shooting triangle
+  });
+  iv.sort((u, v) => u[0] - v[0]);
+  let cov = 0, e = -Infinity; for (const [a, b] of iv) { if (b <= e) continue; cov += b - Math.max(a, e); e = b; }
+  const visible = 1 - cov / th, z = Math.log(xgAt(s, X, Y) / (1 - xgAt(s, X, Y))) + 4 * (visible - visSet) - 0.35 * between - 0.6 * (o.press || 0) - (o.head ? 1 : 0);
+  return { xg: clamp(1 / (1 + Math.exp(-z)), 0.005, 0.9), visible, between };
+}
 // How dangerous a spot is with the ball (expected threat): grows towards goal, highest centrally.
 // Near goal it stays below the chance of a shot from there: close in, shooting is how you score.
 function threat(s, X, Y) {
@@ -328,8 +360,7 @@ function carrierDecide(M, s, i, o = {}) {
   // waits for the best moment, a nervous finisher snatches at it early.
   const thru1 = !gk && !o.restart && throughOnGoal(M, s, p.x, p.y);
   if (!gk && d2g < 32 && !o.restart) {
-    let xg = xgAt(s, p.x, p.y) * (1 - press * 0.35) * blockedBy(M, s, p.x, p.y);
-    if (oneOnOneAt(M, s, p.x, p.y)) xg = Math.max(xg, 0.28);
+    let xg = chanceAt(M, s, p.x, p.y, { press }).xg; // 7.5
     let will = (1 + b('sh') * 0.6) * (0.85 + (ac(S, i, 'fla') - 10) * 0.02) * [0.8, 0.9, 1, 1.1, 1.2][ment] * ENG.shoot * shotNerve(S, i);
     if (thru1) will *= 1 + (12 - ac(S, i, 'cmp')) * 0.04;
     // Worth its chance (plus a little for rebounds and corners); a miss only gives them a goal kick, so the
@@ -365,7 +396,7 @@ function carrierDecide(M, s, i, o = {}) {
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
     if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03))) {
       const ahead = 9 + ac(S, j, 'pac') * 0.3, sx = clamp(q.x + q.vx * 1.2, 4, PW - 4), sy = clamp(q.y + fwdY(s) * ahead, 2, PL - 2);
-      const tl = hyp(sx - p.x, sy - p.y), r2 = clamp(passRisk(M, s, p.x, p.y, sx, sy, false) + 0.12 + (20 - vis) * 0.012 + tl * 0.004 - b('thr') * 0.05, 0.05, 0.95);
+      const tl = hyp(sx - p.x, sy - p.y), r2 = clamp(passRisk(M, s, p.x, p.y, sx, sy, false) + 0.12 + (20 - vis) * 0.012 + tl * 0.004 - b('thr') * 0.05 + press * clamp(0.32 - (vis + ac(S, i, 'cmp') - 24) * 0.012, 0.08, 0.4), 0.05, 0.95); // 7.1: a through ball needs time to see the run
       opts.push({ k: 'thru', j, tx: sx, ty: sy, v: ((1 - r2) * threat(s, sx, sy) * 1.15 - r2 * lossCost) * (1 + b('thr') * 0.4 + b('rk') * 0.2) * [0.85, 1, 1.15][pass], risk: r2, rpress: recvPressure(M, s, sx, sy)[1] });
     }
   });
@@ -396,7 +427,10 @@ function carrierDecide(M, s, i, o = {}) {
       if (f < f1) { f2 = f1; f1 = f; } else if (f < f2) f2 = f;
     });
     const beat = 0.95 * f1 * f2;
-    opts.push({ k: 'carry', cx, cy, v: (beat * threat(s, cx, cy) * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1 });
+    // Rulebook 6.2: a centre-back with nobody within 10 m steps into midfield with the ball (a Ball-Playing
+    // Defender all the more), until someone comes out to him and frees a team-mate.
+    const cbStep = FORMATIONS[S.ip][i][0] === 'DC' && oy > 0.4 && dd > 10 ? 0.02 * (roleName(S, i) === 'Ball-Playing Defender' ? 1.5 : 1) : 0;
+    opts.push({ k: 'carry', cx, cy, v: cbStep + (beat * threat(s, cx, cy) * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1 });
     // Round the keeper when he comes out: Dribbling, Agility and Composure against his One on Ones.
     if (thru1 && gk1 && hyp(gk1.x - p.x, gk1.y - p.y) < 7 && dGoal(s, gk1.x, gk1.y) < d2g) {
       const pr = sigm((avg2(S, i, [['dri', 0.45], ['agi', 0.35], ['cmp', 0.2]]) - avg2(O, 0, [['one', 0.7], ['agi', 0.3]])) / 3 - 0.4);
@@ -617,16 +651,15 @@ function shoot(M, s, i, o = {}) {
   const S = M.sides[s], O = M.sides[1 - s], sim = M.sim, p = P_(M, s, i), pl = G.players[S.on[i]];
   if (!p || !pl) return looseBall(M);
   const press = o.press || 0;
-  let xg = o.pen ? 0.76 : xgAt(s, p.x, p.y);
-  if (o.head) xg *= 0.55 * (o.del ? 0.8 + o.del / 50 : 1);
+  let xg = o.pen ? 0.76 : chanceAt(M, s, p.x, p.y, { press, head: o.head }).xg; // 7.5
+  if (o.head && o.del) xg *= 0.8 + o.del / 50;
   if (o.fk) xg = clamp(0.06 * Math.exp(-(dGoal(s, p.x, p.y) - 18) / 12), 0.02, 0.1);
   // A one-on-one: nobody between him and the keeper.
   const oneOnOne = !o.pen && !o.head && !o.fk && oneOnOneAt(M, s, p.x, p.y);
-  if (oneOnOne) xg = Math.max(xg, 0.22 + R() * 0.12);
   if (o.open) xg = 0.72; // he has gone round the keeper
   const weak = !o.head && !o.pen && pl.foot !== 'Either' && R() < 0.25;
   if (weak) xg *= 0.8;
-  if (!o.pen) xg = clamp(xg * (1 - press * 0.3) * ENG.xg * tune('xgScale') * M.mod.xg * (s === 0 ? tune('homeShot') * M.mod.home : 1) * (1 + S.boost - O.guard), 0.01, 0.85);
+  if (!o.pen) xg = clamp(xg * ENG.xg * tune('xgScale') * M.mod.xg * (s === 0 ? tune('homeShot') * M.mod.home : 1) * (1 + S.boost - O.guard), 0.01, 0.85);
   S.st.sh++; S.st.xg += xg; pstat(S, i, 'sh');
   if (o.pen) S.st.pk++;
   const aid = o.aid != null ? o.aid : (sim.lastPass && sim.lastPass.s === s && sim.t - sim.lastPass.t < 6 && sim.lastPass.id !== pl.id ? sim.lastPass.id : null);
@@ -906,8 +939,11 @@ function challenges(M) {
     const front = (q.y - own.y) * fwdY(s) > 0.3 && d < 1.8;
     if (front && own.carry && sim.t - (q.toT || -9) >= 1) q.toT = sim.t;
     else if (front && own.carry) return;
-    const deep = toOwn(s, own.x, own.y)[1] < 0.4; // defenders commit more near their own goal
-    const go = front && own.carry ? 1 : (deep ? 0.45 : 0.32) * (1 + bh(O, j, 'tk') * 0.4) * (1 + ((O.press ?? 1) - 1) * 0.15) * (own.carry ? 1.3 : 1);
+    // 4.5: near his own box he delays, and only commits when the ball is exposed (the attacker facing away from
+    // goal) or a team-mate covers him; elsewhere he presses to win it.
+    const deep = toOwn(s, own.x, own.y)[1] < 0.4;
+    const exposed = own.vy * fwdY(s) < -0.5, covered = deep && sim.P[o].some((c, k) => c && k && k !== j && hyp(c.x - own.x, c.y - own.y) < 7 && (c.y - own.y) * fwdY(s) > (q.y - own.y) * fwdY(s));
+    const go = front && own.carry ? 1 : (deep ? (exposed || covered ? 0.45 : 0.16) : 0.32) * (1 + bh(O, j, 'tk') * 0.4) * (1 + ((O.press ?? 1) - 1) * 0.15) * (own.carry ? 1.3 : 1);
     if (go < 1 && R() > go * TICK * 2) return;
     // Foul? Rash challenges, poor tacklers, temperament, the weather; fewer in the box.
     const pl = G.players[O.on[j]], inBox = toOwn(s, own.x, own.y)[1] < 0.157 && Math.abs(own.x - PW / 2) < 20;
@@ -968,6 +1004,13 @@ function targets(M, all) {
       trig = own.vy * fw > 0.5 || pressureOn(M, s, B.oi)[0] < 0.4;
       for (let i = 1; i < P.length; i++) { const q = P[i]; if (!q || i === carrier) continue; if (LINE[ip[i][0]] >= 4 && q.vy * fw < -2) drop = true; if ((q.y - B.y) * fw < 0 && !(q.run > sim.t)) cover++; }
     }
+    // 4.7: the back line (its anchors after the unit step) sets the offside line for the whole side.
+    let backY = null;
+    if (!has) {
+      const ys = [], map = S.map || shapeMap(S.ip, S.oop);
+      for (let k = 1; k < P.length; k++) if (P[k] && pos[k] && LINE[FORMATIONS[S.oop][map[k]][0]] === 1) ys.push((s === 0 ? pos[k][1] * PL : (1 - pos[k][1]) * PL) + fw * unitStep);
+      if (ys.length) backY = ys.reduce((a, b) => a + b, 0) / ys.length;
+    }
     for (let i = 0; i < P.length; i++) {
       const p = P[i];
       if (!p || !pos[i] || i === carrier) continue;
@@ -979,7 +1022,9 @@ function targets(M, all) {
       const lineY = Y;
       if (i === 0) { // keeper: on his line, covering the angle; a sweeper higher behind a high line
         const ky = gy + fw * (1.5 + (by > 0.5 ? 0 : (S.line ?? 1) * 3 + bh(S, 0, 'sweep') * 6));
-        p.tx = has ? X : PW / 2 + (B.x - PW / 2) * 0.12; p.ty = has ? Y : ky; continue;
+        // 6.1: on the line from the middle of his goal to the ball, at his depth (at the near post for a tight angle).
+        const dep = Math.abs(ky - gy), kx = PW / 2 + (B.x - PW / 2) * dep / Math.max(dep + 0.1, Math.abs(B.y - gy));
+        p.tx = has ? X : clamp(kx, PW / 2 - 3.2, PW / 2 + 3.2); p.ty = has ? Y : ky; continue;
       }
       if (reserves.has(i)) p.run = 0; // the chosen cover cannot join an attacking run
       const running = p.run > sim.t;
@@ -1023,13 +1068,17 @@ function targets(M, all) {
         if (m > 0) {
           const q = T[m], qy = s === 0 ? q.y / PL : 1 - q.y / PL, danger = qy > 0.55; // near our goal (their attack)
           // Marking reads where his man is going (and stays goal-side of that), rather than standing on his toes.
-          const tight = (danger ? 2.2 : 3.6) - bh(S, i, 'mk') * 0.8 - attention(S, M.sides[1 - s].on[m]) * 0.4;
+          const box = qy > 0.8; // 4.8: in and around his own box he is goal-side and touch-tight
+          const tight = (box ? 1.4 : danger ? 2.2 : 3.6) - bh(S, i, 'mk') * (box ? 0.3 : 0.8) - attention(S, M.sides[1 - s].on[m]) * 0.4;
           const lead = clamp((ac(S, i, 'mar') - 4) * 0.06, 0, 1), px = q.x + q.vx * lead, py = q.y + q.vy * lead;
           const L = hyp(gx - px, gy - py) || 1, t2 = Math.max(1, tight);
           const mx = px + (gx - px) / L * t2, my = py + (gy - py) / L * t2;
-          const w = clamp((danger ? 0.55 : 0.35) + ac(S, i, 'pos') * 0.02 + (ac(S, i, 'tea') - 10) * 0.012 + bh(S, i, 'mk') * 0.15, 0.2, 0.92);
+          const w = clamp((box ? 0.78 : danger ? 0.55 : 0.35) + ac(S, i, 'pos') * 0.02 + (ac(S, i, 'tea') - 10) * 0.012 + bh(S, i, 'mk') * 0.15, 0.2, box ? 0.97 : 0.92);
           X += (mx - X) * w; Y += (my - Y) * w;
           if (defRole === 1 && by < .8) Y = clamp(Y, lineY - 1.5, lineY + 1.5);
+          // A midfielder tracks his runner up to the back line and passes him on (4.7); dropping behind it would
+          // play everyone onside and leave the line stranded.
+          else if (defRole >= 2 && backY != null && by < .8 && (backY - Y) * fw > 1) Y = backY - fw;
         }
       }
       // Individual support/search must not pull the reserved cover ahead of its team anchor.
@@ -1128,7 +1177,7 @@ function movePlayers(M) {
       if (carrier) { const O = sim.P[1 - s]; for (let j = 0; j < O.length; j++) { const q = O[j]; if (q && (q.x - p.x) * (q.x - p.x) + (q.y - p.y) * (q.y - p.y) < 9 && (q.y - p.y) * fwdY(s) > -0.5) { top *= 0.55; break; } } }
       // Sprint only when it matters: on the ball, making a run, pressing, going for a loose ball, a restart, or
       // getting back goal-side; otherwise jog into position (most of a match is jogging).
-      const urgent = carrier || p.run > sim.t || (p.boxRun || 0) > sim.t || p.eng === sim.t || p.chase === sim.t || sim.t < (p.want || 0) || (rs && d > 12) || (sim.poss !== s && (p.y - ty) * fwdY(s) > 21 - ac(M.sides[s], i, 'wor') * 0.6);
+      const urgent = carrier || p.run > sim.t || (p.boxRun || 0) > sim.t || p.eng === sim.t || p.chase === sim.t || sim.t < (p.want || 0) || (rs && d > 12) || (sim.poss !== s && (p.y - ty) * fwdY(s) > 21 - ac(M.sides[s], i, 'wor') * 0.6) || (sim.poss !== s && i > 0 && d > 1 && dGoal(1 - s, tx, ty) < 25) || (i === 0 && sim.poss !== s && d > 0.5 && dGoal(1 - s, B.x, B.y) < 35); // 4.8: defending his own box is never at a jog; 6.1: the keeper resets with every pass near his goal
       let want = urgent ? top : Math.min(top * (0.4 + ac(M.sides[s], i, 'wor') * 0.01), d / 2); // Work Rate: gets into position
       if (want > d / 0.6) want = d / 0.6;
       const vx = d > 0.2 ? dx / d * want : 0, vy = d > 0.2 ? dy / d * want : 0;

@@ -1,0 +1,378 @@
+1' HOME from middle/centre (4 passes)
+   ST@middle/centre --pass5m-> DM@middle/centre --pass20m-> DC@defensive/centre --pass14m-> MC@middle/R half --long35m-> GK@defensive/centre --clear38m->
+1' AWAY from middle/L half (5 passes) -> restart gk
+   AML@middle/L half --pass17m-> DC@defensive/L half --pass13m-> DM@middle/centre --pass6m-> MC@middle/L half --pass21m-> DL@defensive/L half --long33m->
+1' HOME from defensive/centre (12 passes)
+   GK@defensive/centre --pass12m-> DC@defensive/L half --pass23m-> DL@defensive/L wing --pass28m-> DM@defensive/centre --pass11m-> DC@defensive/L half --pass15m-> MC@middle/L half --long41m-> DR@defensive/R wing --pass15m-> AMR@defensive/R wing --pass30m-> MC@defensive/centre --pass17m-> DC@defensive/L half --pass22m-> GK@defensive/centre --pass30m-> MC@defensive/R half --pass10m->
+2' AWAY from final/L half (1 passes)
+   MC@final/L half --pass13m-> DM@middle/centre
+2' HOME from middle/centre (0 passes)
+   DM@middle/centre
+2' AWAY from middle/centre (0 passes)
+   DM@middle/centre
+2' HOME from middle/centre (0 passes)
+   DM@middle/centre
+2' AWAY from middle/centre (0 passes)
+   DM@middle/centre
+2' HOME from middle/centre (10 passes) -> restart ck
+   DM@middle/centre --long32m-> GK@defensive/centre --pass14m-> MC@defensive/centre --pass11m-> DC@defensive/R half --pass19m-> DR@defensive/R half --pass13m-> DC@defensive/R half --pass21m-> MC@middle/centre --long33m-> AML@middle/L half --pass5m-> ST@middle/L half --pass21m-> DC@middle/L half --long33m->
+3' AWAY from final/R wing (1 passes)
+   DL@final/R wing --cross35m->
+3' HOME from defensive/centre (0 passes) -> restart thr
+   DC@defensive/centre --clear25m->
+3' AWAY from middle/L wing (6 passes)
+   MC@middle/L wing --pass27m-> DL@middle/L half --long32m-> GK@defensive/centre --pass17m-> DC@defensive/R half --pass12m-> DR@defensive/R half --pass10m-> MC@middle/R half --pass8m-> DR@defensive/R half
+3' HOME from final/L half (5 passes)
+   ST@final/L half --pass25m-> ST@final/L half --pass17m-> MC@middle/L half --pass22m-> MC@final/centre --pass21m-> ST@final/L half --pass12m-> AML@final/centre
+4' AWAY from defensive/centre (5 passes)
+   GK@defensive/centre --clear37m-> ST@middle/R half --pass18m-> DC@defensive/R half --pass5m-> DR@defensive/R half --pass10m-> MC@middle/R half --pass11m-> AMR@middle/R wing --pass23m->
+4' HOME from middle/centre (7 passes)
+   DM@middle/centre --pass23m-> MC@middle/L half --pass25m-> DC@defensive/centre --pass8m-> DM@defensive/centre --pass7m-> DC@defensive/centre --pass5m-> DM@defensive/centre --pass20m-> MC@middle/centre --pass23m-> AML@middle/L half
+4' AWAY from middle/R half (0 passes)
+   DR@middle/R half DR@middle/R half
+4' HOME from middle/L half (21 passes) -> restart fk
+   AML@middle/L half --pass4m-> MC@middle/L half --pass16m-> MC@final/centre --long34m-> DL@middle/L half --pass8m-> DM@middle/L half --long43m-> ST@final/centre --pass16m-> MC@final/centre --pass11m-> DM@middle/centre --pass5m-> MC@final/centre --long40m-> DL@middle/L wing --pass12m-> MC@middle/L wing --pass6m-> DL@middle/L wing --pass21m-> DC@defensive/L half --pass16m-> DM@defensive/L half DM@defensive/L half --pass25m-> DC@defensive/R half --pass18m-> DR@defensive/R wing --pass23m-> MC@middle/R half --pass18m-> DM@middle/centre --pass17m-> DM@middle/centre --pass18m-> MC@defensive/L half --pass9m-> DC@defensive/L half --long41m-> AML@middle/L half
+5' AWAY from middle/R half (5 passes)
+   DR@middle/R half --pass8m-> DC@middle/R half --pass5m-> DM@defensive/centre DM@defensive/centre --pass24m-> DC@defensive/L half --long33m-> ST@middle/centre --pass5m-> AML@middle/centre
+6' HOME from middle/centre (4 passes)
+   DM@middle/centre --pass15m-> DR@middle/R half --pass24m-> DC@middle/centre --pass9m-> DR@middle/R half --pass29m->
+6' AWAY from middle/centre (1 passes)
+   MC@middle/centre --pass9m-> AML@middle/L half
+6' HOME from middle/R half (12 passes) -> restart gk
+   DM@middle/R half --pass10m-> DC@defensive/centre --pass13m-> DR@defensive/R half --pass25m-> DC@defensive/R half --long46m-> ST@final/centre --pass8m-> AML@final/centre --pass8m-> AMR@final/centre --pass16m-> DM@middle/centre --pass18m-> DC@middle/centre --pass9m-> DM@middle/centre --pass12m-> MC@middle/L half --long41m-> AMR@final/centre --thru7m->
+7' AWAY from defensive/centre (5 passes)
+   GK@defensive/centre --pass14m-> DC@defensive/L half --pass15m-> GK@defensive/centre --long37m-> MC@middle/R half --pass20m-> ST@middle/R half --pass24m->
+7' HOME from middle/centre (12 passes)
+   MC@middle/centre --pass22m-> ST@final/centre --pass15m-> MC@final/centre --pass8m-> DM@middle/centre --long34m-> DL@middle/L wing --pass22m-> MC@middle/L wing --pass5m-> DL@middle/L wing --long36m-> DC@defensive/centre --pass6m-> DM@defensive/centre --pass16m-> GK@defensive/centre --pass19m-> MC@defensive/centre --pass19m-> DM@defensive/centre --long48m->
+7' AWAY from middle/R wing (0 passes)
+   DR@middle/R wing
+7' HOME from middle/L wing (3 passes)
+   AML@middle/L wing --long32m-> DR@defensive/R wing --pass28m-> GK@defensive/centre --pass15m->
+7' AWAY from final/L half (0 passes)
+   ST@final/L half
+7' HOME from defensive/R half (2 passes) -> shot
+   DC@defensive/R half --long45m-> AMR@middle/centre --thru20m-> ST@final/centre --shot17m->
+8' AWAY from defensive/centre (2 passes)
+   GK@defensive/centre --pass17m-> DC@defensive/L half --pass14m-> MC@defensive/L half
+8' HOME from final/R half (3 passes)
+   MC@final/R half --pass12m-> ST@final/centre --pass5m-> AMR@final/R half --pass13m-> AMR@final/R half
+8' AWAY from defensive/L half (0 passes)
+   DL@defensive/L half
+8' HOME from final/R half (1 passes)
+   AMR@final/R half --long32m->
+8' AWAY from middle/centre (0 passes)
+   ST@middle/centre --clear12m-> ST@middle/centre
+8' HOME from middle/centre (7 passes) -> shot
+   DC@middle/centre --pass5m-> MC@middle/R half --pass9m-> DC@middle/centre --pass5m-> MC@middle/centre --long41m-> AML@final/L half --pass11m-> MC@final/centre --pass6m-> ST@final/centre --pass6m-> AMR@final/L half --shot12m->
+9' AWAY from defensive/centre (5 passes) -> restart fk
+   GK@defensive/centre --pass12m-> DC@defensive/L half --clear39m-> AMR@middle/R half --pass7m-> ST@middle/centre --pass4m-> DR@middle/R half DR@middle/R half DR@middle/R half --pass15m-> DC@defensive/R half --long35m->
+10' HOME from defensive/R wing (16 passes)
+   DR@defensive/R wing --pass20m-> DC@defensive/R half --pass19m-> DR@defensive/R wing --pass20m-> MC@middle/R half --pass16m-> DC@defensive/R half --long48m-> AML@middle/L wing --long35m-> DC@middle/centre --pass6m-> AMR@middle/R half --pass15m-> MC@middle/centre --pass6m-> DM@middle/centre --pass16m-> DC@defensive/centre --pass20m-> GK@defensive/centre --pass18m-> DC@defensive/R half --pass23m-> DR@defensive/R wing --pass28m-> DM@defensive/centre --long41m-> AML@middle/L half --thru29m->
+10' AWAY from defensive/centre (6 passes)
+   DC@defensive/centre --pass20m-> DL@defensive/L half --pass13m-> MC@middle/L half --pass24m-> DR@middle/centre --pass14m-> DC@defensive/R half --long38m-> ST@middle/centre --pass23m-> DM@middle/centre
+11' HOME from middle/R half (7 passes) -> shot
+   AMR@middle/R half --pass13m-> MC@middle/centre --thru20m-> MC@final/centre --pass12m-> AMR@middle/R half --pass15m-> AML@final/centre --pass17m-> MC@final/centre --pass7m-> AMR@final/R half --pass16m-> ST@final/centre --shot10m->
+12' AWAY from defensive/centre (2 passes)
+   GK@defensive/centre --pass12m-> DC@defensive/R half --pass14m-> MC@defensive/R half
+12' HOME from final/L half (0 passes)
+   AML@final/L half
+12' AWAY from defensive/R half (0 passes)
+   MC@defensive/R half
+12' HOME from final/L half (1 passes) -> shot
+   AML@final/L half --thru19m-> ST@final/centre --shot0m->
+12' AWAY from defensive/centre (0 passes)
+   GK@defensive/centre --clear35m-> ST@middle/centre
+12' HOME from middle/centre (19 passes)
+   MC@middle/centre MC@middle/centre --long36m-> DR@middle/R wing --pass18m-> DM@middle/R half --pass19m-> DC@defensive/R half --pass15m-> DM@defensive/R half --pass20m-> MC@middle/centre --long35m-> DR@defensive/R wing --pass9m-> DM@defensive/R half --pass28m-> GK@defensive/centre --pass17m-> DC@defensive/R half --pass23m-> DR@defensive/R wing --pass18m-> DC@defensive/R half --pass28m-> DC@defensive/L half --pass13m-> MC@middle/L half --pass17m-> MC@middle/centre --pass8m-> DM@defensive/centre --pass14m-> DC@defensive/R half --pass20m-> GK@defensive/centre --pass21m-> DM@defensive/centre --long33m->
+13' AWAY from middle/L half (0 passes)
+   DC@middle/L half
+13' HOME from middle/R half (6 passes)
+   MC@middle/R half --pass20m-> DC@defensive/R half --pass15m-> MC@middle/R half --pass16m-> DM@middle/centre --pass27m-> DR@defensive/R wing --pass11m-> DC@defensive/R half --long28m-> MC@middle/R half
+13' AWAY from middle/L half (2 passes)
+   DL@middle/L half --pass13m-> DM@middle/L half --long32m-> AMR@middle/R half
+13' HOME from middle/L half (1 passes)
+   DL@middle/L half --pass11m-> DL@middle/L half
+13' AWAY from middle/R half (1 passes)
+   AMR@middle/R half --pass6m->
+13' HOME from middle/L half (3 passes) -> restart fk
+   DL@middle/L half DL@middle/L half --pass6m-> MC@middle/L half --long39m-> DR@defensive/R wing --pass10m->
+13' AWAY from final/centre (0 passes)
+   ST@final/centre
+13' HOME from defensive/centre (2 passes) -> restart thr
+   DC@defensive/centre --long29m-> ST@middle/centre --long35m->
+14' AWAY from final/L wing (1 passes)
+   AML@final/L wing --pass19m->
+14' HOME from defensive/R half (4 passes) -> restart fk
+   MC@defensive/R half MC@defensive/R half --pass23m-> DC@defensive/R half --pass7m-> MC@defensive/R half --long49m-> AML@middle/L wing --thru40m-> AMR@final/centre
+14' AWAY from defensive/centre (1 passes)
+   DC@defensive/centre --long32m->
+14' HOME from middle/centre (1 passes)
+   DM@middle/centre --pass25m-> DC@middle/centre
+14' AWAY from middle/centre (0 passes)
+   ST@middle/centre
+14' HOME from middle/centre (1 passes)
+   MC@middle/centre --pass9m->
+14' AWAY from middle/centre (0 passes)
+   ST@middle/centre
+14' HOME from middle/centre (6 passes)
+   MC@middle/centre --pass22m-> DR@defensive/R wing --pass26m-> MC@middle/R half --long38m-> DC@defensive/L half --pass19m-> DL@defensive/L wing --pass17m-> DC@defensive/L half --long40m->
+15' AWAY from middle/L half (1 passes)
+   DL@middle/L half --pass25m->
+15' HOME from middle/R half (1 passes)
+   AMR@middle/R half --pass10m->
+15' AWAY from middle/centre (1 passes)
+   MC@middle/centre --pass10m->
+15' HOME from middle/R half (5 passes) -> shot
+   DC@middle/R half --pass15m-> AMR@middle/centre --pass16m-> MC@middle/L half --long35m-> AMR@final/R half --pass9m-> ST@final/R half --thru16m-> AMR@final/centre --shot5m->
+15' AWAY from defensive/centre (6 passes)
+   GK@defensive/centre --clear36m-> ST@middle/centre --pass7m-> MC@middle/centre --pass21m-> AMR@middle/R half --pass18m-> DC@defensive/R half --pass13m-> DR@middle/R half --pass25m-> DC@defensive/L half --long39m-> AML@middle/L half
+15' HOME from middle/R wing (9 passes)
+   DR@middle/R wing --pass18m-> DM@defensive/R half --pass7m-> DR@defensive/R half --pass5m-> DM@defensive/R half --long35m-> DL@middle/L half --pass17m-> AML@middle/L half --pass18m-> DC@defensive/L half --pass10m-> MC@middle/L half --pass14m-> DC@defensive/L half --long41m->
+16' AWAY from middle/L half (1 passes) -> restart fk
+   DL@middle/L half --pass14m->
+16' HOME from middle/R half (4 passes)
+   DC@middle/R half --pass13m-> DM@defensive/centre --pass28m-> DR@defensive/R wing --pass17m-> DC@defensive/R half --long45m->
+16' AWAY from middle/R wing (1 passes)
+   DR@middle/R wing --pass5m->
+16' HOME from middle/L half (1 passes)
+   AML@middle/L half --pass4m->
+16' AWAY from middle/R half (1 passes)
+   DR@middle/R half --pass6m->
+16' HOME from middle/L half (3 passes)
+   AML@middle/L half --pass9m-> MC@middle/L half --pass10m-> MC@middle/L half --long34m->
+16' AWAY from middle/L half (0 passes)
+   AML@middle/L half --clear32m->
+16' HOME from final/centre (1 passes) -> shot
+   AMR@final/centre --thru17m-> AML@final/L wing --shot13m->
+17' AWAY from defensive/centre (3 passes)
+   GK@defensive/centre --pass14m-> DC@defensive/L half --pass10m-> MC@defensive/L half --long48m->
+17' HOME from middle/L half (2 passes) -> shot
+   DL@middle/L half DL@middle/L half --pass27m-> MC@final/centre --pass25m-> AML@final/L half --shot15m->
+17' AWAY from defensive/centre (4 passes)
+   GK@defensive/centre --pass12m-> DC@defensive/R half --pass16m-> DR@defensive/R half --pass10m-> DC@defensive/R half --pass20m-> MC@defensive/R wing
+18' HOME from middle/L wing (3 passes)
+   AML@middle/L wing --pass23m-> DC@middle/centre --pass15m-> DC@middle/centre --pass20m-> DC@middle/R half
+18' AWAY from middle/L half (1 passes)
+   MC@middle/L half --pass11m->
+18' HOME from middle/R half (11 passes) -> restart fk
+   DC@middle/R half --pass7m-> DM@middle/centre --pass15m-> DC@defensive/centre --pass16m-> DM@defensive/centre --pass12m-> DC@defensive/R half --pass25m-> DM@defensive/centre --pass30m-> DR@defensive/R wing --pass17m-> DC@defensive/R half --pass14m-> MC@middle/R half MC@middle/R half --pass19m-> DR@defensive/R wing --pass16m-> DC@defensive/R half --pass19m-> DR@defensive/R wing
+18' AWAY from final/L wing (1 passes)
+   AML@final/L wing --long32m->
+19' HOME from defensive/centre (14 passes)
+   DC@defensive/centre --pass8m-> MC@defensive/L half --pass6m-> DL@defensive/L half --pass5m-> MC@defensive/L half --pass22m-> GK@defensive/centre --pass17m-> DC@defensive/L half --pass17m-> DL@defensive/L wing --pass15m-> DC@defensive/L half --long44m-> MC@middle/R half --pass8m-> AMR@middle/R half --pass17m-> DC@defensive/R half --pass13m-> DM@middle/centre --pass19m-> MC@middle/R half --long34m-> DC@defensive/L half --long47m-> ST@middle/centre
+19' AWAY from middle/centre (0 passes)
+   DR@middle/centre
+19' HOME from middle/centre (30 passes) -> restart fk
+   MC@middle/centre --long34m-> DR@middle/R half --pass11m-> AML@middle/R half AML@middle/R half --pass6m-> MC@middle/R half --pass17m-> DC@middle/R half --pass17m-> DM@middle/centre --pass7m-> DC@middle/R half --pass8m-> DM@middle/centre --pass17m-> DC@defensive/L half --pass22m-> DC@defensive/R half --pass16m-> DR@defensive/R wing --pass29m-> DM@defensive/centre --long33m-> MC@middle/L half --pass23m-> DM@middle/centre --pass12m-> DC@defensive/L half --pass22m-> DC@defensive/R wing --long61m-> AML@middle/L wing --pass5m-> MC@middle/L wing --pass15m-> DM@middle/L half --pass9m-> MC@defensive/L half --pass10m-> DL@defensive/L wing --pass24m-> DM@defensive/centre --pass10m-> DC@defensive/L half --pass12m-> DM@defensive/centre --pass19m-> DC@defensive/R half --pass18m-> DR@defensive/R wing --pass17m-> DC@defensive/R half --pass13m-> DM@defensive/centre --long52m-> ST@final/centre --pass5m-> AMR@final/centre --thru13m->
+21' AWAY from defensive/centre (2 passes)
+   GK@defensive/centre --pass19m-> DC@defensive/R half --clear33m-> ST@middle/centre --pass5m->
+21' HOME from middle/centre (2 passes) -> GOAL
+   DM@middle/centre --pass11m-> MC@middle/centre --long36m-> AMR@final/R half --shot10m->
+22' AWAY from middle/centre (1 passes)
+   ST@middle/centre --pass6m->
+22' HOME from middle/centre (2 passes)
+   ST@middle/centre --pass18m-> AMR@middle/R half --pass16m->
+22' AWAY from middle/L half (1 passes)
+   AML@middle/L half --pass11m->
+22' HOME from middle/R half (0 passes)
+   AMR@middle/R half
+22' AWAY from middle/L half (3 passes)
+   MC@middle/L half --pass20m-> DL@defensive/L half --pass9m-> DC@defensive/L half --long42m-> AML@middle/L wing
+22' HOME from middle/R wing (9 passes) -> restart thr
+   DR@middle/R wing --long33m-> MC@middle/centre MC@middle/centre --pass17m-> AML@middle/centre --pass5m-> MC@middle/centre --pass9m-> DC@middle/centre --pass8m-> DM@middle/centre --pass9m-> DC@defensive/centre --pass4m-> MC@middle/L half --long39m-> DR@defensive/R wing --pass4m-> MC@middle/R wing --clear10m->
+22' AWAY from middle/L wing (2 passes)
+   MC@middle/L wing --pass29m-> DC@middle/L half --pass9m-> DM@middle/centre
+23' HOME from middle/centre (4 passes) -> shot
+   AMR@middle/centre --pass6m-> DM@middle/centre --pass14m-> DC@middle/centre --long36m-> AMR@final/centre --shot21m-> DL@final/L wing --cross30m->
+23' AWAY from defensive/R half (3 passes)
+   DC@defensive/R half --clear37m-> ST@middle/centre --pass7m-> AML@middle/centre --pass9m-> DR@middle/R half --pass11m-> DM@middle/centre
+23' HOME from middle/centre (2 passes)
+   MC@middle/centre --pass8m-> MC@middle/centre --pass25m->
+23' AWAY from middle/centre (1 passes)
+   DM@middle/centre --pass8m-> MC@middle/centre
+23' HOME from middle/centre (7 passes) -> restart fk
+   AMR@middle/centre --pass16m-> DC@middle/R half --pass24m-> AMR@final/R half --pass17m-> DM@middle/centre --pass17m-> DC@middle/R half --pass12m-> DM@middle/centre --pass19m-> MC@middle/R half --pass15m->
+24' AWAY from defensive/centre (4 passes) -> restart fk
+   DC@defensive/centre --pass7m-> DL@defensive/L half --pass20m-> ST@middle/centre --pass13m-> MC@middle/R half MC@middle/R half --pass12m-> DM@middle/centre
+24' HOME from middle/centre (2 passes)
+   MC@middle/centre --pass7m-> MC@middle/L half --pass23m->
+25' AWAY from defensive/R half (1 passes)
+   DR@defensive/R half --clear45m-> ST@middle/centre --pass4m->
+25' HOME from middle/centre (0 passes)
+   DC@middle/centre
+25' AWAY from middle/centre (1 passes)
+   ST@middle/centre --pass14m->
+25' HOME from middle/centre (19 passes) -> shot
+   DC@middle/centre --pass12m-> MC@middle/centre --pass10m-> MC@middle/centre --pass14m-> DC@defensive/L half --pass11m-> MC@middle/L half --long37m-> AML@final/L half --pass12m-> MC@final/L half --cross13m-> DC@final/centre --shot1m-> DL@final/L wing --cross30m-> DC@final/centre --pass9m-> ST@final/centre --pass13m-> DM@middle/centre --pass6m-> DC@final/centre --pass6m-> DM@middle/centre --pass12m-> MC@middle/L half --pass19m-> DC@middle/centre --pass6m-> DM@middle/centre --long32m-> DR@middle/R wing --long34m-> DC@middle/L half --pass17m-> DL@defensive/L wing --long33m-> GK@defensive/centre --clear50m->
+26' AWAY from middle/R half (4 passes)
+   DR@middle/R half --pass14m-> MC@middle/R half --pass14m-> DR@middle/R half --pass9m-> DM@middle/centre --pass5m-> DR@middle/R half
+26' HOME from middle/centre (8 passes)
+   ST@middle/centre --pass17m-> MC@middle/centre --pass13m-> DM@middle/centre --pass18m-> DC@defensive/centre --pass11m-> DM@middle/centre --pass16m-> DC@defensive/centre --pass10m-> DM@defensive/centre --pass11m-> MC@middle/L half --long38m-> AMR@final/centre
+27' AWAY from defensive/centre (1 passes)
+   DC@defensive/centre --long36m->
+27' HOME from middle/L half (12 passes)
+   DL@middle/L half --clear15m-> DC@middle/centre --pass10m-> MC@middle/centre --pass13m-> DC@middle/centre --pass19m-> DR@middle/R wing --pass15m-> DC@defensive/R half --pass10m-> DM@defensive/centre --pass16m-> DC@defensive/L half --pass12m-> MC@middle/L half --long41m-> DR@defensive/R wing --pass6m-> MC@defensive/R wing --pass9m-> AMR@defensive/R wing --pass9m-> DC@defensive/R half --long47m->
+27' AWAY from middle/centre (3 passes)
+   MC@middle/centre --pass21m-> MC@middle/centre --pass25m-> DC@middle/centre --pass6m->
+27' HOME from middle/centre (1 passes)
+   DM@middle/centre ST@middle/centre --pass19m->
+27' AWAY from middle/centre (0 passes)
+   DM@middle/centre
+27' HOME from middle/centre (6 passes)
+   ST@middle/centre --long33m-> DL@defensive/L wing --pass17m-> DC@middle/L half --pass5m-> DM@middle/L half --pass13m-> MC@defensive/L wing --pass12m-> DC@defensive/L half --long34m->
+28' AWAY from middle/R wing (0 passes)
+   DC@middle/R wing
+28' HOME from middle/L wing (6 passes) -> restart thr
+   AML@middle/L wing --long38m-> DC@middle/R half --pass10m-> DR@defensive/R wing --pass28m-> DC@middle/R half --pass9m-> DR@defensive/R wing --pass11m-> DC@defensive/R half --long49m->
+28' AWAY from middle/R wing (14 passes)
+   DR@middle/R wing --pass25m-> DC@defensive/R half --pass16m-> DR@middle/R wing --pass17m-> DC@defensive/R half --long45m-> MC@middle/L half --pass8m-> ST@middle/L half --pass8m-> MC@middle/L half --pass26m-> AML@final/centre --pass7m-> ST@final/centre --pass9m-> DM@middle/centre --pass10m-> MC@final/centre --pass6m-> DR@middle/R half --pass13m-> DC@middle/R half --pass21m-> DC@middle/centre --pass12m->
+29' HOME from middle/centre (20 passes) -> restart fk
+   MC@middle/centre --long35m-> DM@defensive/centre --pass6m-> AMR@defensive/centre --pass18m-> DL@middle/L half --pass25m-> MC@defensive/centre --pass18m-> ST@middle/centre --pass16m-> DM@defensive/centre --pass12m-> DC@defensive/centre --pass20m-> DR@defensive/R wing DR@defensive/R wing --pass21m-> MC@middle/R half --pass30m-> DC@defensive/centre --pass8m-> MC@middle/L half --long41m-> DR@defensive/R wing --pass11m-> AMR@middle/R wing --pass12m-> MC@defensive/R half --pass25m-> GK@defensive/centre --pass16m-> DC@defensive/R half --pass17m-> GK@defensive/centre --pass16m-> DC@defensive/R half --pass23m-> DR@defensive/R wing --pass19m-> DC@defensive/R half
+30' AWAY from final/L half (0 passes) -> shot
+   ST@final/L half --shot31m->
+30' HOME from defensive/centre (9 passes)
+   GK@defensive/centre --pass13m-> DC@defensive/R half --pass16m-> MC@middle/centre --long37m-> AML@final/L wing --pass17m-> AMR@final/centre --pass17m-> ST@middle/L wing --pass22m-> DL@middle/L wing --long35m-> DC@middle/centre --pass5m-> ST@middle/centre --long36m-> DL@defensive/L wing
+30' AWAY from final/R wing (1 passes)
+   AMR@final/R wing --pass20m->
+30' HOME from defensive/L half (22 passes)
+   DM@defensive/L half --pass6m-> DC@defensive/L wing --pass5m-> DL@defensive/L wing --long34m-> AML@middle/L half --long38m-> DC@middle/centre --pass10m-> DM@defensive/centre --pass20m-> DC@defensive/L half --pass25m-> GK@defensive/centre --pass19m-> DC@defensive/L half --pass18m-> DL@defensive/L wing --pass28m-> DM@defensive/centre --long30m-> MC@middle/centre --long38m-> DL@defensive/L wing --pass27m-> ST@middle/centre --pass20m-> DC@defensive/L half --pass14m-> DL@defensive/L wing --long34m-> GK@defensive/centre --pass16m-> DC@defensive/R half --pass18m-> ST@middle/centre --pass15m-> DC@defensive/R half --pass22m-> MC@middle/R half --pass22m-> DM@defensive/centre --long29m->
+31' AWAY from middle/centre (0 passes)
+   DC@middle/centre DC@middle/centre
+31' HOME from middle/centre (2 passes)
+   ST@middle/centre --pass6m-> MC@middle/centre --pass24m->
+31' AWAY from middle/centre (5 passes)
+   DM@middle/centre --pass11m-> DC@middle/centre --pass7m-> DM@middle/centre --pass18m-> MC@middle/R half --pass16m-> DC@defensive/R half --pass17m-> MC@middle/centre
+32' HOME from middle/centre (3 passes)
+   MC@middle/centre --pass4m-> AMR@middle/R half --pass17m-> DC@middle/centre --pass21m->
+32' AWAY from middle/centre (0 passes)
+   ST@middle/centre ST@middle/centre
+32' HOME from middle/centre (1 passes)
+   DC@middle/centre --pass8m->
+32' AWAY from middle/centre (0 passes)
+   ST@middle/centre
+32' HOME from middle/centre (1 passes)
+   DC@middle/centre --pass27m->
+32' AWAY from middle/centre (0 passes)
+   ST@middle/centre
+32' HOME from middle/centre (0 passes)
+   DC@middle/centre
+32' AWAY from middle/centre (2 passes) -> restart fk
+   MC@middle/centre MC@middle/centre --pass12m-> ST@middle/centre --pass16m->
+32' HOME from middle/centre (2 passes) -> shot
+   ST@middle/centre --pass13m-> MC@middle/L half --thru29m-> MC@final/centre --shot22m->
+33' AWAY from defensive/centre (5 passes)
+   GK@defensive/centre --pass12m-> DC@defensive/L half --clear31m-> ST@middle/centre --pass5m-> AML@middle/centre --pass19m-> DL@defensive/L half --pass10m-> DC@defensive/L half --long36m->
+33' HOME from middle/centre (11 passes)
+   DM@middle/centre --pass7m-> DC@middle/centre --pass14m-> DC@middle/R half --pass14m-> DC@middle/centre --pass31m-> DR@defensive/R wing --pass12m-> DC@defensive/R half --long33m-> MC@middle/R half --long36m-> AML@final/L half --long34m-> DC@middle/L half --pass20m-> DL@defensive/L wing --pass22m-> DM@middle/centre --long33m->
+33' AWAY from middle/L half (3 passes)
+   DM@middle/L half --long34m-> GK@defensive/centre --pass16m-> MC@defensive/centre --long34m->
+33' HOME from middle/centre (4 passes)
+   DM@middle/centre --pass23m-> DR@middle/R half --pass12m-> DC@defensive/centre --pass14m-> DM@middle/centre --pass15m->
+33' AWAY from middle/centre (1 passes)
+   DM@middle/centre --pass10m->
+34' HOME from middle/centre (7 passes)
+   DM@middle/centre --pass15m-> DR@defensive/R half --pass14m-> MC@middle/R half --pass23m-> DC@defensive/R half --pass18m-> DR@defensive/R wing --pass16m-> DM@defensive/centre --long38m-> ST@final/centre --thru13m->
+34' AWAY from defensive/centre (21 passes)
+   DL@defensive/centre --clear42m-> AML@middle/L half --pass7m-> ST@middle/L wing --pass15m-> MC@defensive/L half --pass8m-> DC@defensive/L half --long51m-> AMR@middle/R wing --pass9m-> MC@middle/R wing --pass17m-> DC@middle/R half --pass24m-> DR@middle/R half --pass10m-> DM@middle/centre --pass18m-> MC@middle/L half --long35m-> MC@middle/R half --pass28m-> DC@middle/centre DC@middle/centre --pass7m-> DR@middle/R half --pass21m-> MC@middle/centre --pass19m-> DL@defensive/L half --long49m-> AMR@final/R half --pass7m-> MC@middle/R wing --pass5m-> AML@middle/R half --pass19m-> DC@middle/R half --pass10m-> DM@middle/centre --pass9m-> DM@middle/centre --pass18m->
+35' HOME from middle/centre (29 passes)
+   DC@middle/centre --pass6m-> DC@middle/centre --pass16m-> DM@middle/centre --pass25m-> DR@defensive/R wing --pass23m-> ST@middle/centre --pass7m-> MC@middle/L half --pass15m-> DC@defensive/L half --pass10m-> DM@defensive/centre --long47m-> AML@final/L wing --long32m-> DL@middle/L wing --pass14m-> ST@middle/L wing --pass26m-> DC@defensive/L half --pass22m-> DC@defensive/centre --pass17m-> MC@middle/centre --long34m-> DC@defensive/L half --pass7m-> DM@defensive/L half --pass17m-> DL@defensive/L wing --pass18m-> DC@defensive/L half --long30m-> ST@middle/L half --pass7m-> MC@middle/L half --long38m-> DC@defensive/centre --pass7m-> AML@defensive/centre --pass17m-> DC@defensive/L half --pass16m-> DL@defensive/L wing --pass14m-> DM@defensive/L half --pass9m-> DC@defensive/L half --long34m-> AML@middle/L half --pass28m-> DL@middle/L wing --long32m-> DC@defensive/centre --long38m->
+36' AWAY from middle/R half (0 passes)
+   DC@middle/R half
+36' HOME from middle/L half (9 passes) -> shot
+   ST@middle/L half --pass4m-> AML@middle/centre --pass13m-> DM@middle/centre --pass9m-> DR@middle/centre --pass12m-> DC@defensive/centre --pass16m-> DC@defensive/L half --pass11m-> MC@middle/L half --pass25m-> AML@final/L half --thru19m-> AMR@final/R half --cross16m-> ST@final/centre --shot5m->
+36' AWAY from defensive/centre (0 passes)
+   GK@defensive/centre
+36' HOME from final/centre (0 passes) -> shot
+   ST@final/centre --shot2m->
+36' AWAY from defensive/centre (0 passes)
+   GK@defensive/centre
+36' HOME from final/centre (0 passes) -> GOAL
+   ST@final/centre --shot4m->
+37' AWAY from middle/centre (2 passes)
+   ST@middle/centre --pass17m-> DC@middle/centre --pass9m->
+37' HOME from final/centre (1 passes)
+   MC@final/centre MC@final/centre --pass17m->
+37' AWAY from defensive/centre (0 passes)
+   DC@defensive/centre
+37' HOME from final/centre (4 passes) -> shot
+   MC@final/centre --pass16m-> MC@middle/centre --pass13m-> MC@middle/R half --pass15m-> DM@middle/centre --long35m-> ST@final/centre --shot23m->
+38' AWAY from defensive/centre (4 passes)
+   GK@defensive/centre --pass20m-> DC@defensive/L half --clear39m-> ST@middle/centre --pass6m-> MC@middle/centre --pass7m-> DM@middle/centre --pass13m-> MC@middle/L half
+38' HOME from middle/R half (2 passes)
+   DC@middle/R half --pass10m-> MC@middle/centre --pass17m-> AMR@final/R wing
+38' AWAY from middle/L wing (5 passes)
+   DL@middle/L wing --pass18m-> DL@middle/L wing --pass12m-> MC@defensive/L half --pass9m-> DC@defensive/L half --pass13m-> DM@defensive/centre --long41m->
+38' HOME from defensive/R half (4 passes)
+   DR@defensive/R half --pass28m-> MC@middle/R half --pass29m-> DC@middle/centre --pass8m-> DM@middle/centre --pass13m-> MC@middle/centre
+38' AWAY from middle/centre (0 passes)
+   MC@middle/centre
+38' HOME from middle/centre (0 passes)
+   MC@middle/centre
+38' AWAY from middle/centre (0 passes)
+   MC@middle/centre
+38' HOME from middle/centre (12 passes)
+   MC@middle/centre --pass30m-> DM@defensive/centre --pass10m-> DC@defensive/centre --pass19m-> DL@defensive/L wing --pass15m-> DC@defensive/L half --pass12m-> DM@defensive/centre --pass18m-> DC@defensive/R half --pass19m-> DR@defensive/R wing --pass24m-> DM@defensive/centre --pass21m-> DC@defensive/L half --pass18m-> DL@defensive/L wing --pass17m-> DC@defensive/L half --long42m-> MC@middle/R half
+39' AWAY from middle/L half (0 passes)
+   AML@middle/L half
+39' HOME from middle/R half (3 passes)
+   MC@middle/R half --pass5m-> AMR@middle/centre --pass14m-> ST@middle/centre ST@middle/centre --pass8m->
+39' AWAY from middle/centre (3 passes)
+   DM@middle/centre --pass5m-> MC@middle/centre --pass13m-> DL@defensive/L half --pass8m->
+39' HOME from final/R half (1 passes)
+   ST@final/R half --thru29m-> AML@final/L half
+39' AWAY from defensive/R half (0 passes)
+   DC@defensive/R half --clear48m->
+39' HOME from middle/L wing (0 passes) -> restart thr
+   DC@middle/L wing --clear10m->
+39' AWAY from middle/R wing (0 passes) -> restart thr
+   DR@middle/R wing --clear7m->
+40' HOME from middle/L wing (1 passes)
+   AML@middle/L wing --pass20m->
+40' AWAY from middle/R wing (0 passes) -> restart thr
+   DR@middle/R wing --clear11m->
+40' HOME from middle/L wing (1 passes)
+   AML@middle/L wing --pass20m->
+40' AWAY from middle/R half (3 passes)
+   MC@middle/R half --pass24m-> DC@middle/centre --pass13m-> DL@defensive/L half --long41m->
+40' HOME from middle/L half (11 passes)
+   DL@middle/L half --long35m-> DR@middle/R half --pass27m-> DC@middle/centre --pass22m-> AMR@middle/R wing --long32m-> MC@middle/centre --pass8m-> DM@middle/centre --pass10m-> ST@middle/L half --pass21m-> DC@defensive/centre --pass5m-> DM@middle/centre --pass17m-> DC@defensive/R half --pass18m-> MC@middle/centre --long37m->
+41' AWAY from defensive/R half (11 passes)
+   DR@defensive/R half --pass24m-> GK@defensive/centre --pass20m-> DC@defensive/L half --pass12m-> DL@defensive/L half --pass10m-> MC@defensive/L half --pass13m-> DC@defensive/L half --pass11m-> DM@defensive/centre --long47m-> AMR@final/R half --pass4m-> ST@middle/R half --pass5m-> MC@middle/R half --pass18m-> DC@middle/R half --pass23m->
+41' HOME from middle/L half (5 passes)
+   ST@middle/L half --pass11m-> DM@middle/centre --pass5m-> AML@middle/centre --pass10m-> MC@middle/L half --long32m-> ST@final/centre --thru5m->
+41' AWAY from defensive/R half (3 passes)
+   DC@defensive/R half --pass20m-> MC@defensive/centre --pass20m-> ST@middle/centre --pass12m->
+41' HOME from middle/centre (3 passes)
+   DM@middle/centre --pass13m-> DC@middle/centre --pass30m-> DR@middle/R wing --pass24m-> MC@middle/R half
+41' AWAY from middle/L half (0 passes)
+   DC@middle/L half
+41' HOME from middle/R half (12 passes)
+   MC@middle/R half --long40m-> DL@middle/L half --long32m-> DC@defensive/centre --pass10m-> MC@middle/R half --long33m-> DC@defensive/L half --pass5m-> MC@defensive/L half --pass29m-> DC@defensive/R half --pass10m-> MC@middle/R half --pass31m-> DC@defensive/L half --pass10m-> DM@defensive/centre --pass11m-> MC@middle/centre --long39m-> ST@final/centre --pass6m->
+42' AWAY from defensive/centre (0 passes)
+   DC@defensive/centre
+42' HOME from final/centre (15 passes) -> restart fk
+   AMR@final/centre --pass4m-> MC@middle/centre --long37m-> DR@middle/R wing --pass16m-> DM@middle/R half --pass4m-> DC@middle/R half --pass14m-> MC@middle/centre --pass22m-> DM@middle/centre --pass25m-> DR@defensive/R wing DR@defensive/R wing --pass28m-> MC@middle/centre --long32m-> DR@defensive/R wing --pass11m-> DC@defensive/centre DC@defensive/centre --pass9m-> DM@defensive/centre --pass16m-> DC@defensive/L half --pass19m-> DL@defensive/L wing --pass21m-> DM@defensive/L half --long39m->
+43' AWAY from middle/R wing (0 passes) -> restart thr
+   DR@middle/R wing --clear10m->
+43' HOME from middle/L wing (6 passes)
+   AML@middle/L wing --pass20m-> DL@defensive/L wing --pass24m-> DM@middle/centre --long36m-> DR@defensive/R wing --pass16m-> DC@defensive/R half --pass13m-> MC@defensive/R wing --long52m-> AML@middle/L half
+43' AWAY from middle/R half (2 passes)
+   DR@middle/R half --pass12m-> DR@middle/R half --pass12m->
+43' HOME from middle/L half (8 passes)
+   AML@middle/L half AML@middle/L half --long33m-> DR@defensive/R half --pass12m-> DC@defensive/centre --pass17m-> DR@defensive/R wing --pass17m-> MC@middle/R half --pass11m-> DM@defensive/centre --pass14m-> MC@middle/R half --long37m-> GK@defensive/centre --pass8m->
+44' AWAY from final/centre (1 passes) -> shot
+   ST@final/centre --shot1m-> DL@final/R wing --cross35m->
+44' HOME from defensive/centre (3 passes)
+   DC@defensive/centre --clear30m-> ST@middle/R half --long34m-> DC@middle/L half --pass7m-> AMR@middle/L half --long36m->
+44' AWAY from defensive/centre (0 passes)
+   DC@defensive/centre
+44' HOME from final/centre (0 passes)
+   ST@final/centre
+44' AWAY from defensive/centre (1 passes)
+   DC@defensive/centre --long29m->
+45' HOME from middle/centre (0 passes)
+   DM@middle/centre --clear18m->
+45' AWAY from middle/L half (0 passes)
+   AML@middle/L half
+45' HOME from middle/R half (18 passes) -> restart fk
+   AMR@middle/R half --pass5m-> DC@middle/R half --pass13m-> DM@middle/centre --pass18m-> DC@middle/centre --pass17m-> DC@middle/centre --pass20m-> DC@defensive/L half --pass9m-> MC@defensive/L half --pass24m-> DM@defensive/centre --pass16m-> MC@middle/centre --long35m-> DL@defensive/L wing DL@defensive/L wing --pass22m-> DM@defensive/centre --pass11m-> DC@defensive/L half --pass15m-> MC@middle/L half --long32m-> DC@defensive/R half --long53m-> AML@middle/L wing --pass7m-> ST@middle/L half --pass18m-> DC@middle/L half --pass16m-> DM@defensive/centre --long37m->
