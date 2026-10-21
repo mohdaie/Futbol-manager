@@ -34,7 +34,7 @@ ACT.newsView = ds => { UI.tab.nv = ds.v; render(); };
 function pressCard() {
   const reqs = (G.media.req || []).filter(r => !r.done && G.players[r.pid]), po = staffOf('Press')[0];
   return `<div class="card"><h3>Press Officer <small>${po ? esc(po.name) + ' · rating ' + po.rating : 'Vacant'}</small></h3>
-    ${reqs.length ? reqs.map(r => { const p = G.players[r.pid]; return `<div class="preq"><p><b>${esc(fullName(p))}</b>${r.acc ? ` · ${esc(mediaAcc(r.acc).name)}` : ''}</p>${r.txt ? `<p class="muted">"${esc(r.txt)}"</p>` : ''}
+    ${reqs.length ? reqs.map(r => { const p = G.players[r.pid]; return `<div class="preq"><p><b>${esc(fullName(p))}</b>${r.acc ? ` · ${esc(mediaAcc(r.acc).name)}` : ''}</p>${r.txt ? `<p class="muted">"${esc(r.txt)}"</p>` : ''}${(() => { const w = pressWords(r); return w ? `<blockquote class="aiq">${esc(w)}</blockquote>` : ''; })()}
       <div class="btns col">${STATEMENTS[r.kind].map(([k, t, d]) => `<button class="btn wide ${k === r.advice ? 'pri' : ''}" data-a="press" data-id="${r.id}" data-k="${k}"><span>${esc(t)}${k === r.advice ? ' · advised' : ''}</span><small>${esc(d)}</small></button>`).join('')}</div></div>`; }).join('') : '<p class="muted">No statements needed. He answers the press when your players or targets are in the rumours, and keeps quiet talks quiet.</p>'}</div>`;
 }
 ACT.press = ds => { const msg = pressAnswer(+ds.id, ds.k); saveGame(); toast(msg); if (UI.popup) closeSheet(true); render(); };
