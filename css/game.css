@@ -698,3 +698,25 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .banner.dl b { color: #FF8A8A; }
 .dr-cal.dl .dr-wd { color: #FFD2DD; opacity: 1; }
 .aiq { margin: 6px 0 8px; padding: 8px 12px; border-left: 3px solid var(--amber); background: rgba(127,127,127,.1); border-radius: 0 8px 8px 0; font-style: italic; }
+
+/* Assistant's daily club briefing */
+.assistant-brief { border-top: 3px solid var(--amber); }
+.assistant-brief .dcard-h small { display: block; margin-top: 4px; opacity: .65; }
+.brief-summary { font-size: 14px; line-height: 1.6; margin: 12px 0; }
+.brief-priority { display: grid; gap: 5px; width: 100%; padding: 12px; border: 1px solid #F5C51855; border-radius: 12px; background: #F5C5180B; text-align: left; }
+.brief-priority > small { color: var(--warn); }
+.brief-priority > span, .brief-department > p { font-size: 12px; line-height: 1.5; opacity: .8; }
+.assistant-brief .lbl { margin: 12px 0 7px; font-size: 11px; }
+.assistant-brief .chips { flex-wrap: wrap; overflow: visible; gap: 6px; }
+.assistant-brief .chip { white-space: normal; text-align: left; font-size: 11px; min-height: 36px; padding: 8px 10px; }
+.brief-attention .chip { border-color: #F5C51866; }
+.brief-healthy .chip { border-color: #2BD46A55; }
+.brief-details { margin-top: 14px; font-size: 12px; }
+.brief-details summary { cursor: pointer; padding: 8px 0; }
+.brief-department { display: grid; gap: 6px; width: 100%; text-align: left; padding: 12px 0; border: 0; border-bottom: 1px solid #FFFFFF12; background: transparent; }
+.brief-department b { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 13px; }
+.brief-department small, .brief-department .link { font-size: 11px; }
+.brief-department p { margin: 0; }
+.brief-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.brief-footer > small { flex: 1; min-width: 150px; opacity: .6; font-size: 10px; }
+.brief-footer .link { font-size: 11px; min-height: 32px; }
