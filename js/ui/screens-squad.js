@@ -69,7 +69,7 @@ function playerSheet(pid) {
   sheet(`<div class="phead">
       <div class="pnum" style="--k1:${G.clubs[p.club].c1}">${p.no || '-'}</div>
       <div class="grow"><h3 class="sh-t" data-no-links>${esc(fullName(p))}</h3><p class="muted">${POS_NAME[p.pos]}${p.alt.length ? ' / ' + p.alt.join(', ') : ''} · ${p.age} · ${natName(p.nat)} · ${p.foot} foot${mine ? ' · ' + LEVELS[lvlOf(p)] : ''}</p>
-        <p class="pclub">${badge(p.club, 18)} ${esc(clubName(p.club))}${p.inj ? ` · <em class="tag bad">${esc(p.inj.n)}, ${p.inj.w} wk</em>` : ''}${p.ban ? ' · <em class="tag bad">Suspended</em>' : ''}</p></div>
+        <p class="pclub">${badge(p.club, 18)} ${esc(clubName(p.club))}${p.inj ? ` · <em class="tag bad">${esc(p.inj.n)}, ${p.inj.w} wk</em>` : ''}${p.ban ? ' · <em class="tag bad">Suspended</em>' : ''}${(mine || knowOf(p) >= 90) && unsetLabel(p) ? ` · <em class="tag warn">${esc(unsetLabel(p))}</em>` : ''}</p></div>
       <div class="pov"><small>Rating</small>${ovrPill(so.v, so.txt)}<em>${so.txt === '??' ? 'Unknown' : ratingRemark(so.v)}</em><small>Potential</small>${mine || potKnown(p) ? `${starHtml(pot)}<em>${potRemark(pot)}</em>` : '<b class="unk">?</b><em>Not scouted</em>'}</div></div>
     ${mine ? `<div class="meters"><div><small>Condition</small>${bar(p.cond, condClass(p.cond))}</div><div><small>Morale · ${morLabel(p.mor)}</small>${bar(p.mor, morClass(p.mor))}</div><div><small>Match sharpness</small>${bar(p.shp)}</div></div>` : ''}
     ${tabs('ps', [['attr', 'Attributes'], ['bio', 'Personal'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
@@ -166,7 +166,8 @@ ACT.talk1 = ds => {
   if (ds.k === 'praise') { d = r >= 7 ? 6 : r >= 6.7 ? 2 : -3; msg = d > 0 ? 'He appreciates the recognition.' : 'He feels the praise is not deserved.'; }
   if (ds.k === 'crit') { const tough = ['Professional', 'Determined', 'Model Citizen'].includes(p.pers); d = r < 6.6 ? (tough ? 4 : -2) : -7; msg = d > 0 ? 'He accepts the criticism and promises to work harder.' : 'He reacts badly to the criticism.'; }
   if (ds.k === 'time') { d = 5; p.promise = G.week + 8; msg = 'He is pleased and will expect more minutes over the next two months.'; }
-  if (ds.k === 'future') { d = 0; msg = p.mor > 65 ? 'He is happy here and wants to stay.' : p.mor > 40 ? 'He is unsure. Regular football would help.' : 'He is unhappy and would consider leaving.'; }
+  if (ds.k === 'future' && (p.treq || p.unset)) { d = p.unset && p.unset.lvl < 2 ? 2 : 0; if (p.unset && p.unset.lvl < 2) p.unset.lvl = Math.max(0, p.unset.lvl - 0.5); msg = p.treq ? 'He wants to leave. He has asked for a transfer.' : p.unset.lvl >= 2 ? `He admits the ${clubName(p.unset.to)} interest has turned his head.` : `He was flattered by the ${clubName(p.unset.to)} talk, but your chat settles him.`; }
+  else if (ds.k === 'future') { d = 0; msg = p.mor > 65 ? 'He is happy here and wants to stay.' : p.mor > 40 ? 'He is unsure. Regular football would help.' : 'He is unhappy and would consider leaving.'; }
   p.mor = clamp(p.mor + d, 0, 100);
   closeSheet(true); toast(msg); playerSheet(p.id);
 };

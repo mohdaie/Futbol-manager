@@ -83,6 +83,7 @@ function dealMedia(d, ev) {
   if (ev === 'done') { post('off:' + d.to, `✍️ ${n} is a ${to} player! Welcome to the club.`, { ...o, kind: 'done', hot: 2, react: true }); }
   if (ev === 'off') post(pickAcc(accsOf([1, 2], ['journalist']), s).id, `Talks between ${to} and ${from} over ${n} have collapsed. ❌`, { ...o, kind: 'off' });
   if (ev === 'bid') post(pickAcc(accsOf([2, 3]), s).id, `${to} have made an offer for ${n}. ${from} considering it.`, { ...o, kind: 'talks' });
+  if (['talks', 'approach', 'leak', 'agreed', 'bid'].includes(ev)) transferBuzz(p, d.dir === 'out' ? d.to : d.to, ev === 'agreed' || ev === 'bid');
   if (clubs.includes(G.club) && ['talks', 'approach', 'leak', 'bid'].includes(ev)) pressRequest(p, d.dir === 'in' ? 'target' : 'ours', G.social[0]);
 }
 
@@ -109,6 +110,7 @@ function falseRumour(i) {
   const pt = post(acc.id, lines[Math.floor(hash01(s + 'x') * lines.length)], { pid: p.id, clubs: [to.id, p.club], kind: 'rumour', real: false, react: true });
   (G.rumours || (G.rumours = [])).unshift({ date: today().getTime(), pid: p.id, to: to.id, txt: pt.txt, acc: acc.id, real: false });
   G.rumours.length = Math.min(G.rumours.length, 60);
+  transferBuzz(p, to.id, false);
   if (p.club === G.club) pressRequest(p, 'ours', pt);
 }
 
@@ -146,6 +148,7 @@ function pressAnswer(id, choice) {
   if (choice === 'listen') { p.listed = true; p.media = { k: 'listen', day: dayAbs() }; }
   if (choice === 'confirm') { const d = activeDeal(p.id, 'in'); if (d) { d.will = null; d.pub = true; d.ask = d.ask ? roundMoney(d.ask * 1.05) : d.ask; dealLog(d, 'You confirmed your interest in public.', 'you'); } p.media = { k: 'confirm', day: dayAbs() }; }
   if (choice === 'deny') { const d = activeDeal(p.id, 'in'); if (d) dealLog(d, 'You denied any interest in public.', 'you'); p.media = { k: 'deny', day: dayAbs() }; }
+  statementMood(p, choice);
   post('off:' + G.club, `Club statement on ${fullName(p)}: "${st[1]}."`, { pid: p.id, clubs: [G.club], kind: 'statement', react: true });
   G.news.forEach(n => { if (n.action && n.action.t === 'press' && n.action.id === id) n.done = true; });
   return `Statement released: "${st[1]}."`;

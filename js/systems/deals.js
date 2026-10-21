@@ -321,12 +321,14 @@ function completeIn(d) {
   if (d.clause) p.rc = d.clause;
   if (d.add) G.addOns.push({ pid: p.id, to: from.id, amount: d.add, apps: 25 });
   agentRelMove(p, 8, `Completed ${fullName(p)}'s move`);
+  signingMood(p, d.fee || 0, d.wage);
   dealMedia(d, 'done');
   closeDeal(d, true, `${fullName(p)} has signed: ${dealSummary(d)}.`, false);
   return `${fullName(p)} signs for the ${me.name}.`;
 }
 function completeOut(d) {
   const p = G.players[d.pid];
+  saleMood(p, d.to);
   sellPlayer(p, d.to, d.fee);
   if (p.sellOn && G.clubs[p.sellOn.club]) { const cut = roundMoney(d.fee * p.sellOn.pct / 100); userClub().bal -= cut; G.clubs[p.sellOn.club].bal += cut; }
   agentRelMove(p, 4, `Sanctioned ${fullName(p)}'s move`);
@@ -383,6 +385,7 @@ function bidForUser(b, p, fee) {
     d.stage = 'terms'; d.next = wait(1, 2);
     return dealNews(d, `Release clause met: ${pname(p)}`, `The ${b.name} have triggered ${fullName(p)}'s ${money(p.rc)} release clause. You cannot refuse; he is talking to them.`, true);
   }
+  transferBuzz(p, b.id, true);
   const val = pValue(p), key = isKeyPlayer(p);
   const advice = fee >= val * 1.25 ? 'A strong offer. I would accept.' : key ? 'He is a key player. I would reject or ask for more.' : fee >= val * 0.95 ? 'A fair offer.' : 'Below his value. Ask for more.';
   dealLog(d, `The ${b.name} offer ${money(fee)} for ${fullName(p)} (valued at ${money(val)}). Director of Football: ${advice}`, 'club');

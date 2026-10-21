@@ -528,3 +528,13 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - **Meeting approaches**: quiet talks, open approach, or leak to the press (keener player, higher price).
 - **Transfer centre**: window banner, Press Officer statements, here-we-go posts, talks in progress around the league, the rumour mill, done deals and collapsed deals.
 - Test: `node tests/social.cjs`.
+
+## Transfers and rumours affect players (2026.10.21.15)
+- **All through morale** (`js/systems/mood.js`), which the engine already uses for match form; the engine itself is unchanged.
+- **Links unsettle** (`transferBuzz()`, from false rumours, deal posts and bids): how much a link gets to a player (`buzzReach()`) depends on ambition, character (Ambitious more, Loyal much less, Professional / Model Citizen less), low morale, a rotation or backup role, and how much bigger the other club is. Unsettled players (`p.unset`, levels 1-3) lose morale at once and each week (`moodWeekly()`); news tells you when one of yours is distracted. With no new links for four weeks it fades.
+- **Transfer requests** (`p.treq`): an unsettled, unhappy ambitious player asks to leave. Accept (listed, morale up, agent pleased) or refuse (a calm character accepts it for now; others are angry; agent annoyed).
+- **Statements** (`statementMood()`): "Not for sale" pleases a settled player (+3, calms him) and annoys one who wants out (−6); "We would listen" hurts a settled player (−7) and pleases one who wants out (+5).
+- **Signings** (`signingMood()`): a big signing lifts the squad (+2) and fans; starters in his position worry (−4, −1 for determined or professional players); compatriots are pleased (+3); a new top earner on 25% more than anyone annoys senior players (−3). A news item sums up the dressing room's reaction.
+- **Sales** (`saleMood()`): selling a key player or a leader lowers the squad (−3) and the fans (−2, −4 to a league rival).
+- Moving club clears a player's unsettled state, request and listing. The profile shows "Distracted / Unsettled by X interest" or "Has asked to leave"; asking about his future gives an honest answer and can settle a mildly distracted player.
+- Test: `node tests/mood.cjs`.
