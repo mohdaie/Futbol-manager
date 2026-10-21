@@ -150,6 +150,7 @@ img.crest-art { object-fit: contain; max-width: none; vertical-align: middle; }
 .choice-row { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); padding-right: 8px; }
 .choice-row > .row { flex: 1; width: auto; border: 0; }
 .choice-row > .btn { flex: none; }
+.team-sections { position: relative; margin-top: 0; }
 .chev { color: var(--mute); font-size: 17px; flex: none; }
 .pos { flex: none; width: 30px; text-align: center; padding: 2.5px 0; border-radius: 5px; background: var(--night); border: 1px solid var(--line); font-family: var(--f-disp); font-weight: 700; font-size: 11px; letter-spacing: .03em; }
 .no { flex: none; width: 20px; text-align: center; font-family: var(--f-disp); font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }

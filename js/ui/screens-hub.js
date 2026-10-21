@@ -112,19 +112,7 @@ function hubMenu(title, items) {
 
 SCREENS.team = {
   render() {
-    return hubMenu('My Team', [
-      ['squad', 'Squad', 'First team, reserves and under-18s'],
-      ['tactics', 'Tactics', 'Line-up, shape and instructions'],
-      ['fixtures', 'Fixtures', 'Your schedule and every round'],
-      ['training', 'Training', 'Team focus and individual development'],
-      ['staffroom', 'Staff room', 'Advice from your assistant, analyst, coaches, physio and scouts'],
-      ['staff', 'Staff', 'Coaches, scouts and physios'],
-      ['medical', 'Medical center', 'Injuries and fatigue'],
-      ['youth', 'Youth academy', 'Prospects and intake'],
-      ['stats', 'Stats', 'Goals, assists and ratings'],
-      ['table', 'League table', LEAGUE_NAME + ' standings'],
-      ['clubs', 'Club directory', 'Browse every club and its squad'],
-    ]);
+    return SCREENS.squad.render(); // legacy route; My Team now opens Squad
   },
 };
 

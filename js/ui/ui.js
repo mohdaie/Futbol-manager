@@ -13,6 +13,11 @@ const NAV_GROUPS = {
   team: ['squad', 'tactics', 'pinstr', 'staffroom', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'clubs', 'clubview', 'prematch', 'match', 'post'],
   facilities: ['finance', 'board', 'club'],
 };
+const TEAM_SECTIONS = [['squad', 'Squad'], ['tactics', 'Tactics'], ['fixtures', 'Fixtures'], ['training', 'Training'], ['staffroom', 'Staff room'], ['staff', 'Staff'], ['medical', 'Medical center'], ['youth', 'Youth academy'], ['stats', 'Stats'], ['table', 'League table'], ['clubs', 'Club directory']];
+function teamSections() {
+  const current = UI.s === 'pinstr' ? 'tactics' : UI.s;
+  return `<nav class="tabs team-sections" aria-label="My Team sections">${TEAM_SECTIONS.map(([s, n]) => `<button class="${current === s ? 'on' : ''}" ${current === s ? 'aria-current="page"' : ''} data-a="go" data-s="${s}">${n}</button>`).join('')}</nav>`;
+}
 const ICON = {
   back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
   ball: '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#fff"/><path d="M20 11.5l7 5-2.7 8.2h-8.6L13 16.5z" fill="#22082F"/><path d="M20 2.2v9.3M27 16.5l8.6-3M24.3 24.7l5.4 7.6M15.7 24.7l-5.4 7.6M13 16.5l-8.6-3" stroke="#22082F" stroke-width="2"/><path d="M11 3.6l2.2 4.8M29 3.6l-2.2 4.8M37.9 21l-4.7 2.6M2.1 21l4.7 2.6M17 37.8l3-4.3 3 4.3" stroke="#22082F" stroke-width="2" fill="none"/></svg>',
@@ -24,6 +29,7 @@ const ICON = {
 
 function go(s, p = {}) {
   return viewAction(() => {
+    if (s === 'team') s = 'squad';
     if (UI.s === 'match' && s !== 'match') stopLive();
     hideSheet();
     UI.s = s; UI.p = p;
@@ -33,6 +39,7 @@ function go(s, p = {}) {
 
 function render(reset) {
   syncPlaytime();
+  if (UI.s === 'team') UI.s = 'squad'; // old bookmarks and saved views
   ENTITY_INDEX = null;
   const root = document.getElementById('app');
   const main = root.querySelector('.main');
@@ -43,11 +50,13 @@ function render(reset) {
   else if (G.gameOver) scr = SCREENS.sacked;
   else if (G.seasonReview && UI.s !== 'review') { UI.s = 'review'; scr = SCREENS.review; }
   else scr = SCREENS[UI.s] || SCREENS.home;
-  const body = scr.render(UI.p);
+  const body = (!scr.full && (TEAM_SECTIONS.some(([s]) => s === UI.s) || UI.s === 'pinstr') ? teamSections() : '') + scr.render(UI.p);
   root.innerHTML = scr.full ? `<div class="app full">${body}</div>` : shell(body);
   linkEntities(root);
   const m2 = root.querySelector('.main');
   if (m2) m2.scrollTop = keep;
+  const rail = root.querySelector('.team-sections'), active = rail?.querySelector('.on');
+  if (active) rail.scrollLeft = Math.max(0, active.offsetLeft - (rail.clientWidth - active.offsetWidth) / 2);
   if (scr.after) scr.after(UI.p);
   rememberScreen();
   syncViewHistory();
