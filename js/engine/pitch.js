@@ -135,6 +135,8 @@ const FIT_AREAS = {
     w: { wor: 1, sta: 0.8, pac: 0.6, tea: 0.6, ant: 0.5, agi: 0.3 }, line: { 1: 0.6, 2: 1, 3: 1.1, 4: 1.3, 5: 1.3 } },
   poss: { n: 'Short passing and possession', need: 'Passing, First Touch, Composure, Decisions, Vision, Teamwork', on: T => (T.pass ?? 1) === 0 || (T.tempo ?? 1) === 0,
     w: { pas: 1, fir: 0.8, cmp: 0.8, dec: 0.6, vis: 0.5, tea: 0.4 }, line: { 1: 0.8, 2: 1.3, 3: 1.3, 4: 1, 5: 0.8 } },
+  tempo: { n: 'Fast, direct play', need: 'Pace, Decisions, First Touch, Passing and Off the Ball in midfield and attack; Stamina', on: T => (T.tempo ?? 1) === 2,
+    w: { pac: 0.8, dec: 0.8, fir: 0.7, pas: 0.6, otb: 0.5, sta: 0.5 }, line: { 1: 0.3, 2: 0.6, 3: 1.2, 4: 1.3, 5: 1.2 } },
   counter: { n: 'Counter-attacking', need: 'Pace, Off the Ball, Finishing, Decisions up front; Vision and Passing behind them', on: T => (T.won ?? 1) === 2,
     w: { pac: 1, otb: 0.8, fin: 0.6, dec: 0.4, dri: 0.3, vis: 0.3, pas: 0.3 }, line: { 1: 0.2, 2: 0.5, 3: 0.8, 4: 1.3, 5: 1.4 } },
   long: { n: 'Long balls and second balls', need: 'Heading, Strength and height up front; Work Rate in midfield; Passing behind', on: T => (T.pass ?? 1) === 2,
@@ -201,6 +203,9 @@ const fitPct = v => Math.round(clamp(50 + v * 35, 3, 98));
 function sideFit(S) {
   const f = tacticFit(S, (i, k) => (S.form && S.form.length ? av(S, i, k) : (G.players[S.on[i]] || { at: [] }).at[A[k]] || 10));
   S.fit = f.area;
+  // Cohesion: average fit over the areas this side's instructions switch on (0 when it asks nothing special). Used in every duel.
+  const on = Object.entries(FIT_AREAS).filter(([, F]) => F.on(S)).map(([k]) => S.fit[k]);
+  S.coh = on.length ? on.reduce((t, v) => t + v, 0) / on.length : 0;
   return f;
 }
 // For the Tactics screen: the active areas with fit %, plus a warning for poor ones.

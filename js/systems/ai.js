@@ -22,7 +22,7 @@ const DS_MODELS = [['deepseek-flash', 'deepseek-flash (cheapest, recommended)'],
 // Game features each service can drive. Saved now; wired in when each feature is built.
 const AI_FEATURES = {
   jev: [['manager', 'Computer managers: in-match changes'], ['react', 'Player and press reactions to what you say'], ['transfer', 'Transfer decisions (accept, counter, join)'], ['advice', 'Assistant tactical advice']],
-  ds: [['second', 'Second opinion when Jev is unsure (manager decisions)'], ['press', 'Press conference questions'], ['talks', 'Player conversation replies'], ['report', 'Match reports'], ['staff', 'Staff advice in words (assistant manager)'], ['news', 'News stories and rumours']],
+  ds: [['second', 'Second opinion when Jev is unsure (manager decisions)'], ['press', 'Press conference questions'], ['talks', 'Player conversation replies'], ['report', 'Match reports'], ['staff', 'Staff advice in words (assistant, analyst, coaches, physio, scouts)'], ['news', 'News stories and rumours']],
 };
 
 function aiDefaults() {
@@ -114,6 +114,13 @@ function aiGuard(svc) {
   if (aiUsage(svc).cost >= c.budget) throw new Error(`Monthly budget of $${c.budget} reached. Raise it to continue.`);
 }
 
+// Usage statistics (relay mode only): the feature that made the call and this installation's anonymous
+// AI Brain credential, so the relays can log tokens and cost per feature. Never forwarded to the AI service.
+function aiMeta(note) {
+  const C = typeof brain === 'function' && typeof brainCloudInit === 'function' ? brainCloudInit(brain()) : null;
+  return { f: String(note).replace(/[^a-z0-9 :_-]/gi, '').trim().slice(0, 40) || 'request', ...(C ? { i: C.token } : {}) };
+}
+
 // Jev: questions = { id: { type: 'choice'|'score'|'noul', instructions, criteria } }
 async function jevAsk(state, questions, note = 'request', opts = {}) {
   const c = aiCfg().jev;
@@ -122,7 +129,7 @@ async function jevAsk(state, questions, note = 'request', opts = {}) {
   const headers = c.mode === 'proxy' ? {} : { Authorization: 'Bearer ' + c.key };
   const t0 = performance.now();
   try {
-    const res = await aiFetch(url, { model: c.model, state, questions }, headers, opts.timeout || c.timeout);
+    const res = await aiFetch(url, { model: c.model, state, questions, ...(c.mode === 'relay' ? { meta: aiMeta(note) } : {}) }, headers, opts.timeout || c.timeout);
     const ms = Math.round(performance.now() - t0), inTok = (res.usage && res.usage.input_tokens) || 0;
     aiRecord('jev', true, ms, inTok, (res.usage && res.usage.output_tokens) || 0, inTok * AI_PRICES.jev.in / 1e6, note);
     return { ...res, ms };
@@ -138,6 +145,7 @@ async function dsChat(messages, note = 'request', opts = {}) {
   const body = { model: c.model, messages, max_tokens: opts.maxTokens || c.maxTokens, thinking: { type: c.thinking ? 'enabled' : 'disabled' } };
   if (!c.thinking) body.temperature = c.temp;
   if (opts.json) body.response_format = { type: 'json_object' };
+  if (c.mode === 'relay') body.meta = aiMeta(note);
   const t0 = performance.now();
   try {
     const res = await aiFetch(base + '/chat/completions', body, headers, c.timeout);

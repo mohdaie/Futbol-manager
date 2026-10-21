@@ -17,6 +17,12 @@ uploads research data; it never downloads or activates a server engine automatic
 - `futbol_brain_sources`: anonymous installation hashes and the last accepted batch
   sequence/digest. These remain after raw records expire, preventing replay totals.
 - `futbol_brain_analysis`: private, security-invoker aggregate view for analysis.
+- `futbol_brain_duels` (v5, migration `20261020170000`): per-installation player-duel totals from real matches,
+  by engine version (game version + tuning hash), duel type, pitch row (0 = goal attacked) and attribute gap
+  (steps of 2): tries, wins and the engine's predicted chance. `futbol_brain_duel_analysis` compares real
+  against predicted rates. Batches may carry an optional `duels` array (at most 400 rows).
+- `POST /usage` (v5): this installation's Jev/DeepSeek usage from `futbol_manager_ai_requests` via
+  `futbol_ai_usage_stats()` (migration `20261020171000`), plus this month's totals across installations.
 
 The first upload imports the entire existing draft as `legacy` summary totals and
 up to 2,000 available decisions as details. Those details do **not** add to the totals

@@ -591,3 +591,6 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .predbar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,.08); }
 .predbar i { display: block; height: 100%; }
 .predlbl { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin: 4px 0 6px; }
+/* admin test season report */
+.tbl.lab th, .tbl.lab td { white-space: nowrap; padding: 6px 6px; }
+.tbl.lab td:first-child { width: auto; text-align: left; color: inherit; }

@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.20.9';
+const GAME_VERSION = '2026.10.21.1';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -233,12 +233,12 @@ const TV_FEE = 0.6e6; // extra per club for a televised match
 // Match engine tuning. The admin page can override these per save (G.tune).
 const TUNE_DEFAULTS = {
   shotBase: { v: 0.285, min: 0.1, max: 0.5, step: 0.01, n: 'Shot chance per possession minute' },
-  xgScale: { v: 0.82, min: 0.5, max: 2, step: 0.05, n: 'Chance quality (xG) multiplier' },
+  xgScale: { v: 0.74, min: 0.5, max: 2, step: 0.05, n: 'Chance quality (xG) multiplier' },
   homeShot: { v: 1.06, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: shots' },
   homePoss: { v: 1.04, min: 1, max: 1.3, step: 0.01, n: 'Home advantage: possession' },
   fatigue: { v: 0.38, min: 0.1, max: 0.8, step: 0.02, n: 'Fatigue per minute' },
   cornerShot: { v: 0.2, min: 0, max: 0.5, step: 0.01, n: 'Chance a corner leads to a header' },
-  foulRate: { v: 0.2, min: 0.05, max: 0.4, step: 0.01, n: 'Foul chance per minute' },
+  foulRate: { v: 0.18, min: 0.05, max: 0.4, step: 0.01, n: 'Foul chance per minute' },
   injuryRate: { v: 0.0024, min: 0, max: 0.01, step: 0.0002, n: 'Injury chance per minute' },
 };
 const tune = k => (G && G.tune && G.tune[k] != null ? G.tune[k] : TUNE_DEFAULTS[k].v);

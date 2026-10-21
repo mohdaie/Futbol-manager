@@ -1,6 +1,6 @@
 # Match engine v2: design plan
 
-Status: stages A-D built in 2026.10.20.4 (pitch model, action engine, tactical styles, player instructions, 2D replay). Stage E (duel data in cloud sync, removing v1) is still to do. v1 was replaced directly rather than kept behind a switch. Covers items 1-3 from the engine review:
+Status: stages A-D built in 2026.10.20.4 (pitch model, action engine, tactical styles, player instructions, 2D replay). Stage E duel data built in 2026.10.21.1 (`duelRoll()` in sim.js, `futbol_brain_duels` in the cloud; see STRUCTURE.md). v1 is already gone. v1 was replaced directly rather than kept behind a switch. Covers items 1-3 from the engine review:
 player-against-player actions, tactics tied to space, and a 2D view driven by the engine.
 
 ## 1. Goals

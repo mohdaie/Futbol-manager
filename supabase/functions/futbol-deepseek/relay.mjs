@@ -13,6 +13,25 @@ const json = (status, data) => new Response(JSON.stringify(data), {
   status, headers: { ...CORS, 'Content-Type': 'application/json' },
 });
 
+// Usage statistics: the game names the feature and its anonymous installation (body.meta, never forwarded).
+const meta = body => {
+  const m = body && typeof body.meta === 'object' && body.meta ? body.meta : {};
+  return { feature: typeof m.f === 'string' && /^[a-z0-9 :_-]{1,40}$/i.test(m.f) ? m.f : null, install: typeof m.i === 'string' && /^[a-f0-9]{64}$/.test(m.i) ? m.i : null };
+};
+async function sourceOf(install) {
+  if (!install) return null;
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(install));
+  return [...new Uint8Array(bytes)].map(n => n.toString(16).padStart(2, '0')).join('');
+}
+// US$ per 1M tokens [off-peak, peak]; peak = Mon-Fri 01:00-04:00 and 06:00-10:00 UTC (same table as js/systems/ai.js).
+const PRICES = { 'deepseek-flash': { hit: [0.003, 0.006], miss: [0.15, 0.3], out: [0.6, 1.2] }, 'deepseek-v4-pro': { hit: [0.022, 0.044], miss: [0.66, 1.32], out: [1.98, 3.96] } };
+export function deepSeekCost(model, u, d = new Date()) {
+  const P = PRICES[model] || PRICES['deepseek-flash'], day = d.getUTCDay(), h = d.getUTCHours();
+  const i = day >= 1 && day <= 5 && ((h >= 1 && h < 4) || (h >= 6 && h < 10)) ? 1 : 0;
+  const hit = u.prompt_cache_hit_tokens || 0, miss = u.prompt_cache_miss_tokens ?? Math.max(0, (u.prompt_tokens || 0) - hit);
+  return (hit * P.hit[i] + miss * P.miss[i] + (u.completion_tokens || 0) * P.out[i]) / 1e6;
+}
+
 export async function handleDeepSeek(req, fetcher = fetch, record = async () => {}) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-deepseek' });
   if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
@@ -36,7 +55,11 @@ export async function handleDeepSeek(req, fetcher = fetch, record = async () => 
   const started = performance.now();
   const log = async (http_status, usage = {}, model = body.model, error_code = null) => {
     const count = n => Number.isFinite(n) && n > 0 ? Math.min(2147483647, Math.trunc(n)) : 0;
-    try { await record({ provider: 'deepseek', http_status, duration_ms: Math.round(performance.now() - started), model, input_tokens: count(usage.prompt_tokens), output_tokens: count(usage.completion_tokens), error_code }); } catch { /* Diagnostics must not interrupt a match. */ }
+    try {
+      const m = meta(body), ok = http_status < 400;
+      await record({ provider: 'deepseek', http_status, duration_ms: Math.round(performance.now() - started), model, input_tokens: count(usage.prompt_tokens), output_tokens: count(usage.completion_tokens), error_code,
+        feature: m.feature, cache_hit_tokens: count(usage.prompt_cache_hit_tokens), cost_usd: ok ? deepSeekCost(model, usage || {}) : 0, source_id: await sourceOf(m.install) });
+    } catch { /* Diagnostics must not interrupt a match. */ }
   };
   try {
     const response = await fetcher(UPSTREAM, {

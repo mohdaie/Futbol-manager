@@ -5,6 +5,7 @@ const actions = ['attack', 'hold', 'defend', 'press', 'fresh', 'restyle', 'count
 const providers = ['jev', 'deepseek', 'learned', 'rules', 'explore', 'legacy'];
 const kinds = ['live', 'instant', 'background', 'camp', 'legacy'];
 const bucket = /^(HT|60|70|80)\|(-2|-1|0|1|2)\|(weaker|stronger|even)\|(tired|fresh)\|(man down|man up|11v11)(\|(gegen|tiki|bal|counter|long|custom))?$/;
+const duelTypes = ['pass', 'thru', 'long', 'race', 'drib', 'cross', 'setpiece'];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const number = (v, min, max, integer = false) => Number.isFinite(v) && v >= min && v <= max && (!integer || Number.isSafeInteger(v));
 const text = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -28,7 +29,7 @@ function validateSnapshot(s) {
   return safe(s.data);
 }
 export function validateBatch(b) {
-  if (!only(b, ['seq', 'stats', 'records', 'snapshots', 'omitted']) || !number(b.seq, 1, Number.MAX_SAFE_INTEGER, true) || !number(b.omitted, 0, 1e9, true) ||
+  if (!only(b, ['seq', 'stats', 'records', 'snapshots', 'omitted', 'duels']) || !number(b.seq, 1, Number.MAX_SAFE_INTEGER, true) || !number(b.omitted, 0, 1e9, true) ||
       !Array.isArray(b.stats) || b.stats.length > 80 || !Array.isArray(b.records) || b.records.length > 100 || !Array.isArray(b.snapshots) || b.snapshots.length > 1) return false;
   if (!b.stats.every(r => only(r, ['v', 'e', 'k', 'b', 'a', 's', 'n', 'r', 'q', 'w', 'l', 'c', 'cn', 'd', 'tv']) && dimensions(r) &&
       number(r.n, 1, 1e9, true) && number(r.r, -100 * r.n, 100 * r.n) && number(r.q, 0, 10000 * r.n) &&
@@ -38,21 +39,30 @@ export function validateBatch(b) {
       only(r.details, ['f', 'match', 'side', 'at', 'score', 'jev', 'second', 'mode', 'jevModel', 'dsModel']) && JSON.stringify(r.details).length <= 2048 &&
       (!r.details.f || (only(r.details.f, ['min', 'diff', 'home', 'str', 'cond', 'reds', 'ment', 'subs', 'shots', 'sot', 'xg', 'oppShots', 'oppXg', 'possession', 'press', 'line', 'tempo', 'style', 'oppStyle', 'shape', 'oppShape', 'fit', 'oppFit', 'passPct', 'oppPassPct', 'regains', 'oppRegains', 'duels', 'offsides']) && Object.values(r.details.f).every(v => typeof v === 'boolean' || number(v, -100, 10000)))) &&
       Object.entries(r.details).filter(([k]) => k !== 'f').every(([, v]) => v === null || typeof v === 'boolean' || number(v, -100, 1e12) || (typeof v === 'string' && v.length <= 100) || (Array.isArray(v) && v.length <= 2 && v.every(n => number(n, 0, 100)))))) return false;
+  // Optional player-duel summaries (engine plan stage E): [type, pitch row, attribute gap] -> tries, wins, predicted chance.
+  if (b.duels !== undefined && !(Array.isArray(b.duels) && b.duels.length <= 400 && b.duels.every(r => only(r, ['e', 't', 'z', 'g', 'n', 'w', 'p']) &&
+      text(r.e, 80) && duelTypes.includes(r.t) && number(r.z, 0, 5, true) && number(r.g, -8, 8, true) && r.g % 2 === 0 &&
+      number(r.n, 1, 1e9, true) && number(r.w, 0, r.n, true) && number(r.p, 0, r.n)))) return false;
   return b.snapshots.every(validateSnapshot);
 }
 async function digest(value) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return [...new Uint8Array(bytes)].map(n => n.toString(16).padStart(2, '0')).join('');
 }
-export async function handleBrain(req, ingest) {
+export async function handleBrain(req, ingest, usage = null) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-brain' });
   if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json(405, { error: 'Use POST.' });
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer /i, '');
   // Anonymous installation identity: 256 random bits. No shared public write key,
-  // no read endpoint, and clients cannot choose or overwrite another source.
+  // no read endpoint except this installation's own AI usage, and clients cannot choose or overwrite another source.
   if (!/^[a-f0-9]{64}$/.test(token)) return json(401, { error: 'Missing installation credential.' });
+  // AI usage statistics for this installation (and totals across all installations). Read-only.
+  if (new URL(req.url).pathname.endsWith('/usage')) {
+    if (!usage) return json(404, { error: 'Unknown endpoint.' });
+    try { return json(200, await usage(await digest(token))); } catch { return json(503, { error: 'Usage statistics are temporarily unavailable.' }); }
+  }
   let body, raw;
   try {
     const reader = req.body.getReader(), chunks = []; let size = 0;

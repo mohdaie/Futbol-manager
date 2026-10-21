@@ -141,13 +141,21 @@ function stepLine(L, st) {
   if (st.flick) return [`${n(st.pid)} flicks it on for ${n(st.to)}.`, st.s];
   if (st.k === 'regain') return [`The ${clubName(L.M.sides[st.s].cid)} win it straight back high up the pitch.`, st.s];
   if ((st.k === 'pass' || st.k === 'thru') && st.res === 'lost' && st.oid) return [`${n(st.oid)} intercepts.`, o];
-  if (st.k === 'tackle') return [`${n(st.pid)} gets back to stop the run.`, st.s];
+  if (st.k === 'tackle') return [G.players[st.pid] && G.players[st.pid].pos === 'GK' ? `${n(st.pid)} rushes off his line to stop the run.` : `${n(st.pid)} gets back to stop the run.`, st.s];
   return ['', null];
 }
 
 function scriptEvents(L, evs) {
   const M = L.M, T = tickMs(), ev = evs[0];
   L.q.push({ fn: () => { L.poss = ev.side; L.pins = {}; L.line = null; } });
+  const told = new Set();
+  const foulLine = e => {
+    told.add(e);
+    if (e.t === 'yellow' || e.t === 'red') {
+      L.q.push({ fn: () => { pushFeed(L, e.t, commLine(L, e), e.fside); L.overlay = { big: e.t === 'red' ? 'RED CARD' : 'YELLOW', small: pname(G.players[e.pid]), t: 1100, card: e.t }; } });
+      L.q.push({ hold: 1000 });
+    } else L.q.push({ fn: () => pushFeed(L, 'info', commLine(L, e), e.fside) });
+  };
   if (ev.key && ev.seq && ev.seq.length) {
     if (ev.counter) L.q.push({ fn: () => pushFeed(L, 'info', `The ${clubName(M.sides[ev.side].cid)} break forward quickly.`, ev.side) });
     ev.seq.forEach((st, k) => {
@@ -168,6 +176,7 @@ function scriptEvents(L, evs) {
         L.q.push({ fn: () => { pushFeed(L, 'info', commLine(L, ev), 1 - ev.side); L.overlay = { big: 'OFFSIDE', small: pname(G.players[ev.pid]), t: 1200, flag: true }; } });
         L.q.push({ hold: 1200 });
       }
+      if (st.k === 'foul') { const e = evs.find(x => ['foul', 'yellow', 'red'].includes(x.t) && x.pid === st.pid && x !== ev && !told.has(x)); if (e) foulLine(e); }
       if (st.res === 'lost' && k === ev.seq.length - 1) L.q.push({ fn: () => { L.poss = 1 - st.s; } });
     });
     const shotEv = ['goal', 'save', 'miss'].includes(ev.t);
@@ -186,14 +195,7 @@ function scriptEvents(L, evs) {
     L.q.push({ x: cx, y: cy, d: T * 0.45 });
     if (R() < 0.08) L.q.push({ fn: () => pushFeed(L, 'info', fillerLine(L, ev), ev.side) });
   }
-  evs.forEach(e => {
-    if (e.t === 'yellow' || e.t === 'red') {
-      L.q.push({ fn: () => { pushFeed(L, e.t, commLine(L, e), e.fside); L.overlay = { big: e.t === 'red' ? 'RED CARD' : 'YELLOW', small: pname(G.players[e.pid]), t: 1100, card: e.t }; } });
-      L.q.push({ hold: 1000 });
-    } else if (e.t === 'foul' && e !== ev) {
-      L.q.push({ fn: () => pushFeed(L, 'info', commLine(L, e), e.fside) });
-    }
-  });
+  evs.forEach(e => { if (!told.has(e) && (e.t === 'yellow' || e.t === 'red' || (e.t === 'foul' && e !== ev))) foulLine(e); });
   evs.slice(1).filter(e => !['yellow', 'red', 'foul'].includes(e.t)).forEach(e => L.q.push({ fn: () => {
     pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'tac' ? 'tac' : 'info', commLine(L, e), e.side);
     if (e.t === 'inj' && M.sides[e.side].user) { L.paused = true; updateBoard(L); toast(`${pname(G.players[e.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
@@ -328,11 +330,14 @@ function commLine(L, ev) {
   switch (ev.t) {
     case 'goal': return ev.pen ? `Penalty to ${tn}. ${n(ev.pid)} sends the keeper the wrong way. ${L.disp.join('-')}.` : `${fk}${n(ev.pid)} scores for ${tn}${ev.aid ? ', set up by ' + n(ev.aid) : ''}. ${L.disp.join('-')}.`;
     case 'save': return `${fk}${n(ev.pid)} forces a save from ${O.on[0] ? n(O.on[0]) : 'the keeper'}.${ev.corner ? ' Corner.' : ''}`;
-    case 'miss': return ev.sp ? `${fk}${n(ev.pid)} heads over.` : `${fk}${n(ev.pid)} ${pick(['drags a shot wide', 'fires over the bar', 'shoots straight into a defender', 'curls it just past the post'])}.${ev.corner ? ' Corner.' : ''}`;
+    case 'miss':
+      if (ev.block) return `${fk}${n(ev.pid)} ${pick(['has a shot blocked', 'sees his shot charged down', 'shoots straight into a defender'])}.${ev.corner ? ' Corner.' : ''}`;
+      if (ev.corner) return `${fk}${n(ev.pid)}${ev.sp ? "'s header" : "'s shot"} ${pick(['takes a deflection and goes behind', 'is turned behind by a defender'])}. Corner.`;
+      return ev.sp ? `${fk}${n(ev.pid)} ${pick(['heads over', 'heads wide', 'cannot keep his header down'])}.` : `${fk}${n(ev.pid)} ${pick(['drags a shot wide', 'fires over the bar', 'curls it just past the post', 'blazes over'])}.`;
     case 'yellow': return `Yellow card for ${n(ev.pid)} (${clubName(M.sides[ev.fside].cid)}).`;
     case 'red': return ev.second ? `Second yellow for ${n(ev.pid)}. Off he goes.` : `Straight red card for ${n(ev.pid)}.`;
     case 'foul': return `Foul by ${n(ev.pid)}. Free kick to ${tn}.`;
-    case 'offside': return `Flag up. ${n(ev.pid)} is offside, timing his run too early.`;
+    case 'offside': return `Flag up. ${n(ev.pid)} ${pick(['is offside, timing his run too early', 'is caught offside', 'strays beyond the last defender', 'has gone too soon. Offside'])}.`;
     case 'inj': return `${n(ev.pid)} is down with a suspected ${ev.inj.toLowerCase()}.`;
     case 'tac': return `The ${clubName(S.cid)} ${MGR_SAY[ev.opt] || 'change their approach'}.`;
     case 'sub': return `Substitution, ${clubName(S.cid)}: ${n(ev.pid)} on, ${n(ev.out)} off.`;
