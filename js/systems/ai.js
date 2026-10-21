@@ -21,13 +21,13 @@ const DS_MODELS = [['deepseek-flash', 'deepseek-flash (cheapest, recommended)'],
 
 // Game features each service can drive. Saved now; wired in when each feature is built.
 const AI_FEATURES = {
-  jev: [['briefing', 'Dashboard assistant: prioritise club issues'], ['manager', 'Computer managers: in-match changes'], ['react', 'Player and press reactions to what you say'], ['transfer', 'Transfer decisions (Director of Football second opinion, players joining, clubs answering bids)'], ['advice', 'Assistant tactical advice']],
+  jev: [['engine', 'Engine testing: review batches and prioritise failures'], ['briefing', 'Dashboard assistant: prioritise club issues'], ['manager', 'Computer managers: in-match changes'], ['react', 'Player and press reactions to what you say'], ['transfer', 'Transfer decisions (Director of Football second opinion, players joining, clubs answering bids)'], ['advice', 'Assistant tactical advice']],
   ds: [['briefing', 'Dashboard assistant: summarise the club'], ['second', 'Second opinion when Jev is unsure (manager decisions)'], ['press', 'Press conference questions'], ['talks', 'Player conversation replies'], ['report', 'Match reports'], ['staff', 'Staff advice in words (assistant, analyst, coaches, physio, scouts, Director of Football, Press Officer)'], ['agents', "Agents' messages in deals"], ['news', 'News stories and rumours (journalists and influencers)']],
 };
 
 function aiDefaults() {
   return {
-    jev: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: JEV_RELAY_URL, model: 'jev-latest', timeout: 10000, budget: 2, feat: { briefing: true } },
+    jev: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: JEV_RELAY_URL, model: 'jev-latest', timeout: 10000, budget: 2, feat: { briefing: true, engine: true } },
     ds: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: DS_RELAY_URL, base: 'https://api.deepseek.com', model: 'deepseek-flash', thinking: false, maxTokens: 300, temp: 0.9, timeout: 20000, budget: 3, feat: { briefing: true } },
     usage: {}, log: [],
   };
@@ -41,6 +41,7 @@ function aiCfg() {
     if (s) {
       ['jev', 'ds'].forEach(k => { AICFG[k] = { ...AICFG[k], ...(s[k] || {}) }; });
       ['jev', 'ds'].forEach(k => { AICFG[k].feat = { briefing: true, ...AICFG[k].feat }; });
+      AICFG.jev.feat = { engine: true, ...AICFG.jev.feat };
       AICFG.usage = s.usage || {};
       AICFG.log = s.log || [];
       if (s.jev && !s.jev.relaySetup && s.jev.mode === 'direct') {

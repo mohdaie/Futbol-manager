@@ -75,7 +75,10 @@ const ADMIN_TABS = {
 
   eng() {
     const T = ADM.test;
-    return `<div class="card"><h3>Engine tuning</h3><p class="muted">Applies to every match from now on, including the live 2D view.</p>
+    return `<div class="card"><h3>Team shape rehearsal</h3><p class="muted">Move the ball and watch your roles, cover and compact block. Try it without changing your save.</p><button class="btn pri" data-a="go" data-s="shapedemo">Watch shape demo</button></div>
+      <div class="card"><h3>Fast engine checks + Jev</h3><p class="muted">Check formations, roles, cover and pitch zones in one local batch. Jev can prioritise the measured failures with one review call. Your career and tuning stay unchanged.</p>
+        <div class="btns"><button class="btn" data-a="admEngineQa" ${ADM.engineQaRun ? 'disabled' : ''}>Quick local checks</button><button class="btn pri" data-a="admEngineQa" data-jev="1" ${ADM.engineQaRun ? 'disabled' : ''}>${ADM.engineQaRun ? 'Reviewing…' : 'Run checks + Jev'}</button></div>${engineQaHtml(ADM.engineQa)}</div>
+      <div class="card"><h3>Engine tuning</h3><p class="muted">Applies to every match from now on, including the live 2D view.</p>
         ${Object.entries(TUNE_DEFAULTS).map(([k, d]) => `<div class="field"><label for="tn-${k}">${d.n}: <b id="tv-${k}">${tune(k)}</b>${tune(k) !== d.v ? ` <small>(default ${d.v})</small>` : ''}</label><input id="tn-${k}" type="range" min="${d.min}" max="${d.max}" step="${d.step}" value="${tune(k)}" data-c="admTune" data-k="${k}"></div>`).join('')}
         <div class="btns"><button class="btn" data-a="admTuneReset">Reset to defaults</button></div></div>
       <div class="card"><h3>Test season</h3><p class="muted">Plays all 380 matches on a copy of the save with the current tuning. Your real save does not change. Every measure is compared with Premier League-like averages, and each style and level of tactic fit is shown against the strength of the teams using it.</p>
@@ -100,6 +103,22 @@ const ADMIN_TABS = {
       <div class="card danger"><h3>Save</h3><div class="btns"><button class="btn" data-a="go" data-s="settings">Export or import a save</button>
         <button class="btn ${c2('wipe')}" data-a="admConfirm" data-k="wipe">${ADM.confirm === 'wipe' ? 'Tap again to delete the save' : 'Delete save and restart'}</button></div></div>`;
   },
+};
+
+function engineQaHtml(report) {
+  if (!report) return '';
+  const review = report.review;
+  return `<p class="note"><b>${report.checked - report.failed}/${report.checked} checks passed</b> · ${report.scenarios} scenarios · ${report.ms} ms. Measures target positions; full-match regression is still required.</p>
+    <div class="list">${Object.entries(report.groups).map(([id, g]) => `<div class="row sm"><span class="grow"><b>${esc(g.name)}</b><small>${g.examples.map(esc).join(' · ') || 'No failures found in these checks.'}</small></span><span class="stat"><b class="${g.failed ? 'bad' : 'good'}">${g.failed} failed</b><small>${g.checked} checks</small></span></div>`).join('')}</div>
+    ${review ? `<p><b>${review.source === 'jev' ? 'Jev priority' : 'Local priority'}${review.cached ? ' · reused' : ''}</b>: ${esc(review.action)}</p><p class="muted">${esc(review.status || '')}${review.confidence != null ? ' · Confidence ' + Math.round(review.confidence * 100) + '%' : ''}</p>` : ''}`;
+}
+ACT.admEngineQa = async ds => {
+  if (ADM.engineQaRun) return;
+  const game = G, report = engineAudit(); ADM.engineQa = report;
+  if (ds.jev !== '1') { render(); return; }
+  ADM.engineQaRun = true; render();
+  try { const review = await reviewEngineAudit(report); if (G === game && ADM.engineQa === report) report.review = review; }
+  finally { ADM.engineQaRun = false; if (G === game && UI.s === 'admin') render(); }
 };
 
 // Test season report: league averages against targets, then results by style and by tactic fit.

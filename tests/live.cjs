@@ -81,18 +81,23 @@ const assert = require('node:assert/strict');
     const waitMin = async target => { for (let k = 0; k < 120; k++) { if (await page.evaluate(t => { G.settings.hl = 'key'; G.settings.speed = 4; if (LIVE.paused && !LIVE.done) { closeSheet(true); LIVE.paused = false; LIVE.overlay = null; } return LIVE.M.min >= t; }, target)) return; await page.waitForTimeout(500); } throw new Error('match did not reach minute ' + target); };
     await waitMin(min + 4);
     const before = await page.evaluate(() => ({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-') }));
+    // The match can advance after the preceding evaluate() and before reload.
+    // Compare with the checkpoint at actual page exit, not an earlier clock sample.
+    await page.evaluate(() => window.addEventListener('pagehide', () => {
+      sessionStorage.setItem('test:live-exit', JSON.stringify({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-') }));
+    }, { once: true }));
     await page.reload();
     await page.waitForFunction(() => typeof LIVE !== 'undefined' && LIVE && UI.s === 'match');
     const after = await page.evaluate(() => ({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-'), paused: LIVE.paused, s: UI.s }));
     check('Refresh returns to the live match', after.s, 'match');
-    check('Refresh keeps the minute', after.min >= before.min - 1 && after.min <= before.min, true);
-    check('Refresh keeps the score', after.score === before.score || after.min < before.min, true);
+    const exit = await page.evaluate(() => JSON.parse(sessionStorage.getItem('test:live-exit')));
+    check('Refresh keeps the minute', after.min === exit.min && exit.min >= before.min, true);
+    check('Refresh keeps the score', after.score, exit.score);
     check('Resumed match waits paused', after.paused, true);
     check('Scoreboard shows the kept score', await page.locator('#sbScore').innerText(), after.score.replace('-', ' - '));
 
     await waitMin(after.min + 3);
-    const m2 = await page.evaluate(() => { liveKeep(); return LIVE.M.min; });
-    await page.evaluate(() => { stopLive(); loadGame(); go('prematch'); });
+    const m2 = await page.evaluate(() => { LIVE.paused = true; liveKeep(); const min = LIVE.M.min; stopLive(); loadGame(); go('prematch'); return min; });
     await act('kickoff');
     check('Save and load resumes the same minute', await page.evaluate(() => LIVE.M.min), m2);
     check('Loaded match is the saved one, not a new kick-off', await page.evaluate(() => LIVE.M === G.live.M), true);
