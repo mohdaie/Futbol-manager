@@ -727,6 +727,18 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .brief-footer > small { flex: 1; min-width: 150px; opacity: .6; font-size: 10px; }
 .brief-footer .link { font-size: 11px; min-height: 32px; }
 
+/* Rulebook shape rehearsal */
+.shape-controls { display: flex; gap: 6px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.shape-controls select { flex: 1; min-width: 140px; width: auto; }
+.shape-controls .btn { min-height: 36px; padding: 7px 10px; font-size: 11px; }
+.shape-stage { position: relative; border-radius: 14px; overflow: hidden; background: #123d30; }
+#shapePitch { display: block; width: 100%; height: min(50vh, 460px); min-height: 280px; touch-action: none; }
+.shape-caption { position: absolute; bottom: 0; width: 100%; padding: 5px 8px; background: #102b24e8; color: #e4eee9; font-size: 10px; text-align: center; pointer-events: none; }
+.shape-help { font-size: 10px; line-height: 1.5; margin: 8px 0; }
+.shape-readout { font-size: 12px; }
+.shape-readout p { margin: 6px 0; font-size: 11px; }
+.shape-readout small { font-size: 10px; opacity: .75; line-height: 1.5; }
+
 /* Shared UI motion: immediate press, short release, and quiet view changes. */
 :root { --motion-press: 80ms; --motion-enter: 160ms; --motion-ease: cubic-bezier(.2,.8,.2,1); }
 button:not(.tok) { touch-action: manipulation; transition: filter var(--motion-press) ease, background-color 120ms ease, border-color 120ms ease, transform var(--motion-press) ease; }

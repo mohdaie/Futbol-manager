@@ -1,0 +1,16 @@
+0s ground pass, middle third, centre; within 12 m: blue 2, red 3; red attackers in the box: 0
+1s blue(press) MC on the ball, middle third, centre; within 12 m: blue 2, red 3; blue attackers in the box: 0
+2s ground pass, red's attacking third, centre; within 12 m: blue 2, red 1; red attackers in the box: 0
+3s blue(press) DC on the ball, red's attacking third, left half-space; within 12 m: blue 1, red 1; blue attackers in the box: 0
+4s ground pass, red's attacking third, left wing; within 12 m: blue 1, red 0; red attackers in the box: 0
+5s blue(press) DL on the ball, red's attacking third, left wing; within 12 m: blue 1, red 0; blue attackers in the box: 0
+6s ball in the air, red's attacking third, left half-space; within 12 m: blue 2, red 1; red attackers in the box: 0
+7s ball in the air, middle third, centre; within 12 m: blue 1, red 3; red attackers in the box: 0
+8s blue(press) MC on the ball, middle third, centre; within 12 m: blue 3, red 3; blue attackers in the box: 0
+9s ground pass, red's attacking third, centre; within 12 m: blue 2, red 0; red attackers in the box: 0
+10s ground pass, red's attacking third, centre; within 12 m: blue 2, red 0; red attackers in the box: 0
+11s blue(press) GK on the ball, red's attacking third, centre; within 12 m: blue 1, red 0; blue attackers in the box: 0
+12s blue(press) DC on the ball, red's attacking third, left half-space; within 12 m: blue 2, red 0; blue attackers in the box: 0
+13s ground pass, red's attacking third, centre; within 12 m: blue 2, red 0; red attackers in the box: 0
+14s blue(press) DC on the ball, red's attacking third, right half-space; within 12 m: blue 1, red 0; blue attackers in the box: 0
+15s loose ball, red's attacking third, centre; within 12 m: blue 3, red 1; red attackers in the box: 1

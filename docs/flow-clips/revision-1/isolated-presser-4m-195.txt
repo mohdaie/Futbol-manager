@@ -1,0 +1,16 @@
+0s restart fk, red's defensive third, centre; within 12 m: blue 2, red 2
+1s ground pass, red's defensive third, centre; within 12 m: blue 2, red 2
+2s ground pass, red's defensive third, centre; within 12 m: blue 1, red 2
+3s red(direct) DC on the ball, red's defensive third, left half-space; within 12 m: blue 1, red 1
+4s red(direct) DC on the ball, red's defensive third, left half-space; within 12 m: blue 1, red 1
+5s ground pass, red's defensive third, left wing; within 12 m: blue 0, red 1
+6s red(direct) DR on the ball, red's defensive third, left wing; within 12 m: blue 0, red 1
+7s ground pass, red's defensive third, left wing; within 12 m: blue 0, red 2
+8s red(direct) DC on the ball, red's defensive third, left half-space; within 12 m: blue 0, red 2
+9s ground pass, red's defensive third, left wing; within 12 m: blue 0, red 2
+10s red(direct) DR on the ball, red's defensive third, left wing; within 12 m: blue 0, red 1
+11s red(direct) DR on the ball, red's defensive third, left wing; within 12 m: blue 1, red 1
+12s ball in the air, red's defensive third, left half-space; within 12 m: blue 0, red 2
+13s ball in the air, red's defensive third, centre; within 12 m: blue 0, red 2
+14s red(direct) DC on the ball, red's defensive third, centre; within 12 m: blue 0, red 4
+15s loose ball, red's defensive third, centre; within 12 m: blue 1, red 5

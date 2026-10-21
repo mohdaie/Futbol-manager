@@ -601,3 +601,14 @@ Built from `reports/FM match engine comparison.md` (not in the repo), items 1-10
 10. **Fatigue from sprinting** (`drain()` in match.js): each player tires by the metres he sprinted last minute (over 5.5 m/s), not by the pressing instruction. Players jog into position and sprint only for the ball, runs, pressing, a loose ball or getting back goal-side (Work Rate gets them there sooner).
 - Marking now reads where the attacker is going, makes his first touch harder and helps cut out passes; Vision makes forward passes more likely; players weigh their four best passes.
 - **Calibration** (`ENG`, 150+ matches): goals 2.6-2.9, shots 23-26, on target 7-8, corners 9, fouls 21-23, yellows 3.0, penalties 0.25, offsides about 2, pass completion 84%. About 0.3 s a match in a desktop browser.
+
+## Rulebook-driven match engine (2026.10.21.26)
+Built from `docs/FOOTBALL_RULEBOOK.md` (every change cites its section, rule 11c). Includes PR #40's foundation
+(`js/engine/shape.js` pitch zones/phases/team shape and rest defence, `intent.js` forward-first decisions,
+`defending.js` pressure/cover/screen unit and line step/drop, `transitions.js` counter-press window) and on top:
+ball in and out of play with real restart times (1b), individual tempo (3.10), loose and second balls (4.9),
+direct play with outlets and second-ball support (9.5), box occupation and attacking the space on the cross (7.2),
+cut-backs, wingers to the byline and inside forwards cutting in (7.1, 7.4). League calibration (150 matches):
+goals 2.73, shots 20, corners 8.3, fouls 24. Developer tools: `scripts/flow-scenarios.cjs` (gegenpress v long ball),
+`scripts/flow-clips.cjs` (clips with timelines), Admin shape demo, Jev decision loop (`js/systems/jev-lead.js`,
+paused by the owner). Handover: `docs/CLAUDE_HANDOVER.md`.

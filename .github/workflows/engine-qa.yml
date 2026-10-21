@@ -1,0 +1,39 @@
+name: Engine QA + Jev
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/rulebook-shape-jev-qa]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Local shape and position-job audit
+        run: node scripts/engine-qa.cjs --strict
+      - name: Jev client contract tests (mocked)
+        run: node tests/engine-qa.cjs
+      - name: Team intent and possession lifecycle
+        run: node tests/intent.cjs
+      - name: Coordinated defending
+        run: node tests/defending.cjs
+      - name: Transition lifecycle
+        run: node tests/transitions.cjs
+      - name: One genuine Jev review
+        env:
+          JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
+        run: node scripts/engine-qa.cjs --matches 6 --jev --strict
