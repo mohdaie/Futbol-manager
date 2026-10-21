@@ -194,11 +194,22 @@ function kickOff(M, s) {
   });
 }
 // A restart for side s at (X, Y): 'thr' throw-in, 'gk' goal kick, 'ck' corner, 'fk' free kick, 'pen' penalty.
+// Dead time before a restart is taken, in seconds, as in real matches (the ball is in play for only about
+// 55-58 of 90+ minutes): a throw-in about 15 s, a goal kick about 24 s, a corner about 28 s, a free kick in
+// the attacking half about 30 s (wall, set-up) and about 18 s elsewhere, a penalty about 50 s.
+function restartWait(k, s, X, Y) {
+  if (k === 'thr') return 15;
+  if (k === 'gk') return 24;
+  if (k === 'ck') return 28;
+  if (k === 'pen') return 50;
+  if (k === 'fk') return dGoal(s, X, Y) < 38 ? 30 : 18;
+  return 4;
+}
 function setRestart(M, k, s, X, Y, ev) {
   const sim = M.sim;
   sim.momentum = null; sim.counterpress = null;
   looseBall(M); sim.B.offSet = 0;
-  sim.rs = { k, s, x: clamp(X, 0, PW), y: clamp(Y, 0, PL), w: k === 'thr' ? 3 : k === 'gk' ? 5 : k === 'ck' ? 7 : k === 'pen' ? 10 : 4, ev: ev || null };
+  sim.rs = { k, s, x: clamp(X, 0, PW), y: clamp(Y, 0, PL), w: restartWait(k, s, X, Y), ev: ev || null };
   Object.assign(sim.B, { x: sim.rs.x, y: sim.rs.y, z: 0, vx: 0, vy: 0, vz: 0 });
   if (sim.poss !== s) { sim.poss = s; sim.turn = sim.t; }
   if (k === 'ck') { M.sides[s].st.co++; mark(M, 'corner', s); }
@@ -394,6 +405,8 @@ function carrierDecide(M, s, i, o = {}) {
     if (out) opts.push({ k: 'long', j: out.j, tx: out.x, ty: out.y, v: out.win * threat(s, out.x, out.y) - (1 - out.win) * 0.04, risk: 1 - out.win, outlet: true });
     if (oy > 0.84 && press > 0.7) opts.push({ k: 'clear', v: 0.01 + press * 0.04 + (gk ? 0.01 : 0) });
   }
+  // Cornered on the touchline under pressure in his own half: put it out for a throw-in.
+  if (!gk && oy > 0.5 && press > 0.6 && (p.x < 4 || p.x > PW - 4)) opts.push({ k: 'touch', v: 0.004 + press * 0.012 });
   if (!opts.length) { B.dt = 0.5; return; }
   sim.intent = applyTeamIntent(M, s, i, opts, press, o);
   // He weighs the few best passes he sees (Vision finds them), not every team-mate equally.
@@ -465,6 +478,7 @@ function playOption(M, s, i, op, press) {
   if (op.k === 'cross') return crossBall(M, s, i, {});
   if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; return; }
   if (op.k === 'round') return roundKeeper(M, s, i);
+  if (op.k === 'touch') return kick(M, s, i, 'clear', p.x < PW / 2 ? -3 : PW + 3, p.y + fwdY(s) * rf(2, 10), -1, { air: false, err: 1 });
   if (op.k === 'clear') {
     // Away from danger, towards the outlet if there is one, otherwise up the near channel.
     const out = directOutlet(M, s, i), [px] = toOwn(s, p.x, p.y);
@@ -638,7 +652,7 @@ function shotArrives(M, fl) {
     S.on.forEach(id => bumpRating(S, id, 0.05));
     onPitch(O).forEach(z => bumpRating(O, z.p.id, z.pos === 'GK' ? -0.35 : LINE[z.pos] <= 2 ? -0.22 : -0.05));
     mark(M, 'goal', s);
-    M.sim.celebrate = 4;
+    M.sim.celebrate = 35; // celebration and the walk back for the kick-off
     return kickOff(M, 1 - s);
   }
   if (fl.res === 'save') {
@@ -660,6 +674,16 @@ function shotArrives(M, fl) {
 
 /* ---------- crosses and headers ---------- */
 function crossBall(M, s, i, o) {
+  // A defender close to the crosser can block it: most go behind for a corner, the rest loose.
+  if (!o.ck && !o.fk) {
+    const p0 = P_(M, s, i), O = M.sides[1 - s];
+    const bl = M.sim.P[1 - s].findIndex((q, j) => q && j && hyp(q.x - p0.x, q.y - p0.y) < 2.2);
+    if (bl > 0 && R() < 0.28 + (ac(O, bl, 'pos') - 10) * 0.015) {
+      pstat(O, bl, 'blk'); M.sides[s].st.cr = (M.sides[s].st.cr || 0) + 1;
+      if (R() < 0.6) return setRestart(M, 'ck', s, p0.x < PW / 2 ? 0.5 : PW - 0.5, goalY(s));
+      const B = M.sim.B; looseBall(M); B.x = p0.x; B.y = p0.y; B.vx = rf(-7, 7); B.vy = -fwdY(s) * rf(2, 8); B.ls = 1 - s; B.li = bl; return;
+    }
+  }
   const S = M.sides[s], TP = M.sim.P[s], p = P_(M, s, i);
   // Target: the best header of the ball among team-mates in the box, else the penalty spot area.
   let best = -1, bv = -1;
@@ -804,7 +828,7 @@ function pressTrigger(M, s, j, fl, poor) {
 function controlOrLoose(M, t, j, sp, cut) {
   const S = M.sides[t], B = M.sim.B;
   if (R() < clamp(0.8 + (ac(S, j, 'fir') - 10) * 0.015 - (cut ? sp * 0.012 : 0), 0.35, 0.97)) { giveBall(M, t, j); return; }
-  B.fl = null; B.vx = B.vx * -0.3 + rf(-3, 3); B.vy = B.vy * -0.3 + rf(-3, 3); B.ls = t; B.li = j; // deflected
+  B.fl = null; B.vx = B.vx * rf(-0.5, 0.3) + rf(-6, 6); B.vy = B.vy * rf(-0.5, 0.3) + rf(-6, 6); B.ls = t; B.li = j; // deflected
   if (B.offS !== t) B.offSet = 0;
 }
 function offside(M, s, j, fl) {
@@ -857,7 +881,7 @@ function challenges(M) {
     }
     pstat(O, j, 'tk'); bump(O, j, 0.06); bump(S, i, -0.04);
     if (R() < 0.65) return giveBall(M, o, j);
-    looseBall(M); B.vx = rf(-5, 5); B.vy = rf(-5, 5); B.ls = o; B.li = j;
+    looseBall(M); { const a = rf(0, 6.283), v = rf(5, 11); B.vx = Math.cos(a) * v + (B.x < PW / 2 ? -2 : 2); B.vy = Math.sin(a) * v; } B.ls = o; B.li = j; // poked away
   });
 }
 // A foul by side o's player j on side s's player i: free kick or penalty, and maybe a card.

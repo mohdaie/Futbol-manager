@@ -157,7 +157,7 @@ function flowSummary(M, cfg) {
     supportAtLanding: +(F.longs.reduce((t, l) => t + (l.support || 0), 0) / Math.max(1, F.longs.length)).toFixed(1), oppAtLanding: +(F.longs.reduce((t, l) => t + (l.opp || 0), 0) / Math.max(1, F.longs.length)).toFixed(1),
     freeReceiverFinalThirdPct: { direct: pct(F.recv.free, F.recv.fin), press: pct(F.recvP.free, F.recvP.fin) },
     counterpress: { ...F.cp, regainPct: pct(F.cp.regain, F.cp.starts) }, recoverySecs: rec.length ? +(rec.reduce((t, r) => t + r.done, 0) / rec.length).toFixed(1) : null, slowRecoveries: rec.filter(r => r.done >= 8).length,
-    blockOver40mPct: pct(F.deep.gap, F.deep.frames), longKinds: F.kinds || {}, directPasses: st[D].pa, directLongStat: st[D].lp || 0, events: F.events.slice(0, 12), allEvents: F.events,
+    blockOver40mPct: pct(F.deep.gap, F.deep.frames), longKinds: F.kinds || {}, directPasses: st[D].pa, passesBoth: st[0].pa + st[1].pa, directLongStat: st[D].lp || 0, events: F.events.slice(0, 12), allEvents: F.events,
   };
 }
 

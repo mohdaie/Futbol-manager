@@ -11,6 +11,7 @@ const t0 = Date.now();
 for (let k = 0; k < seeds; k++) {
   const rt = createMatchQaRuntime(base + k);
   vm.runInContext(fs.readFileSync(path.join(__dirname, 'flow-scan.js'), 'utf8'), rt.ctx, { filename: 'flow-scan.js' });
+  if (arg('--eng', null)) rt.run('Object.assign(ENG,' + arg('--eng') + ')');
   rt.ctx.FLOW_LIST = scen.map((c, n) => ({ ...c, n, seed: base + k, pair: k }));
   rows.push(...rt.run('flowRun(FLOW_LIST)'));
 }
@@ -18,6 +19,7 @@ const avg = (f) => { const v = rows.map(f).filter(x => x != null && Number.isFin
 const sum = f => rows.reduce((t, r) => t + (f(r) || 0), 0);
 const pb = sum(r => r.pressedBuildUps);
 const agg = {
+  passesPerTeam: Math.round(rows.reduce((t, r) => t + r.passesBoth, 0) / rows.length / 2),
   matches: rows.length, seeds, secs: Math.round((Date.now() - t0) / 1000),
   goals: avg(r => r.score.split(' ')[0].split('-').reduce((a, b) => +a + +b, 0)), possPress: avg(r => r.possPress),
   pressedBuildUpsPerMatch: avg(r => r.pressedBuildUps),
