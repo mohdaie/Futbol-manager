@@ -29,6 +29,10 @@ jobs:
         run: node tests/engine-qa.cjs
       - name: Team intent and possession lifecycle
         run: node tests/intent.cjs
+      - name: Coordinated defending
+        run: node tests/defending.cjs
+      - name: Transition lifecycle
+        run: node tests/transitions.cjs
       - name: One genuine Jev review
         env:
           JEV_API_KEY: ${{ secrets.JEV_API_KEY }}

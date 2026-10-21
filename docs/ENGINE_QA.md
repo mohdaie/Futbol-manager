@@ -77,8 +77,10 @@ Jev is an optional triage assistant; the scripts themselves provide the speed-up
   engine faults. These are explicitly mocked, not evidence of provider output.
 - `tests/engine-qa-ui.cjs`: 10 mobile browser checks, including manual requests,
   local-only runs, caching, honest disconnected state, career isolation and layout.
+- `tests/transitions.cjs`: 16 window, cohort, break/recovery and regain checks.
+- `tests/defending.cjs`: 18 coordinated-unit, trigger and line-movement checks.
 - `tests/intent.cjs`: 17 scorer, mirrored geometry and possession lifecycle checks.
-- `tests/shape.cjs`: 28 browser checks plus eight full-match smoke tests.
+- `tests/shape.cjs`: 30 browser checks plus eight full-match smoke tests.
 - `tests/briefing.cjs`: 33 regression checks for the existing manual dashboard AI.
 - `tests/live.cjs`: 20 live playback/save/resume regression checks passed.
 - The live save/resume test now compares refresh with the actual page-exit
@@ -87,3 +89,7 @@ Jev is an optional triage assistant; the scripts themselves provide the speed-up
 
 This remains a draft branch. The full rulebook, league calibration and a live
 release are separate remaining work.
+
+Coordinated defending and continuation instructions: [CLAUDE_HANDOVER.md](CLAUDE_HANDOVER.md).
+The full-match report now includes unit assignment, cover, trap and step/drop
+frame counters. Strict mode also fails a measured assignment violation.

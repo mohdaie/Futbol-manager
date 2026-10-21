@@ -1,7 +1,7 @@
 'use strict';
 // Instrumentation wraps actual action/receive functions in this test runtime.
 // It is not loaded by index.html and never changes a game player's experience.
-const QA_PLAY = playOption, QA_KICK = kick, QA_RECEIVE = receive;
+const QA_PLAY = playOption, QA_KICK = kick, QA_RECEIVE = receive, QA_ENGAGE = engage, QA_BEGIN_CP = beginCounterpress;
 const QA_INTENT = applyTeamIntent;
 let QA_BASELINE_INTENT = false;
 applyTeamIntent = function(M, s, i, options, press, context) {
@@ -51,6 +51,28 @@ receive = function(M, s, j, fl, d) {
   return result;
 };
 
+beginCounterpress = function(M, ...args) {
+  const result=QA_BEGIN_CP(M,...args),c=M.sim.counterpress,q=M.qa;
+  if(q && c && !c.broken){q.counterpressStarts++;q.cpWindowMin=Math.min(q.cpWindowMin,c.until-c.t);q.cpWindowMax=Math.max(q.cpWindowMax,c.until-c.t);}
+  return result;
+};
+engage = function(M) {
+  const result = QA_ENGAGE(M), q = M.qa, d = M.sim.defence;
+  if(q && M.sim.counterpress?.broken && M.sim.t<M.sim.counterpress.recoverUntil && M.sim.B.os>=0) q.recoveryFrames++;
+  if (q && d?.assignments.length) {
+    if(d.counterpress) q.counterpressFrames++;
+    q.defensiveFrames++;
+    const ids = d.assignments.map(a => a.i), n = d.assignments.filter(a => a.job === 'press').length;
+    q.maxUnitPressers = Math.max(q.maxUnitPressers, n);
+    if (new Set(ids).size !== ids.length || n !== 1 || d.counterpress && ids.length < 3) q.defensiveViolations++;
+    if (d.assignments.some(a => a.job === 'cover')) q.coverFrames++;
+    if (d.trap) q.trapFrames++;
+    if (d.lineStep > 0) q.stepFrames++;
+    if (d.lineStep < 0) q.dropFrames++;
+  }
+  return result;
+};
+
 function matchQaBatch(n = 12, baselineIntent = false) {
   QA_BASELINE_INTENT = baselineIntent;
   const started = performance.now(), names = Object.keys(STYLES);
@@ -64,7 +86,7 @@ function matchQaBatch(n = 12, baselineIntent = false) {
     G.club = 'QA-unmanaged';
     [h, a].forEach((id, s) => { applyStyle(G.clubs[id].tac, styles[s]); });
     const M = createMatch({ id: -1 - k, h, a });
-    M.qa = { passes: 0, forward: 0, backward: 0, sideways: 0, returnPass: 0, backwardReturn: 0, lineBreaks: 0, afterBreak: 0, backAfterBreak: 0, openAfterBreak: 0, backOpenAfterBreak: 0, momentum: null };
+    M.qa = { passes: 0, forward: 0, backward: 0, sideways: 0, returnPass: 0, backwardReturn: 0, lineBreaks: 0, afterBreak: 0, backAfterBreak: 0, openAfterBreak: 0, backOpenAfterBreak: 0, counterpressStarts: 0, cpWindowMin: 8, cpWindowMax: 5, counterpressFrames: 0, recoveryFrames: 0, defensiveFrames: 0, maxUnitPressers: 0, defensiveViolations: 0, coverFrames: 0, trapFrames: 0, stepFrames: 0, dropFrames: 0, momentum: null };
     let minutes = 0;
     while (!M.ended && minutes++ < 110) { simMinute(M); M.sides.forEach(S => injurySubs(M, S)); }
     const st = M.sides.map(S => S.st), qa = { ...M.qa }; delete qa.momentum;
@@ -79,5 +101,10 @@ function matchQaBatch(n = 12, baselineIntent = false) {
     goalsPerMatch: +(sum('goals') / n).toFixed(2), shotsPerMatch: +(sum('shots') / n).toFixed(2), passesPerMatch: Math.round(sum('attempts') / n), completionPct: rate('complete', 'attempts'),
     forwardPct: rate('forward', 'passes'), backwardPct: rate('backward', 'passes'), returnPct: rate('returnPass', 'passes'), backwardReturnPct: rate('backwardReturn', 'passes'),
     lineBreaks: sum('lineBreaks'), afterBreak: sum('afterBreak'), backAfterBreak: sum('backAfterBreak'), backAfterBreakPct: rate('backAfterBreak', 'afterBreak'),
+    counterpressStarts: sum('counterpressStarts'), counterpressFrames: sum('counterpressFrames'), recoveryFrames: sum('recoveryFrames'),
+    counterpressWindowMin: sum('counterpressStarts') ? Math.min(...rows.filter(r=>r.counterpressStarts).map(r=>r.cpWindowMin)) : null,
+    counterpressWindowMax: sum('counterpressStarts') ? Math.max(...rows.filter(r=>r.counterpressStarts).map(r=>r.cpWindowMax)) : null,
+    defensiveFrames: sum('defensiveFrames'), defensiveViolations: sum('defensiveViolations'), maxUnitPressers: Math.max(...rows.map(r => r.maxUnitPressers)),
+    coverFrames: sum('coverFrames'), trapFrames: sum('trapFrames'), stepFrames: sum('stepFrames'), dropFrames: sum('dropFrames'),
     openAfterBreak: sum('openAfterBreak'), backOpenAfterBreak: sum('backOpenAfterBreak'), backOpenAfterBreakPct: rate('backOpenAfterBreak', 'openAfterBreak'), rows };
 }

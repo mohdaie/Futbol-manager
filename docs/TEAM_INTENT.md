@@ -68,5 +68,6 @@ live browser regressions continue to exercise the same 2D engine frames.
 paused match using this engine; it is a rendering check, not proof that a
 particular decision was optimal.
 
-Layer 4 (coordinated pressing, cover/balance, triggers/traps and line stepping)
-is next. Layers 5–8 and the complete rulebook remain unfinished.
+Foundations for layers 4–5 (coordinated defending and transitions) are now in
+place; see [CLAUDE_HANDOVER.md](CLAUDE_HANDOVER.md). Box behaviour, set pieces
+and calibration remain unfinished.

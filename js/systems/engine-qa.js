@@ -76,7 +76,7 @@ function engineAudit(planner = teamPlan) {
   checkRole(8, 'Winger', .2, .4, q => pitchZone(...q).lane === 0, 'Winger supplies chosen width');
   checkRole(10, 'Inside Forward', .8, .25, q => pitchZone(...q).lane === 3, 'Inside forward moves inside');
   const checked = Object.values(groups).reduce((n, g) => n + g.checked, 0), failed = Object.values(groups).reduce((n, g) => n + g.failed, 0);
-  const engine = hash01([positionJobs, attackPlan, blockPlan, restSlots, positions, teamPhase].map(String).join('\n') + TEAM_INTENT_SOURCE).toString(36);
+  const engine = hash01([positionJobs, attackPlan, blockPlan, restSlots, positions, teamPhase].map(String).join('\n') + TEAM_INTENT_SOURCE + DEFENDING_SOURCE + TRANSITIONS_SOURCE).toString(36);
   return { schema: ENGINE_QA_VERSION, engine, scenarios, checked, failed, groups, ms: Math.round(performance.now() - started) };
 }
 
@@ -91,6 +91,8 @@ async function reviewEngineAudit(report) {
   const facts = engineQaFacts(report), key = JSON.stringify(facts);
   const candidates = Object.entries(report.groups).filter(([, g]) => g.failed).sort((a, b) => b[1].severity - a[1].severity);
   const next = report.match ? {
+    transitions: `Inspect transition recovery and escape lanes: ${report.match.counterpressStarts} local counterpress starts, ${report.match.counterpressFrames} active assignment frames, ${report.match.recoveryFrames} recovery frames, windows ${report.match.counterpressWindowMin}–${report.match.counterpressWindowMax} seconds. The window must be 5–8 seconds; counts alone do not establish tactical quality.`,
+    defending: `Review coordinated defending: ${report.match.defensiveFrames} active unit frames, ${report.match.defensiveViolations} assignment violations, at most ${report.match.maxUnitPressers} designated presser(s). Cover ${report.match.coverFrames}, traps ${report.match.trapFrames}, step ${report.match.stepFrames}, drop ${report.match.dropFrames} frames. Counts measure execution, not tactical quality; inspect block gaps and free runners next.`,
     momentum: `Investigate continuity after a line break: ${report.match.backAfterBreak}/${report.match.afterBreak} next actions were backward passes (${report.match.backAfterBreakPct}%). Of the unpressured receivers with a viable forward option, ${report.match.backOpenAfterBreak}/${report.match.openAfterBreak} went backward (${report.match.backOpenAfterBreakPct}%). Judge the open cases; pressure/closed routes justify recycling.`,
     forward_first: `Investigate forward-first decisions: ${report.match.forwardPct}% forward and ${report.match.backwardPct}% backward passes. Check pressure and available options before judging.`,
     one_twos: `Investigate repeated return passes: ${report.match.returnPct}% returned to the previous passer; ${report.match.backwardReturnPct}% of all passes were backward returns. Preserve purposeful one-twos.`,

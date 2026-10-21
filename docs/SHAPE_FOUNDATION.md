@@ -31,7 +31,7 @@ spend AI credits, edit the career tactic, or change player condition. A low-bloc
   Other contextual spaces from section 1.3 still need their position jobs.
 - `teamPhase()`: build-up, progression, chance creation, finishing, high press,
   mid block and low block. Match restart metadata is marked as set piece.
-  Transition behaviour remains the previous engine pending layer 5.
+  Layer-5 counterpress/recovery now acts over those anchors (see handover).
 - `teamPlan()`: uses existing role anchors from `positions()` for attacks,
   retains their lateral positions, and moves assigned cover behind the ball.
   Normally reserves three deepest cover players and two screens; gegenpressing
@@ -66,16 +66,14 @@ that the audit should report rather than inventing an unrelated role.
 Position-job anchors now include keeper support, inverted/overlapping full-backs,
 pivot screens, half-space midfielders, late eights, the ten, shadow strikers,
 wide players, far-post runs and a dropping false nine. False nines retain their
-drop instead of immediately starting the old generic striker run. Individual
-cover shadows, third-man combinations, pressing triggers/traps,
-pressure-dependent line stepping, the revised 5–8 s counter-press, new low-block
+drop instead of immediately starting the old generic striker run. Third-man combinations, new low-block
 tactic/shout, box occupation and style-specific set-piece routines are pending.
 No inaccessible research notes were assumed to have been recovered. `ENG` and
 all tuning levers are unchanged. No style win-rate balancing was added.
 
 ## Validation
 
-`tests/shape.cjs`: **28 checks passed**, including all 64 formation pairings,
+`tests/shape.cjs`: **30 checks passed**, including all 64 formation pairings,
 exact lane boundaries, contextual zones, phase selection, back-line membership,
 block depth and shifting, role-specific width, cover advancing with the ball,
 missing players, carrier exclusion, immutable planning, mobile controls, demo
@@ -106,3 +104,12 @@ runs without browser startup. Its measured failures drove the lane-spacing fixes
 The game version is intentionally still `2026.10.21.24` while this foundation is
 reviewed on its branch. Merging or publishing this draft would require a release
 decision and appropriate further calibration.
+
+Layer-4 pressure/cover assignments, trigger traps, approach shadows and shared
+line movement are now implemented as a foundation. The demo can overlay these
+targets. See [CLAUDE_HANDOVER.md](CLAUDE_HANDOVER.md) for the current validation
+and limitations, and [defending-unit.png](shape-demo/defending-unit.png).
+
+Layer 5 now includes the attribute/condition-dependent 5–8 s local counterpress,
+early failure and recovery, and fast regains. This needs further tactical
+inspection; details and next steps are in the handover.

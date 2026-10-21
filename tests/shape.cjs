@@ -98,6 +98,12 @@ const server = require('node:http').createServer((req, res) => {
     fs.mkdirSync(path.join(root, 'docs', 'shape-demo'), { recursive: true });
     await page.evaluate(() => { document.querySelector('.main').scrollTop = 0; });
     await page.screenshot({ path: path.join(root, 'docs/shape-demo/attack.png') });
+    await page.locator('[data-a="shapeUnit"]').click();
+    await page.locator('[data-a="shapeTrigger"]').click();
+    check('Defending overlay uses distinct real-engine unit assignments', await page.evaluate(() => { const u=demoDefendingUnit(SHAPE_DEMO); return u.assignments.length>=2 && u.assignments.filter(a=>a.job==='press').length===1 && new Set(u.assignments.map(a=>a.i)).size===u.assignments.length; }));
+    await page.screenshot({ path: path.join(root, 'docs/shape-demo/defending-unit.png') });
+    await page.locator('[data-a="shapeUnit"]').click();
+    check('Defending rehearsal toggles leave the tactic and possession unchanged', await page.evaluate(() => !SHAPE_DEMO.showUnit && SHAPE_DEMO.unitTrigger && SHAPE_DEMO.has));
     await page.locator('[data-a="shapePoss"]').click();
     await page.waitForFunction(() => !SHAPE_DEMO.has);
     await page.locator('[data-a="shapeMirror"]').click();

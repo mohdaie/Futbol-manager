@@ -24,6 +24,6 @@ const { createEngineQaRuntime } = require('./engine-qa-runtime.cjs');
   } else if (wantsJev) report.review = { source: 'local', status: 'No environment Jev key; local checks ran without an AI request.' };
   console.log(JSON.stringify(report, null, 2));
   // Known spacing failures remain visible; a release gate should use --strict.
-  if (process.argv.includes('--strict') && (report.failed || report.match && (!report.match.finished || !report.match.finite))) process.exitCode = 1;
+  if (process.argv.includes('--strict') && (report.failed || report.match && (!report.match.finished || !report.match.finite || report.match.defensiveViolations > 0))) process.exitCode = 1;
   else if (wantsJev && report.review?.source !== 'jev' && report.review?.providerReview?.source !== 'jev') process.exitCode = 2;
 })().catch(e => { console.error(String(e.message)); process.exitCode = 1; });

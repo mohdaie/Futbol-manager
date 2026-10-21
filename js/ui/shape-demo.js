@@ -38,19 +38,23 @@ SCREENS.shapedemo = {
       <div class="shape-controls"><button class="btn" data-a="shapeStep" data-n="-1" aria-label="Previous ball position">←</button>
         <button class="btn pri" data-a="shapePlay" id="shapePlay">${D.playing ? 'Pause' : 'Play'}</button>
         <button class="btn" data-a="shapeStep" data-n="1" aria-label="Next ball position">→</button>
-        <button class="btn" data-a="shapePoss">Change possession</button></div>
+        <button class="btn" data-a="shapePoss">Change possession</button>
+        <button class="btn" data-a="shapeUnit">${D.showUnit ? 'Hide' : 'Show'} defending unit</button>
+        ${D.showUnit ? `<button class="btn" data-a="shapeTrigger">Trigger: ${D.unitTrigger ? 'on' : 'off'}</button>` : ''}</div>
       <p class="muted shape-help">Red: your team · Blue: opponent · Gold rings: cover. Tap the pitch to move the ball. Faint circles show target positions.</p>
       <div class="card shape-readout" id="shapeReadout"></div>
       <details class="card"><summary>Change formation & roles</summary><p class="muted">Try inverted full-backs, inside forwards or a false nine. These changes only affect this rehearsal.</p>
         <div class="two">${fld('With the ball', selectHtml('shapeIp', Object.keys(FORMATIONS), D.T.ip, 'shapeFormation'))}${fld('Without the ball', selectHtml('shapeOop', Object.keys(FORMATIONS), D.T.oop, 'shapeFormation'))}</div>
         ${FORMATIONS[D.T.ip].map(([pos], i) => fld(`${i + 1} · ${pos}`, `<select id="shapeRole${i}" data-c="shapeRole" data-i="${i}">${ROLES[pos].map((r, k) => `<option value="${k}" ${k === (D.T.roles[i] || 0) ? 'selected' : ''}>${esc(r.n)}</option>`).join('')}</select>`)).join('')}
-      </details><p class="muted">Layers 1–2: shape and position jobs. Pressing triggers, transitions and later rulebook layers are still to follow.</p>`;
+      </details><p class="muted">Layers 1–2 show shape/jobs. The unit overlay rehearses layer-4 pressure/cover targets; arrows are planned movement. Transition and box layers are still to follow.</p>`;
   },
   after() { bindShapeDemo(); },
 };
 ACT.shapePlay = () => { const D = SHAPE_DEMO; D.playing = !D.playing; D.last = 0; document.getElementById('shapePlay').textContent = D.playing ? 'Pause' : 'Play'; };
 ACT.shapeStep = ds => { demoScene(SHAPE_DEMO, SHAPE_DEMO.step + Number(ds.n)); SHAPE_DEMO.playing = false; render(); };
 ACT.shapePoss = () => { const D = SHAPE_DEMO; D.has = !D.has; D.playing = false; D.caption = 'Possession changed'; render(); };
+ACT.shapeUnit = () => { SHAPE_DEMO.showUnit = !SHAPE_DEMO.showUnit; render(); };
+ACT.shapeTrigger = () => { SHAPE_DEMO.unitTrigger = !SHAPE_DEMO.unitTrigger; render(); };
 ACT.shapeMirror = () => { SHAPE_DEMO.mirror = !SHAPE_DEMO.mirror; render(); };
 CHG.shapeStyle = () => { const D = SHAPE_DEMO; D.key = val('shapeStyle'); D.T = demoTactic(D.key); D.dots = [[], []]; render(); };
 CHG.shapeFormation = () => {
@@ -96,6 +100,15 @@ function shapeDemoFrame(now) {
   const el = document.getElementById('shapeReadout'); if (el.innerHTML !== html) el.innerHTML = html;
   D.raf = requestAnimationFrame(shapeDemoFrame);
 }
+// Feed rehearsal positions into the same assignment helper used by engage().
+// This draws target arrows; it does not claim to reproduce match pressure gates.
+function demoDefendingUnit(D) {
+  const s = D.has ? 0 : 1, P = D.dots.map(team => team.map(q => q ? { x: q[0] * PW, y: q[1] * PL } : null));
+  const candidates = P[s].map((q, i) => q && i ? { i, d: hyp(q.x - D.bx * PW, q.y - D.by * PL) } : null).filter(Boolean).sort((a,b) => a.d-b.d);
+  if (!candidates.length) return { assignments: [] };
+  const i = candidates[0].i; P[s][i] = { x: D.bx * PW, y: D.by * PL };
+  return { ...defensiveUnit({ sim: { P, B: { os:s, oi:i }, rs:null } }, s, 1.2, !!D.unitTrigger), side: 1-s };
+}
 function drawShapeDemo(D, plans) {
   const cv = D.cv, W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
@@ -125,6 +138,17 @@ function drawShapeDemo(D, plans) {
       g.fillStyle = '#10232d'; g.font = 'bold 8px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(i + 1), x, y);
     });
   });
+  if (D.showUnit) {
+    const unit = demoDefendingUnit(D);
+    unit.assignments.forEach(a => {
+      const q = D.dots[unit.side][a.i]; if (!q) return;
+      const [x,y] = point(q), [tx,ty] = point([a.x/PW,a.y/PL]);
+      g.strokeStyle = a.job === 'press' ? '#fff' : '#ffdc74'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x,y); g.lineTo(tx,ty); g.stroke();
+      g.beginPath(); g.arc(tx,ty,4,0,Math.PI*2); g.stroke();
+      g.fillStyle = '#fff'; g.font = 'bold 10px system-ui'; g.fillText(a.job,tx,ty-9);
+    });
+  }
   const [x, y] = point([D.bx, D.by]); g.fillStyle = '#fff'; g.strokeStyle = '#0a1713'; g.lineWidth = 2;
   g.beginPath(); g.arc(x, y, 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
   g.fillStyle = '#d8eadd'; g.font = '9px system-ui'; g.textAlign = 'center'; g.fillText(D.mirror ? 'YOUR TEAM ATTACKS ↓' : 'YOUR TEAM ATTACKS ↑', W / 2, 7);
