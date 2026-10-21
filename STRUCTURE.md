@@ -459,3 +459,9 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - Every first-team player from the real-based squads has `p.insp`: the name of the real player he is based on (9th field of each first-team row in rosters.js). It is a name only: nothing in the game reads it. Shown on the player's Personal tab. Generated players (reserves, U18s, youth intake, free agents) have none.
 - Older saves get it on load, matched by the player's name (`ensureWorld()` in bio.js, once, `G.flags.insp`).
 - The full list is in `docs/INSPIRATIONAL_FIGURES.md`. It was rebuilt from the Transfermarkt 2026/27 squad pages, matching club, age, squad order and name likeness.
+
+## Overseas clubs, refresh and daily saves (2026.10.21.5)
+- **Overseas clubs** are built from real 2026/27 squads (`FOREIGN_ROSTERS` in rosters.js, linked by `ros` in `FOREIGN`): Castilla CF = Real Madrid, Lutece SG = PSG, Lombardia AC = AC Milan, Rhein 04 = Leverkusen, Porto Norte = FC Porto, Amstel FC = Ajax, Rio Atletico = Flamengo, Pampas Juniors = Boca Juniors, Brussels Royal = Anderlecht, Tokyo Bay FC = FC Tokyo, Oslo Vikings = Vålerenga, Lagos Stars = Remo Stars, Selangor Harimau = Selangor FC. 345 players with sound-alike names, real ages, nationalities, positions, feet and values, and their inspirational figure. New games only; old saves keep their generated overseas players. Free agents stay generated.
+- Ratings from value: the age boost for older players now stops at 35 (`ratingFromValue()`), so a 41-year-old with a small value is no longer world class. Affects a few Premier League veterans in new games too.
+- **Refresh** returns to the screen you were on (sessionStorage, this tab only; a live match returns to the pre-match screen). Opening the game in a new tab shows the title.
+- **Daily saves:** the day-by-day calendar saves after every day.

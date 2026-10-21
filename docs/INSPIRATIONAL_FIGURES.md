@@ -643,3 +643,417 @@ Game player → real player. Taken from the 2026/27 squads the rosters were buil
 | Nicolas Johnson | ST | 25 | Nicolas Jackson |
 | Brian Mbejo | ST | 17 | Brian Madjo |
 | Tammy Adewale | ST | 29 | Tammy Abraham |
+
+# Overseas clubs
+
+New games only: existing saves keep their generated overseas players.
+
+## Castilla CF (Real Madrid)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Thibault Courtens | GK | 34 | Thibaut Courtois |
+| Andriy Lukin | GK | 27 | Andriy Lunin |
+| Dean Huisman | DC | 21 | Dean Huijsen |
+| Ibrahim Konare | DC | 27 | Ibrahima Konaté |
+| Raul Asenjo | DC | 23 | Raúl Asencio |
+| Eder Militino | DC | 28 | Éder Militão |
+| Antonio Rudinger | DC | 33 | Antonio Rüdiger |
+| Marc Cucarell | DL | 28 | Marc Cucurella |
+| Alvaro Carrera | DL | 23 | Álvaro Carreras |
+| Ferland Mendes | DL | 31 | Ferland Mendy |
+| Trent Alexander-Arnott | DR | 28 | Trent Alexander-Arnold |
+| Denzel Dumfield | DR | 30 | Denzel Dumfries |
+| Aurelien Tchoumani | DM | 26 | Aurélien Tchouaméni |
+| Federico Valdero | MC | 28 | Federico Valverde |
+| Eduardo Camavia | MC | 23 | Eduardo Camavinga |
+| Tiago Pitarra | MC | 19 | Thiago Pitarch |
+| Jorge Cestaro | MC | 20 | Jorge Cestero |
+| Jude Bellamy | AMC | 23 | Jude Bellingham |
+| Arda Guleren | AMC | 21 | Arda Güler |
+| Bernardo Sylvan | AMC | 32 | Bernardo Silva |
+| Vinicio Junho | AML | 26 | Vinicius Junior |
+| Yann Diomandi | AMR | 19 | Yan Diomande |
+| Rodrigao | AMR | 25 | Rodrygo |
+| Kyllian Mbakou | ST | 27 | Kylian Mbappé |
+| Enderson | ST | 20 | Endrick |
+| Carlos Espin | ST | 21 | Carlos Espí |
+
+## Lutece SG (Paris Saint-Germain)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Matvei Safronov | GK | 27 | Matvey Safonov |
+| Lucas Chevallard | GK | 24 | Lucas Chevalier |
+| Alessandro Longhini | GK | 18 | Alessandro Longoni |
+| Willian Pachon | DC | 25 | Willian Pacho |
+| Ilya Zabrodny | DC | 24 | Ilya Zabarnyi |
+| Marquinho | DC | 32 | Marquinhos |
+| Lucas Bernaldo | DC | 22 | Lucas Beraldo |
+| Nuno Menezes | DL | 24 | Nuno Mendes |
+| Luca Hernanz | DL | 30 | Lucas Hernández |
+| Lucas Digard | DL | 33 | Lucas Digne |
+| Achraf Hakami | DR | 27 | Achraf Hakimi |
+| Vitorinha | DM | 26 | Vitinha |
+| Joao Nevares | MC | 22 | João Neves |
+| Warren Zaire-Emory | MC | 20 | Warren Zaïre-Emery |
+| Senny Mayolo | MC | 20 | Senny Mayulu |
+| Fabian Ruano | MC | 30 | Fabián Ruiz |
+| Dro Fernandel | AMC | 18 | Dro Fernández |
+| Khvicha Kvaradze | AML | 25 | Khvicha Kvaratskhelia |
+| Mika Goddaert | AML | 21 | Mika Godts |
+| Quentin Ndjanga | AML | 19 | Quentin Ndjantou |
+| Desire Doumbe | AMR | 21 | Désiré Doué |
+| Maghnes Aklouche | AMR | 24 | Maghnes Akliouche |
+| Ousmane Dembeke | ST | 29 | Ousmane Dembélé |
+| Ferran Torrent | ST | 26 | Ferran Torres |
+
+## Lombardia AC (AC Milan)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Mike Magnan | GK | 31 | Mike Maignan |
+| Lorenzo Torrisi | GK | 21 | Lorenzo Torriani |
+| Pietro Terranova | GK | 36 | Pietro Terracciano |
+| Strahinja Pavicevic | DC | 25 | Strahinja Pavlović |
+| Mario Gilabert | DC | 26 | Mario Gila |
+| Koni De Wilde | DC | 24 | Koni De Winter |
+| Matteo Gabbiani | DC | 27 | Matteo Gabbia |
+| Fikayo Tomoba | DC | 28 | Fikayo Tomori |
+| Filippo Terrazzi | DC | 23 | Filippo Terracciano |
+| Sankoun Diawane | DC | 20 | Sankhoun Diawara |
+| Valeri Vladislavov | DC | 18 | Valeri Vladimirov |
+| Davide Bartolazzi | DL | 20 | Davide Bartesaghi |
+| Pervis Estupino | DL | 28 | Pervis Estupiñán |
+| Ardon Jashani | DM | 24 | Ardon Jashari |
+| Adrien Rabaud | MC | 31 | Adrien Rabiot |
+| Yunus Musa | MC | 23 | Yunus Musah |
+| Christian Comotti | MC | 18 | Christian Comotto |
+| Ruben Lofton-Cheeke | MC | 30 | Ruben Loftus-Cheek |
+| Warren Bonda | MC | 23 | Warren Bondo |
+| Luka Modrinic | MC | 41 | Luka Modrić |
+| Alexis Saelens | MR | 27 | Alexis Saelemaekers |
+| Diego Moreno | ML | 22 | Diego Moreira |
+| Alphadio Cisset | AMC | 19 | Alphadjo Cisse |
+| Christian Pulasky | AMR | 28 | Christian Pulisic |
+| Omari Hutchings | AMR | 22 | Omari Hutchinson |
+| Samuel Chukwuma | AMR | 27 | Samuel Chukwueze |
+| Goncalo Ramires | ST | 25 | Gonçalo Ramos |
+| Francesco Camardi | ST | 18 | Francesco Camarda |
+
+## Rhein 04 (Bayer Leverkusen)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Mark Flekstra | GK | 33 | Mark Flekken |
+| Janis Blasius | GK | 35 | Janis Blaswich |
+| Niklas Lombe | GK | 33 | Niklas Lomb |
+| Jarrell Quarshie | DC | 23 | Jarell Quansah |
+| Edmond Tapsore | DC | 27 | Edmond Tapsoba |
+| Facundo Medrano | DC | 27 | Facundo Medina |
+| Loic Badou | DC | 26 | Loïc Badé |
+| Tim Ohrmann | DC | 23 | Tim Oermann |
+| Miguel Guitarte | DL | 25 | Miguel Gutiérrez |
+| Guela Douka | DR | 24 | Guéla Doué |
+| Lucas Vazquero | DR | 35 | Lucas Vázquez |
+| Equi Fernandino | DM | 24 | Equi Fernández |
+| Kennet Eichberg | DM | 17 | Kennet Eichhorn |
+| Robert Andreski | DM | 32 | Robert Andrich |
+| Aleix Garrigos | MC | 29 | Aleix García |
+| Ibrahim Mazari | AMC | 20 | Ibrahim Maza |
+| Malik Tillberg | AMC | 24 | Malik Tillman |
+| Jonas Hoffner | AMC | 34 | Jonas Hofmann |
+| Afonso Moreiro | AML | 21 | Afonso Moreira |
+| Eliesse Ben Seghira | AML | 21 | Eliesse Ben Seghir |
+| Martin Terrien | AML | 29 | Martin Terrier |
+| Moussa Diabaye | AMR | 27 | Moussa Diaby |
+| Nathan Tellam | AMR | 27 | Nathan Tella |
+| Montrell Culberth | AMR | 19 | Montrell Culbreath |
+| Christian Kofana | ST | 20 | Christian Kofane |
+| Patrik Schicker | ST | 30 | Patrik Schick |
+| Victor Bonifacio | ST | 25 | Victor Boniface |
+| Ndjicoura Bombo | ST | 18 | Ndjicoura Bomba |
+
+## Porto Norte (FC Porto)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Diogo Coutinho | GK | 27 | Diogo Costa |
+| Claudio Ramalho | GK | 34 | Cláudio Ramos |
+| Joao Coelho | GK | 30 | João Costa |
+| Jakub Kiwacz | DC | 26 | Jakub Kiwior |
+| Jan Bednarczyk | DC | 30 | Jan Bednarek |
+| Nehuen Peralta | DC | 26 | Nehuén Pérez |
+| Dominik Prskalo | DC | 22 | Dominik Prpić |
+| Chris Smallbone | DC | 36 | Chris Smalling |
+| Sousinha | DL | 20 | Souza |
+| Francisco Mourao | DL | 27 | Francisco Moura |
+| Zaidu Sanni | DL | 29 | Zaidu Sanusi |
+| Alberto Costela | DR | 23 | Alberto Costa |
+| Martim Fernandino | DR | 20 | Martim Fernandes |
+| Alan Varone | DM | 25 | Alan Varela |
+| Pablo Rosales | DM | 29 | Pablo Rosario |
+| Victor Fryholt | MC | 20 | Victor Froholdt |
+| Seko Fofie | MC | 31 | Seko Fofana |
+| In-beom Hwangbo | MC | 30 | In-beom Hwang |
+| Vasco Soares | MC | 23 | Vasco Sousa |
+| Gabri Vega | AMC | 24 | Gabri Veiga |
+| Oskar Pietrowski | AML | 18 | Oskar Pietuszewski |
+| Borja Saez | AML | 25 | Borja Sainz |
+| William Gomide | AMR | 20 | William Gomes |
+| Pepinho | AMR | 29 | Pepê |
+| Gabriel Mecca | AMR | 18 | Gabriel Mec |
+| Duarte Cunhal | AMR | 18 | Duarte Cunha |
+| Samu Aghahowe | ST | 22 | Samu Aghehowa |
+| Santiago Gimeno | ST | 25 | Santiago Giménez |
+| Andre Silvares | ST | 30 | André Silva |
+
+## Amstel FC (Ajax)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Marc-Andre ter Steeg | GK | 34 | Marc-André ter Stegen |
+| Maarten Paas | GK | 28 | Maarten Paes |
+| Joeri Heerkes | GK | 20 | Joeri Heerkens |
+| Youri Baars | DC | 23 | Youri Baas |
+| Thilo Kehrmann | DC | 30 | Thilo Kehrer |
+| Aaron Bouwens | DC | 19 | Aaron Bouwman |
+| Dies Jansma | DC | 20 | Dies Janse |
+| Daley Blink | DC | 36 | Daley Blind |
+| Caio Henriques | DL | 29 | Caio Henrique |
+| Owen Wijnberg | DL | 26 | Owen Wijndal |
+| Jofre Torrens | DL | 19 | Jofre Torrents |
+| Lucas Rossetto | DR | 26 | Lucas Rosa |
+| Anton Gaard | DR | 23 | Anton Gaaei |
+| Jorthy Mokiri | DM | 18 | Jorthy Mokio |
+| Yves Bissoume | DM | 30 | Yves Bissouma |
+| Sofyan Amrabet | DM | 30 | Sofyan Amrabat |
+| Davy Klaver | MC | 33 | Davy Klaassen |
+| Oscar Glukhov | AMC | 22 | Oscar Gloukh |
+| Julian Brandner | AMC | 30 | Julian Brandt |
+| Abdellah Ouazzani | AMC | 17 | Abdellah Ouazane |
+| Rayane Bounina | AMC | 20 | Rayane Bounida |
+| Simon Adinkra | AML | 24 | Simon Adingra |
+| Oliver Edvardsson | AML | 27 | Oliver Edvardsen |
+| Viktor Tsyganok | AMR | 28 | Viktor Tsygankov |
+| Steven Berghout | AMR | 34 | Steven Berghuis |
+| Tolu Arokoyo | ST | 25 | Tolu Arokodare |
+| Marcos Leonel | ST | 23 | Marcos Leonardo |
+| Kasper Dahlberg | ST | 29 | Kasper Dolberg |
+
+## Rio Atletico (Flamengo)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Agustin Rossetti | GK | 31 | Agustín Rossi |
+| Andreus | GK | 25 | Andrew |
+| Dyogo Alvaro | GK | 22 | Dyogo Alves |
+| Leo Ortega | DC | 30 | Léo Ortiz |
+| Leo Pereiro | DC | 30 | Léo Pereira |
+| Vilao | DC | 26 | Vitão |
+| Danilinho | DC | 35 | Danilo |
+| Joao Souto | DC | 19 | João Souza |
+| Ayrton Lucena | DL | 29 | Ayrton Lucas |
+| Alex Sandrino | DL | 35 | Alex Sandro |
+| Emerson Real | DR | 27 | Emerson Royal |
+| Guillermo Varona | DR | 33 | Guillermo Varela |
+| Evertton Arouca | DM | 23 | Evertton Araújo |
+| Erick Pulgarin | DM | 32 | Erick Pulgar |
+| Jorgito | DM | 34 | Jorginho |
+| Nicolas de la Cuesta | MC | 29 | Nicolás de la Cruz |
+| Saul Nunez | MC | 31 | Saúl Ñíguez |
+| Lucas Paquera | AMC | 29 | Lucas Paquetá |
+| Jorge Carrascoso | AMC | 28 | Jorge Carrascal |
+| Giorgian de Arrasate | AMC | 32 | Giorgian de Arrascaeta |
+| Samuel Linhares | AML | 26 | Samuel Lino |
+| Gonzalo Platero | AMR | 25 | Gonzalo Plata |
+| Luiz Arruda | AMR | 30 | Luiz Araújo |
+| Anthony Valenzuela | AMR | 23 | Anthony Valencia |
+| Pedrinho | ST | 29 | Pedro |
+| Joaquin Freire | ST | 19 | Joaquín Freitas |
+| Bruno Henriquez | ST | 35 | Bruno Henrique |
+
+## Pampas Juniors (Boca Juniors)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Alvaro Monteros | GK | 31 | Álvaro Montero |
+| Leandro Breyer | GK | 24 | Leandro Brey |
+| Agustin Marchetti | GK | 38 | Agustín Marchesín |
+| Lautaro Di Lullo | DC | 22 | Lautaro Di Lollo |
+| Ayrton Costas | DC | 27 | Ayrton Costa |
+| Facundo Herreros | DC | 20 | Facundo Herrera |
+| Marco Pellegrini | DC | 24 | Marco Pellegrino |
+| Matias Sataro | DC | 18 | Matías Satas |
+| Lautaro Blanquet | DL | 27 | Lautaro Blanco |
+| Malcom Braidot | DL | 29 | Malcom Braida |
+| Leandro Lozada | DR | 27 | Leandro Lozano |
+| Dylan Gorostiza | DR | 20 | Dylan Gorosito |
+| Milton Delgadillo | DM | 21 | Milton Delgado |
+| Santiago Ascarate | DM | 29 | Santiago Ascacíbar |
+| Leandro Paredon | DM | 32 | Leandro Paredes |
+| Tomas Belmondo | DM | 28 | Tomás Belmonte |
+| Williams Alarcos | MC | 25 | Williams Alarcón |
+| Tomas Arancibia | AMC | 19 | Tomás Aranda |
+| Carlos Palacin | AMC | 26 | Carlos Palacios |
+| Sebastian Villar | AML | 30 | Sebastián Villa |
+| Alan Velazquez | AML | 24 | Alan Velasco |
+| Leonel Florencio | AMR | 19 | Leonel Flores |
+| Miguel Merentel | ST | 30 | Miguel Merentiel |
+| Adam Barreto | ST | 30 | Adam Bareiro |
+| Milton Ginestra | ST | 30 | Milton Giménez |
+| Enner Valenzano | ST | 36 | Enner Valencia |
+
+## Brussels Royal (Anderlecht)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Colin Coomans | GK | 34 | Colin Coosemans |
+| Justin Heekers | GK | 25 | Justin Heekeren |
+| Mattis Seghaert | GK | 17 | Mattis Seghers |
+| Andrew Omobolaji | DC | 24 | Andrew Omobamidele |
+| Giulian Biancardi | DC | 26 | Giulian Biancone |
+| Lucas Heyn | DC | 23 | Lucas Hey |
+| Leo Petraud | DC | 29 | Léo Pétrot |
+| Zoumana Keitane | DC | 20 | Zoumana Keita |
+| Oleg Reabcov | DL | 28 | Oleg Reabciuk |
+| Ludwig Augustsson | DL | 32 | Ludwig Augustinsson |
+| Ali Maamri | DR | 21 | Ali Maamar |
+| Ilay Camaro | DR | 23 | Ilay Camara |
+| Killian Sardelli | DR | 24 | Killian Sardella |
+| Marco Kanga | DM | 24 | Marco Kana |
+| Enric Llansa | DM | 25 | Enric Llansana |
+| Romeo Amani | MC | 23 | Romeo Amane |
+| Ilias Koutsoukos | MC | 25 | Ilias Koutsoupias |
+| Lukas Ambroz | AMC | 22 | Lukas Ambros |
+| Mario Stroobants | AMC | 22 | Mario Stroeykens |
+| Thelo Aasland | AMC | 24 | Thelo Aasgaard |
+| Joshua Nga Kama | AML | 17 | Joshua Nga Kana |
+| Noa Ojeda | AML | 17 | Noa Ojea |
+| Oliver Antila | AMR | 25 | Oliver Antman |
+| Tristan Degrave | AMR | 21 | Tristan Degreef |
+| Mihajlo Cvetanovic | ST | 19 | Mihajlo Cvetković |
+| Tawfik Bentaleb | ST | 24 | Tawfik Bentayeb |
+| Danylo Sikora | ST | 25 | Danylo Sikan |
+| Adriano Bertacchi | ST | 26 | Adriano Bertaccini |
+
+## Tokyo Bay FC (FC Tokyo)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Hayate Tanabe | GK | 27 | Hayate Tanaka |
+| Seung-gu Kang | GK | 36 | Seung-gyu Kim |
+| Wataru Gotanda | GK | 20 | Wataru Goto |
+| Alexander Scholten | DC | 33 | Alexander Scholz |
+| Hayato Inamoto | DC | 24 | Hayato Inamura |
+| Rio Omura | DC | 24 | Rio Omori |
+| Shuto Nagami | DC | 20 | Shuto Nagano |
+| Masato Morishita | DC | 39 | Masato Morishige |
+| Kento Hashida | DL | 26 | Kento Hashimoto |
+| Kashif Bangura | DL | 25 | Kashif Bangnagande |
+| Yuto Nagatani | DL | 40 | Yuto Nagatomo |
+| Hirokazu Ishikawa | DR | 27 | Hirokazu Ishihara |
+| Sei Murota | DR | 32 | Sei Muroya |
+| Takahiro Kono | DM | 28 | Takahiro Ko |
+| Kyota Tokunaga | DM | 24 | Kyota Tokiwa |
+| Kaede Suzuya | DM | 19 | Kaede Suzuki |
+| Soma Anzawa | MR | 24 | Soma Anzai |
+| Shion Hombo | ML | 26 | Shion Homma |
+| Kio Tanahashi | AMC | 19 | Kio Tanaka |
+| Nicolai Valsted | AML | 30 | Nicolai Vallys |
+| Kota Tawaramoto | AML | 22 | Kota Tawaratsumida |
+| Kein Satoyama | AMR | 25 | Kein Sato |
+| Fuki Yamane | AMR | 25 | Fuki Yamada |
+| Teruhito Nakamaru | AMR | 34 | Teruhito Nakagawa |
+| Marcelo Rian | ST | 24 | Marcelo Ryan |
+| Dani Gomila | ST | 28 | Dani Gómez |
+| Motoki Nagakubo | ST | 27 | Motoki Nagakura |
+| Tsuna Kominami | ST | 21 | Tsuna Kominato |
+
+## Oslo Vikings (Vålerenga)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Oscar Hedlund | GK | 28 | Oscar Hedvall |
+| Sander Lunning | GK | 24 | Sander Lønning |
+| Aron Kiil Olsvik | DC | 25 | Aaron Kiil Olsen |
+| Ivan Nesheim | DC | 30 | Ivan Næsberg |
+| Sebastian Jarle | DC | 26 | Sebastian Jarl |
+| Kevin Tshimanga | DC | 29 | Kevin Tshiembe |
+| Kolbeinn Finnbogason | DL | 27 | Kolbeinn Finnsson |
+| Hakon Sjaastad | DR | 23 | Håkon Sjåtil |
+| Vegar Hedemark | DR | 35 | Vegar Hedenstad |
+| Fidel Brice Ambassa | DM | 24 | Fidel Brice Ambina |
+| Odin Tiago Holmen | MC | 23 | Odin Thiago Holm |
+| Magnus Westerholm | MC | 28 | Magnus Westergaard |
+| Petter Strandli | MC | 32 | Petter Strand |
+| Omar Bullah | MC | 23 | Omar Bully |
+| Carl Langer | AMC | 28 | Carl Lange |
+| Ghayas Zahir | AMC | 32 | Ghayas Zahid |
+| Elbasan Rashica | AML | 33 | Elbasan Rashani |
+| Dennis Gjengedal | AMR | 22 | Dennis Gjengaar |
+| Lucas Harlev | AMR | 29 | Lucas Haren |
+| Mathias Grundvik | ST | 26 | Mathias Grundetjern |
+| Ole Saetre | ST | 30 | Ole Sæter |
+| Havard Nilsen | ST | 33 | Håvard Nielsen |
+| Lorents Apold-Aaker | ST | 19 | Lorents Apold-Aasen |
+
+## Lagos Stars (Remo Stars)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Emmanuel Ofosu | GK | 28 | Emmanuel Ofori |
+| Emmanuel Olisah | GK | 22 | Emmanuel Olisa |
+| Biola Ibrahim Sabiu | GK | 21 | Biola Ibrahim Sabitu |
+| Ahmed Akinola | DC | 21 | Ahmed Akinyele |
+| Stanley Josephs | DC | 21 | Stanley Joseph |
+| Ibrahim Adeiza Obanor | DC | 22 | Ibrahim Adeiza Obansa |
+| Michael Olakunle Hosanna | DC | 20 | Michael Olakunle Hosea |
+| Chigozie Chukwu | DL | 30 | Chigozie Chilekwu |
+| Mutiu Daudu | DL | 22 | Mutiu Dauda |
+| Segun Owolabi | DL | 19 | Segun Owoade |
+| Olalekan Adelakun | DR | 18 | Olalekan Adeleke |
+| Chaka Coulibali | DM | 19 | Chaka Coulibaly |
+| Olamilekan Adedeji | MC | 23 | Olamilekan Adedayo |
+| Qudus Akande | MC | 23 | Qudus Akanni |
+| Sodiq Oshodi | MC | 22 | Sodiq Oshidero |
+| Shuaib Abdulrahman | AMC | 22 | Shuaib Abdulrazaq |
+| Jabbar Maliki | AML | 22 | Jabbar Malik |
+| Lekan Malomo | AML | 20 | Lekan Malik |
+| Mark Gibbons | AMR | 21 | Mark Gibson |
+| Joseph Abara | ST | 19 | Joseph Abah |
+| Azeez Agbaje | ST | 19 | Azeez Agboola |
+| George Prosper | ST | 18 | George Precious |
+
+## Selangor Harimau (Selangor FC)
+
+| Game player | Pos | Age | Inspired by |
+|---|---|---|---|
+| Kalamullah Al-Hafidz | GK | 31 | Kalamullah Al-Hafiz |
+| Sikh Izhan Nazril | GK | 24 | Sikh Izhan Nazrel |
+| Azim Al-Amri | GK | 26 | Azim Al-Amin |
+| Arbenit Xhemaili | DC | 28 | Arbenit Xhemajli |
+| Jefferson Tabaniag | DC | 28 | Jefferson Tabinas |
+| Harith Haikal | DC | 24 | Harith Haiqal |
+| Richmond Tetteh Ankomah | DC | 26 | Richmond Tetteh Ankrah |
+| Sharul Nazim | DC | 26 | Sharul Nazeem |
+| Safuan Baharom | DC | 35 | Safuwan Baharudin |
+| Adib Rauf | DL | 26 | Adib Ra'op |
+| Quentin Cheong | DR | 26 | Quentin Cheng |
+| Zikri Khalid | DR | 24 | Zikri Khalili |
+| Muhammad Abu Kamil | DM | 21 | Muhammad Abu Khalil |
+| Nooa Lainio | MC | 23 | Nooa Laine |
+| Azam Azizi | MC | 31 | Azam Azih |
+| Peter Makris | MC | 31 | Peter Makrillos |
+| Syahir Basri | MC | 25 | Syahir Bashah |
+| Mukhairi Ajmain | MC | 24 | Mukhairi Ajmal |
+| Alex Agyemang | MC | 26 | Alex Agyarkwa |
+| Hugo Boumaza | AMC | 25 | Hugo Boumous |
+| Eduardo Sosaya | AMC | 30 | Eduardo Sosa |
+| Aliff Izwani | AMC | 22 | Aliff Izwan |
+| Faisal Halimi | AML | 28 | Faisal Halim |
+| A. Selvam | AMR | 25 | A. Selvan |
+| Vitor Recifense | AMR | 28 | Vitor Pernambuco |
+| Chrigor Moraldo | ST | 25 | Chrigor Moraes |
+| Kay Tejero | ST | 29 | Kay Tejan |
+| Pedro Atayde | ST | 21 | Pedro Ataíde |

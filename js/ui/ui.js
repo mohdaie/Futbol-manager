@@ -47,7 +47,24 @@ function render(reset) {
   const m2 = root.querySelector('.main');
   if (m2) m2.scrollTop = keep;
   if (scr.after) scr.after(UI.p);
+  rememberScreen();
   syncViewHistory();
+}
+
+// A refresh returns to the screen you were on (this browser tab only); opening the game afresh shows the title.
+const LAST_VIEW_KEY = 'futbol-manager:view';
+function rememberScreen() {
+  if (!G || ['title', 'start'].includes(UI.s)) return;
+  try { sessionStorage.setItem(LAST_VIEW_KEY, JSON.stringify({ s: UI.s, p: UI.p || {}, tab: UI.tab || {} })); } catch (e) { /* storage blocked */ }
+}
+function restoreScreen() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(LAST_VIEW_KEY) || 'null');
+    if (!v || !SCREENS[v.s]) return false;
+    // A live match is not saved mid-game: it restarts from the pre-match screen.
+    UI.s = v.s === 'match' ? 'prematch' : v.s; UI.p = v.p || {}; UI.tab = { ...UI.tab, ...(v.tab || {}) };
+    return true;
+  } catch (e) { return false; }
 }
 
 function shell(body) {
@@ -176,7 +193,8 @@ ACT.tab = ds => { UI.tab[ds.key] = ds.v; render(); };
 function boot() {
   loadGame();
   UI.s = 'title';
-  render(true);
+  if (G) restoreScreen();
+  try { render(true); } catch (e) { UI.s = G ? 'home' : 'title'; UI.p = {}; render(true); } // a screen that no longer fits the save
   initViewHistory();
 }
 window.addEventListener('DOMContentLoaded', boot);

@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.21.4';
+const GAME_VERSION = '2026.10.21.5';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -36,21 +36,21 @@ const CLUBS = [
   { id: 'OLD', name: 'Old Gold', city: 'Wolverhampton', c1: '#FDB913', c2: '#231F20', rep: 73, ground: 'Waterloo Road', cap: 31700 },
 ];
 
-// Clubs abroad. They play no fixtures; they hold players you can scout and buy.
+// Clubs abroad. They play no fixtures; they hold players you can scout and buy. ros: their real-based squad in FOREIGN_ROSTERS (rosters.js).
 const FOREIGN = [
-  { name: 'Castilla CF', nat: 'ESP', rep: 86, c1: '#F5F5F5', c2: '#5B2C83' },
-  { name: 'Lutece SG', nat: 'FRA', rep: 84, c1: '#0B2A5B', c2: '#E2001A' },
-  { name: 'Lombardia AC', nat: 'ITA', rep: 81, c1: '#B5121B', c2: '#111111' },
-  { name: 'Rhein 04', nat: 'GER', rep: 80, c1: '#E32219', c2: '#111111' },
-  { name: 'Porto Norte', nat: 'POR', rep: 78, c1: '#1B4E9B', c2: '#FFFFFF' },
-  { name: 'Amstel FC', nat: 'NED', rep: 76, c1: '#FFFFFF', c2: '#C8102E' },
-  { name: 'Rio Atletico', nat: 'BRA', rep: 74, c1: '#1A1A1A', c2: '#E30613' },
-  { name: 'Pampas Juniors', nat: 'ARG', rep: 73, c1: '#0033A0', c2: '#FFD100' },
-  { name: 'Brussels Royal', nat: 'BEL', rep: 70, c1: '#5B2C83', c2: '#FFFFFF' },
-  { name: 'Tokyo Bay FC', nat: 'JPN', rep: 66, c1: '#00205B', c2: '#E4002B' },
-  { name: 'Oslo Vikings', nat: 'NOR', rep: 62, c1: '#FFD200', c2: '#111111' },
-  { name: 'Lagos Stars', nat: 'NGA', rep: 60, c1: '#008751', c2: '#FFFFFF' },
-  { name: 'Selangor Harimau', nat: 'MAS', rep: 58, c1: '#E2001A', c2: '#FFD100' },
+  { name: 'Castilla CF', ros: 'RMA', nat: 'ESP', rep: 86, c1: '#F5F5F5', c2: '#5B2C83' },
+  { name: 'Lutece SG', ros: 'PSG', nat: 'FRA', rep: 84, c1: '#0B2A5B', c2: '#E2001A' },
+  { name: 'Lombardia AC', ros: 'MIL', nat: 'ITA', rep: 81, c1: '#B5121B', c2: '#111111' },
+  { name: 'Rhein 04', ros: 'LEV', nat: 'GER', rep: 80, c1: '#E32219', c2: '#111111' },
+  { name: 'Porto Norte', ros: 'POR', nat: 'POR', rep: 78, c1: '#1B4E9B', c2: '#FFFFFF' },
+  { name: 'Amstel FC', ros: 'AJA', nat: 'NED', rep: 76, c1: '#FFFFFF', c2: '#C8102E' },
+  { name: 'Rio Atletico', ros: 'FLA', nat: 'BRA', rep: 74, c1: '#1A1A1A', c2: '#E30613' },
+  { name: 'Pampas Juniors', ros: 'BOC', nat: 'ARG', rep: 73, c1: '#0033A0', c2: '#FFD100' },
+  { name: 'Brussels Royal', ros: 'AND', nat: 'BEL', rep: 70, c1: '#5B2C83', c2: '#FFFFFF' },
+  { name: 'Tokyo Bay FC', ros: 'TOK', nat: 'JPN', rep: 66, c1: '#00205B', c2: '#E4002B' },
+  { name: 'Oslo Vikings', ros: 'VAL', nat: 'NOR', rep: 62, c1: '#FFD200', c2: '#111111' },
+  { name: 'Lagos Stars', ros: 'REM', nat: 'NGA', rep: 60, c1: '#008751', c2: '#FFFFFF' },
+  { name: 'Selangor Harimau', ros: 'SEL', nat: 'MAS', rep: 58, c1: '#E2001A', c2: '#FFD100' },
 ];
 
 const NATIONS = {
@@ -81,11 +81,11 @@ const NATIONS = {
 const COUNTRY = (() => {
   const g = {
     'Britain & Ireland': 'ENG England|SCO Scotland|WAL Wales|NIR Northern Ireland|IRL Ireland|GIB Gibraltar',
-    Europe: 'FRA France|ESP Spain|POR Portugal|GER Germany|NED Netherlands|BEL Belgium|ITA Italy|NOR Norway|SWE Sweden|DEN Denmark|ISL Iceland|AUT Austria|SUI Switzerland|CRO Croatia|SRB Serbia|BIH Bosnia-Herzegovina|ALB Albania|GRE Greece|TUR Türkiye|UKR Ukraine|POL Poland|CZE Czech Republic|SVK Slovakia|HUN Hungary|GEO Georgia|KAZ Kazakhstan|CYP Cyprus|LTU Lithuania|SVN Slovenia|BUL Bulgaria|ISR Israel',
+    Europe: 'FRA France|ESP Spain|POR Portugal|GER Germany|NED Netherlands|BEL Belgium|ITA Italy|NOR Norway|SWE Sweden|DEN Denmark|ISL Iceland|AUT Austria|SUI Switzerland|CRO Croatia|SRB Serbia|BIH Bosnia-Herzegovina|ALB Albania|GRE Greece|TUR Türkiye|UKR Ukraine|POL Poland|CZE Czech Republic|SVK Slovakia|HUN Hungary|GEO Georgia|KAZ Kazakhstan|CYP Cyprus|LTU Lithuania|SVN Slovenia|BUL Bulgaria|FIN Finland|KOS Kosovo|MDA Moldova|RUS Russia|ISR Israel',
     'South America': 'BRA Brazil|ARG Argentina|URU Uruguay|PAR Paraguay|COL Colombia|ECU Ecuador|CHI Chile|VEN Venezuela|SUR Suriname',
     'North America': 'USA United States|CAN Canada|MEX Mexico|JAM Jamaica|CUW Curaçao|HAI Haiti|BER Bermuda',
-    Africa: "NGA Nigeria|GHA Ghana|SEN Senegal|CIV Ivory Coast|CMR Cameroon|MLI Mali|BFA Burkina Faso|GAM The Gambia|GUI Guinea|ALG Algeria|MAR Morocco|TUN Tunisia|EGY Egypt|COD DR Congo|ANG Angola|BEN Benin|ZIM Zimbabwe|MOZ Mozambique|MTN Mauritania|COM Comoros",
-    Asia: 'JPN Japan|KOR South Korea|CHN China|AUS Australia|NZL New Zealand|PHI Philippines|UZB Uzbekistan|MAS Malaysia',
+    Africa: "NGA Nigeria|GHA Ghana|SEN Senegal|CIV Ivory Coast|CMR Cameroon|MLI Mali|BFA Burkina Faso|GAM The Gambia|GUI Guinea|ALG Algeria|MAR Morocco|TUN Tunisia|EGY Egypt|COD DR Congo|ANG Angola|BEN Benin|ZIM Zimbabwe|MOZ Mozambique|MTN Mauritania|COM Comoros|LBR Liberia",
+    Asia: 'JPN Japan|KOR South Korea|CHN China|AUS Australia|NZL New Zealand|PHI Philippines|UZB Uzbekistan|MAS Malaysia|IDN Indonesia|SGP Singapore',
   };
   const out = {};
   Object.entries(g).forEach(([r, list]) => list.split('|').forEach(x => { out[x.slice(0, 3)] = [x.slice(4), r]; }));

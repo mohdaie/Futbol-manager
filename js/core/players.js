@@ -96,10 +96,12 @@ function genPlayer(o) {
 
 // Starting rating and potential from a real market value (EUR millions) and age.
 // Young players' value is mostly potential, veterans' value is discounted by age.
+// Older players' market value understates their level, so age adds to the rating, up to age 35
+// (a 41-year-old with a small value is not a world-class player).
 function ratingFromValue(v, age, lvl) {
   if (v > 0) {
     const base = 63 + 4.2 * Math.log2(v);
-    const ca = clamp(base - (age <= 23 ? (24 - age) * 1.8 : 0) + (age >= 30 ? (age - 29) * 2.2 : 0) + gauss() * 1.2, 38, 93);
+    const ca = clamp(base - (age <= 23 ? (24 - age) * 1.8 : 0) + (age >= 30 ? (Math.min(age, 35) - 29) * 2.2 : 0) + gauss() * 1.2, 38, 93);
     const pa = age <= 23 ? Math.max(ca + 2, base + (24 - age) * 0.8 + rf(0, 4)) : ca + (age <= 26 ? rf(0, 3) : 0);
     return [ca, clamp(pa, ca, 96)];
   }
