@@ -105,11 +105,31 @@ function shell(body) {
 function sheet(html, opts = {}) {
   return viewAction(() => {
     const layer = document.getElementById('layer');
+    const panel = !layer.hidden && opts.key && UI.popup?.key === opts.key ? layer.querySelector('.sheet') : null;
+    const body = panel?.querySelector('.sh-body'), focused = body?.contains(document.activeElement) ? document.activeElement : null;
+    const scroll = panel?.scrollTop || 0;
+    const rails = body ? [...body.querySelectorAll('.tabs,.chips,.dstages')].map(el => el.scrollLeft) : [];
+    const focus = focused ? { tag: focused.tagName, id: focused.id, data: { ...focused.dataset }, value: focused.value, start: focused.selectionStart, end: focused.selectionEnd } : null;
     UI.sheetOpts = opts;
     UI.popup = { key: opts.key || html, restore: opts.restore || (() => sheet(html, opts)), valid: opts.valid };
-    layer.innerHTML = `<div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sh-x" data-a="dismissSheet" aria-label="Close">×</button><div class="sh-body">${html}</div></section>`;
+    // Updating an open sheet must not replay its entrance, jump to the top,
+    // or throw keyboard focus away (fee buttons and late AI replies do this often).
+    if (body) body.innerHTML = html;
+    else layer.innerHTML = `<div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sh-x" data-a="dismissSheet" aria-label="Close">×</button><div class="sh-body">${html}</div></section>`;
     linkEntities(layer);
     layer.hidden = false;
+    if (body) {
+      if (focus && (focus.id || Object.keys(focus.data).length)) {
+        const next = [...body.querySelectorAll(focus.tag)].find(el => focus.id ? el.id === focus.id : Object.entries(focus.data).every(([k, v]) => el.dataset[k] === v));
+        if (next && !next.disabled) {
+          if (['INPUT', 'TEXTAREA'].includes(focus.tag) && !['checkbox', 'radio'].includes(next.type)) next.value = focus.value;
+          next.focus({ preventScroll: true });
+          if (focus.start != null && next.setSelectionRange) next.setSelectionRange(focus.start, focus.end);
+        }
+      }
+      body.querySelectorAll('.tabs,.chips,.dstages').forEach((el, i) => { el.scrollLeft = rails[i] || 0; });
+      panel.scrollTop = scroll;
+    }
   });
 }
 function hideSheet() {
