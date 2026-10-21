@@ -1,0 +1,27 @@
+{
+  "id": "flow-005-remaining-criteria",
+  "kind": "decision",
+  "blind": true,
+  "question": "direct_outlets revision 1 was judged revise (flow-004, 0.64). Two required criteria still fail: long passes 182.5 per match (target 50-90) and short escapes 13% (target 20%). How should the next iteration handle them?",
+  "evidence": {
+    "met": { "clearances": 35.8, "supportAtLanding": 2.5, "counterpressIsolatedPct": 24.6, "regression": "9/9 suites" },
+    "failing": { "longPasses": 182.5, "shortEscapePct": 13 },
+    "longPassFacts": { "completionPct": 51, "shareOfDirectSidePassesPct": 29, "realDirectTeamSharePct": "about 15-25", "directSidePassesPerMatch": 631, "realLongBallTeamPassesPerMatch": "about 350-400", "engineWidePassVolumeVsReal": 1.4, "mostLongPassesFrom": "middle third under pressure after winning a second ball" },
+    "escapeFacts": { "pressBreakingPassAvailablePct": 48, "itsAverageRisk": 0.58, "note": "pressers stand in the lanes; the press works, so the long-ball side goes long" }
+  },
+  "options": {
+    "fix_pass_volume": { "summary": "Investigate and fix the engine-wide pass volume (about 1.4x real) first, then re-measure long passes; this is the rulebook's calibration layer brought forward.", "tradeoffs": "Touches decision timing for all teams; larger change; may fix the long-pass count at its root." },
+    "reduce_mid_third_long": { "summary": "Make the direct side play forward on the ground or wide after winning a second ball in the middle third instead of going long again.", "tradeoffs": "Targets the main source; risks scripting a style." },
+    "share_criterion": { "summary": "Replace the absolute long-pass target with a share (15-25% of passes) and accept escapes at 13% as the press working, then move on to the next defect.", "tradeoffs": "Fast; relies on the argument that absolute counts are inflated by global volume." },
+    "weaken_press_lanes": { "summary": "Lower the pressing side's lane coverage so more press-breaking passes are on.", "tradeoffs": "Raises escapes but weakens gegenpressing, possibly unrealistically." }
+  },
+  "recommendation": "fix_pass_volume",
+  "criteria": {
+    "share": "Direct side long passes 15-25% of its passes.",
+    "absolute": "Direct side long passes 50-90 per match.",
+    "volume": "Passes per team per match 400-550 across the 24 scenarios.",
+    "escapes": "Short escapes at least 20% of pressed build-ups.",
+    "keepGains": "Clearances at most 40, support at least 2.5, isolated counter-press starts at most 30% stay met.",
+    "regression": "All suites pass, finite, zero violations."
+  }
+}
