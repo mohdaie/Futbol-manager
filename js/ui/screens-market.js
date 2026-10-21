@@ -136,18 +136,18 @@ function contractSheet(pid, fee, mode, msg) {
     const d = wageDemand(p, mode === 'renew');
     UI.con = { pid, fee, mode, wage: d, years: p.age >= 31 ? 1 : 3, status: mode === 'renew' ? p.status : (p.ca >= userBestAt(p.pos) ? 'First team' : 'Rotation'), tries: 0 };
   }
-  const C = UI.con, step = C.wage >= 50000 ? 5000 : C.wage >= 10000 ? 1000 : 250;
+  const C = UI.con, step = C.wageStep ??= C.wage >= 50000 ? 5000 : C.wage >= 10000 ? 1000 : 250;
   sheet(`<h3 class="sh-t">${mode === 'renew' ? 'New contract' : 'Personal terms'}: ${esc(pname(p))}</h3>
     <p class="muted">${mode === 'renew' ? 'Current wage ' + wageFmt(p.wage) + ' · ends June ' + p.con : (fee ? 'Fee agreed: ' + money(fee) : 'Free transfer')}. Agent's opening demand: ${wageFmt(wageDemand(p, mode === 'renew'))}.</p>
     <h4 class="lbl">Weekly wage</h4>
-    <div class="stepper"><button class="btn" data-a="wStep" data-v="${-step * 5}">−−</button><button class="btn" data-a="wStep" data-v="${-step}">−</button><b>${wageFmt(C.wage)}</b><button class="btn" data-a="wStep" data-v="${step}">+</button><button class="btn" data-a="wStep" data-v="${step * 5}">++</button></div>
+    <div class="stepper"><button class="btn" aria-label="Lower weekly wage by ${moneyExact(step * 5)}" data-a="wStep" data-v="${-step * 5}">−−</button><button class="btn" aria-label="Lower weekly wage by ${moneyExact(step)}" data-a="wStep" data-v="${-step}">−</button><b aria-live="polite" aria-atomic="true">${moneyExact(C.wage)}/w</b><button class="btn" aria-label="Raise weekly wage by ${moneyExact(step)}" data-a="wStep" data-v="${step}">+</button><button class="btn" aria-label="Raise weekly wage by ${moneyExact(step * 5)}" data-a="wStep" data-v="${step * 5}">++</button></div>
     <h4 class="lbl">Length</h4><div class="seg">${[1, 2, 3, 4, 5].map(y => `<button class="${C.years === y ? 'on' : ''}" data-a="cYears" data-v="${y}">${y} yr</button>`).join('')}</div>
     <h4 class="lbl">Squad status promise</h4><div class="chips">${['Key player', 'First team', 'Rotation', 'Backup', 'Prospect'].map(s => `<button class="chip ${C.status === s ? 'on' : ''}" data-a="cStatus" data-v="${s}">${s}</button>`).join('')}</div>
     <p class="muted">Wage budget: ${wageFmt(clubWageBill(userClub()))} used of ${wageFmt(G.fin.wb)}. Promising a bigger role lowers the wage demand.</p>
     ${msg ? `<p class="note">${esc(msg)}</p>` : ''}
     <button class="btn pri wide" data-a="sendContract">Offer contract</button>`, { key: 'contract:' + pid + ':' + mode, restore: () => contractSheet(pid, fee, mode, msg), valid: () => !C.closed && C.tries < 4 && !!G?.players[pid] && (mode === 'renew' || G.players[pid].club !== G.club), onClose: () => render() });
 }
-ACT.wStep = ds => { UI.con.wage = Math.max(300, roundWage(UI.con.wage + +ds.v)); contractSheet(UI.con.pid, UI.con.fee, UI.con.mode); };
+ACT.wStep = ds => { UI.con.wage = Math.max(300, UI.con.wage + +ds.v); contractSheet(UI.con.pid, UI.con.fee, UI.con.mode); };
 ACT.cYears = ds => { UI.con.years = +ds.v; contractSheet(UI.con.pid, UI.con.fee, UI.con.mode); };
 ACT.cStatus = ds => { UI.con.status = ds.v; contractSheet(UI.con.pid, UI.con.fee, UI.con.mode); };
 ACT.sendContract = () => {

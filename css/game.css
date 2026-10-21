@@ -206,9 +206,9 @@ img.crest-art { object-fit: contain; max-width: none; vertical-align: middle; }
 select, input[type=text], input[type=search], textarea { width: 100%; padding: 7.5px 8.5px; border-radius: 7.5px; border: 1px solid var(--line); background: var(--night); color: var(--chalk); min-height: 33.5px; }
 textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; word-break: break-all; resize: vertical; }
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8.5px; }
-.stepper { display: grid; grid-template-columns: auto auto 1fr auto auto; gap: 5px; align-items: center; }
-.stepper b { text-align: center; font-family: var(--f-disp); font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.stepper .btn { min-width: 35.5px; padding: 6.5px; }
+.stepper { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; gap: 5px; align-items: center; }
+.stepper b { min-width: 0; overflow-wrap: anywhere; text-align: center; font-family: var(--f-disp); font-size: clamp(14px, 4.4vw, 20px); font-weight: 800; font-variant-numeric: tabular-nums; }
+.stepper .btn { min-width: 35.5px; padding: 6.5px; touch-action: manipulation; }
 
 /* ---------- bars & meters ---------- */
 .bar { display: block; height: 5px; border-radius: 2.5px; background: var(--night); overflow: hidden; border: 1px solid var(--line); }
