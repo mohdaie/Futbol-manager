@@ -326,7 +326,7 @@ textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; wor
 .pbar { display: block; height: 3.5px; background: var(--line); border-radius: 2px; overflow: hidden; }
 .pbar i { display: block; height: 100%; background: var(--amber); transition: width .6s; }
 .poss small { text-align: center; color: var(--mute); font-size: 9px; font-variant-numeric: tabular-nums; }
-.pitchwrap { flex: 1; min-height: 168px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.pitchwrap { flex: 1; min-height: 168px; display: flex; align-items: stretch; justify-content: stretch; overflow: hidden; border-radius: 10px; }
 #pitch { display: block; border-radius: 8.5px; box-shadow: 0 8.5px 25px rgba(0,0,0,.45); max-width: 100%; }
 .feed { flex: none; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; height: 128px; overflow: hidden; }
 .feed li span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -340,7 +340,7 @@ textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; wor
 .feed .fd-tac { color: #8EC5FF; }
 @keyframes feedIn { from { transform: translateY(-3.5px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .feed li { animation: none; } }
-.mctl { flex: none; display: grid; grid-template-columns: repeat(7, 1fr); gap: 3.5px; }
+.mctl { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3.5px; }
 .mctl button { padding: 8.5px 0; border-radius: 7.5px; background: var(--stand); border: 1px solid var(--line); font-size: 9.5px; font-weight: 700; text-align: center; letter-spacing: .02em; }
 .mctl button:first-child { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
 .ftbar { flex: none; }

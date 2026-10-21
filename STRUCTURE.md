@@ -20,8 +20,7 @@ js/core/state.js           the game state object G, new-game world build, save/l
 js/core/playtime.js        per-career active time, session counts and background pause
 js/core/calendar.js        weeks and dates, fixture generator, transfer windows, league table
 js/engine/pitch.js         tactical styles, role behaviour, player instructions, positions() and the offside line
-js/engine/shots.js         shot engine: who gets the chances (late runs, lay-offs, crosses, tight marking)
-js/engine/sim.js           match engine v2: each minute's chain of player-against-player actions (ev.seq)
+js/engine/sim.js           match engine v3: positional simulation, 22 players + ball every half second
 js/engine/match.js         match setup, team summary units, subs, AI manager, results
 js/engine/live.js          2D canvas match: replays ev.seq (key moments), commentary, team talks, shouts
 js/systems/training.js     weekly training, development and decline, injuries, recovery
@@ -578,3 +577,12 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - The dashboard briefing is now exactly three compact rows: title/**Ask assistant**, department counts, and a single-line preview. Counts and preview open the full report in a separate sheet, retaining department/player/news links.
 - AI is requested only by **Ask assistant**. Opening Dashboard, rerendering, reloading, opening a saved report or changing club facts never starts a request. Accepted answers for unchanged facts are reused; failed services can be retried manually, within the existing daily/monthly caps. Repeated taps during a request cannot start duplicates.
 - `tests/briefing.cjs` verifies the compact height at 390×844, manual-only querying (including enabled services), caching, report links, errors, caps and stale responses.
+
+## Match engine v3: positional simulation (2026.10.21.23)
+- **Replaces v2 and the old 2D movement entirely** (`js/engine/sim.js`; `shots.js` removed, its marking/attention helpers moved into sim.js). Every half second (`TICK`) all 22 players and the ball move on a 68×105 m pitch: ball physics (air, bounce, friction), passes that can be cut out along their path, first touches, loose balls, offside judged at the moment of each pass, timed runs, pressing, jockeying, tackles, fouls, crosses and headers, shots with an xG model, and every restart (throw-ins, goal kicks, corners, free kicks, penalties).
+- **Decisions:** the player on the ball scores his options (shoot, pass, long ball, through ball, cross, carry, clear) from his attributes, team-mates' movement, pressure and the tactic, then picks with a softmax whose sharpness grows with Decisions/Vision. All 26 attributes, height/foot/character, instructions and tactics feed positions, speeds and choices; nothing is aimed at a single match, player or style.
+- **Levers:** `ENG` in sim.js (`xg`, `shoot`, `foul`, `intercept`, `sharp`, `touch`, `cross`, `fin`, `keepShot`...). Calibration, 24 matches: goals 2.7, shots 28, on target 8.5, corners 9.8, fouls 20, yellows 3.0, offsides 4.3, penalties 0.17, pass completion 79%.
+- **Speed:** about 150-200 ms a match in a desktop browser; the assistant's run-throughs yield between matches (`simFixture` is async).
+- **2D view** (`js/engine/live.js`): draws the engine's own frames (`M.frames`, 120 a minute, ball + 22 players), interpolated. Camera follows the ball (Cam button: follow / full pitch) with a mini-map; your team always attacks upward. **Highlights** (HL button): key (goals, shots, penalties, cards), extended (+ corners, free kicks, dangerous attacks) or full match; quiet parts are skipped with the clock jumping.
+- **Saving:** frames are not saved; per-minute caches are rebuilt after a load (`shapeOf()` recreates its Map).
+- Test: `node tests/live.cjs` (frames, speeds, camera, screen matches engine, highlight levels, resume/refresh/load).

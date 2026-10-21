@@ -15,9 +15,10 @@ const styleKeyT = T => styleOf(T) || 'custom';
 const styleName = k => (STYLES[k] ? STYLES[k].n : 'your own tactic');
 
 // Play the fixture n times with the current G.tactics. Nothing in the game state changes.
-function simFixture(fx, n) {
+async function simFixture(fx, n) {
   const out = { n, w: 0, d: 0, l: 0, gf: 0, ga: 0, xf: 0, xa: 0, pos: 0 };
   for (let k = 0; k < n; k++) {
+    if (k) await tick(); // one match at a time, so the screen stays responsive
     const M = createMatch({ id: -1, h: fx.h, a: fx.a, w: fx.w, d: fx.d, t: fx.t, wx: fx.wx });
     M.noLog = true;
     while (!M.ended) stepMatch(M, true);
@@ -57,7 +58,7 @@ function matchFacts(fx, r, oppTac) {
 // The assistant's full advice for a fixture. Runs in the background; onStep(text) reports progress.
 async function assistantAdvice(fx, onStep = () => {}) {
   const r = assistantRating(), home = fx.h === G.club, opp = home ? fx.a : fx.h;
-  const n = Math.round(6 + r * 1.5), K = 1 + Math.floor(r / 5);
+  const n = Math.round(3 + r * 0.5), K = 1 + Math.floor(r / 5); // each positional match is costly but tells him more
   const saved = JSON.stringify(G.tactics), fixedWas = G.flags.fixedTac;
   ensureUserLineup();
   const oppTac = aiChooseTactic(opp, G.club);
@@ -65,7 +66,7 @@ async function assistantAdvice(fx, onStep = () => {}) {
   try {
     onStep('Studying the opposition…');
     await tick();
-    const cur = simFixture(fx, n * 2), curKey = styleKeyT(G.tactics), results = [{ k: curKey, cur: true, res: cur }];
+    const cur = await simFixture(fx, n * 2), curKey = styleKeyT(G.tactics), results = [{ k: curKey, cur: true, res: cur }];
     // Other styles, best-suited first; better assistants try more of them.
     const cands = Object.keys(STYLES).filter(k => k !== curKey).map(k => {
       const t = JSON.parse(saved); applyStyle(t, k);
@@ -76,7 +77,7 @@ async function assistantAdvice(fx, onStep = () => {}) {
       onStep(`Trying ${STYLES[c.k].n.toLowerCase()}…`);
       await tick();
       G.tactics = c.t; autoSetPieces();
-      results.push({ k: c.k, t: c.t, res: simFixture(fx, n) });
+      results.push({ k: c.k, t: c.t, res: await simFixture(fx, n) });
       G.tactics = JSON.parse(saved);
     }
     G.tactics = JSON.parse(saved);
