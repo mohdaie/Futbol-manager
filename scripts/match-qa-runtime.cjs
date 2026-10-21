@@ -14,6 +14,7 @@ function createMatchQaRuntime(seed = 20261021, fetcher = fetch) {
   for (const file of ['js/core/rosters.js', 'js/core/players.js', 'js/core/bio.js', 'js/core/state.js', 'js/core/playtime.js', 'js/core/calendar.js', 'js/engine/sim.js', 'js/systems/training.js']) {
     vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), rt.ctx, { filename: file });
   }
+  rt.run('G={players:{}}'); // synthetic shape audit precedes newGame() in the CLI
   vm.runInContext(fs.readFileSync(path.join(root, 'scripts/match-qa-scan.js'), 'utf8'), rt.ctx, { filename: 'scripts/match-qa-scan.js' });
   return rt;
 }
