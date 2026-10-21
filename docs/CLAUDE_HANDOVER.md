@@ -225,6 +225,14 @@ at the top of `sim.js`; do not change them merely to make a small sample look go
 
 ## What to do next
 
+**Final handover priority (owner confirmed):** first extend and verify the Jev-led
+decision loop described above. Build the actual-match flow evidence/scenario
+harness, starting with gegenpressing versus long ball and one/two-striker
+variants. Submit measured defects and proposed fixes to Jev before choosing the
+next engine change. The layer roadmap below supplies candidate work, not a
+reason to skip the flow-first validation. Keep goals secondary. Preserve the
+draft branch and do not merge/deploy without an owner request.
+
 1. Review layer-4 actual-match clips for free runners, pressing isolation and
    block gaps, using the new unit overlay and defensive counters. Strengthen
    behavioural assertions if those reveal a concrete defect.
