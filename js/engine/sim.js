@@ -99,7 +99,8 @@ function defShape(S, bx, by) {
   });
 }
 function shapeOf(M, s, has, bx, by) {
-  const S = M.sides[s], c = S._shape || (S._shape = new Map()), qx = Math.round(clamp(bx, 0, 1) * 12), qy = Math.round(clamp(by, 0, 1) * 14);
+  if (!(M.sides[s]._shape instanceof Map)) M.sides[s]._shape = new Map(); // (a saved match comes back as a plain object)
+  const S = M.sides[s], c = S._shape, qx = Math.round(clamp(bx, 0, 1) * 12), qy = Math.round(clamp(by, 0, 1) * 14);
   const key = (has ? 1 : 0) * 10000 + qx * 64 + qy;
   let v = c.get(key);
   if (!v) { v = has ? positions(S, true, qx / 12, qy / 14) : defShape(S, qx / 12, qy / 14); c.set(key, v); }

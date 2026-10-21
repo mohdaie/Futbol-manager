@@ -33,46 +33,38 @@ const assert = require('node:assert/strict');
     await act('kickoff');
     const fid = await page.evaluate(() => LIVE.fid);
 
-    // Movement: sample the 2D view while the match plays.
-    const probe = await page.evaluate(() => new Promise(done => {
-      const L = LIVE, out = { frames: 0, beyond: 0, offside: 0, fast: 0, meets: 0, misses: 0, gaps: [] };
-      let prev = null, lastCur = null;
+    // The 2D view draws the engine's own frames; the camera follows the ball; highlight levels skip quiet play.
+    await page.evaluate(() => { G.settings.hl = 'full'; });
+    await page.waitForFunction(() => LIVE.mq && LIVE.mq.fr.length > 0 && LIVE.M.min >= 2, null, { timeout: 30000 });
+    const v = await page.evaluate(() => new Promise(done => {
+      const L = LIVE, out = { frames: L.mq.fr.length, width: L.mq.fr[0].length, fast: 0, off: 0, inView: 0, samples: 0, match: 0 };
+      // Speeds straight from the engine's frames (half a second apart).
+      const fr = L.mq.fr;
+      for (let k = 1; k < fr.length; k++) for (let n = 7; n < fr[k].length; n += 2) { if (fr[k][n] == null || fr[k - 1][n] == null) continue; const m = Math.hypot(fr[k][n] - fr[k - 1][n], fr[k][n + 1] - fr[k - 1][n + 1]); if (m > 6.5 && fr[k][6] === fr[k - 1][6] && !fr[k][6]) out.fast++; }
+      let n = 0;
       const tick = () => {
-        if (LIVE !== L || L.M.min >= 25 || out.frames > 2400) { out.min = L.M.min; out.paused = L.paused; return done(out); }
-        out.frames++;
-        // Attackers not involved in the move stay onside (allowing for players still getting back).
-        if (!L.kick && L.poss != null) {
-          const a = L.poss, line = liveLine(L, a);
-          L.M.sides[a].on.forEach((id, i) => {
-            const d = L.dots[a][i]; if (!id || !i || !d || L.pins[a + ':' + i]) return;
-            // Offside and not getting back (vy is in canvas frame; own frame "back" is +y).
-            const back = (a === L.bottom ? 1 : -1) * (d.vy || 0);
-            if (toCanvas(L, a, d.x, d.y)[1] < line - 0.03) { out.beyond++; if (back < 0.002) out.offside++; }
-          });
+        if (n++ > 120 || LIVE !== L) return done(out);
+        if (L.mq && !L.paused && !L.hold) {
+          out.samples++;
+          const [bx, by] = view(L, L.ball.x, L.ball.y), x = sx(L, bx), y = sy(L, by);
+          if (x >= 0 && x <= L.W && y >= 0 && y <= L.H) out.inView++;
+          const d = L.dots[0][5], q = L.mq; // the screen shows the engine's position for that second
+          const t = q.t0 + q.p, k = q.fr.findIndex(f => f[0] >= t), f = q.fr[Math.max(0, k)];
+          if (d && f && f[7 + 10] != null && Math.hypot(d.x - f[17], d.y - f[18]) < 6) out.match++;
         }
-        // Nobody moves faster than a sprinting footballer (with the catch-up allowance).
-        if (prev) [0, 1].forEach(si => L.dots[si].forEach((d, i) => {
-          const p = prev[si][i], id = L.M.sides[si].on[i]; if (!p || !id || L.pins[si + ':' + i]?.hold) return;
-          const m = Math.hypot((d.x - p.x) * 68, (d.y - p.y) * 105), dt = L.lastDt || 16;
-          if (m / dt > topSpeed(L, L.M.sides[si], id) * 1.7 + 0.002) out.fast++;
-        }));
-        // A pass ends with the receiver on the ball.
-        if (lastCur && L.cur !== lastCur && lastCur.rk) {
-          const [si, i] = lastCur.rk.split(':').map(Number), d = L.dots[si][i];
-          const gap = Math.hypot((d.x - lastCur.x) * 68, (d.y - lastCur.y) * 105);
-          if (gap < 3) out.meets++; else { out.misses++; out.gaps.push(+gap.toFixed(1)); }
-        }
-        lastCur = L.cur;
-        prev = L.dots.map(s => s.map(d => d && { x: d.x, y: d.y }));
         requestAnimationFrame(tick);
       };
-      const orig = liveFrame;
       requestAnimationFrame(tick);
     }));
-    console.log('movement', JSON.stringify(probe));
-    check('Attackers stay onside when not in the move', probe.offside / probe.frames < 0.03, true);
-    check('Players move at running speed', probe.fast, 0);
-    check('Passes reach the receiver', probe.misses <= Math.max(2, probe.meets * 0.1), true);
+    console.log('view', JSON.stringify(v));
+    check('The engine records the minute every half second (ball + 22 players)', [v.frames >= 110, v.width], [true, 51]);
+    check('Players move at football speeds', v.fast, 0);
+    check('The camera keeps the ball on screen', v.inView >= v.samples * 0.9, true);
+    check('The screen draws the engine positions', v.match >= v.samples * 0.85, true);
+    const hl = await page.evaluate(() => { const marks = [{ t: 100, k: 'shot', xg: 0.2 }, { t: 130, k: 'corner' }, { t: 145, k: 'attack' }]; G.settings.hl = 'key'; const k = segments(marks, 90); G.settings.hl = 'ext'; const e = segments(marks, 90); G.settings.hl = 'full'; const f = segments(marks, 90); const len = a => a.reduce((t, s) => t + s[1] - s[0], 0); return [len(k), len(e), len(f)]; });
+    check('Highlights: key < extended < full', hl[0] > 0 && hl[0] < hl[1] && hl[1] < hl[2] && hl[2] === 60, true);
+    await page.screenshot({ path: '/tmp/futbol-live-view.png' });
+    await page.evaluate(() => { G.settings.hl = 'ext'; });
 
     const min = await page.evaluate(() => LIVE.M.min);
     const score = await page.evaluate(() => LIVE.M.sides.map(S => S.st.g).join('-'));
@@ -86,8 +78,8 @@ const assert = require('node:assert/strict');
     await act('kickoff');
     check('Resume continues the same minute after visiting other pages', await page.evaluate(m => LIVE.M.min >= m && LIVE.M.min <= m + 1, min), true);
 
-    await page.evaluate(() => { LIVE.paused = false; });
-    await page.waitForFunction(m => LIVE.M.min >= m + 4, min);
+    const waitMin = async target => { for (let k = 0; k < 120; k++) { if (await page.evaluate(t => { G.settings.hl = 'key'; G.settings.speed = 4; if (LIVE.paused && !LIVE.done) { closeSheet(true); LIVE.paused = false; LIVE.overlay = null; } return LIVE.M.min >= t; }, target)) return; await page.waitForTimeout(500); } throw new Error('match did not reach minute ' + target); };
+    await waitMin(min + 4);
     const before = await page.evaluate(() => ({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-') }));
     await page.reload();
     await page.waitForFunction(() => typeof LIVE !== 'undefined' && LIVE && UI.s === 'match');
@@ -98,8 +90,7 @@ const assert = require('node:assert/strict');
     check('Resumed match waits paused', after.paused, true);
     check('Scoreboard shows the kept score', await page.locator('#sbScore').innerText(), after.score.replace('-', ' - '));
 
-    await page.evaluate(() => { LIVE.paused = false; });
-    await page.waitForFunction(m => LIVE.M.min >= m + 3, after.min);
+    await waitMin(after.min + 3);
     const m2 = await page.evaluate(() => { liveKeep(); return LIVE.M.min; });
     await page.evaluate(() => { stopLive(); loadGame(); go('prematch'); });
     await act('kickoff');

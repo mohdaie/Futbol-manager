@@ -81,6 +81,7 @@ function moveCam(L, dt, snap) {
   let tx = full ? PW / 2 : clamp(bx, Math.min(PW / 2, hw - 3), Math.max(PW / 2, PW + 3 - hw)), ty = full ? PL / 2 : clamp(by, Math.min(PL / 2, hh - 4), Math.max(PL / 2, PL + 4 - hh));
   const k = snap ? 1 : Math.min(1, dt / 320);
   L.cam.x += (tx - L.cam.x) * k; L.cam.y += (ty - L.cam.y) * k; L.cam.s += (s - L.cam.s) * (snap || !L.cam.s ? 1 : Math.min(1, dt / 200));
+  if (!full) { const mx = hw * 0.8, my = hh * 0.8; L.cam.x = clamp(L.cam.x, bx - mx, bx + mx); L.cam.y = clamp(L.cam.y, by - my, by + my); } // fast balls never leave the screen
 }
 
 function bindLive() {
