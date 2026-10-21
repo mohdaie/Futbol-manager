@@ -43,6 +43,7 @@ function playerSheet(pid) {
         <div><small>Height</small><b>${(p.ht / 100).toFixed(2)} m <i class="muted">${Math.floor(ftIn / 12)}'${ftIn % 12}"</i></b></div>
         <div><small>Weight</small><b>${p.wt} kg</b></div>
         <div><small>Nationality</small><b>${natName(p.nat)}</b></div>
+        ${p.insp ? `<div><small>Inspirational figure</small><b>${esc(p.insp)}</b></div>` : ''}
         <div><small>Ambition</small><b>${known ? ambLabel(p.amb) : 'Unknown'}</b></div>
         <div><small>Favourite person</small><b>${fp ? `<button class="link" data-a="player" data-id="${fp.id}">${esc(p.fpn)}</button>` : esc(p.fpn) + (p.fp ? ' (retired)' : '')}</b>${fp ? `<span>${esc(clubName(fp.club))}</span>` : ''}</div>
         <div><small>Favourite manager</small><b>${p.fmn === G.manager ? 'You' : esc(p.fmn)}</b>${fmClub ? `<span>${esc(fmClub.name)}</span>` : ''}</div></div>

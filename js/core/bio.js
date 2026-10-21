@@ -57,6 +57,13 @@ function ensureWorld() {
   if (G.club && G.clubs[G.club]) G.clubs[G.club].mgr = G.manager;
   Object.values(G.players).forEach(p => { migrateAttrs(p); if (p.ht == null) genBio(p); });
   Object.values(G.players).forEach(p => { if (p.fpn == null) linkBio(p); });
+  // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.
+  if (!G.flags.insp && typeof ROSTERS !== 'undefined') {
+    const by = {};
+    Object.values(ROSTERS).forEach(rows => rows.forEach(r => { if (r[8]) by[r[1]] = by[r[1]] === undefined ? r[8] : null; }));
+    Object.values(G.players).forEach(p => { const n = p.fn ? p.fn + ' ' + p.ln : p.ln; if (!p.insp && by[n]) p.insp = by[n]; });
+    G.flags.insp = 1;
+  }
 }
 
 /* ---------- effects ---------- */

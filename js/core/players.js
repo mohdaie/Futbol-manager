@@ -119,6 +119,7 @@ function playerFromRoster(row, club) {
   p.ln = parts.length > 1 ? parts.slice(1).join(' ') : name;
   p.foot = foot === 'L' ? 'Left' : foot === 'B' ? 'Either' : 'Right';
   p.con = con >= START_SEASON + 1 ? con : START_SEASON + (lvl === 'A' ? ri(1, 3) : ri(1, 2));
+  if (row[8]) p.insp = row[8]; // inspirational figure: the real player he is based on (a name only)
   return p;
 }
 
