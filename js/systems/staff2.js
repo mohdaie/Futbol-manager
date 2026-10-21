@@ -248,7 +248,7 @@ function logScoutRecs(adv) {
 // DeepSeek rewords a staff member's advice from the computed facts only (AI settings: "Staff advice in words").
 // The same check as the assistant: any number, player or club not in the facts and the built-in wording is kept.
 const STAFF_WORDS = {};
-const STAFF_ROLE_TEXT = { Analyst: 'performance analyst', Coach: 'first-team coach', Physio: 'head physio', Scout: 'chief scout' };
+const STAFF_ROLE_TEXT = { Analyst: 'performance analyst', Coach: 'first-team coach', Physio: 'head physio', Scout: 'chief scout', Director: 'director of football', Press: 'press officer' };
 function staffWords(role, key, facts) {
   if (typeof aiReady !== 'function' || !aiReady('ds', 'staff') || !facts || !facts.length) return null;
   const c = STAFF_WORDS[key];
@@ -310,6 +310,7 @@ function staffWeekly() {
 }
 // Scouts: judged at the end of the season, on how the players they recommended did.
 function staffSeasonEnd() {
+  if (typeof transferLearnSeason === 'function') transferLearnSeason();
   (G.staffLog || []).forEach(e => {
     if (e.k === 'scout' && e.season === G.season && !e.res) {
       const p = G.players[e.pid];
@@ -353,5 +354,5 @@ function staffEvidence(key) {
 }
 function staffSnapshot() {
   const L = staffLearn();
-  return { app: GAME_VERSION, tables: L.draft, records: { versions: L.versions.length, active: L.active } };
+  return { app: GAME_VERSION, tables: L.draft, records: { versions: L.versions.length, active: L.active, transfers: typeof transferSummary === 'function' && G ? transferSummary() : null } };
 }

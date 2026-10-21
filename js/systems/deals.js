@@ -78,7 +78,7 @@ function dofMemo(p) {
   if (fit && fit.cur && gain >= 3 && fit.cur.status === 'Key player') har.push(['warn', `${pname(fit.cur)} is a key player and would lose his place: handle it carefully.`]);
   if (p.at[A.ldr] >= 15 && k >= 75) { har.push(['good', 'A leader in the dressing room.']); hs += 0.5; }
   const n = 2 + Math.floor(r / 5), score = fs + ts + hs, grade = scoutGrade(p);
-  const verdict = grade === 'D' || score <= 0 || ts < 0 ? 'Drop' : score >= 3 && fs >= 0 ? 'Proceed' : 'Monitor';
+  const verdict = grade === 'D' || score <= 0 || ts < 0 ? 'Drop' : score >= (typeof dofBar === 'function' ? dofBar() : 3) && fs >= 0 ? 'Proceed' : 'Monitor';
   const open = est ? roundMoney(est * (0.82 + r * 0.004)) : 0, max = est ? roundMoney(Math.min(Math.max(G.fin.tb, est), est * 1.12)) : 0;
   return { date: today().getTime(), r: Math.round(r), k, est, wage, years, fin: fin.slice(0, n + 1), tac: tac.slice(0, n), har: har.slice(0, n), score: r1(score), verdict, open, max, wmax: roundWage(Math.max(wage * 1.12, Math.min(room, wage * 1.2))) };
 }
@@ -143,6 +143,7 @@ const DEAL_STEP = {
       d.memo = dofMemo(p);
       d.stage = 'meeting';
       dealLog(d, `Memo: ${d.memo.verdict}. ${DOF_SAYS[d.memo.verdict]}`);
+      if (typeof dofSecondOpinion === 'function') dofSecondOpinion(d);
       needDecision(d, 'meeting', `Director of Football: ${fullName(p)}`, `${DOF_SAYS[d.memo.verdict]} His memo covers finance, tactics and harmony. Meet him to decide: proceed, monitor or drop.`);
     },
     interest(d, p) {
@@ -167,7 +168,10 @@ const DEAL_STEP = {
       if (d.bidOut) { // the selling club answers
         d.bidOut = false; d.round++;
         const value = d.fee + (d.add || 0) * 0.5 - (d.inst ? d.fee * 0.02 * d.inst : 0), need = ask * (c.bal < 0 ? 0.9 : 1);
-        if (value >= need) {
+        // A borderline offer: the AI's answer for the selling club, if it is back in time.
+        const ai = d.ai && d.ai.club && d.ai.club.fee === d.fee && value >= need * 0.88 && value < need * 1.05 ? aiAnswer(d, 'club') : null;
+        if (ai === 'Reject') return closeDeal(d, false, `The ${c.name} reject the offer and end talks over ${fullName(p)}.`);
+        if (ai === 'Accept' || (value >= need && ai !== 'Counter')) {
           dealLog(d, `The ${c.name} accept ${money(d.fee)}${d.add ? ' plus ' + money(d.add) + ' in add-ons' : ''}${d.inst ? ', paid over ' + (d.inst + 1) + ' years' : ''}.`, 'club');
           dealNews(d, `Fee agreed for ${pname(p)}`, `The ${c.name} accept ${money(d.fee)} for ${fullName(p)}. Next: talks with his agent.`);
           if (d.pub || d.leaked) dealMedia(d, 'agreed');
@@ -184,6 +188,7 @@ const DEAL_STEP = {
       // The DoF shapes the offer: add-ons for a player with room to grow, instalments for a big fee.
       if (d.add == null) d.add = potKnown(p) && p.age <= 24 && seenPot(p) > stars(p.ca) + 0.4 ? roundMoney(d.fee * 0.12) : 0;
       if (d.inst == null) d.inst = d.fee > G.fin.tb * 0.5 && d.fee >= 10e6 ? 2 : 0;
+      { const v = d.fee + (d.add || 0) * 0.5 - (d.inst ? d.fee * 0.02 * d.inst : 0); if (typeof askClubAnswer === 'function' && v >= ask * 0.88 && v < ask * 1.05) askClubAnswer(d, ask); }
       dealLog(d, `Offer sent: ${money(d.fee)}${d.add ? ' + ' + money(d.add) + ' add-ons' : ''}${d.inst ? ', over ' + (d.inst + 1) + ' years' : ''}.`);
       d.bidOut = true; d.next = wait(1, 3);
     },
@@ -207,10 +212,12 @@ const DEAL_STEP = {
       d.wage = demand;
       dealLog(d, `Personal terms agreed: ${wageFmt(d.wage)} a week for ${d.years} years, ${d.status.toLowerCase()}${d.clause ? ', release clause ' + money(d.clause) : ''}, signing bonus ${money(d.bonus)}.`, 'agent');
       d.stage = 'player'; d.next = wait(will === 'keen' ? 0 : 1, will === 'hesitant' ? 4 : 2);
+      if (will !== 'keen' && typeof askPlayerDecision === 'function') askPlayerDecision(d);
     },
     player(d, p) {
-      const will = willOf(p, d);
-      if (will === 'hesitant' && hash01(d.id + 'yes') < 0.4) return closeDeal(d, false, `${fullName(p)} has decided to stay where he is.`);
+      const will = willOf(p, d), ai = typeof aiAnswer === 'function' ? aiAnswer(d, 'player') : null;
+      if (ai === 'Stay') return closeDeal(d, false, `${fullName(p)} has decided to stay where he is.`);
+      if (ai !== 'Join' && will === 'hesitant' && hash01(d.id + 'yes') < 0.4) return closeDeal(d, false, `${fullName(p)} has decided to stay where he is.`);
       dealLog(d, `${fullName(p)} says yes to the move.`, 'player');
       d.stage = 'medical'; d.next = wait(1, 2);
     },
@@ -288,13 +295,14 @@ function dealSummary(d) {
 function dealProceed(d, approach, feeLim, wageLim) {
   const p = G.players[d.pid];
   d.lim = { fee: feeLim, wage: wageLim }; d.approach = approach; d.need = null;
+  if (typeof logDof === 'function') logDof(d, 'proceed');
   d.stage = 'interest'; d.next = approach === 'open' ? wait(1, 2) : wait(2, 4);
   dealLog(d, `You and the Director of Football agree to go for ${fullName(p)}: ${{ open: 'an open approach to his club', quiet: 'quiet talks with his agent first', leak: 'interest leaked to the press first' }[approach]}. Limits: ${money(feeLim)}, ${wageFmt(wageLim)} a week.`, 'you');
   if (approach !== 'quiet') d.pub = true;
   if (typeof dealMedia === 'function') { if (approach === 'open') dealMedia(d, 'approach'); if (approach === 'leak') dealMedia(d, 'leak'); }
 }
-function dealMonitor(d) { closeDeal(d, false, 'Kept on file to monitor. The Director of Football will review him again if you ask.', false); const r = scoutFile(G.players[d.pid]); r.folder = 'mon'; }
-function dealDrop(d) { closeDeal(d, false, 'Dropped after the meeting.', false); const r = scoutFile(G.players[d.pid]); r.folder = 'rej'; }
+function dealMonitor(d) { if (typeof logDof === 'function') logDof(d, 'monitor'); closeDeal(d, false, 'Kept on file to monitor. The Director of Football will review him again if you ask.', false); const r = scoutFile(G.players[d.pid]); r.folder = 'mon'; }
+function dealDrop(d) { if (typeof logDof === 'function') logDof(d, 'drop'); closeDeal(d, false, 'Dropped after the meeting.', false); const r = scoutFile(G.players[d.pid]); r.folder = 'rej'; }
 function dealRaise(d, amount) {
   const p = G.players[d.pid];
   if (d.need.k === 'bidlimit' || d.need.k === 'notforsale') { d.lim.fee = Math.max(d.lim.fee, amount); d.fee = amount; d.stage = 'bid'; d.bidOut = false; if (d.need.k === 'notforsale') d.ask = amount; }

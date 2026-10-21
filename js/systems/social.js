@@ -48,6 +48,7 @@ function post(acc, txt, o = {}) {
   G.social.unshift(p);
   if (G.social.length > 160) G.social.length = 160;
   if (o.react && p.clubs.length) fanReplies(p);
+  if (typeof postWords === 'function' && ['rumour', 'here', 'agreed', 'talks', 'off'].includes(p.kind)) postWords(p);
   return p;
 }
 // A few fan replies under a post.
@@ -134,6 +135,7 @@ function pressAdvice(p, kind) {
   let best;
   if (kind === 'ours') best = p.mor < 45 || p.listed ? 'listen' : isKeyPlayer(p) ? 'notforsale' : 'nocomment';
   else { const d = activeDeal(p.id, 'in'); best = d && ['interest', 'bid'].includes(d.stage) ? 'deny' : d ? 'nocomment' : 'deny'; }
+  if (typeof learnedStatement === 'function') best = learnedStatement(kind, best);
   if (hash01(p.id + ':' + dayAbs() + 'pa') * 20 > pressR() + 6) best = STATEMENTS[kind][Math.floor(hash01(p.id + 'pb') * 3)][0];
   return best;
 }
@@ -143,6 +145,7 @@ function pressAnswer(id, choice) {
   if (!r || r.done) return '';
   const p = G.players[r.pid], st = STATEMENTS[r.kind].find(x => x[0] === choice);
   r.done = true; r.choice = choice;
+  if (typeof logStatement === 'function') logStatement(r, p);
   const B = G.board;
   if (choice === 'notforsale') { B.fans = clamp(B.fans + 1, 0, 100); p.media = { k: 'notforsale', day: dayAbs() }; }
   if (choice === 'listen') { p.listed = true; p.media = { k: 'listen', day: dayAbs() }; }

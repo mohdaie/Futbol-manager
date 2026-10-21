@@ -15,6 +15,7 @@ function advanceWeek() {
   weeklyFinance();
   staffWeekly();
   moodWeekly();
+  transferLearnWeekly();
   // Day jobs not reached day by day this week (Admin time skips) still happen once.
   DAY_JOBS.forEach(([, k, fn]) => dayJob(k, fn));
   monthly();

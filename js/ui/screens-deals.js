@@ -42,6 +42,8 @@ function dealSheet(id) {
   const p = G.players[d.pid], M = d.memo, n = d.need;
   const memoHtml = M ? `<section class="fsec memo"><h4>Director of Football's memo <small>${fmtDate(M.date, false)} · file ${M.k}% · rating ${M.r}</small></h4>
       <div class="memo-v v-${M.verdict.toLowerCase()}"><b>${M.verdict}</b><span>${DOF_SAYS[M.verdict]}</span></div>
+      ${(() => { const w = dofWords(d); return w ? `<blockquote class="aiq">${esc(w)}</blockquote>` : ''; })()}
+      ${M.jev && !M.jev.pending ? `<p class="muted">AI second opinion: <b>${M.jev.choice}</b> (${Math.round(M.jev.conf * 100)}% sure)${M.rules ? `. He changed his verdict from ${M.rules}.` : ''}</p>` : ''}
       ${[['Finance', M.fin], ['Tactics', M.tac], ['Harmony', M.har]].map(([t, l]) => `<h5>${t}</h5><ul class="notes">${l.map(([k, txt]) => `<li class="${k}">${esc(txt)}</li>`).join('') || '<li>Nothing to note.</li>'}</ul>`).join('')}
       ${M.k < 90 ? `<p class="note">The file is only ${M.k}% complete, so this is a rougher judgement.</p>` : ''}</section>` : '';
   let act = '';
@@ -75,6 +77,7 @@ function dealSheet(id) {
     <p class="muted">${POS_NAME[p.pos]} · ${p.age} · ${natName(p.nat)}${agentOf(p) && (d.dir !== 'in' || d.stage !== 'review') ? ' · agent ' + agentLink(agentOf(p)) : ''}</p>
     ${dealStages(d)}
     <p class="dstatus ${d.closed ? (d.closed.ok ? 'good' : 'bad') : d.need ? 'warn' : ''}">${esc(dealStatus(d))}</p>
+    ${(() => { const w = agentWords(d), a = agentOf(p); return w && a ? `<section class="fsec"><h4>Message from ${esc(a.name)}</h4><blockquote class="aiq">${esc(w)}</blockquote></section>` : ''; })()}
     ${act}
     ${terms ? `<section class="fsec"><h4>Terms so far</h4><p>${esc(terms)}</p>${d.lim ? `<p class="muted">Your limits: ${money(d.lim.fee)} · ${wageFmt(d.lim.wage)} a week</p>` : ''}</section>` : ''}
     ${memoHtml}
