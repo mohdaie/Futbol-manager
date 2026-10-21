@@ -296,3 +296,14 @@ This remains a diagnostic, not calibrated league output. Full report:
    (target 50-90; mostly middle third under pressure after second balls), support 2.3 (2.5), short escapes
    15% (20%), second balls won 74% (real nearer 50%). `docs/engine-qa/flow-after-direct-outlets.json`.
    **Next:** the revision of direct_outlets, then resubmit flow-004 for acceptance.
+4. **Later rounds (all genuine Jev replies):** flow-004 acceptance of direct_outlets revision 1: **revise** (0.64).
+   flow-005 (first **blind** proposal): Jev chose **fix_pass_volume** (0.85), requiring long passes 50-90 and
+   escapes 20%; four criteria it was unsure of stay pending. Root cause found: ball in play 90 of 95 minutes
+   (real 55-58) because restarts took 3-10 s and the ball rarely left the pitch. Implemented real restart times
+   (`restartWait()`), proper deflections, blocked crosses for corners, putting it out under touchline pressure.
+   Result: passes/team 1137 -> 912, ball in play 90 -> 72 min, throw-ins 13 -> 21, corners 3.5 -> 5.8, escapes
+   13% -> 17%, long passes 182 -> 155, all 9 suites pass. Slower decisions were tested and rejected (escapes
+   collapse). flow-006 acceptance: **revise** (0.94).
+   Jev loop changes: blind proposals (`blind: true`), criteria under 0.6 confidence stay pending, clip timelines
+   (`.txt` next to each clip, `clips` in proposals). **Next:** the ball still leaves play too rarely (21 throw-ins v
+   about 40-45, corners 5.8 v 10) and the possession side still makes ~1270 passes; then resubmit for acceptance.
