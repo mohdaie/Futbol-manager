@@ -33,6 +33,7 @@ js/systems/brain.js        learning engine for computer managers, engine version
 js/systems/brain-cloud.js  private incremental cloud uploads, legacy import, offline queue and retry checkpoints
 js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
 js/systems/lab.js          Admin "Run test season": league averages against targets, results by style and by tactic fit
+js/ui/crests.js            shared club artwork renderer and generated shield fallback
 js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
 js/ui/dayrun.js            Continue: the calendar moves day by day and stops on matchday or important news
 js/ui/navigation.js        browser/in-game Back history, view restoration, root guard

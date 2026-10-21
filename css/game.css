@@ -80,6 +80,7 @@ small { font-size: 10px; }
 .vs-meta { display: flex; justify-content: space-between; align-items: center; gap: 6.5px; font-size: 11px; color: var(--mute); flex-wrap: wrap; }
 .scorers { display: grid; grid-template-columns: 1fr 1fr; gap: 42px; text-align: center; font-size: 10px; color: var(--mute); }
 .crest { flex: none; filter: drop-shadow(0 2px 2.5px rgba(0,0,0,.35)); }
+img.crest-art { object-fit: contain; max-width: none; vertical-align: middle; }
 
 /* ---------- tiles & cards ---------- */
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8.5px; }
