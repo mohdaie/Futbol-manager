@@ -121,10 +121,7 @@ function toast(msg) {
 
 /* ---------- components ---------- */
 function badge(cid, size = 28) {
-  const c = G.clubs[cid];
-  if (!c) return '';
-  const code = c.code || c.id, txt = isLight(c.c1) ? '#141414' : '#FFFFFF';
-  return `<svg class="crest" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 37.5 6v16c0 12-8 19-17.5 22.5C10.5 41 2.5 34 2.5 22V6z" fill="${c.c1}" stroke="${c.c2}" stroke-width="2.5"/><path d="M8 9h24" stroke="${c.c2}" stroke-width="2" opacity=".55"/><text x="20" y="28" text-anchor="middle" font-size="${code.length > 2 ? 11.5 : 13}" font-weight="800" fill="${txt}" font-family="Plus Jakarta Sans, sans-serif">${code}</text></svg>`;
+  return clubBadge(G?.clubs[cid], size);
 }
 const avatarImg = (n, cls = '') => `<img class="av ${cls}" src="${avatarSrc(n)}" alt="Manager ${AVATARS.includes(+n) ? +n : 1}" width="320" height="320" loading="lazy" decoding="async">`;
 function avatarPicker(cur, act) {
