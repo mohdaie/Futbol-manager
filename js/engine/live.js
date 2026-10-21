@@ -4,7 +4,11 @@
    team talks, touchline shouts, in-match tactics and substitutions.
    Key moments only (as in Football Manager): the engine's action chain for a minute
    (ev.seq from sim.js) is replayed step by step; quiet minutes pass quickly.
-   Players stand where positions() puts them, and the players in each action move to it. */
+   Movement is visual only (the engine has already decided what happens): players run at their own pace
+   with momentum, the defending back line holds a line, attackers stay onside until they make a run, and the
+   ball goes to where a team-mate is or is running to.
+   The match in progress is kept in the save (G.live) every minute, so leaving the screen, refreshing,
+   or saving and loading resumes it at the same minute instead of restarting it. */
 
 const SPEED_MS = { 1: 1000, 2: 520, 4: 260 };
 // Duration of each action, relative to one speed unit.
@@ -12,17 +16,42 @@ const ACT_DUR = { pass: 0.75, thru: 0.95, long: 1.15, cross: 1.05, drib: 0.95, s
 const ACT_ARC = { long: 0.05, cross: 0.045, clear: 0.04 };
 let LIVE = null;
 
-function startLive(fx) {
-  if (LIVE && !LIVE.done && LIVE.fid === fx.id) return go('match');
-  const M = createMatch(fx);
+function newLive(M, fid) {
   const bottom = M.sides[0].user ? 0 : 1;
   M.live = true;
   M.onAsync = evs => evs.forEach(e => { if (LIVE && LIVE.M === M) pushFeed(LIVE, e.t === 'sub' ? 'info' : 'tac', commLine(LIVE, e), e.side); });
-  LIVE = { M, fid: fx.id, bottom, ball: { x: 0.5, y: 0.5 }, q: [], cur: null, poss: 0, t: 0, last: 0, paused: false, hold: 0, dots: [[], []], disp: [0, 0], feed: [], overlay: null, done: false, raf: 0, cv: null, ctx: null, W: 0, H: 0, placed: false, subSel: null, colors: null, pins: {}, line: null, carrier: null };
+  LIVE = { M, G, fid, bottom, ball: { x: 0.5, y: 0.5 }, q: [], cur: null, poss: 0, t: 0, last: 0, paused: false, hold: 0, dots: [[], []], disp: [0, 0], feed: [], overlay: null, done: false, raf: 0, cv: null, ctx: null, W: 0, H: 0, placed: false, subSel: null, colors: null, pins: {}, due: {}, focus: null, kick: true, line: null, carrier: null };
   LIVE.colors = kitColors(M.sides[bottom].cid, M.sides[1 - bottom].cid);
+  return LIVE;
+}
+// The live match for this fixture is still on screen (and belongs to the loaded save).
+const liveOn = fx => !!(fx && LIVE && !LIVE.done && LIVE.fid === fx.id && LIVE.G === G);
+function startLive(fx) {
+  if (liveOn(fx) || liveFromSave(fx)) return go('match');
+  newLive(createMatch(fx), fx.id);
   pushFeed(LIVE, 'info', `Kick-off at ${G.clubs[fx.h].ground}. ${clubName(fx.h)} v ${clubName(fx.a)}.`);
   go('match');
 }
+// Keep the match in the save. Called between minutes, when the screen is left and when the page is hidden.
+function liveKeep(L = LIVE) {
+  if (!L || L.done || L.G !== G || !G) return;
+  G.live = { fid: L.fid, M: L.M, poss: L.poss, feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
+  saveGame();
+}
+// Pick the match up from the save at the minute it reached. It waits paused until Play.
+function liveFromSave(fx) {
+  const K = G && G.live;
+  if (!K || !fx || K.fid !== fx.id || !K.M) return false;
+  if (played(fx)) { G.live = null; return false; }
+  if (liveOn(fx)) return true;
+  const L = newLive(K.M, fx.id), M = L.M;
+  L.disp = [M.sides[0].st.g, M.sides[1].st.g];
+  L.poss = K.poss || 0; L.feed = K.feed || []; L.kick = false; L.paused = !M.ended;
+  pushFeed(L, 'info', `Match resumed at ${M.min}'. Press Play to carry on.`);
+  return true;
+}
+window.addEventListener('pagehide', () => liveKeep());
+document.addEventListener('visibilitychange', () => { if (document.hidden) liveKeep(); });
 
 const tickMs = () => SPEED_MS[G.settings.speed] || 700;
 
@@ -59,7 +88,8 @@ function bindLive() {
   };
   L.cv = cv; L.ctx = cv.getContext('2d'); L.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); L.W = W; L.H = H;
   if (!L.placed) {
-    [0, 1].forEach(si => { L.dots[si] = teamTargets(L, si).map(t => (t ? { x: t[0], y: t[1] } : { x: 0.5, y: 0.5 })); });
+    const tg = liveTargets(L);
+    [0, 1].forEach(si => { L.dots[si] = tg[si].map(t => (t ? { x: t[0], y: t[1], vx: 0, vy: 0 } : { x: 0.5, y: 0.5, vx: 0, vy: 0 })); });
     L.placed = true;
   }
   updateBoard(L);
@@ -67,12 +97,12 @@ function bindLive() {
   if (!L.raf) { L.last = 0; L.raf = requestAnimationFrame(liveFrame); }
 }
 
-function stopLive() { if (LIVE && LIVE.raf) cancelAnimationFrame(LIVE.raf); if (LIVE) LIVE.raf = 0; }
+function stopLive() { if (LIVE && LIVE.raf) cancelAnimationFrame(LIVE.raf); if (LIVE) { LIVE.raf = 0; liveKeep(LIVE); } }
 
 function liveFrame(ts) {
   const L = LIVE;
   if (!L || !L.cv || !document.body.contains(L.cv)) { if (L) L.raf = 0; return; }
-  const dt = Math.min(64, ts - (L.last || ts));
+  const dt = Math.min(64, ts - (L.last || ts)); L.lastDt = dt;
   L.last = ts; L.t += dt;
   if (!L.paused) {
     if (L.hold > 0) L.hold -= dt;
@@ -87,6 +117,7 @@ function liveFrame(ts) {
 }
 
 function liveStep(L) {
+  liveKeep(L); // everything up to this minute has been shown
   const evs = stepMatch(L.M, false);
   scriptEvents(L, evs);
   updateBoard(L, true);
@@ -99,34 +130,104 @@ function slotOf(L, pid) {
   for (const si of [0, 1]) { const i = L.M.sides[si].on.indexOf(pid); if (pid && i >= 0) return [si, i]; }
   return null;
 }
-// Where each player wants to be: the engine's positions() for the current ball and possession,
-// unless he is one of the players in the action being shown (L.pins).
-function teamTargets(L, si) {
-  const S = L.M.sides[si], hasBall = L.poss === si;
-  const [bx, by] = si === L.bottom ? [L.ball.x, L.ball.y] : [1 - L.ball.x, 1 - L.ball.y];
-  const pos = positions(S, hasBall, bx, by);
-  return pos.map((q, i) => {
-    if (!q) return null;
-    const pin = L.pins[si + ':' + i];
-    if (pin) return pin === 'ball' ? [L.ball.x, L.ball.y] : pin;
-    const t = L.t / 1000 + i * 1.7 + si * 3;
-    const [x, y] = toCanvas(L, si, q[0] + Math.sin(t * 0.9) * 0.006, q[1] + Math.cos(t * 0.7) * 0.006);
-    return [x, y];
+/* ---------- movement ---------- */
+const PITCH_M = [68, 105];
+const timeK = () => 3 * 520 / tickMs(); // the replay runs about three times real time at 2x
+// Top speed in metres per animation millisecond: pace and agility, slower when tired.
+function topSpeed(L, S, id) {
+  const p = G.players[id], a = p ? p.at : null, cond = S.cond[id] ?? 100;
+  return (6.3 + (a ? a[A.pac] * 0.13 + a[A.agi] * 0.03 : 1.6)) * (0.8 + 0.2 * cond / 100) * timeK() / 1000;
+}
+// The offside line for attacking side a, in its own frame (attacking towards y = 0): the second-last
+// defender as he actually stands, the ball if it is further forward, never inside a's own half.
+function liveLine(L, a) {
+  const d = 1 - a, O = L.M.sides[d];
+  let deep = 0;
+  O.on.forEach((id, i) => { const p = L.dots[d][i]; if (id && i > 0 && p) deep = Math.max(deep, toCanvas(L, d, p.x, p.y)[1]); });
+  return Math.min(0.5, 1 - deep, toCanvas(L, a, L.ball.x, L.ball.y)[1]);
+}
+function pinPoint(L, pin) { return Array.isArray(pin) ? pin : [L.ball.x + (pin.ox || 0), L.ball.y + (pin.oy || 0)]; }
+// Where each player wants to be (canvas frame). The shape follows where the ball is going (L.focus),
+// not every frame of its flight, so players read the play instead of chasing the ball.
+function liveTargets(L) {
+  const f = L.focus || L.ball;
+  const own = [0, 1].map(si => {
+    const S = L.M.sides[si], att = L.poss === si, [bx, by] = toCanvas(L, si, f.x, f.y);
+    const q = positions(S, att && !L.kick, bx, by);
+    if (!att) { // the back line holds a line
+      const back = q.map((p, i) => (p && i && LINE[FORMATIONS[S.ip][i][0]] === 1 ? i : -1)).filter(i => i > 0);
+      const h = Math.min(avg(back, i => q[i][1]), Math.max(by + 0.1, 0.8)); // no deeper than needed
+      back.forEach(i => { q[i][1] = h + (q[i][1] - h) * 0.2; });
+    }
+    // A compact team: nobody more than about 40 metres behind the ball (the back line steps up behind the play).
+    q.forEach((p, i) => { if (p && i) p[1] = Math.min(p[1], Math.max(by, 0.2) + (att ? 0.4 : 0.36)); });
+    if (L.kick) q.forEach((p, i) => { if (p && i) p[1] = Math.max(p[1], att ? 0.505 : 0.56); });
+    return q;
   });
+  const a = L.poss;
+  if (!L.kick && (a === 0 || a === 1)) {
+    // Stay onside until the run is on: behind the line as it stands and where it is heading.
+    const d = 1 - a;
+    let deep = 0;
+    own[d].forEach((p, i) => { if (p && i) deep = Math.max(deep, p[1]); });
+    const line = Math.max(liveLine(L, a), Math.min(0.5, 1 - deep, toCanvas(L, a, L.ball.x, L.ball.y)[1]));
+    own[a].forEach((p, i) => { if (p && i && !L.pins[a + ':' + i]) p[1] = Math.max(p[1], line + 0.022); });
+  }
+  return own.map((q, si) => q.map((p, i) => {
+    if (!p) return null;
+    const pin = L.pins[si + ':' + i];
+    if (pin) return pinPoint(L, pin);
+    const t = L.t / 1000 + i * 1.7 + si * 3;
+    return toCanvas(L, si, p[0] + Math.sin(t * 0.6) * 0.004, p[1] + Math.cos(t * 0.5) * 0.003);
+  }));
 }
 
+// Players accelerate, run and slow down into position. A player on the ball stays with it; a receiver
+// times his run to arrive with the pass (L.due).
 function moveDots(L, dt) {
-  // Faster players get to their spot quicker.
+  const tg = liveTargets(L);
   [0, 1].forEach(si => {
-    const S = L.M.sides[si], tg = teamTargets(L, si);
-    tg.forEach((t, i) => {
+    const S = L.M.sides[si];
+    tg[si].forEach((t, i) => {
       if (!t) return;
-      const p = G.players[S.on[i]], sp = 200 + (20 - (p ? p.at[A.pac] : 10)) * 9;
-      const k = 1 - Math.exp(-dt / (L.pins[si + ':' + i] ? sp * 0.6 : sp));
-      const d = L.dots[si][i] || (L.dots[si][i] = { x: t[0], y: t[1] });
-      d.x += (t[0] - d.x) * k; d.y += (t[1] - d.y) * k;
+      const d = L.dots[si][i] || (L.dots[si][i] = { x: t[0], y: t[1], vx: 0, vy: 0 }), key = si + ':' + i, pin = L.pins[key];
+      if (pin && pin.hold) { const b = Math.min(1, dt / 40); d.x += (t[0] - d.x) * b; d.y += (t[1] - d.y) * b; d.vx = d.vy = 0; return; }
+      const dx = (t[0] - d.x) * PITCH_M[0], dy = (t[1] - d.y) * PITCH_M[1], dist = Math.hypot(dx, dy);
+      const top = topSpeed(L, S, S.on[i]);
+      let want = Math.min(pin ? top : top * (dist > 10 ? 0.9 : 0.6), dist / 260);
+      const due = L.due[key];
+      if (pin && due > L.t) want = Math.max(want, Math.min(dist / (due - L.t), top * 1.6));
+      const vx = dist > 0.05 ? dx / dist * want : 0, vy = dist > 0.05 ? dy / dist * want : 0, k = Math.min(1, dt / 140);
+      d.vx = (d.vx || 0) + (vx - (d.vx || 0)) * k; d.vy = (d.vy || 0) + (vy - (d.vy || 0)) * k;
+      d.x += d.vx * dt / PITCH_M[0]; d.y += d.vy * dt / PITCH_M[1];
     });
   });
+  // Players don't stand on top of each other: ease apart anyone closer than about 3 metres.
+  const all = [];
+  [0, 1].forEach(si => L.dots[si].forEach((d, i) => { if (d && L.M.sides[si].on[i] && !L.pins[si + ':' + i]?.hold) all.push(d); }));
+  for (let a = 0; a < all.length; a++) for (let b = a + 1; b < all.length; b++) {
+    const p = all[a], q = all[b], dx = (q.x - p.x) * PITCH_M[0], dy = (q.y - p.y) * PITCH_M[1], m = Math.hypot(dx, dy);
+    if (m >= 3.2 || m < 1e-6) continue;
+    const push = Math.min(1, dt / 120) * (3.2 - m) / 2 / m;
+    p.x -= dx * push / PITCH_M[0]; p.y -= dy * push / PITCH_M[1]; q.x += dx * push / PITCH_M[0]; q.y += dy * push / PITCH_M[1];
+  }
+}
+// How long a player needs to reach a point at full speed (animation ms).
+function reachMs(L, key, pt) {
+  const [si, i] = key.split(':').map(Number), d = L.dots[si][i], S = L.M.sides[si];
+  return d ? Math.hypot((pt[0] - d.x) * PITCH_M[0], (pt[1] - d.y) * PITCH_M[1]) / topSpeed(L, S, S.on[i]) : 0;
+}
+// A team-mate to pass to in a quiet spell: someone 10-30 metres away, mostly sideways or forwards.
+function quietTarget(L, si) {
+  const S = L.M.sides[si], from = L.ball, fwd = si === L.bottom ? -1 : 1, c = [];
+  S.on.forEach((id, i) => {
+    const d = L.dots[si][i]; if (!id || !i || !d) return;
+    const m = Math.hypot((d.x - from.x) * PITCH_M[0], (d.y - from.y) * PITCH_M[1]);
+    if (m > 6 && m < 32) c.push([i, (1 + Math.max(0, (d.y - from.y) * fwd) * 4) * (m > 10 ? 1 : 0.4)]);
+  });
+  if (!c.length) return null;
+  let r = R() * c.reduce((t, x) => t + x[1], 0);
+  return c.find(x => (r -= x[1]) <= 0)?.[0] ?? c[0][0];
 }
 
 // Short commentary for the steps of a key moment.
@@ -147,7 +248,7 @@ function stepLine(L, st) {
 
 function scriptEvents(L, evs) {
   const M = L.M, T = tickMs(), ev = evs[0];
-  L.q.push({ fn: () => { L.poss = ev.side; L.pins = {}; L.line = null; } });
+  L.q.push({ fn: () => { L.poss = ev.side; L.pins = {}; L.due = {}; L.line = null; L.kick = false; } });
   const told = new Set();
   const foulLine = e => {
     told.add(e);
@@ -159,19 +260,41 @@ function scriptEvents(L, evs) {
   if (ev.key && ev.seq && ev.seq.length) {
     if (ev.counter) L.q.push({ fn: () => pushFeed(L, 'info', `The ${clubName(M.sides[ev.side].cid)} break forward quickly.`, ev.side) });
     ev.seq.forEach((st, k) => {
-      const from = toCanvas(L, st.s, st.x0, st.y0), to = toCanvas(L, st.s, st.x1, st.y1);
-      const actor = slotOf(L, st.pid), recv = slotOf(L, st.to), opp = slotOf(L, st.oid);
+      const from = toCanvas(L, st.s, st.x0, st.y0), actor = slotOf(L, st.pid), recv = slotOf(L, st.to), opp = slotOf(L, st.oid);
+      const onBall = ['drib', 'shot', 'head', 'foul', 'regain'].includes(st.k), goalSide = s => (s === L.bottom ? 0.022 : -0.022);
+      let to = toCanvas(L, st.s, st.x1, st.y1), rkey = null;
+      if (k === 0 && actor && !onBall) {
+        // The move starts with the ball being worked to the first player where he stands.
+        L.q.push({ fn: () => { L.pins = { [actor.join(':')]: from }; L.carrier = actor; L.focus = { x: from[0], y: from[1] }; } });
+        L.q.push({ x: from[0], y: from[1], d: T * 0.5, rk: actor.join(':') });
+      }
+      if (st.res === 'offside' && recv) {
+        // Caught beyond the line as the pass is played.
+        L.q.push({ fn: () => { L.pins = { [recv.join(':')]: toCanvas(L, st.s, st.x1, st.line - 0.025) }; if (actor) L.pins[actor.join(':')] = { ox: 0, oy: 0, hold: true }; } });
+        L.q.push({ hold: T * 0.6 });
+      }
       L.q.push({ fn: () => {
         const keep = {};
-        if (actor) keep[actor.join(':')] = st.k === 'drib' || st.k === 'shot' || st.k === 'head' ? 'ball' : from;
+        // A normal pass goes to where the receiver can take it onside.
+        if (st.k === 'pass' && recv) { const a = toCanvas(L, st.s, to[0], to[1]); to = toCanvas(L, st.s, a[0], Math.max(a[1], liveLine(L, st.s) + 0.012)); }
+        if (actor) keep[actor.join(':')] = st.k === 'drib' ? { ox: 0, oy: 0, hold: true } : [L.ball.x, L.ball.y];
         if (recv) keep[recv.join(':')] = to;
-        if (opp) keep[opp.join(':')] = st.k === 'drib' ? 'ball' : [to[0] + (to[0] < 0.5 ? 0.03 : -0.03), to[1] + (opp[0] === L.bottom ? 0.03 : -0.03)];
-        L.pins = keep; L.carrier = actor;
+        if (opp) keep[opp.join(':')] = st.k === 'drib' ? { ox: 0, oy: goalSide(opp[0]) } : [to[0] + (to[0] < 0.5 ? 0.025 : -0.025), to[1] + goalSide(opp[0])];
+        rkey = recv && !onBall ? recv.join(':') : null;
+        // Intercepted or claimed: the ball goes to the defender who gets to it.
+        if (opp && st.k !== 'drib' && (st.res === 'lost' || st.res === 'claim')) { rkey = opp.join(':'); to = keep[rkey]; }
+        if (st.k === 'cross') { // runners attack the near post, the penalty spot and the far post
+          const near = st.x0 < 0.5 ? -1 : 1, spots = [[0.5 + near * 0.06, 0.065], [0.5, 0.11], [0.5 - near * 0.08, 0.075]];
+          const S = L.M.sides[st.s], runners = S.on.map((id, i) => (id && i && id !== st.pid && id !== st.to && LINE[FORMATIONS[S.ip][i][0]] >= 3 ? i : -1)).filter(i => i > 0);
+          runners.sort((a, b) => L.dots[st.s][a].y * (st.s === L.bottom ? 1 : -1) - L.dots[st.s][b].y * (st.s === L.bottom ? 1 : -1));
+          runners.slice(0, 3).forEach((i, n) => { keep[st.s + ':' + i] = toCanvas(L, st.s, spots[n][0], spots[n][1]); });
+        }
+        L.pins = keep; L.carrier = actor; L.focus = { x: to[0], y: to[1] };
         if (st.k !== 'clear' && st.k !== 'tackle' && st.k !== 'foul') L.poss = st.s;
         if (st.res === 'offside') { L.line = toCanvas(L, st.s, 0, st.line)[1]; }
         const [txt, ts] = stepLine(L, st); if (txt) pushFeed(L, 'info', txt, ts);
       } });
-      L.q.push({ x: to[0], y: to[1], sx0: from[0], sy0: from[1], d: T * (ACT_DUR[st.k] || 0.8), arc: ACT_ARC[st.k] || 0 });
+      L.q.push({ to: () => to, d: T * (ACT_DUR[st.k] || 0.8), arc: ACT_ARC[st.k] || 0, rkf: () => rkey, carry: st.k === 'drib' && actor ? actor.join(':') : null });
       if (st.res === 'offside') {
         L.q.push({ fn: () => { pushFeed(L, 'info', commLine(L, ev), 1 - ev.side); L.overlay = { big: 'OFFSIDE', small: pname(G.players[ev.pid]), t: 1200, flag: true }; } });
         L.q.push({ hold: 1200 });
@@ -183,16 +306,24 @@ function scriptEvents(L, evs) {
     if (ev.t === 'goal') {
       L.q.push({ fn: () => { L.disp[ev.side]++; updateBoard(L); pushFeed(L, 'goal', commLine(L, ev), ev.side); L.overlay = { big: 'GOAL', small: pname(G.players[ev.pid]) + ' ' + ev.min + "'", t: 1900, side: ev.side }; } });
       L.q.push({ hold: 1900 });
-      L.q.push({ fn: () => { L.poss = 1 - ev.side; L.pins = {}; } });
+      L.q.push({ fn: () => { L.poss = 1 - ev.side; L.pins = {}; L.carrier = null; L.kick = true; L.focus = { x: 0.5, y: 0.5 }; } });
       L.q.push({ x: 0.5, y: 0.5, d: 350 });
+      L.q.push({ hold: 900 }); // back to their own halves for the restart
     } else if (shotEv) {
       L.q.push({ fn: () => pushFeed(L, 'chance', commLine(L, ev), ev.side) });
       L.q.push({ hold: 350 });
     }
   } else {
-    // A quiet minute: the ball moves around the middle of the pitch quickly.
-    const [cx, cy] = toCanvas(L, ev.side, rf(0.25, 0.75), rf(0.45, 0.75));
-    L.q.push({ x: cx, y: cy, d: T * 0.45 });
+    // A quiet minute: a couple of passes between team-mates.
+    for (let n = 0; n < 2; n++) {
+      let rk = null;
+      L.q.push({ fn: () => {
+        const i = quietTarget(L, ev.side); rk = i == null ? null : ev.side + ':' + i;
+        L.pins = {}; L.carrier = rk ? [ev.side, i] : null;
+        if (rk) { const d = L.dots[ev.side][i]; L.pins[rk] = [d.x, d.y]; L.focus = { x: d.x, y: d.y }; }
+      } });
+      L.q.push({ to: () => (rk ? L.pins[rk] : [L.ball.x, L.ball.y]), d: T * 0.4, rkf: () => rk });
+    }
     if (R() < 0.08) L.q.push({ fn: () => pushFeed(L, 'info', fillerLine(L, ev), ev.side) });
   }
   evs.forEach(e => { if (!told.has(e) && (e.t === 'yellow' || e.t === 'red' || (e.t === 'foul' && e !== ev))) foulLine(e); });
@@ -200,7 +331,7 @@ function scriptEvents(L, evs) {
     pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'tac' ? 'tac' : 'info', commLine(L, e), e.side);
     if (e.t === 'inj' && M.sides[e.side].user) { L.paused = true; updateBoard(L); toast(`${pname(G.players[e.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
   } }));
-  if (ev.ht) L.q.push({ fn: () => { L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); } });
+  if (ev.ht) L.q.push({ fn: () => { L.kick = true; L.pins = {}; L.carrier = null; L.focus = { x: 0.5, y: 0.5 }; L.ball.x = 0.5; L.ball.y = 0.5; L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); } });
 }
 
 function advanceBall(L, dt) {
@@ -208,7 +339,21 @@ function advanceBall(L, dt) {
     const c = L.q.shift();
     if (c.fn) { c.fn(); return; }
     if (c.hold) { L.hold = c.hold; return; }
-    c.sx = c.sx0 ?? L.ball.x; c.sy = c.sy0 ?? L.ball.y; c.e = 0;
+    c.sx = L.ball.x; c.sy = L.ball.y; c.e = 0;
+    if (c.to) [c.x, c.y] = c.to();
+    if (c.rkf) c.rk = c.rkf();
+    // The pass waits for the run: it arrives with the receiver, within reason.
+    if (c.rk) {
+      const lim = c.d * 2.4, need = reachMs(L, c.rk, [c.x, c.y]) * 1.05;
+      if (need > lim) { // too far to get there: played to where he can reach
+        const [si, i] = c.rk.split(':').map(Number), d = L.dots[si][i], f = lim / need;
+        c.x = d.x + (c.x - d.x) * f; c.y = d.y + (c.y - d.y) * f;
+        if (Array.isArray(L.pins[c.rk])) L.pins[c.rk] = [c.x, c.y];
+        L.focus = { x: c.x, y: c.y };
+      }
+      c.d = clamp(need, c.d, lim); L.due[c.rk] = L.t + c.d;
+    }
+    if (c.carry) c.d = clamp(reachMs(L, c.carry, [c.x, c.y]) * 1.25, c.d, c.d * 2);
     L.cur = c;
   }
   const c = L.cur;
@@ -409,6 +554,7 @@ function liveInstant() {
 
 function onFullTime(L) {
   L.done = true;
+  if (G.live && G.live.fid === L.fid) G.live = null;
   finishMatch(L.M);
   finishRound();
   L.overlay = { big: 'FULL TIME', small: clubName(L.M.sides[0].cid) + ' ' + L.disp.join(' - ') + ' ' + clubName(L.M.sides[1].cid), t: 1, stay: true };

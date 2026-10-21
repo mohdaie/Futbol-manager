@@ -105,9 +105,9 @@ function restoreView(view) {
     if (negotiation && UI.con && negotiation.pid === UI.con.pid && negotiation.mode === UI.con.mode) UI.con.tries = Math.max(UI.con.tries, negotiation.tries);
     Object.assign(ADM, view.admin);
     // A finished match can be revisited as a report, never kicked off again.
-    if (UI.s === 'match' && (!LIVE || LIVE.fid !== view.liveFid)) {
+    if (UI.s === 'match' && (!LIVE || LIVE.fid !== view.liveFid || LIVE.G !== G)) {
       const fx = G?.fixtures.find(f => f.id === view.liveFid);
-      UI.s = fx && played(fx) ? 'post' : 'prematch'; UI.p = fx ? { fid: fx.id } : {};
+      if (!liveFromSave(fx)) { UI.s = fx && played(fx) ? 'post' : 'prematch'; UI.p = fx ? { fid: fx.id } : {}; }
     }
     render(true);
     if (view.popup && (!view.popup.valid || view.popup.valid())) {
