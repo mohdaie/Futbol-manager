@@ -1,0 +1,16 @@
+0s restart thr, red's defensive third, left wing; within 12 m: blue 1, red 1
+1s ground pass, red's defensive third, left wing; within 12 m: blue 1, red 1
+2s blue(press) DL on the ball, red's defensive third, left wing; within 12 m: blue 1, red 2
+3s ground pass, red's defensive third, left half-space; within 12 m: blue 1, red 2
+4s ground pass, middle third, left half-space; within 12 m: blue 3, red 0
+5s blue(press) DM on the ball, middle third, centre; within 12 m: blue 3, red 3
+6s blue(press) MC on the ball, red's defensive third, centre; within 12 m: blue 2, red 4
+7s red(direct) MC on the ball, red's defensive third, centre; within 12 m: blue 2, red 4
+8s loose ball, red's defensive third, centre; within 12 m: blue 3, red 2
+9s ground pass, middle third, centre; within 12 m: blue 3, red 3
+10s blue(press) MC on the ball, middle third, centre; within 12 m: blue 4, red 2
+11s blue(press) DM on the ball, middle third, centre; within 12 m: blue 3, red 3
+12s ball in the air, middle third, centre; within 12 m: blue 3, red 3
+13s ball in the air, middle third, left wing; within 12 m: blue 1, red 1
+14s blue(press) DL on the ball, middle third, left wing; within 12 m: blue 1, red 1
+15s blue(press) MC on the ball, middle third, left half-space; within 12 m: blue 2, red 2

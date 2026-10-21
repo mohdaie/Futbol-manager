@@ -1,0 +1,16 @@
+0s restart fk, middle third, left half-space; within 12 m: blue 3, red 2
+1s ball in the air, red's attacking third, left half-space; within 12 m: blue 4, red 1
+2s ground pass, red's attacking third, centre; within 12 m: blue 3, red 1
+3s loose ball, red's attacking third, centre; within 12 m: blue 2, red 0
+4s loose ball, red's attacking third, right half-space; within 12 m: blue 2, red 0
+5s loose ball, red's attacking third, right half-space; within 12 m: blue 2, red 1
+6s loose ball, red's attacking third, centre; within 12 m: blue 5, red 2
+7s red(direct) ST on the ball, red's attacking third, centre; within 12 m: blue 4, red 1
+8s red(direct) ML on the ball, red's attacking third, right half-space; within 12 m: blue 2, red 1
+9s red(direct) ML on the ball, red's attacking third, right half-space; within 12 m: blue 2, red 1
+10s red(direct) ST on the ball, red's attacking third, centre; within 12 m: blue 4, red 2
+11s red(direct) ST on the ball, red's attacking third, centre; within 12 m: blue 4, red 2
+12s restart ko, middle third, centre; within 12 m: blue 4, red 3
+13s restart ko, middle third, centre; within 12 m: blue 4, red 3
+14s restart ko, middle third, centre; within 12 m: blue 4, red 3
+15s restart ko, middle third, centre; within 12 m: blue 4, red 3
