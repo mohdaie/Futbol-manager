@@ -31,6 +31,8 @@ are isolated on `fix/ui-motion`, separate from the rulebook engine PR.
 - `tests/ui-stability.cjs`: 24 existing fee/wage, rapid edit and popup checks.
 - `tests/navigation.cjs`: 47 existing Back/history/save/title checks.
 - `tests/live.cjs`: live playback/save/resume regression (result in PR).
+  Its existing timing race is corrected using the actual page-exit checkpoint
+  and an atomic paused save/load, matching the previously reviewed PR #40 fix.
 
 ```sh
 CHROMIUM_PATH=/path/to/chromium node tests/ui-motion.cjs
