@@ -1,0 +1,23 @@
+{
+  "id": "flow-006-accept-pass-volume",
+  "kind": "acceptance",
+  "question": "You decided fix_pass_volume (flow-005, blind, 0.85) and required: direct-side long passes 50-90 per match and short escapes at least 20%. Here is the result. Accept, revise or investigate?",
+  "decision": { "id": "flow-005-remaining-criteria", "choice": "fix_pass_volume", "run": "39614455523" },
+  "criteria": { "absolute": "Direct side long passes 50-90 per match.", "escapes": "Short escapes at least 20% of pressed build-ups.", "regression": "All suites pass (owner rule, always required)." },
+  "evidence": {
+    "rootCause": "Pass volume was high because the ball was in play 90 of 95 minutes (real 55-58): restarts took 3-10 s and the ball rarely left the pitch (13 throw-ins, 3.5 corners per match; real about 40-45 and 10). Passing itself was realistic: average ground pass 16 m (real about 18), time on the ball 1.0-1.4 s.",
+    "implementation": "Real restart times (throw-in 15 s, goal kick 24 s, corner 28 s, free kick 18/30 s, penalty 50 s, goal celebration 35 s); tackles and interceptions deflect the ball properly; crosses can be blocked behind for corners; a pressed defender on the touchline can put it out.",
+    "rejectedLever": "Slower decisions (time on the ball) cut passes further but collapse short escapes (17% -> 6% at touch 1.7) and goals, because pressers arrive first. Not used.",
+    "before": { "passesPerTeam": 1137, "pressSidePasses": 1640, "directSidePasses": 631, "ballInPlayMin": 90, "throwIns": 13, "corners": 3.5, "longPasses": 182.5, "shortEscapePct": 13, "goals": 2.8 },
+    "after": {
+      "passesPerTeam": 912, "pressSidePasses": 1272, "directSidePasses": 551, "ballInPlayMin": 72, "throwIns": 21, "corners": 5.8, "longPasses": 155.4, "clearances": 32.2, "supportAtLanding": 2.5, "shortEscapePct": 17, "counterpressIsolatedPct": 26, "secondBallWonPct": 69.7, "goals": 2.5,
+      "leagueCheck60Matches": { "goals": 2.48, "shots": 14.9, "corners": 5.5, "fouls": 25.9, "passesPerTeam": 793, "note": "shots and corners were already low before this change (PR #40 baseline: shots 15.4, goals 2.33)" },
+      "checks": {
+        "longPasses50to90": { "pass": false, "value": 155.4 },
+        "shortEscapesAtLeast20pct": { "pass": false, "value": 17 },
+        "regressionSuites": { "pass": true, "value": "9/9" }
+      }
+    },
+    "analysis": "Ball-in-play time and pass volume moved strongly towards real football and escapes improved (13% -> 17%), but both required criteria still fail. The ball is still in play about 72 minutes because the ball leaves the pitch less often than in real matches (21 throw-ins v about 40-45). The pressing side still has 1272 passes at 65% possession. The direct side's long passes (155) would need its total passes near 350-400 to reach 50-90 at a realistic 20-25% share."
+  }
+}
