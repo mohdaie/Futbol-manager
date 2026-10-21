@@ -96,6 +96,7 @@ ACT.news = ds => {
   let actions = '';
   const a = n.action;
   if (a && !n.done && a.t === 'bid') actions = `<div class="btns"><button class="btn pri" data-a="bid" data-id="${n.id}" data-c2="accept">Accept ${money(a.fee)}</button><button class="btn" data-a="bid" data-id="${n.id}" data-c2="counter">Ask for ${money(roundMoney(a.fee * 1.2))}</button><button class="btn ghost" data-a="bid" data-id="${n.id}" data-c2="reject">Reject</button></div>`;
+  if (a && a.t === 'scoutfile' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="scoutFile" data-id="${a.pid}">Open scouting file</button></div>`;
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;
   if (a && n.done) actions += '<p class="note">Dealt with.</p>';
   sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div><h3 class="sh-t">${esc(n.title)}</h3><p class="body">${esc(n.body)}</p>${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });

@@ -136,7 +136,7 @@ function newGame(clubId, manager, avatar) {
     createdAt: Date.now(),
     v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,
     players: {}, clubs: {}, fixtures: [], news: [], know: {}, shortlist: [],
-    scout: { assign: [], reports: [] }, pitches: [], offers: [], tHist: [],
+    scout: { assign: [], reports: [], jobs: [] }, pitches: [], offers: [], tHist: [],
     fin: null, board: null, staff: [], staffPool: [], tactics: null,
     training: { focus: 'bal', intensity: 1, fam: 60, indiv: {} },
     ledger: null, ledgerPrev: null, balHist: [], history: [], trophies: [],

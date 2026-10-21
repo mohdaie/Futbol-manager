@@ -4,7 +4,6 @@
 
 const sponsorWeekly = rep => Math.round(60000 * Math.pow(1.08, rep - 50));
 const staffWageBill = () => sum(G.staff, s => s.wage);
-const scoutCost = () => G.scout.assign.length * 15000;
 const opsWeekly = rep => Math.round(60000 + rep * 5000);
 
 function weeklyFinance() {

@@ -625,3 +625,25 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .dayrun .btns .btn { flex: 1; }
 @keyframes drflip { from { transform: rotateX(70deg) translateY(-6px); opacity: .3; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .dr-cal.flip { animation: none; } }
+
+/* scouting files (2026.10.21.11) */
+.attrs b.unk, .pov b.unk { color: var(--mut, #8b8f98); font-weight: 600; }
+.attrs b.est { font-style: italic; opacity: .78; }
+.sfile { display: grid; gap: 12px; }
+.sf-tab { justify-self: start; padding: 4px 10px; border-radius: 8px 8px 0 0; background: #E9DFC6; color: #4A3F28; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: -12px; }
+.sf-cover { position: relative; padding: 14px; border-radius: 0 10px 10px 10px; background: #F6F0E1; color: #2B261B; border: 1px solid #E2D6B8; }
+.sf-cover p { margin: 2px 0; font-size: 13px; }
+.sf-cover dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 0; }
+.sf-cover dt { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; opacity: .7; }
+.sf-cover dd { margin: 0; font-size: 12px; font-weight: 700; }
+.sf-stamp { position: absolute; top: 10px; right: 10px; padding: 2px 8px; border: 2px solid #B23A3A; border-radius: 4px; color: #B23A3A; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; transform: rotate(6deg); }
+.sf-know small { display: block; margin-top: 4px; }
+.fsec { border-top: 1px dashed rgba(127,127,127,.35); padding-top: 10px; }
+.fsec h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.fsec h4 small { font-weight: 500; opacity: .7; }
+.sf-verdict { display: flex; align-items: center; gap: 12px; }
+.sf-verdict small { display: block; opacity: .75; }
+.sf-verdict .r { margin-left: auto; text-align: right; }
+.lock { margin: 0; padding: 10px; border-radius: 8px; background: rgba(127,127,127,.1); font-size: 13px; opacity: .8; }
+.seg.wrap { flex-wrap: wrap; }
+.grade.g\? { background: rgba(127,127,127,.35); }

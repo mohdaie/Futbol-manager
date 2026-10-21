@@ -43,20 +43,27 @@ const TR_TABS = {
     return `<div class="list">${list.map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`)).join('') || empty('Shortlist is empty', 'Add players from their profile to track them here.')}</div>`;
   },
   scout() {
-    const scouts = staffOf('Scout'), A1 = G.scout.assign, free = scouts.length - A1.length;
+    const scouts = staffOf('Scout'), A1 = G.scout.assign, jobs = G.scout.jobs, free = scouts.filter(s => scoutLoad(s) === 0).length;
     const f = UI.tab.newAssign || { region: 'Everywhere', pos: 'Any', maxAge: 30, weeks: 4 };
     UI.tab.newAssign = f;
-    return `<div class="card"><h3>Assignments <small>${A1.length}/${scouts.length} scouts busy</small></h3>
-        <div class="list">${A1.map(a => `<div class="row"><span class="grow"><b>${esc(a.region)} · ${a.pos === 'Any' ? 'Any position' : POS_NAME[a.pos]}</b><small>Age ${a.maxAge} or under · ${a.left} week${a.left > 1 ? 's' : ''} left</small></span><button class="btn sm ghost" data-a="cancelAssign" data-id="${a.id}">Stop</button></div>`).join('') || '<p class="muted">No active assignments.</p>'}</div>
+    const fd = UI.tab.sfold || 'new', files = G.scout.reports.filter(r => (r.folder || 'new') === fd && G.players[r.pid]);
+    const scoutRow = s => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>Rating ${s.rating} · knows ${esc(scoutRegion(s))} · ${scoutLoad(s) >= SCOUT_LOAD ? 'fully booked' : (SCOUT_LOAD - scoutLoad(s)) + ' of 3 places free'}</small></span></div>`;
+    return `<div class="card"><h3>Scouts <small>${scouts.length}</small></h3><p class="muted">Each scout follows up to three players, or runs one assignment. A scout who knows a region learns faster there.</p>
+        <div class="list">${scouts.map(scoutRow).join('') || '<p class="muted">No scouts. Hire one in Staff.</p>'}</div></div>
+      <div class="card"><h3>Following <small>${jobs.length}</small></h3>
+        <div class="list">${jobs.map(j => { const p = G.players[j.pid], s = scoutById(j.sid); return p ? `<div class="row"><span class="grow"><b>${playerLink(p.id, fullName(p))}</b><small>${j.mode === 'video' ? 'Video analysis' : esc(s ? s.name : 'Scout')} · ${knowOf(p)}% · ${j.n || 0} watched · ${Math.max(0, j.end - dayAbs())} days left</small></span><button class="btn sm" data-a="scoutFile" data-id="${p.id}">File</button><button class="btn sm ghost" data-a="stopScout" data-id="${j.id}">Stop</button></div>` : ''; }).join('') || '<p class="muted">Nobody yet. Open a player and choose Scouting > Send a scout.</p>'}</div></div>
+      <div class="card"><h3>Assignments <small>${A1.length}</small></h3><p class="muted">A scout searches a region and files first reports on two players a week.</p>
+        <div class="list">${A1.map(a => `<div class="row"><span class="grow"><b>${esc(a.region)} · ${a.pos === 'Any' ? 'Any position' : POS_NAME[a.pos]}</b><small>${esc((scoutById(a.sid) || {}).name || 'Scout')} · age ${a.maxAge} or under · ${a.left} week${a.left > 1 ? 's' : ''} left</small></span><button class="btn sm ghost" data-a="cancelAssign" data-id="${a.id}">Cancel</button></div>`).join('')}</div>
         ${free > 0 ? `<div class="two">
           <div class="field"><label for="aReg">Region</label>${selectHtml('aReg', REGIONS, f.region, 'af', 'data-k="region"')}</div>
           <div class="field"><label for="aPos">Position</label>${selectHtml('aPos', ['Any', ...POSITIONS], f.pos, 'af', 'data-k="pos"')}</div>
           <div class="field"><label for="aAge">Max age</label>${selectHtml('aAge', [19, 21, 23, 25, 28, 30, 35], f.maxAge, 'af', 'data-k="maxAge" data-n="1"')}</div>
           <div class="field"><label for="aWk">Duration</label>${selectHtml('aWk', [[2, '2 weeks'], [4, '4 weeks'], [8, '8 weeks']], f.weeks, 'af', 'data-k="weeks" data-n="1"')}</div></div>
-          <button class="btn pri wide" data-a="addAssign">Send a scout (£15k a week)</button>` : '<p class="note">Every scout is busy. Hire more scouts in Staff.</p>'}
+          <button class="btn pri wide" data-a="addAssign">Start assignment (£15k a week)</button>` : '<p class="note">No scout is completely free for an assignment.</p>'}
       </div>
-      <div class="sec-h"><h2>Reports</h2><span class="muted">${G.scout.reports.length}</span></div>
-      <div class="list">${G.scout.reports.map(r => { const p = G.players[r.pid]; return p ? playerRow(p, `<span class="grade g${r.grade}">${r.grade}</span>`, { sub: GRADE_NOTE[r.grade] }) : ''; }).join('') || empty('No reports yet', 'Scouts file reports each week while on assignment.')}</div>`;
+      <div class="sec-h"><h2>Scouting files</h2><span class="muted">${G.scout.reports.length}</span></div>
+      <div class="seg wrap">${FOLDERS.map(([k, n]) => `<button class="${fd === k ? 'on' : ''}" data-a="scoutFolder" data-v="${k}">${n} ${G.scout.reports.filter(r => (r.folder || 'new') === k).length}</button>`).join('')}</div>
+      <div class="list">${files.map(r => { const p = G.players[r.pid]; return playerRow(p, `<span class="grade g${r.grade}">${r.grade}</span>`, { sub: `${knowOf(p)}% · ${knowStage(knowOf(p))[1]} · ${r.rec || 'Watch more'}` }); }).join('') || empty('No files here', 'Send scouts to watch players, or move files into this folder.')}</div>`;
   },
   pitch() {
     const list = G.pitches.filter(x => G.players[x.pid] && G.players[x.pid].club !== G.club);
@@ -78,7 +85,47 @@ const TR_TABS = {
 CHG.sf = (v, ds) => { UI.search[ds.k] = ds.n ? +v : v; render(); };
 CHG.af = (v, ds) => { UI.tab.newAssign[ds.k] = ds.n ? +v : v; };
 ACT.addAssign = () => { const f = UI.tab.newAssign; if (addAssignment(f.region, f.pos, f.maxAge, f.weeks)) toast('Scout dispatched.'); else toast('No scout is free.'); render(); };
+ACT.scoutFolder = ds => { UI.tab.sfold = ds.v; render(); };
+ACT.stopScout = ds => { stopScouting(+ds.id); render(); };
 ACT.cancelAssign = ds => { G.scout.assign = G.scout.assign.filter(a => a.id !== +ds.id); render(); };
+
+/* ---------- scouting file ----------
+   A dossier: cover, verdict, attributes (confirmed, estimate or not scouted), sections that open stage by stage,
+   notes, matches watched and the history of the report. */
+function scoutFileSheet(pid) {
+  const p = G.players[pid];
+  if (!p) return toast('That player has retired.');
+  const k = knowOf(p), r = scoutFile(p), st = knowStage(k), nx = nextStage(k), so = seenOvr(p), fit = k >= 25 ? fileFit(p) : null;
+  const job = G.scout.jobs.find(j => j.pid === p.id), lock = (need, what) => `<p class="lock">Opens at ${need}%: ${what}.</p>`;
+  const groups = p.pos === 'GK' ? ['P', 'G', 'T', 'M'] : ['P', 'T', 'M'];
+  const attrs = groups.map(g => `<div><h4 class="lbl">${ATTR_GROUPS[g]} <small>${ATTR_STAGE[g]}%</small></h4>${ATTRS.map((a, i) => (a[2] === g ? `<div class="at"><span>${a[1]}</span>${attrCell(p, i)}</div>` : '')).join('')}</div>`).join('');
+  const sec = (title, need, html, what) => `<section class="fsec"><h4>${title}</h4>${k >= need ? html : lock(need, what)}</section>`;
+  const yl = p.con - G.season;
+  sheet(`<article class="sfile">
+    <div class="sf-tab">Scouting department · File ${String(p.id).padStart(5, '0')}</div>
+    <header class="sf-cover"><span class="sf-stamp">Confidential</span>
+      <h3 class="sh-t" data-no-links>${esc(fullName(p))}</h3>
+      <p>${POS_NAME[p.pos]}${p.alt.length ? ' / ' + p.alt.join(', ') : ''} · ${p.age} · ${natName(p.nat)} · ${p.foot} foot</p>
+      <p>${badge(p.club, 16)} ${esc(clubName(p.club))}</p>
+      <dl><div><dt>Scout</dt><dd>${esc(r.by || '-')}</dd></div><div><dt>Updated</dt><dd>${fmtDate(r.date, false)}</dd></div><div><dt>Matches watched</dt><dd>${r.seen.filter(x => x.rt != null || x.note === 'Did not play').length}</dd></div></dl>
+    </header>
+    <div class="sf-know"><div class="kvrow"><span>File complete</span><b>${k}% · ${st[1]}</b></div>${bar(k, k >= 90 ? 'good' : k >= 50 ? '' : 'warn')}
+      <small class="muted">${nx ? `Next at ${nx[0]}%: ${STAGE_UNLOCK[nx[0]]}.` : 'Every value in this file is confirmed.'}${job ? ` Being scouted now (${job.mode === 'video' ? 'video' : esc((scoutById(job.sid) || {}).name || 'scout')}, ${Math.max(0, job.end - dayAbs())} days left).` : ''}</small></div>
+    <section class="fsec verdict"><h4>Verdict</h4><div class="sf-verdict"><span class="grade g${r.grade}">${r.grade}</span><div><b>${esc(r.rec || 'Watch more')}</b><small>${GRADE_NOTE[r.grade]}</small></div><div class="r"><small>Ability</small>${ovrPill(so.v, so.txt)}</div></div>
+      ${fit ? `<p>Best role for you: <b>${POS_NAME[fit.pos]}</b>, about ${fit.est}${fit.cur ? ` against ${playerLink(fit.cur.id, pname(fit.cur))} (${fit.curV})` : ''}.</p>` : ''}</section>
+    <section class="fsec"><h4>Attributes</h4><p class="muted">Exact = confirmed · range = estimate · ? = not scouted yet</p><div class="attrs">${attrs}</div></section>
+    ${sec('Contract and money', 50, `<div class="kv"><div><small>Contract ends</small><b>${p.club === 'FA' ? 'Free agent' : 'June ' + p.con + (yl <= 1 ? ' (expiring)' : '')}</b></div><div><small>Wage</small><b>${p.club === 'FA' ? 'Unattached' : wageFmt(p.wage)}</b></div><div><small>Value</small><b>${money(pValue(p))}</b></div><div><small>Asking price</small><b>${p.club === 'FA' ? 'Free' : '~' + money(askingPrice(p))}</b></div><div><small>Fitness</small><b>${p.inj ? esc(p.inj.n) + ', ' + p.inj.w + ' wk' : 'Fit'}</b></div></div>`, 'contract, wage, value and asking price')}
+    ${sec('Personality and potential', 75, `<div class="kv"><div><small>Character</small><b>${p.pers}</b></div><div><small>Ambition</small><b>${ambLabel(p.amb)}</b></div><div><small>Potential</small><b>${starHtml(seenPot(p))}</b></div></div><p class="muted">${CHARACTER[p.pers]}</p>`, 'personality, ambition and potential')}
+    ${sec('Full file', 90, `<div class="kv"><div><small>Happy at his club</small><b>${p.mor >= 70 ? 'Yes' : p.mor >= 45 ? 'Settled enough' : 'Unsettled'}</b></div><div><small>Role at his club</small><b>${p.club === 'FA' ? 'Without a club' : isKeyPlayer(p) ? 'Key player' : 'Squad player'}</b></div><div><small>Would join you</small><b>${p.ca > userClub().rep + 6 + joinPull(p) ? 'Unlikely' : 'Would listen'}</b></div><div><small>Likely wage demand</small><b>${wageFmt(wageDemand(p, false))}</b></div></div>`, 'happiness, role, interest in joining you and wage demand')}
+    <section class="fsec"><h4>Scout's notes</h4><ul class="notes">${scoutNotes(p).map(n => `<li>${esc(n)}</li>`).join('')}</ul></section>
+    <section class="fsec"><h4>Matches watched</h4>${r.seen.length ? `<div class="list">${r.seen.map(x => `<div class="row"><span class="grow"><b>${esc(x.opp || '')}${x.score ? ' ' + esc(x.score) : ''}</b><small>${fmtDate(x.date, false)} · ${esc(x.by || '')}${x.note ? ' · ' + esc(x.note) : ''}${x.gain ? ' · +' + x.gain + '%' : ''}</small></span>${x.rt != null ? `<span class="rt">${x.rt.toFixed(1)}</span>` : ''}</div>`).join('')}</div>` : '<p class="muted">Nobody has watched him yet.</p>'}</section>
+    ${r.hist.length > 1 ? `<section class="fsec"><h4>Report history</h4><div class="list">${r.hist.map(h => `<div class="row"><span class="grow"><b>${h.k}% · ${knowStage(h.k)[1]}</b><small>${fmtDate(h.date, false)}</small></span><span class="grade g${h.grade}">${h.grade}</span></div>`).join('')}</div></section>` : ''}
+    <section class="fsec"><h4>Folder</h4><div class="seg wrap">${FOLDERS.map(([f, n]) => `<button class="${r.folder === f ? 'on' : ''}" data-a="fileFolder" data-id="${p.id}" data-v="${f}">${n}</button>`).join('')}</div></section>
+    <div class="btns">${job ? '' : `<button class="btn pri" data-a="scoutOne" data-id="${p.id}" ${k >= 100 ? 'disabled' : ''}>Send a scout</button><button class="btn" data-a="scoutOne" data-id="${p.id}" data-mode="video" ${k >= VIDEO_CAP ? 'disabled' : ''}>Video analysis £3k</button>`}<button class="btn" data-a="player" data-id="${p.id}">Player profile</button></div>
+  </article>`, { key: 'sfile:' + pid, restore: () => scoutFileSheet(pid), valid: () => !!G?.players[pid] });
+}
+ACT.scoutFile = ds => scoutFileSheet(+ds.id);
+ACT.fileFolder = ds => { const p = G.players[+ds.id]; scoutFile(p).folder = ds.v; saveGame(); scoutFileSheet(p.id); };
 
 /* ---------- offer & contract negotiation ---------- */
 ACT.offer = ds => {
