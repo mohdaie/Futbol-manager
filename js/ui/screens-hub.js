@@ -90,6 +90,7 @@ SCREENS.news = {
       <div class="list">${list.map(newsRow).join('') || empty('Nothing here', 'News in this category will appear as the season goes on.')}</div>`;
   },
 };
+ACT.treq = ds => { toast(answerRequest(G.players[+ds.id], ds.v === '1')); saveGame(); if (UI.popup) closeSheet(true); render(); };
 ACT.newsF = ds => { UI.f.news = ds.v; render(); };
 ACT.readAll = () => { G.news.forEach(n => { n.read = true; }); render(); };
 ACT.news = ds => {
@@ -99,6 +100,7 @@ ACT.news = ds => {
   let actions = '';
   const a = n.action;
   if (a && !n.done && a.t === 'bid') actions = `<div class="btns"><button class="btn pri" data-a="bid" data-id="${n.id}" data-c2="accept">Accept ${money(a.fee)}</button><button class="btn" data-a="bid" data-id="${n.id}" data-c2="counter">Ask for ${money(roundMoney(a.fee * 1.2))}</button><button class="btn ghost" data-a="bid" data-id="${n.id}" data-c2="reject">Reject</button></div>`;
+  if (a && a.t === 'treq' && G.players[a.pid] && G.players[a.pid].treq) actions = `<div class="btns"><button class="btn pri" data-a="treq" data-id="${a.pid}" data-v="1">Accept and list him</button><button class="btn" data-a="treq" data-id="${a.pid}" data-v="0">Refuse</button></div>`;
   if (a && a.t === 'press') { const r = (G.media.req || []).find(x => x.id === a.id); if (r && !r.done) actions = `<div class="btns col">${STATEMENTS[r.kind].map(([k, t]) => `<button class="btn wide ${k === r.advice ? 'pri' : ''}" data-a="press" data-id="${r.id}" data-k="${k}">${esc(t)}${k === r.advice ? ' (advised)' : ''}</button>`).join('')}</div>`; }
   if (a && a.t === 'deal' && G.deals.some(d => d.id === a.id)) actions = `<div class="btns"><button class="btn pri" data-a="deal" data-id="${a.id}">Open the deal</button></div>`;
   if (a && a.t === 'scoutfile' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="scoutFile" data-id="${a.pid}">Open scouting file</button></div>`;

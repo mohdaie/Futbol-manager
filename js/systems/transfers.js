@@ -78,6 +78,7 @@ function offerContract(pid, wage, years, status, fee, mode) {
 // Signed players join the first team unless they are still U18 age.
 function moveClub(p, toId) {
   const from = p.club;
+  delete p.unset; p.treq = null; p.listed = false;
   removeFromClub(p);
   favPersonMoved(p, from, toId);
   p.lvl = p.age <= 17 ? 'Y' : 'A';
