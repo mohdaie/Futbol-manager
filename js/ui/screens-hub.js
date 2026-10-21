@@ -242,6 +242,7 @@ SCREENS.settings = {
   render() {
     const exp = UI.tab.export;
     return `<h1 class="h1">Settings</h1>
+      <div class="card"><button class="btn pri wide" data-a="returnTitle">Save &amp; return to title</button></div>
       <div class="card"><h3>Manager portrait</h3>${avatarPicker(G.avatar || 1, 'setAvatar')}</div>
       <div class="card"><h3>Default match speed</h3><div class="seg">${[1, 2, 4].map(s => `<button class="${G.settings.speed === s ? 'on' : ''}" data-a="speed" data-v="${s}">${s}x</button>`).join('')}</div></div>
       <div class="card"><h3>Save game</h3><p class="muted">The game saves itself in this browser after every week and match. Clearing site data removes it, so export a copy to keep a backup.</p>
@@ -253,6 +254,15 @@ SCREENS.settings = {
 ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to Manager ' + ds.v + '.'); render(); };
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
 ACT.saveNow = () => toast(saveGame() ? 'Game saved.' : 'Saving failed. Browser storage is blocked here, so export your save instead.');
+ACT.returnTitle = () => {
+  DAYRUN.on = false; clearTimeout(DAYRUN.timer); DAYRUN.timer = 0;
+  closeDayRun();
+  stopLive();
+  if (!saveGame()) return toast('Saving failed. Stay here and export your save before leaving.');
+  try { sessionStorage.removeItem(LAST_VIEW_KEY); } catch (e) { /* storage blocked */ }
+  UI.tab = {};
+  go('title');
+};
 ACT.exportSave = () => { syncPlaytime(); UI.tab.export = btoa(unescape(encodeURIComponent(JSON.stringify(G)))); render(); };
 ACT.copySave = () => {
   const box = document.getElementById('saveBox');
