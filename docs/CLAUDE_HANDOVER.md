@@ -274,3 +274,25 @@ this as an unresolved attacking/defensive interaction to investigate before rele
 do not tune style win rates or silently adjust ENG to hide it.
 This remains a diagnostic, not calibrated league output. Full report:
 `docs/engine-qa/transitions-batch.json`.
+
+## Session update (Claude, 21 October 2026, branch `ccr-063c99f1-fomx5n`, based on PR #40 head `e81b69c`)
+
+1. **Jev-led loop implemented and verified with genuine replies.** `js/systems/jev-lead.js`,
+   `scripts/jev-lead.cjs`, `tests/jev-lead.cjs` (14 mocked contract checks), `.github/workflows/jev-decide.yml`.
+   Commit a proposal JSON under `docs/engine-qa/proposals/` and push: Actions asks Jev with the owner's secret
+   and prints `JEV_DECISION_RECORD`; commit the record to `docs/engine-qa/decisions/`. Decision proposals carry
+   options + candidate criteria (Jev picks the option and marks each criterion require/optional/drop);
+   acceptance proposals carry before/after evidence with `after.checks` (Jev: accept/revise/investigate).
+   Unavailable, invalid or under-0.6 answers are **pending** (no local fallback); accept with a failing check
+   is a **conflict**.
+2. **Match-flow scenarios**: `scripts/flow-scenarios.cjs` (gegenpress v long ball, 1/2 strikers each side,
+   swapped sides, seeds; 24 matches in ~45 s), instrumentation `scripts/flow-scan.js`, clips from the engine's
+   own frames `scripts/flow-clips.cjs` (needs ffmpeg). Baseline `docs/engine-qa/flow-baseline.json`, clips in
+   `docs/flow-clips/`.
+3. **Decisions so far (all genuine):** flow-001 pending (direct_outlets 0.35) -> more evidence -> flow-002
+   decided **direct_outlets** (0.81). Implemented (`directOutlet`, `secondBallSupport`, `aerialContest` in
+   sim.js). flow-003 acceptance: **revise** (0.88). After: clearances 108 -> 32, isolated counter-press starts
+   54% -> 27%, landing support 1.2 -> 2.3, regression 9/9 suites pass; still missing: long passes 174/match
+   (target 50-90; mostly middle third under pressure after second balls), support 2.3 (2.5), short escapes
+   15% (20%), second balls won 74% (real nearer 50%). `docs/engine-qa/flow-after-direct-outlets.json`.
+   **Next:** the revision of direct_outlets, then resubmit flow-004 for acceptance.
