@@ -331,9 +331,10 @@ function carrierDecide(M, s, i, o = {}) {
     if (len < 4 || len > (thr ? 22 : range)) return;
     const air = !thr && len > 32;
     if (air && !longOk) return;
-    const risk = clamp(passRisk(M, s, p.x, p.y, tx, ty, air) + len * (0.003 + (20 - pas) * 0.0006) + (air ? 0.12 : 0) + press * 0.08 - (ac(S, j, 'fir') - 10) * 0.006, 0.02, 0.95);
+    const risk = clamp(passRisk(M, s, p.x, p.y, tx, ty, air) + len * (0.003 + (20 - pas) * 0.0006) + (air ? 0.12 + aerialContest(M, s, j, tx, ty) : 0) + press * 0.08 - (ac(S, j, 'fir') - 10) * 0.006, 0.02, 0.95);
     const [, rpress] = recvPressure(M, s, tx, ty);
-    const val = threat(s, tx, ty) * (1 - rpress * 0.45);
+    // A free team-mate close by under pressure deep: the short escape out of the press.
+    const val = threat(s, tx, ty) * (1 - rpress * 0.45) * (!air && oy > 0.6 && press > 0.4 && rpress < 0.3 && len < 25 ? 1.3 : 1);
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > (20 - vis) / 160) return; // he sees the flag coming (poor Vision misses it now and then)
@@ -379,8 +380,13 @@ function carrierDecide(M, s, i, o = {}) {
       opts.push({ k: 'round', v: pr * 0.6 * (1 + b('dr') * 0.3) - (1 - pr) * 0.05 });
     }
   }
-  // Clear it when under pressure deep in his own half.
-  if (oy > 0.72 && press > 0.35) opts.push({ k: 'clear', v: 0.02 + press * 0.05 + (oy > 0.84 ? 0.04 : 0) + (gk ? 0.02 : 0) });
+  // Under pressure deep in his own half: an aimed ball to the outlet (target man or a runner in the channel),
+  // worth what winning it there brings, and a blind clearance only as a last resort in real danger.
+  if (oy > 0.72 && press > 0.35) {
+    const out = directOutlet(M, s, i);
+    if (out) opts.push({ k: 'long', j: out.j, tx: out.x, ty: out.y, v: out.win * threat(s, out.x, out.y) - (1 - out.win) * 0.04, risk: 1 - out.win, outlet: true });
+    if (oy > 0.84 && press > 0.7) opts.push({ k: 'clear', v: 0.01 + press * 0.04 + (gk ? 0.01 : 0) });
+  }
   if (!opts.length) { B.dt = 0.5; return; }
   sim.intent = applyTeamIntent(M, s, i, opts, press, o);
   // He weighs the few best passes he sees (Vision finds them), not every team-mate equally.
@@ -453,8 +459,10 @@ function playOption(M, s, i, op, press) {
   if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; return; }
   if (op.k === 'round') return roundKeeper(M, s, i);
   if (op.k === 'clear') {
-    const [tx, ty] = toWorld(s, clamp(toOwn(s, p.x, p.y)[0] + rf(-0.3, 0.3), 0.08, 0.92), rf(0.3, 0.5));
-    return kick(M, s, i, 'clear', tx, ty, -1, { air: true, err: 6 });
+    // Away from danger, towards the outlet if there is one, otherwise up the near channel.
+    const out = directOutlet(M, s, i), [px] = toOwn(s, p.x, p.y);
+    const [tx, ty] = out ? [out.x, out.y] : toWorld(s, px < 0.5 ? rf(0.08, 0.3) : rf(0.7, 0.92), rf(0.3, 0.5));
+    return kick(M, s, i, 'clear', tx, ty, out ? out.j : -1, { air: true, err: 6 });
   }
   // A pass: off-target by the passer's technique, more so under pressure, on the weaker foot or in the wind.
   const pl = G.players[S.on[i]], len = hyp(op.tx - p.x, op.ty - p.y);
@@ -481,6 +489,7 @@ function kick(M, s, i, k, tx, ty, j, o = {}) {
   B.offS = s; B.offSet = 0;
   if (k !== 'shot') { const line = offsideY(M, s), P = sim.P[s]; for (let m = 1; m < P.length; m++) { const q = P[m]; if (q && m !== i && beyond(s, q.y, line)) B.offSet |= 1 << m; } }
   if (j >= 0) { const r = P_(M, s, j); if (r) { r.tx = ex; r.ty = ey; r.want = sim.t + flight + 0.5; } }
+  if (o.air && (k === 'long' || k === 'clear')) secondBallSupport(M, s, i, j, ex, ey, flight);
 }
 
 // Taking the ball round the keeper: past him and an open goal, or he smothers it (now and then a penalty).
@@ -498,6 +507,60 @@ function roundKeeper(M, s, i) {
   if (R() < 0.08 * M.mod.foul) return foul(M, s, i, 1 - s, 0);
   pstat(O, 0, 'sv'); bump(O, 0, 0.2);
   giveBall(M, 1 - s, 0);
+}
+
+// A lofted pass has to be won in the air: the receiver against the nearest defender at the landing point
+// (Heading, Jumping via height, Strength through aerialAt), so a marked target is a riskier ball than a free one.
+function aerialContest(M, s, j, x, y) {
+  const OP = M.sim.P[1 - s];
+  let dj = -1, dd = 99;
+  for (let k = 1; k < OP.length; k++) { const z = OP[k]; if (z) { const d = hyp(z.x - x, z.y - y); if (d < dd) { dd = d; dj = k; } } }
+  if (dj < 0 || dd > 5) return 0;
+  return (1 - sigm((aerialAt(M.sides[s], j) - aerialAt(M.sides[1 - s], dj)) / 3)) * 0.6 * (1 - dd / 5);
+}
+// The outlet for a ball forward from deep (rulebook 9.5, 1.3): the target man or a forward/runner well up the
+// pitch, preferring height and Heading; the landing point is just ahead of him. win: chance his side wins the
+// first contact or the knock-down (his aerial ability against the nearest defender, plus team-mates near it).
+function directOutlet(M, s, i) {
+  const S = M.sides[s], O = M.sides[1 - s], P = M.sim.P[s], OP = M.sim.P[1 - s], p = P[i], fw = fwdY(s);
+  let best = null;
+  for (let j = 1; j < P.length; j++) {
+    const q = P[j];
+    if (!q || j === i || (q.y - p.y) * fw < 25 || hyp(q.x - p.x, q.y - p.y) > 62 || offsideNow(M, s, j)) continue;
+    const role = LINE[FORMATIONS[S.ip][j][0]];
+    if (role < 3) continue;
+    const x = clamp(q.x + q.vx * 0.8, 4, PW - 4), y = q.y + fw * 3;
+    let dj = -1, dd = 99;
+    for (let k = 1; k < OP.length; k++) { const z = OP[k]; if (z) { const d = hyp(z.x - x, z.y - y); if (d < dd) { dd = d; dj = k; } } }
+    const air = aerialAt(S, j) * (1 + bh(S, j, 'aer') * 0.3) + clamp(dd - 2, 0, 6) - (dj > 0 ? aerialAt(O, dj) : 0);
+    const help = P.filter((z, n) => z && n && n !== j && n !== i && hyp(z.x - x, z.y - y) < 18).length;
+    const win = clamp(sigm(air / 3) * 0.75 + help * 0.05, 0.1, 0.85), v = win * (1 + bh(S, j, 'aer') * 0.3 + bh(S, j, 'hold') * 0.2);
+    if (!best || v > best.v) best = { j, x, y, win, v };
+  }
+  return best;
+}
+// When the ball is played long, two or three nearby team-mates go for the knock-down and the second ball:
+// one behind the landing point, one to the side and a runner beyond it (rulebook 9.5: midfielders win the
+// second balls, runners attack the flick-on). The rest keep their shape.
+function secondBallSupport(M, s, i, j, x, y, flight) {
+  const sim = M.sim, P = sim.P[s], fw = fwdY(s), S = M.sides[s];
+  const near = P.map((q, n) => q && n && n !== i && n !== j ? { n, d: hyp(q.x - x, q.y - y), role: LINE[FORMATIONS[S.ip][n][0]] } : null)
+    .filter(z => z && z.d < 45 && z.role >= 2).sort((a, b) => a.d - b.d).slice(0, 3);
+  const side = x < PW / 2 ? 1 : -1;
+  const spots = [[0, -6], [side * 6, -2], [-side * 4, 7]]; // behind, inside, beyond
+  near.forEach((z, k) => {
+    const q = P[z.n], [dx, dy] = spots[k];
+    q.tx = clamp(x + dx, 1, PW - 1); q.ty = clamp(y + dy * fw, 1, PL - 1);
+    q.sup = sim.t + flight + 2.5; q.run = sim.t + flight + 1;
+  });
+  // The defending side reacts too: its two nearest midfielders drop on to the landing zone, goal-side, to
+  // contest the second ball (Anticipation reads it earlier: a closer starting spot).
+  const O = M.sides[1 - s], OP = sim.P[1 - s];
+  OP.map((q, n) => q && n ? { n, d: hyp(q.x - x, q.y - y), role: LINE[FORMATIONS[O.ip][n][0]] } : null)
+    .filter(z => z && z.d < 35 && z.role >= 2 && z.role <= 3).sort((a, b) => a.d - b.d).slice(0, 2).forEach((z, k) => {
+      const q = OP[z.n], read = clamp((ac(O, z.n, 'ant') - 8) * 0.4, 0, 4);
+      q.tx = clamp(x + (k ? -side : side) * 4, 1, PW - 1); q.ty = clamp(y - fw * (6 - read), 1, PL - 1); q.sup = sim.t + flight + 2; q.run = sim.t + flight + 1;
+    });
 }
 
 /* ---------- shots ---------- */
@@ -828,6 +891,7 @@ function targets(M, all) {
       const p = P[i];
       if (!p || !pos[i] || i === carrier) continue;
       if (B.fl && B.fl.s === s && B.fl.j === i && sim.t < (p.want || 0)) continue; // running onto a pass
+      if ((p.sup || 0) > sim.t) continue; // going for the knock-down / second ball
       let X = s === 0 ? pos[i][0] * PW : (1 - pos[i][0]) * PW, Y = s === 0 ? pos[i][1] * PL : (1 - pos[i][1]) * PL;
       const role = LINE[ip[i][0]], defRole = LINE[FORMATIONS[S.oop][(S.map || shapeMap(S.ip, S.oop))[i]][0]];
       if (!has && i) Y += fw * unitStep;
