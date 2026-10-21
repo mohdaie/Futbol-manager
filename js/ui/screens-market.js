@@ -7,7 +7,7 @@ SCREENS.transfers = {
   render() {
     const t = UI.tab.tr || 'deals', win = windowState();
     const head = `<h1 class="h1">Transfers</h1>
-      <div class="banner ${win.open ? 'open' : ''}"><b>${win.label}${win.open ? ' · closes ' + win.closes : ''}</b><span>Budget ${money(G.fin.tb)} · Wages ${wageFmt(clubWageBill(userClub()))} of ${wageFmt(G.fin.wb)}</span></div>
+      <div class="banner ${win.open ? 'open' : ''} ${win.open && win.left <= 3 ? 'dl' : ''}"><b>${win.label}${win.open ? (win.left === 0 ? ' · DEADLINE DAY, shuts 23:00' : ' · closes ' + win.closes + ' · ' + win.left + ' days left') : ' · opens ' + win.opens}</b><span>Budget ${money(G.fin.tb)} · Wages ${wageFmt(clubWageBill(userClub()))} of ${wageFmt(G.fin.wb)}</span></div>
       ${tabs('tr', [['deals', 'Deals'], ['advice', 'Scout advice'], ['search', 'Search'], ['short', 'Shortlist'], ['scout', 'Scouting'], ['pitch', 'Pitches'], ['bids', 'Selling'], ['agents', 'Agents'], ['hist', 'History']], t)}`;
     return head + TR_TABS[t]();
   },

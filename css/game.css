@@ -684,3 +684,11 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .preq p { margin: 0 0 4px; }
 .preq .btn { display: grid; text-align: left; }
 .preq .btn small { font-weight: 500; opacity: .75; }
+
+/* deadline day (2026.10.21.16) */
+.dr-cal.dl { background: linear-gradient(160deg, #7A0F2E, #2A0638); color: #fff; }
+.dr-cal.dl .dr-day { font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.dr-cal.dl .dr-mon { color: #FFD2DD; text-transform: uppercase; letter-spacing: .08em; }
+.banner.dl { border-color: #F0605D; box-shadow: 0 0 0 1px rgba(240,96,93,.4) inset; }
+.banner.dl b { color: #FF8A8A; }
+.dr-cal.dl .dr-wd { color: #FFD2DD; opacity: 1; }

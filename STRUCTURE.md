@@ -538,3 +538,10 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - **Sales** (`saleMood()`): selling a key player or a leader lowers the squad (−3) and the fans (−2, −4 to a league rival).
 - Moving club clears a player's unsettled state, request and listing. The profile shows "Distracted / Unsettled by X interest" or "Has asked to leave"; asking about his future gives an honest answer and can settle a mildly distracted player.
 - Test: `node tests/mood.cjs`.
+
+## Eight-week window and deadline day (2026.10.21.16)
+- **Windows by date** (`windowState()` in calendar.js, using today's date): summer from the start of the season (first Monday of July) to deadline day, 1 September (about eight weeks); January from 1 January to 2 February. No window at the end of a season any more; talks agreed then wait for July. `windowState()` gives `left` (days to deadline) and, when shut, when it `opens`. Transfers and the Transfer centre show the days left and "DEADLINE DAY" on the day.
+- **Deadline day hour by hour** (`js/systems/deadline.js`, `G.dd`): 09:00 to 23:00. Each hour every deal in a window stage gets a chance to move a step (`dealTick(d, true)`), computer clubs make late panic moves (`aiMarket()`), late bids for your players can land (`aiBidsForUser()`), rumours and a countdown ticker fill the feed. A "Deadline day" news item opens the day; "The window has shut" sums it up and lists your deals that missed it. Anything not done collapses the next morning.
+- **On screen:** the day-by-day calendar turns into a deadline-day clock (one hour about every second), with the latest move under it; it stops for decisions (a late bid, a deal ready to sign). Skipping the day (or advancing without the calendar card) plays all the hours at once (`runDeadline()` from `advanceDay()`).
+- `dealsDay()` now calls `dealTick()` for each deal (the same checks and steps, also used by deadline day).
+- Test: `node tests/deadline.cjs`.

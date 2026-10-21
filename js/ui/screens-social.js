@@ -46,7 +46,7 @@ function transferCentre() {
   const rum = G.social.filter(p => p.kind === 'rumour').slice(0, 8);
   const done = G.tHist.slice(0, 12), off = G.deals.filter(d => d.closed && !d.closed.ok && d.dir !== 'in' && recent(d.closed.date) && G.players[d.pid] && d.stage !== 'talks').slice(0, 6);
   const win = windowState();
-  return `<div class="banner ${win.open ? 'open' : ''}"><b>${win.label}${win.open ? ' · closes ' + win.closes : ''}</b><span>${G.deals.filter(dealOpen).length} deals in progress</span></div>
+  return `<div class="banner ${win.open ? 'open' : ''} ${win.open && win.left <= 3 ? 'dl' : ''}"><b>${win.label}${win.open ? (win.left === 0 ? ` · DEADLINE DAY${G.dd && G.dd.h > 8 ? ' · ' + String(Math.min(23, G.dd.h)).padStart(2, '0') + ':00' : ''}` : ' · closes ' + win.closes + ' · ' + win.left + ' days left') : ' · opens ' + win.opens}</b><span>${G.deals.filter(dealOpen).length} deals in progress</span></div>
     ${pressCard()}
     <div class="sec-h"><h2>Here we go</h2></div><div class="feed-s">${here.map(p => postHtml(p)).join('') || empty('Nothing agreed lately', 'Fee agreements and done deals appear here.')}</div>
     <div class="sec-h"><h2>Talks in progress</h2><span class="muted">${talks.length}</span></div><div class="list">${talks.map(dealRow).join('') || empty('Quiet', 'Clubs talk mostly while a window is open.')}</div>

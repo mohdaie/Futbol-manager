@@ -102,7 +102,14 @@ function startDeal(p, stage = 'review', extra = {}) {
 /* ---------- each day ---------- */
 function dealsDay() {
   if (!G.deals) return;
-  G.deals.filter(dealOpen).forEach(d => {
+  G.deals.filter(dealOpen).forEach(d => dealTick(d));
+  payAddOns();
+  G.deals = G.deals.filter(d => dealOpen(d) || today().getTime() - d.closed.date < 1000 * 3600 * 24 * 60).slice(0, 80);
+}
+// One deal: checks first (the player moved, the window shut), then its next step when it is due.
+// force: deadline day, when deals move by the hour instead of waiting days.
+function dealTick(d, force) {
+  {
     const p = G.players[d.pid];
     if (!p) return closeDeal(d, false, 'The player has retired.', false);
     if (d.dir === 'in' && p.club === G.club) return closeDeal(d, true, `${fullName(p)} is already your player.`, false);
@@ -110,13 +117,12 @@ function dealsDay() {
     if (d.dir === 'out' && p.club !== G.club) return closeDeal(d, false, `${fullName(p)} is no longer at the club.`, false);
     const fa = G.clubs[d.from] && G.clubs[d.from].fa;
     if (!fa && d.opened && !inWindow() && WINDOW_STAGES.includes(d.stage)) return closeDeal(d, false, `The window shut before the deal for ${fullName(p)} was done.`, d.dir !== 'ai');
-    if (d.need || d.next == null || dayAbs() < d.next) return;
+    if (d.need || d.next == null || (!force && dayAbs() < d.next)) return;
     if (!fa && WINDOW_STAGES.includes(d.stage) && !inWindow()) { d.next = dayAbs() + 1; return; } // talks resume when the window opens
     if (WINDOW_STAGES.includes(d.stage)) d.opened = true;
     (DEAL_STEP[d.dir][d.stage] || (() => {}))(d, p);
-  });
-  payAddOns();
-  G.deals = G.deals.filter(d => dealOpen(d) || today().getTime() - d.closed.date < 1000 * 3600 * 24 * 60).slice(0, 80);
+    if (force && dealOpen(d) && d.next != null) d.next = dayAbs(); // still moving by the hour
+  }
 }
 
 // The player's attitude to joining you: keen, open, hesitant or refuses (worked out once per deal).
