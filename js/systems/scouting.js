@@ -16,7 +16,7 @@ const regionOf = p => { const c = G.clubs[p.club]; if (!c) return 'Free agents';
 const KNOW_STAGES = [[0, 'Heard of'], [25, 'Watched'], [50, 'Scouted'], [75, 'Detailed'], [90, 'Full file']];
 const knowStage = k => KNOW_STAGES.filter(s => k >= s[0]).pop();
 const nextStage = k => KNOW_STAGES.find(s => s[0] > k);
-const STAGE_UNLOCK = { 25: 'physical attributes', 50: 'technical attributes, contract and asking price', 75: 'mental attributes, personality and potential', 90: 'the full file: every value exact' };
+const STAGE_UNLOCK = { 25: 'physical attributes', 50: 'technical attributes, contract and asking price', 75: 'mental attributes, personality, potential and agent', 90: 'the full file: every value exact' };
 const SCOUT_DAYS = 21, VIDEO_DAYS = 2, VIDEO_CAP = 74, SCOUT_LOAD = 3;
 const dayAbs = () => G.season * 400 + todayNo();
 

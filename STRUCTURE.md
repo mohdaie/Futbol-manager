@@ -511,3 +511,10 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - **Money:** instalments are paid at the next season ends (`G.payments`, `payInstalments()` at rollover); add-ons are paid when the player reaches 25 appearances (`G.addOns`); agent's fee and signing bonus come out of the transfer budget; release clauses (`p.rc`) and sell-on shares (`p.sellOn`) are honoured when you sell.
 - Rumours from open approaches and big computer deals are logged in `G.rumours` for the transfer news and social feed (later phases).
 - Test: `node tests/deals.cjs`.
+
+## Agents (2026.10.21.13)
+- **40 fictional agents** (`js/systems/agents.js`, `G.agents`), sound-alike names inspired by real agents and agencies, plus original local agents; the list and what inspired each is in `docs/AGENTS.md`. Each has agency, markets (nations or regions; `*` = worldwide stars), reputation, greed and style, and a relationship with every club (`rel`, -50..50).
+- **Every player 17 and over has an agent** (`p.ag`, `assignAgent()`): a few known pairings by inspirational figure, otherwise by nationality (the agent's markets) and level (big agents take the best players), fixed per player. Older saves are assigned on load.
+- **In deals:** the agent's fee is 4% + greed × 0.35 of the transfer (above 8% needs your approval); his clients ask for more wages if he is greedy; his relationship with your club makes the player keener or warier. Agents pitch their clients (hostile agents do not call). Completing a deal (+8), paying his fee (+3) or sanctioning a client's sale (+4) improves the relationship; walking away during talks (−5), pulling out at the end (−10) or blocking a keen client's move (−8) hurts it.
+- **Agent page** (from the player's Contract tab and scouting file at 75%, the deal sheet and Transfers > Agents): reputation, style, usual fee, markets, relationship with you and the last thing that changed it, clubs where he has power (three or more clients), clients at your club and elsewhere, and recent moves.
+- Test: `node tests/agents.cjs`.
