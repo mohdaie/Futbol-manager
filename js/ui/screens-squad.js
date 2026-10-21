@@ -4,6 +4,7 @@
    tactics with the in/out-of-possession visualiser, training, medical, youth academy. */
 
 const SORTS = { pos: (a, b) => POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || b.ca - a.ca, ovr: (a, b) => b.ca - a.ca, age: (a, b) => a.age - b.age, cond: (a, b) => a.cond - b.cond, mor: (a, b) => b.mor - a.mor, val: (a, b) => pValue(b) - pValue(a) };
+const pitchPosLabel = pos => ({ AMR: 'RW', AML: 'LW', MR: 'RM', ML: 'LM', MC: 'CM', AMC: 'AM', DC: 'CB', DL: 'LB', DR: 'RB' }[pos] || pos);
 
 SCREENS.squad = {
   render() {
@@ -184,13 +185,15 @@ SCREENS.tactics = {
       const p = G.players[id], pp = prev[i] || (view === 'ip' ? ip[i].slice(1) : oop[map[i]].slice(1)), src = [0, pp[0], pp[1]];
       const pos = ip[i][0], f = p ? fam(p, pos) : 0, r = p ? ovrAt(p, pos) : '-';
       const role = ROLES[pos][T.roles[i]] || ROLES[pos][0];
-      return `<button class="tok ${f >= 0.97 ? '' : f >= 0.85 ? 'f2' : 'f3'}" style="left:${src[1] * 100}%;top:${src[2] * 100}%" data-a="slot" data-i="${i}">
-        <span class="tk-c">${r}</span><span class="tk-n">${p ? esc(p.ln) : 'Empty'}</span><span class="tk-r">${view === 'ip' ? esc(role.n) : (oop[map[i]][0])}</span></button>`;
+      const label = pitchPosLabel(view === 'ip' ? pos : oop[map[i]][0]);
+      return `<button class="tok ${f >= 0.97 ? '' : f >= 0.85 ? 'f2' : 'f3'} ${UI.swapMode && UI.swapFrom === i ? 'swap-picked' : ''}" style="left:${src[1] * 100}%;top:${src[2] * 100}%" data-a="${UI.swapMode ? 'swapSlot' : 'slot'}" data-i="${i}" aria-label="${label}: ${p ? esc(fullName(p)) : 'Empty'}. ${UI.swapMode ? 'Swap position' : 'Choose player'}" ${UI.swapMode ? `aria-pressed="${UI.swapFrom === i}"` : ''}>
+        <span class="tk-pos">${label}</span><span class="tk-c">${r}</span><span class="tk-n">${p ? esc(p.ln) : 'Empty'}</span><span class="tk-r">${view === 'ip' ? esc(role.n) : (oop[map[i]][0])}</span></button>`;
     }).join('');
     return `<h1 class="h1">Tactics</h1>
       <div class="two"><div class="field"><label for="tip">In possession</label>${selectHtml('tip', Object.keys(FORMATIONS), T.ip, 'shape', 'data-k="ip"')}</div>
       <div class="field"><label for="toop">Out of possession</label>${selectHtml('toop', Object.keys(FORMATIONS), T.oop, 'shape', 'data-k="oop"')}</div></div>
       <div class="seg wide">${[['ip', 'In possession'], ['oop', 'Out of possession']].map(([k, n]) => `<button class="${view === k ? 'on' : ''}" data-a="tview" data-v="${k}">${n}</button>`).join('')}</div>
+      <div class="swap-toolbar"><button class="btn sm ${UI.swapMode ? 'pri' : ''}" data-a="swapMode" aria-pressed="${!!UI.swapMode}">${UI.swapMode ? 'Done swapping' : 'Swap positions'}</button><span role="status">${UI.swapMode ? UI.swapFrom != null ? `Now tap the position for ${esc(pname(G.players[T.slots[UI.swapFrom]]))}.` : 'Tap the first player, then the other position.' : 'Tap a player to select; use Swap positions to exchange two starters.'}</span></div>
       <div class="tpitch ${view}"><div class="tp-lines"></div>${toks}</div>
       <div class="famrow"><span>Tactical familiarity</span>${bar(G.training.fam, G.training.fam < 50 ? 'warn' : 'good')}<b>${G.training.fam}%</b></div>
       <div class="btns"><button class="btn pri" data-a="autoPick">Pick best XI</button><button class="btn" data-a="go" data-s="pinstr">Player instructions</button></div>
@@ -211,8 +214,19 @@ SCREENS.tactics = {
       <div class="card two">${[['cap', 'Captain'], ['pk', 'Penalties'], ['fk', 'Free kicks'], ['ck', 'Corners']].map(([k, n]) => `<div class="field"><label>${n}</label>${selectHtml('sp-' + k, T.slots.filter(Boolean).map(id => [id, pname(G.players[id])]), T[k], 'setp', `data-k="${k}"`)}</div>`).join('')}</div>`;
   },
 };
-ACT.tview = ds => { UI.tab.tview = ds.v; render(); };
+ACT.tview = ds => { UI.tab.tview = ds.v; UI.swapFrom = null; render(); };
+ACT.swapMode = () => { UI.swapMode = !UI.swapMode; UI.swapFrom = null; render(); };
+ACT.swapSlot = ds => {
+  const T = G.tactics, i = +ds.i;
+  if (!UI.swapMode || !Number.isInteger(i) || i < 0 || i >= T.slots.length) return;
+  const from = UI.swapFrom;
+  if (from == null) { if (!T.slots[i]) return toast('Pick a player first.'); UI.swapFrom = i; return render(); }
+  UI.swapFrom = null;
+  if (from !== i) { assignSlot(i, T.slots[from]); saveGame(); toast('Starting positions swapped.'); }
+  render();
+};
 ACT.style = ds => {
+  UI.swapFrom = null;
   const T = G.tactics, shape = T.ip + '/' + T.oop;
   applyStyle(T, ds.v);
   if (shape !== T.ip + '/' + T.oop) { G.training.fam = Math.max(20, G.training.fam - 15); T.pi = {}; ensureUserLineup(); }
@@ -220,10 +234,11 @@ ACT.style = ds => {
   render();
 };
 ACT.ins = ds => { G.tactics[ds.k] = +ds.v; render(); };
-ACT.autoPick = () => { const T = G.tactics, pk = autoPick(G.club, T.ip); T.slots = pk.xi; T.bench = pk.bench; T.cap = T.pk = T.fk = T.ck = null; autoSetPieces(); toast('Best available XI selected.'); render(); };
+ACT.autoPick = () => { UI.swapFrom = null; const T = G.tactics, pk = autoPick(G.club, T.ip); T.slots = pk.xi; T.bench = pk.bench; T.cap = T.pk = T.fk = T.ck = null; autoSetPieces(); toast('Best available XI selected.'); render(); };
 CHG.shape = (v, ds) => {
   const T = G.tactics;
   if (T[ds.k] === v) return;
+  UI.swapFrom = null;
   T[ds.k] = v;
   if (ds.k === 'ip') { T.roles = Array(11).fill(0); T.pi = {}; }
   G.training.fam = Math.max(20, G.training.fam - (ds.k === 'ip' ? 15 : 8));
@@ -241,13 +256,22 @@ function assignSlot(i, pid) {
 ACT.slot = ds => {
   const T = G.tactics, i = +ds.i, pos = FORMATIONS[T.ip][i][0];
   const cands = seniorSquad(G.club).sort((a, b) => ovrAt(b, pos) - ovrAt(a, pos));
-  const where = p => (T.slots.includes(p.id) ? FORMATIONS[T.ip][T.slots.indexOf(p.id)][0] : T.bench.includes(p.id) ? 'SUB' : '');
+  const starter = p => T.slots.includes(p.id);
+  const starters = T.slots.map(id => G.players[id]).filter(p => p && p.id !== T.slots[i]);
+  const bench = cands.filter(p => !starter(p) && T.bench.includes(p.id)), others = cands.filter(p => !starter(p) && !T.bench.includes(p.id));
+  const row = (p, swap) => {
+    const current = starter(p) ? FORMATIONS[T.ip][T.slots.indexOf(p.id)][0] : p.pos;
+    return `<button class="row act" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${available(p) ? '' : 'disabled'}><span class="pos">${pitchPosLabel(current)}</span><span class="grow"><b>${esc(pname(p))}</b><small>${!available(p) ? p.inj ? 'Injured' : 'Suspended' : swap ? `Swap ${pitchPosLabel(current)} ↔ ${pitchPosLabel(pos)}` : 'Select at ' + pitchPosLabel(pos)}</small></span>${condBar(p.cond)}${ovrPill(ovrAt(p, pos))}</button>`;
+  };
+  const group = (name, list, swap = false) => list.length ? `<h4 class="lbl">${name}</h4><div class="list">${list.map(p => row(p, swap)).join('')}</div>` : '';
   sheet(`<h3 class="sh-t">${POS_NAME[pos]}</h3>
+    ${G.players[T.slots[i]] ? `<p>Currently ${playerLink(T.slots[i])} · ${pitchPosLabel(pos)}</p>` : ''}
+    <p class="muted">Choose another starter to swap positions. Choose a substitute or squad player to replace this player.</p>
     <h4 class="lbl">Role</h4><div class="chips">${ROLES[pos].map((r, k) => `<button class="chip ${T.roles[i] === k ? 'on' : ''}" data-a="role" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>
-    <h4 class="lbl">Player</h4><div class="list">${cands.map(p => `<button class="row act ${T.slots[i] === p.id ? 'sel' : ''}" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${available(p) ? '' : 'disabled'}><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${available(p) ? (where(p) ? 'Now: ' + where(p) : 'Not selected') : p.inj ? 'Injured' : 'Suspended'}</small></span>${condBar(p.cond)}${ovrPill(ovrAt(p, pos))}</button>`).join('')}</div>`, { key: 'slot:' + i, restore: () => ACT.slot({ i }), onClose: () => render() });
+    ${group('Starting XI — swap positions', starters, true)}${group('Substitutes', bench)}${group('Other squad players', others)}`, { key: 'slot:' + i, restore: () => ACT.slot({ i }), onClose: () => render() });
 };
 ACT.role = ds => { G.tactics.roles[+ds.i] = +ds.k; ACT.slot(ds); };
-ACT.pickSlot = ds => { assignSlot(+ds.i, +ds.id); closeSheet(true); render(); };
+ACT.pickSlot = ds => { const p = G.players[+ds.id]; if (!p || p.club !== G.club || !available(p)) return; assignSlot(+ds.i, p.id); UI.swapFrom = null; saveGame(); closeSheet(true); render(); };
 ACT.benchSlot = ds => {
   const T = G.tactics, i = +ds.i;
   const cands = seniorSquad(G.club).filter(p => available(p) && !T.slots.includes(p.id) && !T.bench.includes(p.id)).sort((a, b) => b.ca - a.ca);
