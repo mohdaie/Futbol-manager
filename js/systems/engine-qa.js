@@ -105,7 +105,8 @@ async function reviewEngineAudit(report) {
     const response = await jevAsk(facts, { priority: { type: 'choice', instructions: 'Select the most useful existing investigation for the developer. Test results are authoritative. Return only a listed criterion; you cannot approve a release or change code.', criteria } }, 'Engine QA review');
     const a = response.answers?.priority;
     if (G !== game) return { ...fallback, status: 'Career changed; review discarded.' };
-    if (!aiReady('jev', 'engine') || !a || !Object.hasOwn(criteria, a.choice) || !Number.isFinite(a.confidence) || a.confidence < .6 || a.confidence > 1) return { ...fallback, status: 'Jev answer was not usable; local priority retained.' };
+    if (!aiReady('jev', 'engine') || !a || !Object.hasOwn(criteria, a.choice) || !Number.isFinite(a.confidence) || a.confidence < .6 || a.confidence > 1) return { ...fallback, status: 'Jev answer was not usable; local priority retained.',
+      diagnostic: { choice: a && Object.hasOwn(criteria, a.choice) ? a.choice : 'missing-or-unlisted', confidence: Number.isFinite(a?.confidence) ? a.confidence : null } };
     const review = { source: 'jev', priority: a.choice, confidence: a.confidence, action: report.groups[a.choice]?.action || criteria[a.choice], status: 'Reviewed by Jev' };
     ENGINE_QA_CACHE = { key, review }; return review;
   } catch (e) { return { ...fallback, status: 'Jev failed: ' + String(e.message).slice(0, 180) }; }
