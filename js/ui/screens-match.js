@@ -113,7 +113,7 @@ SCREENS.prematch = {
         <h4 class="lbl">Players to watch</h4><div class="list">${theirs.map(p => playerRow(p, '', { sub: POS_NAME[p.pos] })).join('')}</div></div>
       ${assistCard(fx)}
       <div class="card"><h3>Your line-up <small>${T.ip} · ${INSTRUCTIONS[0].o[T.ment]}</small></h3>
-        <div class="xi">${T.slots.map((id, i) => { const p = G.players[id]; return `<span class="${p && fam(p, ip[i][0]) < 0.9 ? 'warn' : ''}"><em>${ip[i][0]}</em>${p ? esc(p.ln) : '-'}</span>`; }).join('')}</div>
+        <div class="xi">${T.slots.map((id, i) => { const p = G.players[id]; return `<span class="${p && fam(p, ip[i][0]) < 0.9 ? 'warn' : ''}"><em>${ip[i][0]}</em>${p ? playerLink(p.id, p.ln) : '-'}</span>`; }).join('')}</div>
         ${warn.length ? `<ul class="warns">${warn.slice(0, 4).map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '<p class="muted">No selection problems.</p>'}
         <button class="btn wide" data-a="go" data-s="tactics">Edit tactics</button></div>
       <div class="card press"><h3>Press conference</h3>${pc.done ? `<p class="muted">Done. ${esc(pc.said)}</p>` : `<p class="q">“${esc(Q.q)}”</p><div class="list">${Q.a.map((a, k) => `<button class="row act" data-a="pressA" data-k="${k}"><span class="grow">${esc(a[0])}</span><span class="chev">›</span></button>`).join('')}</div><button class="link" data-a="pressSkip">Send the assistant instead</button>`}</div>
@@ -271,10 +271,10 @@ SCREENS.post = {
       const [h, a] = fx.stats, tot = h.pos + a.pos || 1;
       const row = (l, x, y) => `<div class="cmp"><b>${x}</b><span>${l}</span><b>${y}</b></div>`;
       stats = `<div class="card">${row('Possession', Math.round(h.pos / tot * 100) + '%', Math.round(a.pos / tot * 100) + '%')}${row('Shots', h.sh, a.sh)}${row('On target', h.sot, a.sot)}${row('Expected goals', h.xg.toFixed(2), a.xg.toFixed(2))}${row('Pass accuracy', h.pa ? Math.round(h.pc / h.pa * 100) + '%' : '-', a.pa ? Math.round(a.pc / a.pa * 100) + '%' : '-')}${row('Corners', h.co, a.co)}${row('Offsides', h.off || 0, a.off || 0)}${row('Fouls', h.fo, a.fo)}${row('Cards', h.yc + '/' + h.rc, a.yc + '/' + a.rc)}</div>`;
-      const us = fx.h === G.club ? 0 : 1;
+      const us = p.side != null ? +p.side : fx.h === G.club ? 0 : 1;
       const PS = fx.pstats ? new Map(fx.pstats[us].map(r => [r[0], r])) : null;
       const pst = id => { const r = PS && PS.get(id); return r ? `<small>${r[2] ? Math.round(r[1] / r[2] * 100) + '% of ' + r[2] + ' passes' : 'no passes'}${r[3] ? ' · ' + r[3] + ' key' : ''}${r[4] ? ' · ' + r[4] + ' dribbles' : ''}${r[5] + r[6] ? ' · ' + (r[5] + r[6]) + ' tackles/int' : ''}${r[7] ? ' · ' + r[7] + ' aerials' : ''}${r[8] ? ' · ' + r[9] + '/' + r[8] + ' shots on target' : ''}</small>` : ''; };
-      rats = `<div class="sec-h"><h2>Player ratings</h2></div><div class="list">${fx.ratings[us].filter(([id]) => G.players[id]).sort((x, y) => y[1] - x[1]).map(([id, r]) => `<button class="row act" data-a="player" data-id="${id}"><span class="pos">${G.players[id].pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}${fx.motm === id ? ' <em class="tag good">Player of the match</em>' : ''}</b>${pst(id)}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('')}</div>`;
+      rats = `<div class="sec-h"><h2>Player ratings</h2></div><div class="seg">${[fx.h, fx.a].map((cid, i) => `<button class="${us === i ? 'on' : ''}" data-a="reportSide" data-fid="${fx.id}" data-side="${i}">${esc(clubName(cid))}</button>`).join('')}</div><div class="list">${fx.ratings[us].filter(([id]) => G.players[id]).sort((x, y) => y[1] - x[1]).map(([id, r]) => `<button class="row act" data-a="player" data-id="${id}"><span class="pos">${G.players[id].pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}${fx.motm === id ? ' <em class="tag good">Player of the match</em>' : ''}</b>${pst(id)}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('')}</div>`;
     }
     const others = G.fixtures.filter(f => f.r === fx.r && f.id !== fx.id).sort(fxSort);
     return `<section class="hero rep" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
@@ -284,10 +284,12 @@ SCREENS.post = {
         <div class="scorers"><span>${sc(0)}</span><span>${sc(1)}</span></div></section>
       ${stats}${(() => { const a = (G.analysis || []).find(x => x.fid === fx.id); return a ? `<div class="card"><h3>Analyst's view <small>${a.r}/20</small></h3><ul class="notes">${a.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>${a.patterns.length ? `<p class="note">Keeps happening: ${a.patterns.map(x => { const [t, n] = x.split(':'); return `${PATTERN_TEXT[t] || t} (${n} recent matches)`; }).join('; ')}.</p>` : ''}${a.suggest ? `<p class="muted">Suggestion: ${esc(a.suggest.text)}</p>` : ''}</div>` : ''; })()}${rats}
       <div class="sec-h"><h2>Around the league</h2></div>
-      <div class="list">${others.map(f => `<div class="row fxr"><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<span class="res">${played(f) ? f.hg + '-' + f.ag : 'v'}</span>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>
+      <div class="list">${others.map(f => `<div class="row fxr"><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<button class="res" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '-' + f.ag : 'v'}</button>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>
       <button class="btn pri wide" data-a="go" data-s="home">Back to the office</button>`;
   },
 };
+
+ACT.reportSide = ds => go('post', { fid: +ds.fid, side: +ds.side });
 
 /* ---------- season review ---------- */
 SCREENS.review = {

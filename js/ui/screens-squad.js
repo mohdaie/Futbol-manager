@@ -67,12 +67,12 @@ function playerSheet(pid) {
   const actions = `<div class="btns"><button class="btn pri wide" data-a="pActions" data-id="${p.id}">Actions</button></div>`;
   sheet(`<div class="phead">
       <div class="pnum" style="--k1:${G.clubs[p.club].c1}">${p.no || '-'}</div>
-      <div class="grow"><h3 class="sh-t">${esc(fullName(p))}</h3><p class="muted">${POS_NAME[p.pos]}${p.alt.length ? ' / ' + p.alt.join(', ') : ''} · ${p.age} · ${natName(p.nat)} · ${p.foot} foot${mine ? ' · ' + LEVELS[lvlOf(p)] : ''}</p>
+      <div class="grow"><h3 class="sh-t" data-no-links>${esc(fullName(p))}</h3><p class="muted">${POS_NAME[p.pos]}${p.alt.length ? ' / ' + p.alt.join(', ') : ''} · ${p.age} · ${natName(p.nat)} · ${p.foot} foot${mine ? ' · ' + LEVELS[lvlOf(p)] : ''}</p>
         <p class="pclub">${badge(p.club, 18)} ${esc(clubName(p.club))}${p.inj ? ` · <em class="tag bad">${esc(p.inj.n)}, ${p.inj.w} wk</em>` : ''}${p.ban ? ' · <em class="tag bad">Suspended</em>' : ''}</p></div>
       <div class="pov"><small>Rating</small>${ovrPill(so.v, so.txt)}<em>${so.txt === '??' ? 'Unknown' : ratingRemark(so.v)}</em><small>Potential</small>${starHtml(pot)}<em>${potRemark(pot)}</em></div></div>
     ${mine ? `<div class="meters"><div><small>Condition</small>${bar(p.cond, condClass(p.cond))}</div><div><small>Morale · ${morLabel(p.mor)}</small>${bar(p.mor, morClass(p.mor))}</div><div><small>Match sharpness</small>${bar(p.shp)}</div></div>` : ''}
     ${tabs('ps', [['attr', 'Attributes'], ['bio', 'Personal'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
-    ${body}${actions}`, { key: 'player:' + pid, restore: () => playerSheet(pid), valid: () => !!G?.players[pid], onClose: () => render() });
+    ${body}${actions}<div class="btns">${clubLink(p.club, 'View ' + esc(clubName(p.club)), 'btn sm')}${mine ? `<button class="btn sm" data-a="go" data-s="${p.inj ? 'medical' : 'training'}">${p.inj ? 'Medical center' : 'Training'}</button>` : `<button class="btn sm" data-a="offer" data-id="${p.id}">${p.club === 'FA' ? 'Offer contract' : 'Make an offer'}</button><button class="btn sm" data-a="trackPlayer" data-id="${p.id}">${G.shortlist.includes(p.id) ? 'Open shortlist' : 'Add to shortlist'}</button>`}</div>`, { key: 'player:' + pid, restore: () => playerSheet(pid), valid: () => !!G?.players[pid], onClose: () => render() });
 }
 ACT.psTab = ds => { UI.tab.ps = ds.v; playerSheet(+ds.id); };
 
