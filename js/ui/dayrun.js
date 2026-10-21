@@ -24,9 +24,27 @@ function matchdayNow(fx) {
   return go('prematch');
 }
 
+const HOUR_MS = 900; // each hour of deadline day
 function dayTick() {
   DAYRUN.timer = 0;
   if (!DAYRUN.on || !G) return;
+  // Deadline day: the hours tick by before the day moves on.
+  const fxNow = userFixture();
+  if (deadlineToday() && !(G.dd && G.dd.key === G.season + ':' + windowState().label && G.dd.done) && !(fxNow && !played(fxNow) && (fxNow.d ?? 5) <= G.day)) {
+    const first = G.nextId, nPosts = G.social ? G.social.length : 0, D = deadlineHour();
+    saveGame();
+    const fresh = G.news.filter(n => n.id >= first), imp = fresh.filter(newsImportant);
+    const posts = G.social ? G.social.slice(0, Math.max(0, G.social.length - nPosts)) : [];
+    const deal = posts.find(p => p.kind === 'here' || p.kind === 'done') || posts.find(p => p.kind !== 'ticker') || null;
+    DAYRUN.feed.unshift({ d: today(), lbl: String(D.h).padStart(2, '0') + ':00', t: deal ? deal.txt : 'Phones ringing, nothing signed yet.' });
+    DAYRUN.feed.length = Math.min(DAYRUN.feed.length, 5);
+    DAYRUN.hourly = true;
+    if (imp.length) { DAYRUN.stop = { kind: 'news', items: imp.slice(0, 4), at: today() }; return pauseDayRun(); }
+    drawDayRun();
+    DAYRUN.timer = setTimeout(dayTick, HOUR_MS);
+    return;
+  }
+  DAYRUN.hourly = false;
   const firstNews = G.nextId, playedBefore = G.fixtures.filter(played).length, wasDay = today();
   const r = advanceDay();
   DAYRUN.days++;
@@ -75,12 +93,14 @@ function drawDayRun(first) {
   const S = DAYRUN.stop, d = (S && S.at) || today(), nf = nextUserFixture(); // news shows on the day it happened
   const toMatch = nf ? Math.max(0, fxDayNo(nf) - todayNo()) : null;
   const items = S && S.kind === 'news' ? S.items : [];
+  const DD = G.dd && deadlineToday() && G.dd.key === G.season + ':' + windowState().label ? G.dd : null;
   el.innerHTML = `<div class="dr-card" role="dialog" aria-live="polite" aria-label="Calendar">
-      <div class="dr-cal${first ? '' : ' flip'}"><span class="dr-mon">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><b class="dr-day">${d.getDate()}</b><span class="dr-wd">${WDAYS[d.getDay()]}</span></div>
+      ${DD ? `<div class="dr-cal dl"><span class="dr-mon">Deadline day · ${d.getDate()} ${MONTHS[d.getMonth()]}</span><b class="dr-day">${String(Math.min(23, DD.h)).padStart(2, '0')}:00</b><span class="dr-wd">${DD.done ? 'The window is shut' : DD.h < 9 ? 'Window shuts at 23:00' : (23 - DD.h) + ' hour' + (23 - DD.h === 1 ? '' : 's') + ' left'}</span></div>`
+        : `<div class="dr-cal${first ? '' : ' flip'}"><span class="dr-mon">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><b class="dr-day">${d.getDate()}</b><span class="dr-wd">${WDAYS[d.getDay()]}</span></div>`}
       <p class="dr-phase">${esc(phaseLabel())}${nf ? ` · ${toMatch === 0 ? 'matchday' : toMatch === 1 ? 'next match tomorrow' : `next match in ${toMatch} days`}` : ''}</p>
       ${items.length ? `<h3 class="dr-h">News just in</h3><div class="list">${items.map(n => `<button class="row act news unread" data-a="dayRunOpen" data-id="${n.id}"><span class="grow"><b>${esc(n.title)}</b><small>${esc(String(n.body).slice(0, 90))}${String(n.body).length > 90 ? '…' : ''}</small></span></button>`).join('')}</div>`
         : S && S.kind === 'quiet' ? '<p class="muted">Nothing has happened for a while. Continue when you are ready.</p>'
-        : `<ul class="dr-feed">${DAYRUN.feed.map(f => `<li><b>${WDAYS[f.d.getDay()]} ${f.d.getDate()}</b> ${esc(f.t)}</li>`).join('') || '<li class="muted">Moving through the week…</li>'}</ul>`}
+        : `<ul class="dr-feed">${DAYRUN.feed.map(f => `<li><b>${f.lbl || WDAYS[f.d.getDay()] + ' ' + f.d.getDate()}</b> ${esc(f.t)}</li>`).join('') || '<li class="muted">Moving through the week…</li>'}</ul>`}
       <div class="btns">${DAYRUN.on ? '<button class="btn wide" data-a="dayRunStop">Stop</button>'
         : `<button class="btn ghost" data-a="dayRunClose">Close</button><button class="btn pri" data-a="dayRunGo">Continue</button>`}</div>
     </div>`;

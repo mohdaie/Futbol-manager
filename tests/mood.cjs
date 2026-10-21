@@ -65,7 +65,7 @@ const assert = require('node:assert/strict');
       const starter = sq.find(p => T.slots.includes(p.id) && p.pos !== 'GK' && !['Determined', 'Professional'].includes(p.pers));
       const target = Object.values(G.players).find(x => x.club !== G.club && G.clubs[x.club].pl && x.pos === starter.pos && x.ca >= ovrAt(starter, starter.pos) && !activeDeal(x.id));
       const bench = sq.find(p => !T.slots.includes(p.id) && p.nat !== target.nat && p.id !== starter.id);
-      const mate = sq.find(p => p.nat === target.nat && p.id !== starter.id);
+      const mate = sq.find(p => p.nat === target.nat && p.id !== starter.id && !(T.slots.includes(p.id) && (p.pos === target.pos || target.alt.includes(p.pos))));
       const before = { starter: starter.mor, bench: bench.mor, mate: mate ? mate.mor : null, fans: G.board.fans };
       const d = startDeal(target, 'final', { lim: { fee: 1e9, wage: 1e6 }, fee: 30e6, wage: 30000, years: 4, status: 'Key player', need: { k: 'final' } });
       completeIn(d);

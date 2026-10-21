@@ -44,6 +44,7 @@ function dayJob(key, fn) {
 function advanceDay() {
   const fx = userFixtures().find(f => !played(f));
   if (fx && (fx.d ?? 5) <= G.day) return 'match';
+  if (deadlineToday() && !ddState().done) runDeadline(); // deadline day plays out hour by hour first
   G.fixtures.filter(f => f.w === G.week && (f.d ?? 5) === G.day && !played(f) && !isUserFx(f)).sort(fxSort).forEach(f => quickSim(f));
   DAY_JOBS.forEach(([d, k, fn]) => { if (d === G.day) dayJob(k, fn); });
   scoutDay();

@@ -56,12 +56,18 @@ function phaseLabel(w = G.week) {
   return 'Matchweek ' + (next.r + 1);
 }
 
+// Transfer windows by date. Summer: eight weeks from the start of the season (early July) to deadline day,
+// 1 September. January: 1 January to deadline day, 2 February. Each shuts at 23:00 on deadline day.
+const dayKey = d => d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate();
 function windowState(w = G.week) {
-  if (w <= 8 || w >= SEASON_WEEKS - 2) return { open: true, label: 'Summer window', closes: '1 Sep' };
-  const d = weekDate(w);
-  if (d.getMonth() === 0 || (d.getMonth() === 1 && d.getDate() <= 2)) return { open: true, label: 'January window', closes: '2 Feb' };
-  return { open: false, label: 'Window closed', closes: '' };
+  const d = w === G.week ? today() : weekDate(w), k = dayKey(d);
+  const sumOpen = seasonStart(G.season), sumShut = new Date(G.season, 8, 1), janOpen = new Date(G.season + 1, 0, 1), janShut = new Date(G.season + 1, 1, 2);
+  const left = shut => Math.round((shut - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  if (k >= dayKey(sumOpen) && k <= dayKey(sumShut)) return { open: true, label: 'Summer window', closes: '1 Sep', deadline: sumShut, left: left(sumShut) };
+  if (k >= dayKey(janOpen) && k <= dayKey(janShut)) return { open: true, label: 'January window', closes: '2 Feb', deadline: janShut, left: left(janShut) };
+  return { open: false, label: 'Window closed', closes: '', opens: k < dayKey(janOpen) && k > dayKey(sumShut) ? '1 Jan' : 'July' };
 }
+const deadlineToday = () => { const s = windowState(); return s.open && s.left === 0; };
 const inWindow = () => windowState().open;
 
 /* ---------- weather ---------- */
