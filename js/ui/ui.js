@@ -72,8 +72,8 @@ function restoreScreen() {
   try {
     const v = JSON.parse(sessionStorage.getItem(LAST_VIEW_KEY) || 'null');
     if (!v || !SCREENS[v.s]) return false;
-    // A live match is not saved mid-game: it restarts from the pre-match screen.
-    UI.s = v.s === 'match' ? 'prematch' : v.s; UI.p = v.p || {}; UI.tab = { ...UI.tab, ...(v.tab || {}) };
+    // A live match carries on from the save at the minute it reached (paused).
+    UI.s = v.s === 'match' && !liveFromSave(userFixture()) ? 'prematch' : v.s; UI.p = v.p || {}; UI.tab = { ...UI.tab, ...(v.tab || {}) };
     return true;
   } catch (e) { return false; }
 }
