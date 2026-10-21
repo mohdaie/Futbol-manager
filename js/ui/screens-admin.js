@@ -80,7 +80,10 @@ const ADMIN_TABS = {
         <div class="btns"><button class="btn" data-a="admTuneReset">Reset to defaults</button></div></div>
       <div class="card"><h3>Test season</h3><p class="muted">Plays all 380 matches on a copy of the save with the current tuning. Your real save does not change. Every measure is compared with Premier League-like averages, and each style and level of tactic fit is shown against the strength of the teams using it.</p>
         <button class="btn pri" data-a="admTest">Run test season</button>
-        ${T ? labReportHtml(T) : ''}</div>`;
+        ${T ? labReportHtml(T) : ''}</div>
+      <div class="card"><h3>Attribute test</h3><p class="muted">For each of the 26 attributes, 40 matches with one side's players all at 8 and the other's at 16 for that attribute only (on a copy of the save). Points per match of the side at 16: every attribute should help; none should decide everything. Takes a few minutes.</p>
+        <button class="btn pri" data-a="admAttr" ${ADM.attrRun ? 'disabled' : ''}>${ADM.attrRun ? 'Running… ' + ADM.attrRun : 'Run attribute test'}</button>
+        ${ADM.attr ? `<div class="list">${ADM.attr.map(r => `<div class="row"><span class="grow"><b>${esc(r.n)}</b><small>goals ${r.gf} – ${r.ga}</small></span><span class="stat"><b>${r.ppg}</b><small>pts / match</small></span></div>`).join('')}</div>` : ''}</div>`;
   },
 
   data() {
@@ -225,6 +228,14 @@ ACT.admTuneReset = () => { G.tune = {}; saveGame(); toast('Engine back to defaul
 ACT.admTest = () => {
   toast('Running test season…');
   setTimeout(() => { try { ADM.test = runTestSeason(); } catch (e) { toast('Test season failed: ' + e.message); } render(); }, 30);
+};
+
+ACT.admAttr = async () => {
+  if (ADM.attrRun) return;
+  ADM.attrRun = '0/26'; render();
+  try { ADM.attr = await runAttrTest(undefined, 40, 8, 16, (d, t) => { ADM.attrRun = d + '/' + t; if (UI.s === 'admin') render(); }); }
+  catch (e) { toast('Attribute test failed: ' + e.message); }
+  ADM.attrRun = null; render();
 };
 
 /* ---------- data ---------- */

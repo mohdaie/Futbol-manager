@@ -137,20 +137,35 @@ function liveFrame(ts) {
 // The next minute: the engine plays it, then the screen shows it (or the highlights of it).
 function liveStep(L) {
   liveKeep(L); // everything up to this minute has been shown
-  const evs = stepMatch(L.M, false), M = L.M, fr = M.frames || [];
-  const t0 = fr.length ? fr[0][0] - TICK : 0;
+  const prev = L.mq, evs = stepMatch(L.M, false), M = L.M, cur = M.frames || [];
+  const t0 = cur.length ? cur[0][0] - TICK : 0;
+  // A highlight early in the minute keeps its build-up from the end of the last minute (if that wasn't shown).
+  const lo = prev && prev.fr.length && !prev.segs.some(s => s[1] >= 59.5) ? -15 : 0;
+  const fr = lo ? prev.fr.filter(f => f[0] > t0 + lo - TICK && f[0] <= t0).concat(cur) : cur;
   const timed = evs.filter(e => e.tt != null).sort((a, b) => a.tt - b.tt), now = evs.filter(e => e.tt == null && e.t !== 'poss');
-  L.mq = { min: M.min, fr, t0, p: 0, ev: timed, ei: 0, segs: segments(M.marks || [], t0), skip: 0, main: evs[0], marks: (M.marks || []).slice(), mi: 0 };
+  const segs = segments(M.marks || [], t0, lo, M);
+  L.mq = { min: M.min, fr, t0, p: Math.min(0, segs.length ? segs[0][0] : 0), ev: timed, ei: 0, segs, skip: 0, main: evs[0], marks: (M.marks || []).slice(), mi: 0 };
   now.forEach(e => pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'sub' ? 'info' : 'tac', commLine(L, e), e.side));
   updateBoard(L);
   if (UI.popup && UI.popup.key === 'live:pl') { const b = document.querySelector('#layer .sh-body'), h = plCardHtml(L); if (b && h) b.innerHTML = h; }
 }
-// Parts of the minute to show, by highlight level: [from, to] in seconds of the minute.
-function segments(marks, t0) {
+// Parts of the minute to show, by highlight level: [from, to] in seconds of the minute (from lo: the build-up
+// can start in the last minute). Dynamic, as FM26: a close game and the last 15 minutes show more, a one-sided
+// one (three goals or more) shows less.
+function segments(marks, t0, lo = 0, M = null) {
   const hl = G.settings.hl || 'ext';
   if (hl === 'full') return [[0, 60]];
-  const W = HL_MARKS[hl], out = [];
-  marks.forEach(m => { const w = W[m.k]; if (w && !(m.k === 'shot' && hl === 'key' && (m.xg || 0) < 0.05)) out.push([Math.max(0, m.t - t0 - w[0]), Math.min(60, m.t - t0 + w[1])]); });
+  const gd = M ? Math.abs(M.sides[0].st.g - M.sides[1].st.g) : 0, late = M && M.min >= 75;
+  const drama = (gd <= 1 ? 1 : gd >= 3 ? -1 : 0) + (late ? 1 : 0); // -1 dull ... 2 tense
+  const W = HL_MARKS[hl], X = drama >= 2 && hl === 'key' ? HL_MARKS.ext : null, out = [];
+  marks.forEach(m => {
+    let w = W[m.k];
+    if (!w && X && (m.k === 'chance' || m.k === 'corner')) w = X[m.k]; // tense: the near things too
+    if (!w) return;
+    if (m.k === 'shot' && (m.xg || 0) < (hl === 'key' ? (drama < 0 ? 0.15 : 0.05) : drama < 0 ? 0.05 : 0)) return;
+    if (drama < 0 && (m.k === 'attack' || m.k === 'offside' || (m.k === 'corner' && hl === 'ext'))) return;
+    out.push([Math.max(lo, m.t - t0 - w[0] * (drama >= 2 ? 1.3 : 1)), Math.min(60, m.t - t0 + w[1])]);
+  });
   out.sort((a, b) => a[0] - b[0]);
   const merged = [];
   out.forEach(s => { const l = merged[merged.length - 1]; if (l && s[0] <= l[1] + 1) l[1] = Math.max(l[1], s[1]); else merged.push(s.slice()); });
