@@ -75,7 +75,7 @@ function scoutRec(p, grade) {
   if (grade === 'A' || grade === 'B') return k >= 50 ? 'Sign' : 'Watch more';
   return grade === 'C' ? 'Monitor' : grade === 'D' ? 'Avoid' : 'Watch more';
 }
-const FOLDERS = [['new', 'New'], ['rec', 'Recommended'], ['mon', 'Monitor'], ['rej', 'Rejected']];
+const FOLDERS = [['new', 'New'], ['dof', 'With the Director'], ['rec', 'Recommended'], ['mon', 'Monitor'], ['rej', 'Rejected']];
 
 /* ---------- scouts ---------- */
 const SCOUT_REGIONS = REGIONS.filter(r => r !== 'Everywhere' && r !== 'Free agents');
@@ -101,6 +101,7 @@ function scoutFile(p) {
 function addKnowledge(p, gain, by, cap = 100) {
   const before = knowOf(p), k = Math.min(cap, 100, Math.round(before + gain));
   if (k > before) G.know[p.id] = k;
+  if (before < 90 && k >= 90 && typeof dofQueue === 'function') dofQueue(p);
   const r = scoutFile(p), grade = scoutGrade(p);
   if (knowStage(k)[0] !== knowStage(before)[0] || !r.hist.length || grade !== r.grade) r.hist.unshift({ date: today().getTime(), k, grade });
   r.hist = r.hist.slice(0, 10);

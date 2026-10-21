@@ -5,10 +5,10 @@
 
 SCREENS.transfers = {
   render() {
-    const t = UI.tab.tr || 'search', win = windowState();
+    const t = UI.tab.tr || 'deals', win = windowState();
     const head = `<h1 class="h1">Transfers</h1>
       <div class="banner ${win.open ? 'open' : ''}"><b>${win.label}${win.open ? ' · closes ' + win.closes : ''}</b><span>Budget ${money(G.fin.tb)} · Wages ${wageFmt(clubWageBill(userClub()))} of ${wageFmt(G.fin.wb)}</span></div>
-      ${tabs('tr', [['advice', 'Scout advice'], ['search', 'Search'], ['short', 'Shortlist'], ['scout', 'Scouting'], ['pitch', 'Pitches'], ['bids', 'Bids'], ['hist', 'History']], t)}`;
+      ${tabs('tr', [['deals', 'Deals'], ['advice', 'Scout advice'], ['search', 'Search'], ['short', 'Shortlist'], ['scout', 'Scouting'], ['pitch', 'Pitches'], ['bids', 'Selling'], ['hist', 'History']], t)}`;
     return head + TR_TABS[t]();
   },
 };
@@ -67,14 +67,14 @@ const TR_TABS = {
   },
   pitch() {
     const list = G.pitches.filter(x => G.players[x.pid] && G.players[x.pid].club !== G.club);
-    return `<p class="muted">Agents offer players who fit your weakest position. Bid the asking price and the selling club accepts.</p>
+    return `<p class="muted">Agents offer players who fit your weakest position. Make an offer and the Director of Football takes it from there.</p>
       <div class="list">${list.map(x => playerRow(G.players[x.pid], `<span class="stat"><b>${x.ask ? money(x.ask) : 'Free'}</b><small>asking</small></span>`)).join('') || empty('No pitches right now', 'Agents get in touch while a transfer window is open.')}</div>`;
   },
   bids() {
-    const open = G.news.filter(n => n.action && n.action.t === 'bid');
+    const open = G.deals.filter(d => d.dir === 'out' && (dealOpen(d) || d.closed.date > today().getTime() - 864e5 * 14));
     const listed = seniorSquad(G.club).filter(p => p.listed);
     return `<div class="sec-h"><h2>Offers for your players</h2></div>
-      <div class="list">${open.map(newsRow).join('') || empty('No offers', 'Transfer-listed players attract more bids.')}</div>
+      <div class="list">${open.map(dealRow).join('') || empty('No offers', 'Transfer-listed players attract more bids.')}</div>
       <div class="sec-h"><h2>Transfer listed</h2></div>
       <div class="list">${listed.map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`, { noBadge: true })).join('') || empty('Nobody listed', 'List players from their profile to invite bids.')}</div>`;
   },
@@ -121,36 +121,14 @@ function scoutFileSheet(pid) {
     <section class="fsec"><h4>Matches watched</h4>${r.seen.length ? `<div class="list">${r.seen.map(x => `<div class="row"><span class="grow"><b>${esc(x.opp || '')}${x.score ? ' ' + esc(x.score) : ''}</b><small>${fmtDate(x.date, false)} · ${esc(x.by || '')}${x.note ? ' · ' + esc(x.note) : ''}${x.gain ? ' · +' + x.gain + '%' : ''}</small></span>${x.rt != null ? `<span class="rt">${x.rt.toFixed(1)}</span>` : ''}</div>`).join('')}</div>` : '<p class="muted">Nobody has watched him yet.</p>'}</section>
     ${r.hist.length > 1 ? `<section class="fsec"><h4>Report history</h4><div class="list">${r.hist.map(h => `<div class="row"><span class="grow"><b>${h.k}% · ${knowStage(h.k)[1]}</b><small>${fmtDate(h.date, false)}</small></span><span class="grade g${h.grade}">${h.grade}</span></div>`).join('')}</div></section>` : ''}
     <section class="fsec"><h4>Folder</h4><div class="seg wrap">${FOLDERS.map(([f, n]) => `<button class="${r.folder === f ? 'on' : ''}" data-a="fileFolder" data-id="${p.id}" data-v="${f}">${n}</button>`).join('')}</div></section>
-    <div class="btns">${job ? '' : `<button class="btn pri" data-a="scoutOne" data-id="${p.id}" ${k >= 100 ? 'disabled' : ''}>Send a scout</button><button class="btn" data-a="scoutOne" data-id="${p.id}" data-mode="video" ${k >= VIDEO_CAP ? 'disabled' : ''}>Video analysis £3k</button>`}<button class="btn" data-a="player" data-id="${p.id}">Player profile</button></div>
+    <div class="btns">${job ? '' : `<button class="btn pri" data-a="scoutOne" data-id="${p.id}" ${k >= 100 ? 'disabled' : ''}>Send a scout</button><button class="btn" data-a="scoutOne" data-id="${p.id}" data-mode="video" ${k >= VIDEO_CAP ? 'disabled' : ''}>Video analysis £3k</button>`}<button class="btn" data-a="offer" data-id="${p.id}">${activeDeal(p.id, 'in') ? 'Open the deal' : 'Talk to the Director'}</button><button class="btn" data-a="player" data-id="${p.id}">Player profile</button></div>
   </article>`, { key: 'sfile:' + pid, restore: () => scoutFileSheet(pid), valid: () => !!G?.players[pid] });
 }
 ACT.scoutFile = ds => scoutFileSheet(+ds.id);
 ACT.fileFolder = ds => { const p = G.players[+ds.id]; scoutFile(p).folder = ds.v; saveGame(); scoutFileSheet(p.id); };
 
 /* ---------- offer & contract negotiation ---------- */
-ACT.offer = ds => {
-  const p = G.players[+ds.id];
-  if (G.clubs[p.club].fa) return contractSheet(p.id, 0, 'buy');
-  if (!UI.neg || UI.neg.pid !== p.id) UI.neg = { pid: p.id, fee: roundMoney(pValue(p)) };
-  offerSheet();
-};
-function offerSheet(msg) {
-  const N = UI.neg, p = G.players[N.pid], est = knowOf(p) >= 50 ? askingPrice(p) : null;
-  const step = N.fee >= 20e6 ? 1e6 : N.fee >= 2e6 ? 250e3 : 50e3;
-  sheet(`<h3 class="sh-t">Offer for ${esc(fullName(p))}</h3><p class="muted">${esc(clubName(p.club))} · value ${money(pValue(p))}${est ? ' · scout thinks they want about ' + money(est) : ''}</p>
-    <div class="stepper"><button class="btn" data-a="feeStep" data-v="${-step * 4}">−−</button><button class="btn" data-a="feeStep" data-v="${-step}">−</button><b>${money(N.fee)}</b><button class="btn" data-a="feeStep" data-v="${step}">+</button><button class="btn" data-a="feeStep" data-v="${step * 4}">++</button></div>
-    <p class="muted c">Transfer budget ${money(G.fin.tb)}</p>
-    ${msg ? `<p class="note">${esc(msg.text)}</p>${msg.counter ? `<button class="btn wide" data-a="feeSet" data-v="${msg.counter}">Match their price: ${money(msg.counter)}</button>` : ''}` : ''}
-    <button class="btn pri wide" data-a="sendBid">Submit offer</button>`, { key: 'offer:' + p.id, restore: () => offerSheet(msg), valid: () => !!G?.players[p.id] && G.players[p.id].club !== G.club, onClose: () => render() });
-}
-ACT.feeStep = ds => { UI.neg.fee = Math.max(0, roundMoney(UI.neg.fee + +ds.v)); offerSheet(); };
-ACT.feeSet = ds => { UI.neg.fee = +ds.v; ACT.sendBid(); };
-ACT.sendBid = () => {
-  const N = UI.neg, res = makeBid(N.pid, N.fee);
-  if (res.r === 'accept') { toast(res.msg); return contractSheet(N.pid, res.fee, 'buy'); }
-  offerSheet({ text: res.msg, counter: res.r === 'counter' ? res.fee : null });
-};
-
+// Offers for players go through the Director of Football (screens-deals.js).
 ACT.contract = ds => contractSheet(+ds.id, 0, ds.mode || 'renew');
 function contractSheet(pid, fee, mode, msg) {
   const p = G.players[pid];
@@ -216,12 +194,12 @@ ACT.budget = ds => { if (!adjustBudgets(+ds.v)) toast('Not enough budget to move
 /* ---------- staff ---------- */
 SCREENS.staff = {
   render() {
-    const row = (s, hire) => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>${s.role} · age ${s.age} · ${wageFmt(s.wage)}</small></span><span class="rt ${s.rating >= 15 ? 'good' : s.rating < 8 ? 'bad' : ''}">${s.rating}</span>${hire ? `<button class="btn sm" data-a="hire" data-id="${s.id}">Hire</button>` : `<button class="btn sm ghost" data-a="fire" data-id="${s.id}">Release</button>`}</div>`;
+    const row = (s, hire) => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>${STAFF_TITLE[s.role] || s.role} · age ${s.age} · ${wageFmt(s.wage)}</small></span><span class="rt ${s.rating >= 15 ? 'good' : s.rating < 8 ? 'bad' : ''}">${s.rating}</span>${hire ? `<button class="btn sm" data-a="hire" data-id="${s.id}">Hire</button>` : `<button class="btn sm ghost" data-a="fire" data-id="${s.id}">Release</button>`}</div>`;
     const rec = typeof assistantRecord === 'function' ? assistantRecord() : null;
     return `<h1 class="h1">Staff</h1>
       <div class="card"><h3>AI-assisted staff</h3><p class="muted">Your assistant manager advises before each match: he plays it through with the game's own engine and recommends a tactic. The better his rating, the more options he tries and the more accurate he is. Advice and results are recorded.</p>
         ${rec ? `<div class="kv"><div><small>Results called right</small><b>${rec.accuracy}% of ${rec.n}</b></div><div><small>Tactic advice followed</small><b>${rec.nf ? rec.followed + ' pts/game' : '-'}</b></div><div><small>Advice not followed</small><b>${rec.ni ? rec.ignored + ' pts/game' : '-'}</b></div></div>` : '<p class="muted">No advice recorded yet. Ask him on the pre-match screen.</p>'}</div>
-      ${Object.keys(STAFF_ROLES).map(role => `<div class="sec-h"><h2>${role}s</h2><span class="muted">${staffOf(role).length}/${STAFF_ROLES[role]} · ${STAFF_DESC[role]}</span></div><div class="list">${staffOf(role).map(s => row(s)).join('') || '<p class="muted">Vacant</p>'}</div>`).join('')}
+      ${Object.keys(STAFF_ROLES).map(role => `<div class="sec-h"><h2>${STAFF_TITLE[role] || role + 's'}</h2><span class="muted">${staffOf(role).length}/${STAFF_ROLES[role]} · ${STAFF_DESC[role]}</span></div><div class="list">${staffOf(role).map(s => row(s)).join('') || '<p class="muted">Vacant</p>'}</div>`).join('')}
       <div class="sec-h"><h2>Available to hire</h2><span class="muted">Refreshes every six weeks</span></div>
       <div class="list">${G.staffPool.map(s => row(s, true)).join('')}</div>`;
   },

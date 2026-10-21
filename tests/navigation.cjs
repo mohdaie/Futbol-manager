@@ -84,6 +84,7 @@ const assert = require('node:assert/strict');
     check('Squad scroll is preserved', await page.evaluate(() => document.querySelector('.main').scrollTop), scroll);
 
     await act('go', { s: 'transfers' });
+    await page.locator('.main [data-a="tab"][data-v="search"]').click();
     await page.locator('#sName').fill('test draft');
     await act('go', { s: 'finance' });
     await appBack();
