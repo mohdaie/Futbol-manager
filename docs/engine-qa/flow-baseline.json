@@ -1,0 +1,3402 @@
+{
+  "schema": 1,
+  "generated": "2026-10-21T13:48:01.752Z",
+  "aggregate": {
+    "matches": 24,
+    "seeds": 3,
+    "secs": 46,
+    "goals": 2.3,
+    "possPress": 68,
+    "pressedBuildUpsPerMatch": 45.5,
+    "pressedOutcomePct": {
+      "lostOwnThird": 5,
+      "shortEscape": 12,
+      "longRelease": 94,
+      "reachedFinalThird": 22,
+      "shot": 2
+    },
+    "isolatedPressPct": 19.3,
+    "coveredPressPct": 78,
+    "longBallsPerMatch": 186.8,
+    "longUnderPressurePct": 82,
+    "secondBallWonPct": 57,
+    "supportAtLanding": 1.2,
+    "oppAtLanding": 1.3,
+    "freeReceiverFinalThirdPct": {
+      "direct": 74,
+      "press": 69.3
+    },
+    "counterpressRegainPct": 13.4,
+    "counterpressPerMatch": 114.3,
+    "cpBypassedPerMatch": 4.9,
+    "cpIsolatedStartPerMatch": 62.2,
+    "recoverySecs": 0.3,
+    "slowRecoveriesPerMatch": 0.5,
+    "blockOver40mPct": 35.7,
+    "byStrikers": {
+      "press 1ST v direct 1ST": {
+        "secondBallWonPct": 53,
+        "isolatedPressPct": 25,
+        "longBalls": 173,
+        "possPress": 72
+      },
+      "press 1ST v direct 2ST": {
+        "secondBallWonPct": 59,
+        "isolatedPressPct": 24,
+        "longBalls": 225,
+        "possPress": 60
+      },
+      "press 2ST v direct 1ST": {
+        "secondBallWonPct": 56,
+        "isolatedPressPct": 14,
+        "longBalls": 147,
+        "possPress": 75
+      },
+      "press 2ST v direct 2ST": {
+        "secondBallWonPct": 60,
+        "isolatedPressPct": 14,
+        "longBalls": 202,
+        "possPress": 66
+      }
+    }
+  },
+  "rows": [
+    {
+      "scenario": "press 1ST v direct 1ST",
+      "seed": 20261021,
+      "swap": false,
+      "score": "1-0 (press-direct)",
+      "shots": [
+        10,
+        0
+      ],
+      "possPress": 74,
+      "buildUps": 66,
+      "pressedBuildUps": 46,
+      "pressedOutcome": {
+        "lostOwnThird": 3,
+        "shortEscape": 5,
+        "longRelease": 42,
+        "reachedFinalThird": 11,
+        "shot": 0
+      },
+      "isolatedPressPct": 24,
+      "coveredPressPct": 73,
+      "highPressFrames": 472,
+      "longBalls": 178,
+      "longUnderPressure": 150,
+      "longToTarget": 82,
+      "secondBallWonPct": 59,
+      "deadAfterLong": 14,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.6,
+      "freeReceiverFinalThirdPct": {
+        "direct": 67,
+        "press": 79
+      },
+      "counterpress": {
+        "starts": 108,
+        "regain": 15,
+        "broken": 79,
+        "bypassed": 6,
+        "expired": 1,
+        "isolatedStart": 62,
+        "regainSecs": 14,
+        "regainPct": 14
+      },
+      "recoverySecs": 0.3,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 32,
+      "longKinds": {
+        "clear": 96,
+        "long": 82
+      },
+      "directPasses": 366,
+      "directLongStat": 82,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 2,
+          "t": 112.5,
+          "x": 39.6,
+          "y": 19.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 12,
+          "t": 680.5,
+          "x": 15,
+          "y": 8.8
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 14,
+          "t": 817.5,
+          "x": 37.2,
+          "y": 95.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 17,
+          "t": 992.5,
+          "x": 40.3,
+          "y": 16
+        },
+        {
+          "k": "isolated-presser",
+          "min": 22,
+          "t": 1283.5,
+          "x": 3.5,
+          "y": 16.3
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 23,
+          "t": 1352.5,
+          "x": 30.3,
+          "y": 81.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 25,
+          "t": 1475.5,
+          "x": 31.7,
+          "y": 8.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 25,
+          "t": 1477,
+          "x": 22,
+          "y": 9.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 29,
+          "t": 1686,
+          "x": 30.7,
+          "y": 6.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 31,
+          "t": 1824.5,
+          "x": 16.4,
+          "y": 21.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 32,
+          "t": 1875,
+          "x": 40.1,
+          "y": 22.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 33,
+          "t": 1960,
+          "x": 40.2,
+          "y": 15.5
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 1ST (swapped)",
+      "seed": 20261021,
+      "swap": true,
+      "score": "2-0 (press-direct)",
+      "shots": [
+        12,
+        3
+      ],
+      "possPress": 73,
+      "buildUps": 64,
+      "pressedBuildUps": 50,
+      "pressedOutcome": {
+        "lostOwnThird": 3,
+        "shortEscape": 2,
+        "longRelease": 46,
+        "reachedFinalThird": 9,
+        "shot": 0
+      },
+      "isolatedPressPct": 20,
+      "coveredPressPct": 76,
+      "highPressFrames": 465,
+      "longBalls": 177,
+      "longUnderPressure": 146,
+      "longToTarget": 84,
+      "secondBallWonPct": 55,
+      "deadAfterLong": 28,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.4,
+      "freeReceiverFinalThirdPct": {
+        "direct": 70,
+        "press": 65
+      },
+      "counterpress": {
+        "starts": 115,
+        "regain": 22,
+        "broken": 77,
+        "bypassed": 5,
+        "expired": 2,
+        "isolatedStart": 58,
+        "regainSecs": 43,
+        "regainPct": 19
+      },
+      "recoverySecs": 0.4,
+      "slowRecoveries": 1,
+      "blockOver40mPct": 36,
+      "longKinds": {
+        "long": 84,
+        "clear": 93
+      },
+      "directPasses": 368,
+      "directLongStat": 84,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 2,
+          "t": 106,
+          "x": 30.6,
+          "y": 84.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 8,
+          "t": 442,
+          "x": 21.6,
+          "y": 89.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 8,
+          "t": 443,
+          "x": 27.1,
+          "y": 100
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 8,
+          "t": 449,
+          "x": 33.3,
+          "y": 92.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 12,
+          "t": 674.5,
+          "x": 43.8,
+          "y": 83
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 16,
+          "t": 922.5,
+          "x": 21.9,
+          "y": 97
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 20,
+          "t": 1149,
+          "x": 29.2,
+          "y": 86.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 20,
+          "t": 1188.5,
+          "x": 46.5,
+          "y": 89
+        },
+        {
+          "k": "isolated-presser",
+          "min": 24,
+          "t": 1385.5,
+          "x": 24.6,
+          "y": 84.6
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 24,
+          "t": 1430.5,
+          "x": 47.8,
+          "y": 17.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 28,
+          "t": 1670.5,
+          "x": 47.5,
+          "y": 85.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 29,
+          "t": 1735.5,
+          "x": 47.7,
+          "y": 90.1
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 2ST",
+      "seed": 20261021,
+      "swap": false,
+      "score": "2-1 (press-direct)",
+      "shots": [
+        16,
+        3
+      ],
+      "possPress": 63,
+      "buildUps": 82,
+      "pressedBuildUps": 59,
+      "pressedOutcome": {
+        "lostOwnThird": 3,
+        "shortEscape": 5,
+        "longRelease": 55,
+        "reachedFinalThird": 12,
+        "shot": 0
+      },
+      "isolatedPressPct": 27,
+      "coveredPressPct": 71,
+      "highPressFrames": 723,
+      "longBalls": 224,
+      "longUnderPressure": 177,
+      "longToTarget": 115,
+      "secondBallWonPct": 59,
+      "deadAfterLong": 16,
+      "supportAtLanding": 1.3,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 92,
+        "press": 66
+      },
+      "counterpress": {
+        "starts": 128,
+        "regain": 11,
+        "broken": 96,
+        "bypassed": 2,
+        "expired": 2,
+        "isolatedStart": 75,
+        "regainSecs": 15,
+        "regainPct": 9
+      },
+      "recoverySecs": 0.1,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 38,
+      "longKinds": {
+        "long": 115,
+        "clear": 109
+      },
+      "directPasses": 500,
+      "directLongStat": 115,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 2,
+          "t": 98.5,
+          "x": 56.3,
+          "y": 36
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 5,
+          "t": 286,
+          "x": 30.8,
+          "y": 18.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 12,
+          "t": 677.5,
+          "x": 36.2,
+          "y": 21.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 13,
+          "t": 738.5,
+          "x": 45.8,
+          "y": 12.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 20,
+          "t": 1167,
+          "x": 33.3,
+          "y": 22.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 23,
+          "t": 1367.5,
+          "x": 34.8,
+          "y": 33
+        },
+        {
+          "k": "isolated-presser",
+          "min": 30,
+          "t": 1761,
+          "x": 47.4,
+          "y": 19.4
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 30,
+          "t": 1789,
+          "x": 41.3,
+          "y": 92.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 37,
+          "t": 2191.5,
+          "x": 42.6,
+          "y": 19.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 37,
+          "t": 2204.5,
+          "x": 48.2,
+          "y": 20.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 37,
+          "t": 2210.5,
+          "x": 39.2,
+          "y": 13.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 44,
+          "t": 2630.5,
+          "x": 43.2,
+          "y": 16.3
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 2ST (swapped)",
+      "seed": 20261021,
+      "swap": true,
+      "score": "2-2 (press-direct)",
+      "shots": [
+        12,
+        5
+      ],
+      "possPress": 60,
+      "buildUps": 86,
+      "pressedBuildUps": 63,
+      "pressedOutcome": {
+        "lostOwnThird": 2,
+        "shortEscape": 9,
+        "longRelease": 59,
+        "reachedFinalThird": 13,
+        "shot": 2
+      },
+      "isolatedPressPct": 20,
+      "coveredPressPct": 77,
+      "highPressFrames": 769,
+      "longBalls": 252,
+      "longUnderPressure": 213,
+      "longToTarget": 140,
+      "secondBallWonPct": 61,
+      "deadAfterLong": 32,
+      "supportAtLanding": 1.3,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 79,
+        "press": 72
+      },
+      "counterpress": {
+        "starts": 144,
+        "regain": 17,
+        "broken": 103,
+        "bypassed": 5,
+        "expired": 5,
+        "isolatedStart": 68,
+        "regainSecs": 23,
+        "regainPct": 12
+      },
+      "recoverySecs": 0.3,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 32,
+      "longKinds": {
+        "long": 140,
+        "clear": 112
+      },
+      "directPasses": 587,
+      "directLongStat": 140,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 15,
+          "x": 30.1,
+          "y": 80.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 3,
+          "t": 168,
+          "x": 34.1,
+          "y": 84
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 4,
+          "t": 183,
+          "x": 47.4,
+          "y": 84.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 9,
+          "t": 506,
+          "x": 50,
+          "y": 87.7
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 13,
+          "t": 748,
+          "x": 30.5,
+          "y": 23.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 15,
+          "t": 871.5,
+          "x": 14.2,
+          "y": 43.8
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 15,
+          "t": 874,
+          "x": 37.7,
+          "y": 12.1
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 15,
+          "t": 876,
+          "x": 28.3,
+          "y": 18.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 19,
+          "t": 1130,
+          "x": 35.4,
+          "y": 85
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 21,
+          "t": 1224.5,
+          "x": 26.2,
+          "y": 23.5
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 23,
+          "t": 1323,
+          "x": 20.8,
+          "y": 20.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 23,
+          "t": 1342,
+          "x": 23.9,
+          "y": 93.4
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 1ST",
+      "seed": 20261021,
+      "swap": false,
+      "score": "1-0 (press-direct)",
+      "shots": [
+        7,
+        0
+      ],
+      "possPress": 81,
+      "buildUps": 52,
+      "pressedBuildUps": 29,
+      "pressedOutcome": {
+        "lostOwnThird": 2,
+        "shortEscape": 4,
+        "longRelease": 28,
+        "reachedFinalThird": 5,
+        "shot": 0
+      },
+      "isolatedPressPct": 11,
+      "coveredPressPct": 87,
+      "highPressFrames": 353,
+      "longBalls": 120,
+      "longUnderPressure": 96,
+      "longToTarget": 58,
+      "secondBallWonPct": 50,
+      "deadAfterLong": 15,
+      "supportAtLanding": 1,
+      "oppAtLanding": 1.2,
+      "freeReceiverFinalThirdPct": {
+        "direct": 100,
+        "press": 71
+      },
+      "counterpress": {
+        "starts": 77,
+        "regain": 10,
+        "broken": 57,
+        "bypassed": 3,
+        "expired": 7,
+        "isolatedStart": 41,
+        "regainSecs": 21,
+        "regainPct": 13
+      },
+      "recoverySecs": 0.2,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 33,
+      "longKinds": {
+        "clear": 62,
+        "long": 58
+      },
+      "directPasses": 280,
+      "directLongStat": 58,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 60,
+          "x": 15.2,
+          "y": 44.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 11,
+          "t": 643.5,
+          "x": 40.4,
+          "y": 17
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 12,
+          "t": 697,
+          "x": 42.8,
+          "y": 21.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 26,
+          "t": 1517.5,
+          "x": 38.4,
+          "y": 18
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 27,
+          "t": 1572.5,
+          "x": 29.7,
+          "y": 21.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 28,
+          "t": 1666.5,
+          "x": 38.2,
+          "y": 19.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 35,
+          "t": 2099.5,
+          "x": 45.3,
+          "y": 21.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 41,
+          "t": 2446.5,
+          "x": 45.7,
+          "y": 15.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 53,
+          "t": 3141.5,
+          "x": 48.1,
+          "y": 18.6
+        },
+        {
+          "k": "isolated-presser",
+          "min": 56,
+          "t": 3351,
+          "x": 43.7,
+          "y": 18.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 57,
+          "t": 3394.5,
+          "x": 22.5,
+          "y": 19.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 65,
+          "t": 3875,
+          "x": 45.4,
+          "y": 21.9
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 1ST (swapped)",
+      "seed": 20261021,
+      "swap": true,
+      "score": "2-1 (press-direct)",
+      "shots": [
+        8,
+        4
+      ],
+      "possPress": 68,
+      "buildUps": 47,
+      "pressedBuildUps": 35,
+      "pressedOutcome": {
+        "lostOwnThird": 1,
+        "shortEscape": 4,
+        "longRelease": 32,
+        "reachedFinalThird": 8,
+        "shot": 1
+      },
+      "isolatedPressPct": 16,
+      "coveredPressPct": 82,
+      "highPressFrames": 579,
+      "longBalls": 186,
+      "longUnderPressure": 157,
+      "longToTarget": 103,
+      "secondBallWonPct": 60,
+      "deadAfterLong": 17,
+      "supportAtLanding": 1.3,
+      "oppAtLanding": 1.2,
+      "freeReceiverFinalThirdPct": {
+        "direct": 76,
+        "press": 63
+      },
+      "counterpress": {
+        "starts": 103,
+        "regain": 13,
+        "broken": 82,
+        "bypassed": 3,
+        "expired": 6,
+        "isolatedStart": 58,
+        "regainSecs": 32,
+        "regainPct": 13
+      },
+      "recoverySecs": 0.2,
+      "slowRecoveries": 1,
+      "blockOver40mPct": 30,
+      "longKinds": {
+        "clear": 83,
+        "long": 103
+      },
+      "directPasses": 488,
+      "directLongStat": 103,
+      "events": [
+        {
+          "k": "free-receiver-P",
+          "min": 8,
+          "t": 432,
+          "x": 39.3,
+          "y": 94.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 9,
+          "t": 522.5,
+          "x": 38.2,
+          "y": 89.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 14,
+          "t": 807.5,
+          "x": 39.1,
+          "y": 88.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 14,
+          "t": 808.5,
+          "x": 42.1,
+          "y": 91.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 19,
+          "t": 1130,
+          "x": 18.2,
+          "y": 83.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 27,
+          "t": 1563,
+          "x": 44.2,
+          "y": 81.8
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 32,
+          "t": 1901.5,
+          "x": 47.2,
+          "y": 15.4
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 32,
+          "t": 1915,
+          "x": 39.6,
+          "y": 22.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 37,
+          "t": 2218.5,
+          "x": 43.1,
+          "y": 82
+        },
+        {
+          "k": "isolated-presser",
+          "min": 38,
+          "t": 2246,
+          "x": 17.8,
+          "y": 82.3
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 50,
+          "t": 2952,
+          "x": 34.5,
+          "y": 20.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 56,
+          "t": 3342.5,
+          "x": 37.8,
+          "y": 82.5
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 2ST",
+      "seed": 20261021,
+      "swap": false,
+      "score": "3-1 (press-direct)",
+      "shots": [
+        8,
+        2
+      ],
+      "possPress": 69,
+      "buildUps": 62,
+      "pressedBuildUps": 40,
+      "pressedOutcome": {
+        "lostOwnThird": 3,
+        "shortEscape": 4,
+        "longRelease": 38,
+        "reachedFinalThird": 4,
+        "shot": 0
+      },
+      "isolatedPressPct": 11,
+      "coveredPressPct": 87,
+      "highPressFrames": 513,
+      "longBalls": 207,
+      "longUnderPressure": 175,
+      "longToTarget": 117,
+      "secondBallWonPct": 57,
+      "deadAfterLong": 32,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.2,
+      "freeReceiverFinalThirdPct": {
+        "direct": 74,
+        "press": 82
+      },
+      "counterpress": {
+        "starts": 121,
+        "regain": 21,
+        "broken": 87,
+        "bypassed": 7,
+        "expired": 6,
+        "isolatedStart": 62,
+        "regainSecs": 41,
+        "regainPct": 17
+      },
+      "recoverySecs": 0.5,
+      "slowRecoveries": 1,
+      "blockOver40mPct": 38,
+      "longKinds": {
+        "long": 117,
+        "clear": 90
+      },
+      "directPasses": 454,
+      "directLongStat": 117,
+      "events": [
+        {
+          "k": "free-receiver-P",
+          "min": 1,
+          "t": 18,
+          "x": 20.8,
+          "y": 20.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 23,
+          "x": 52.1,
+          "y": 31.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 3,
+          "t": 139.5,
+          "x": 52,
+          "y": 7.9
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 4,
+          "t": 219.5,
+          "x": 21.7,
+          "y": 83.6
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 4,
+          "t": 221.5,
+          "x": 36.6,
+          "y": 85.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 7,
+          "t": 381,
+          "x": 23.1,
+          "y": 13
+        },
+        {
+          "k": "isolated-presser",
+          "min": 10,
+          "t": 571,
+          "x": 47.2,
+          "y": 20.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 10,
+          "t": 584,
+          "x": 40.9,
+          "y": 15.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 15,
+          "t": 895.5,
+          "x": 27.8,
+          "y": 22.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 28,
+          "t": 1631.5,
+          "x": 40.6,
+          "y": 23.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 28,
+          "t": 1665.5,
+          "x": 37.7,
+          "y": 10.8
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 30,
+          "t": 1780.5,
+          "x": 23.9,
+          "y": 88.2
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 2ST (swapped)",
+      "seed": 20261021,
+      "swap": true,
+      "score": "1-0 (press-direct)",
+      "shots": [
+        10,
+        3
+      ],
+      "possPress": 66,
+      "buildUps": 54,
+      "pressedBuildUps": 35,
+      "pressedOutcome": {
+        "lostOwnThird": 2,
+        "shortEscape": 4,
+        "longRelease": 35,
+        "reachedFinalThird": 8,
+        "shot": 0
+      },
+      "isolatedPressPct": 17,
+      "coveredPressPct": 81,
+      "highPressFrames": 670,
+      "longBalls": 192,
+      "longUnderPressure": 161,
+      "longToTarget": 114,
+      "secondBallWonPct": 61,
+      "deadAfterLong": 21,
+      "supportAtLanding": 1.4,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 75,
+        "press": 78
+      },
+      "counterpress": {
+        "starts": 121,
+        "regain": 17,
+        "broken": 90,
+        "bypassed": 4,
+        "expired": 4,
+        "isolatedStart": 65,
+        "regainSecs": 46,
+        "regainPct": 14
+      },
+      "recoverySecs": 0.3,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 46,
+      "longKinds": {
+        "clear": 78,
+        "long": 114
+      },
+      "directPasses": 526,
+      "directLongStat": 114,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 30.5,
+          "x": 20.9,
+          "y": 86
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 8,
+          "t": 429.5,
+          "x": 38.8,
+          "y": 88.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 8,
+          "t": 476,
+          "x": 23.2,
+          "y": 83.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 11,
+          "t": 658.5,
+          "x": 26.9,
+          "y": 89.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 17,
+          "t": 978.5,
+          "x": 20.7,
+          "y": 86.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 18,
+          "t": 1026,
+          "x": 35.7,
+          "y": 82.2
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 20,
+          "t": 1144.5,
+          "x": 20.2,
+          "y": 19.1
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 20,
+          "t": 1148,
+          "x": 16.5,
+          "y": 17.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 21,
+          "t": 1225.5,
+          "x": 50.4,
+          "y": 93.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 25,
+          "t": 1471,
+          "x": 33.1,
+          "y": 88
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 30,
+          "t": 1756,
+          "x": 21.1,
+          "y": 86.1
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 31,
+          "t": 1854.5,
+          "x": 21.3,
+          "y": 18.8
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 1ST",
+      "seed": 20261022,
+      "swap": false,
+      "score": "1-0 (press-direct)",
+      "shots": [
+        6,
+        2
+      ],
+      "possPress": 70,
+      "buildUps": 65,
+      "pressedBuildUps": 48,
+      "pressedOutcome": {
+        "lostOwnThird": 2,
+        "shortEscape": 6,
+        "longRelease": 46,
+        "reachedFinalThird": 9,
+        "shot": 0
+      },
+      "isolatedPressPct": 26,
+      "coveredPressPct": 71,
+      "highPressFrames": 639,
+      "longBalls": 176,
+      "longUnderPressure": 152,
+      "longToTarget": 75,
+      "secondBallWonPct": 55,
+      "deadAfterLong": 22,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 67,
+        "press": 65
+      },
+      "counterpress": {
+        "starts": 118,
+        "regain": 17,
+        "broken": 87,
+        "bypassed": 5,
+        "expired": 3,
+        "isolatedStart": 68,
+        "regainSecs": 28.5,
+        "regainPct": 14
+      },
+      "recoverySecs": 0.4,
+      "slowRecoveries": 1,
+      "blockOver40mPct": 37,
+      "longKinds": {
+        "clear": 101,
+        "long": 75
+      },
+      "directPasses": 436,
+      "directLongStat": 75,
+      "events": [
+        {
+          "k": "free-receiver-P",
+          "min": 11,
+          "t": 617.5,
+          "x": 46.3,
+          "y": 18
+        },
+        {
+          "k": "isolated-presser",
+          "min": 13,
+          "t": 738,
+          "x": 34.2,
+          "y": 39.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 16,
+          "t": 921,
+          "x": 35.7,
+          "y": 9.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 16,
+          "t": 954,
+          "x": 40.6,
+          "y": 28.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 19,
+          "t": 1111.5,
+          "x": 15.1,
+          "y": 25.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 22,
+          "t": 1289.5,
+          "x": 14.4,
+          "y": 13.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 22,
+          "t": 1302.5,
+          "x": 22.9,
+          "y": 13
+        },
+        {
+          "k": "isolated-presser",
+          "min": 23,
+          "t": 1351.5,
+          "x": 31.5,
+          "y": 15.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 25,
+          "t": 1468,
+          "x": 25.6,
+          "y": 21.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 34,
+          "t": 1998,
+          "x": 57.6,
+          "y": 5.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 39,
+          "t": 2305,
+          "x": 33.9,
+          "y": 21.6
+        },
+        {
+          "k": "isolated-presser",
+          "min": 46,
+          "t": 2711.5,
+          "x": 52.9,
+          "y": 41.2
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 1ST (swapped)",
+      "seed": 20261022,
+      "swap": true,
+      "score": "1-0 (press-direct)",
+      "shots": [
+        3,
+        0
+      ],
+      "possPress": 66,
+      "buildUps": 64,
+      "pressedBuildUps": 40,
+      "pressedOutcome": {
+        "lostOwnThird": 3,
+        "shortEscape": 3,
+        "longRelease": 36,
+        "reachedFinalThird": 8,
+        "shot": 0
+      },
+      "isolatedPressPct": 20,
+      "coveredPressPct": 77,
+      "highPressFrames": 610,
+      "longBalls": 205,
+      "longUnderPressure": 169,
+      "longToTarget": 97,
+      "secondBallWonPct": 59,
+      "deadAfterLong": 23,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 57,
+        "press": 75
+      },
+      "counterpress": {
+        "starts": 128,
+        "regain": 15,
+        "broken": 99,
+        "bypassed": 6,
+        "expired": 8,
+        "isolatedStart": 73,
+        "regainSecs": 18,
+        "regainPct": 12
+      },
+      "recoverySecs": 0.2,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 31,
+      "longKinds": {
+        "long": 97,
+        "clear": 108
+      },
+      "directPasses": 484,
+      "directLongStat": 97,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 15,
+          "x": 56.6,
+          "y": 62.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 7,
+          "t": 385,
+          "x": 9.4,
+          "y": 65.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 16,
+          "t": 958.5,
+          "x": 42,
+          "y": 84.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 18,
+          "t": 1020.5,
+          "x": 23.7,
+          "y": 87.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 21,
+          "t": 1240.5,
+          "x": 49.3,
+          "y": 97.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 21,
+          "t": 1246,
+          "x": 35,
+          "y": 93.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 22,
+          "t": 1290.5,
+          "x": 32.2,
+          "y": 84.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 25,
+          "t": 1480,
+          "x": 38,
+          "y": 81.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 29,
+          "t": 1707.5,
+          "x": 47,
+          "y": 87.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 35,
+          "t": 2045.5,
+          "x": 34.7,
+          "y": 87.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 44,
+          "t": 2618,
+          "x": 27,
+          "y": 78.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 47,
+          "t": 2770.5,
+          "x": 32.8,
+          "y": 86.2
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 2ST",
+      "seed": 20261022,
+      "swap": false,
+      "score": "1-3 (press-direct)",
+      "shots": [
+        12,
+        12
+      ],
+      "possPress": 60,
+      "buildUps": 66,
+      "pressedBuildUps": 49,
+      "pressedOutcome": {
+        "lostOwnThird": 1,
+        "shortEscape": 11,
+        "longRelease": 46,
+        "reachedFinalThird": 21,
+        "shot": 3
+      },
+      "isolatedPressPct": 20,
+      "coveredPressPct": 76,
+      "highPressFrames": 695,
+      "longBalls": 256,
+      "longUnderPressure": 205,
+      "longToTarget": 155,
+      "secondBallWonPct": 69,
+      "deadAfterLong": 33,
+      "supportAtLanding": 1.4,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 88,
+        "press": 51
+      },
+      "counterpress": {
+        "starts": 129,
+        "regain": 15,
+        "broken": 102,
+        "bypassed": 10,
+        "expired": 11,
+        "isolatedStart": 65,
+        "regainSecs": 29,
+        "regainPct": 12
+      },
+      "recoverySecs": 0.8,
+      "slowRecoveries": 2,
+      "blockOver40mPct": 39,
+      "longKinds": {
+        "clear": 101,
+        "long": 155
+      },
+      "directPasses": 620,
+      "directLongStat": 155,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 3,
+          "t": 121,
+          "x": 18.4,
+          "y": 29.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 13,
+          "t": 764.5,
+          "x": 31.6,
+          "y": 20.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 14,
+          "t": 790,
+          "x": 15.4,
+          "y": 36.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 25,
+          "t": 1447,
+          "x": 35.5,
+          "y": 18.8
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 25,
+          "t": 1466,
+          "x": 45.3,
+          "y": 85.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 26,
+          "t": 1535.5,
+          "x": 38.4,
+          "y": 21.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 27,
+          "t": 1579.5,
+          "x": 27.4,
+          "y": 14
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 35,
+          "t": 2098,
+          "x": 23.6,
+          "y": 86.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 36,
+          "t": 2151.5,
+          "x": 11.6,
+          "y": 13
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 37,
+          "t": 2217.5,
+          "x": 23.4,
+          "y": 85.5
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 37,
+          "t": 2219.5,
+          "x": 32.4,
+          "y": 90.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 39,
+          "t": 2321.5,
+          "x": 14.8,
+          "y": 41
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 2ST (swapped)",
+      "seed": 20261022,
+      "swap": true,
+      "score": "0-1 (press-direct)",
+      "shots": [
+        5,
+        4
+      ],
+      "possPress": 49,
+      "buildUps": 79,
+      "pressedBuildUps": 62,
+      "pressedOutcome": {
+        "lostOwnThird": 5,
+        "shortEscape": 13,
+        "longRelease": 60,
+        "reachedFinalThird": 15,
+        "shot": 2
+      },
+      "isolatedPressPct": 21,
+      "coveredPressPct": 75,
+      "highPressFrames": 1181,
+      "longBalls": 261,
+      "longUnderPressure": 212,
+      "longToTarget": 160,
+      "secondBallWonPct": 66,
+      "deadAfterLong": 37,
+      "supportAtLanding": 1.3,
+      "oppAtLanding": 1.1,
+      "freeReceiverFinalThirdPct": {
+        "direct": 76,
+        "press": 73
+      },
+      "counterpress": {
+        "starts": 137,
+        "regain": 28,
+        "broken": 95,
+        "bypassed": 9,
+        "expired": 4,
+        "isolatedStart": 65,
+        "regainSecs": 51,
+        "regainPct": 20
+      },
+      "recoverySecs": 0.6,
+      "slowRecoveries": 2,
+      "blockOver40mPct": 29,
+      "longKinds": {
+        "long": 160,
+        "clear": 101
+      },
+      "directPasses": 836,
+      "directLongStat": 160,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 33,
+          "x": 52.3,
+          "y": 61.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 2,
+          "t": 85,
+          "x": 29.5,
+          "y": 87.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 4,
+          "t": 228,
+          "x": 36.1,
+          "y": 82.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 10,
+          "t": 591.5,
+          "x": 26.2,
+          "y": 87.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 16,
+          "t": 925,
+          "x": 19.9,
+          "y": 86.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 23,
+          "t": 1365.5,
+          "x": 29.1,
+          "y": 84.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 24,
+          "t": 1440,
+          "x": 21.2,
+          "y": 86.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 25,
+          "t": 1473.5,
+          "x": 34.5,
+          "y": 56.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 27,
+          "t": 1597.5,
+          "x": 47.7,
+          "y": 84.6
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 29,
+          "t": 1715,
+          "x": 27.7,
+          "y": 20.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 32,
+          "t": 1873,
+          "x": 53.8,
+          "y": 66.1
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 34,
+          "t": 1998,
+          "x": 19.7,
+          "y": 18.8
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 1ST",
+      "seed": 20261022,
+      "swap": false,
+      "score": "1-1 (press-direct)",
+      "shots": [
+        4,
+        1
+      ],
+      "possPress": 71,
+      "buildUps": 54,
+      "pressedBuildUps": 40,
+      "pressedOutcome": {
+        "lostOwnThird": 6,
+        "shortEscape": 5,
+        "longRelease": 37,
+        "reachedFinalThird": 4,
+        "shot": 0
+      },
+      "isolatedPressPct": 12,
+      "coveredPressPct": 87,
+      "highPressFrames": 471,
+      "longBalls": 160,
+      "longUnderPressure": 141,
+      "longToTarget": 81,
+      "secondBallWonPct": 61,
+      "deadAfterLong": 17,
+      "supportAtLanding": 1.1,
+      "oppAtLanding": 1.4,
+      "freeReceiverFinalThirdPct": {
+        "direct": 62,
+        "press": 81
+      },
+      "counterpress": {
+        "starts": 116,
+        "regain": 17,
+        "broken": 92,
+        "bypassed": 4,
+        "expired": 5,
+        "isolatedStart": 65,
+        "regainSecs": 32.5,
+        "regainPct": 15
+      },
+      "recoverySecs": 0.3,
+      "slowRecoveries": 1,
+      "blockOver40mPct": 37,
+      "longKinds": {
+        "long": 81,
+        "clear": 79
+      },
+      "directPasses": 430,
+      "directLongStat": 81,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 2,
+          "t": 71.5,
+          "x": 48.4,
+          "y": 22.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 8,
+          "t": 461.5,
+          "x": 28.1,
+          "y": 21.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 26,
+          "t": 1528.5,
+          "x": 19.1,
+          "y": 22.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 37,
+          "t": 2171.5,
+          "x": 24,
+          "y": 21.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 38,
+          "t": 2234,
+          "x": 27.4,
+          "y": 18.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 47,
+          "t": 2816,
+          "x": 42.7,
+          "y": 16.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 51,
+          "t": 3024,
+          "x": 58.2,
+          "y": 60.2
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 51,
+          "t": 3027,
+          "x": 36.1,
+          "y": 80.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 55,
+          "t": 3288,
+          "x": 28.3,
+          "y": 23.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 61,
+          "t": 3624,
+          "x": 37.7,
+          "y": 18.6
+        },
+        {
+          "k": "isolated-presser",
+          "min": 61,
+          "t": 3632.5,
+          "x": 43.2,
+          "y": 20.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 71,
+          "t": 4254.5,
+          "x": 38.4,
+          "y": 19.8
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 1ST (swapped)",
+      "seed": 20261022,
+      "swap": true,
+      "score": "0-0 (press-direct)",
+      "shots": [
+        7,
+        2
+      ],
+      "possPress": 71,
+      "buildUps": 46,
+      "pressedBuildUps": 29,
+      "pressedOutcome": {
+        "lostOwnThird": 1,
+        "shortEscape": 8,
+        "longRelease": 26,
+        "reachedFinalThird": 8,
+        "shot": 0
+      },
+      "isolatedPressPct": 14,
+      "coveredPressPct": 85,
+      "highPressFrames": 467,
+      "longBalls": 173,
+      "longUnderPressure": 157,
+      "longToTarget": 100,
+      "secondBallWonPct": 59,
+      "deadAfterLong": 21,
+      "supportAtLanding": 1.3,
+      "oppAtLanding": 1.1,
+      "freeReceiverFinalThirdPct": {
+        "direct": 83,
+        "press": 65
+      },
+      "counterpress": {
+        "starts": 96,
+        "regain": 11,
+        "broken": 74,
+        "bypassed": 1,
+        "expired": 5,
+        "isolatedStart": 44,
+        "regainSecs": 19,
+        "regainPct": 11
+      },
+      "recoverySecs": 0.1,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 34,
+      "longKinds": {
+        "long": 100,
+        "clear": 73
+      },
+      "directPasses": 431,
+      "directLongStat": 100,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 11,
+          "x": 42.2,
+          "y": 77.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 5,
+          "t": 242.5,
+          "x": 43,
+          "y": 83.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 7,
+          "t": 410,
+          "x": 31.3,
+          "y": 84.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 16,
+          "t": 958,
+          "x": 18.4,
+          "y": 88.9
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 28,
+          "t": 1622.5,
+          "x": 27.8,
+          "y": 20.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 39,
+          "t": 2319,
+          "x": 19.9,
+          "y": 62.8
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 40,
+          "t": 2381,
+          "x": 18.2,
+          "y": 102.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 45,
+          "t": 2699.5,
+          "x": 27.9,
+          "y": 93
+        },
+        {
+          "k": "isolated-presser",
+          "min": 58,
+          "t": 3449.5,
+          "x": 14.8,
+          "y": 50.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 58,
+          "t": 3471,
+          "x": 25.2,
+          "y": 84.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 58,
+          "t": 3475,
+          "x": 46.9,
+          "y": 95.9
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 59,
+          "t": 3499.5,
+          "x": 29.8,
+          "y": 23.7
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 2ST",
+      "seed": 20261022,
+      "swap": false,
+      "score": "0-2 (press-direct)",
+      "shots": [
+        6,
+        5
+      ],
+      "possPress": 62,
+      "buildUps": 60,
+      "pressedBuildUps": 40,
+      "pressedOutcome": {
+        "lostOwnThird": 1,
+        "shortEscape": 2,
+        "longRelease": 38,
+        "reachedFinalThird": 10,
+        "shot": 2
+      },
+      "isolatedPressPct": 15,
+      "coveredPressPct": 82,
+      "highPressFrames": 602,
+      "longBalls": 242,
+      "longUnderPressure": 199,
+      "longToTarget": 158,
+      "secondBallWonPct": 69,
+      "deadAfterLong": 32,
+      "supportAtLanding": 1.4,
+      "oppAtLanding": 1.4,
+      "freeReceiverFinalThirdPct": {
+        "direct": 88,
+        "press": 78
+      },
+      "counterpress": {
+        "starts": 121,
+        "regain": 11,
+        "broken": 103,
+        "bypassed": 7,
+        "expired": 4,
+        "isolatedStart": 77,
+        "regainSecs": 16.5,
+        "regainPct": 9
+      },
+      "recoverySecs": 0.4,
+      "slowRecoveries": 1,
+      "blockOver40mPct": 46,
+      "longKinds": {
+        "long": 158,
+        "clear": 84
+      },
+      "directPasses": 596,
+      "directLongStat": 158,
+      "events": [
+        {
+          "k": "free-receiver-P",
+          "min": 1,
+          "t": 44.5,
+          "x": 38.2,
+          "y": 24.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 59.5,
+          "x": 16.1,
+          "y": 10.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 5,
+          "t": 243,
+          "x": 45.4,
+          "y": 16.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 5,
+          "t": 244.5,
+          "x": 39.6,
+          "y": 17.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 5,
+          "t": 246,
+          "x": 49.4,
+          "y": 18.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 24,
+          "t": 1413.5,
+          "x": 22.3,
+          "y": 10.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 31,
+          "t": 1856.5,
+          "x": 5.5,
+          "y": 36.4
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 34,
+          "t": 1997.5,
+          "x": 17.7,
+          "y": 92.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 39,
+          "t": 2282.5,
+          "x": 33.8,
+          "y": 24.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 40,
+          "t": 2347.5,
+          "x": 21.5,
+          "y": 36.6
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 43,
+          "t": 2540.5,
+          "x": 25.3,
+          "y": 89.7
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 43,
+          "t": 2552,
+          "x": 41.6,
+          "y": 84.4
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 2ST (swapped)",
+      "seed": 20261022,
+      "swap": true,
+      "score": "0-1 (press-direct)",
+      "shots": [
+        4,
+        5
+      ],
+      "possPress": 60,
+      "buildUps": 52,
+      "pressedBuildUps": 31,
+      "pressedOutcome": {
+        "lostOwnThird": 0,
+        "shortEscape": 7,
+        "longRelease": 30,
+        "reachedFinalThird": 11,
+        "shot": 1
+      },
+      "isolatedPressPct": 15,
+      "coveredPressPct": 83,
+      "highPressFrames": 618,
+      "longBalls": 236,
+      "longUnderPressure": 189,
+      "longToTarget": 157,
+      "secondBallWonPct": 68,
+      "deadAfterLong": 36,
+      "supportAtLanding": 1.3,
+      "oppAtLanding": 1.1,
+      "freeReceiverFinalThirdPct": {
+        "direct": 73,
+        "press": 76
+      },
+      "counterpress": {
+        "starts": 126,
+        "regain": 14,
+        "broken": 102,
+        "bypassed": 8,
+        "expired": 2,
+        "isolatedStart": 66,
+        "regainSecs": 28,
+        "regainPct": 11
+      },
+      "recoverySecs": 0.4,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 47,
+      "longKinds": {
+        "long": 157,
+        "clear": 79
+      },
+      "directPasses": 623,
+      "directLongStat": 157,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 13,
+          "x": 44.4,
+          "y": 75.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 3,
+          "t": 159,
+          "x": 31.3,
+          "y": 89.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 9,
+          "t": 502,
+          "x": 36.7,
+          "y": 83.9
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 11,
+          "t": 657.5,
+          "x": 35.8,
+          "y": 24.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 17,
+          "t": 960.5,
+          "x": 34,
+          "y": 82.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 25,
+          "t": 1445.5,
+          "x": 57,
+          "y": 94.2
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 34,
+          "t": 2000,
+          "x": 33.4,
+          "y": 18.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 34,
+          "t": 2014,
+          "x": 13.4,
+          "y": 78.8
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 34,
+          "t": 2024,
+          "x": 42.5,
+          "y": 21.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 40,
+          "t": 2351.5,
+          "x": 49.1,
+          "y": 83.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 53,
+          "t": 3156.5,
+          "x": 23.9,
+          "y": 51.1
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 56,
+          "t": 3354.5,
+          "x": 29.3,
+          "y": 14.7
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 1ST",
+      "seed": 20261023,
+      "swap": false,
+      "score": "7-1 (press-direct)",
+      "shots": [
+        27,
+        1
+      ],
+      "possPress": 71,
+      "buildUps": 85,
+      "pressedBuildUps": 56,
+      "pressedOutcome": {
+        "lostOwnThird": 3,
+        "shortEscape": 5,
+        "longRelease": 54,
+        "reachedFinalThird": 10,
+        "shot": 0
+      },
+      "isolatedPressPct": 31,
+      "coveredPressPct": 66,
+      "highPressFrames": 660,
+      "longBalls": 164,
+      "longUnderPressure": 134,
+      "longToTarget": 55,
+      "secondBallWonPct": 48,
+      "deadAfterLong": 18,
+      "supportAtLanding": 1.1,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 75,
+        "press": 66
+      },
+      "counterpress": {
+        "starts": 119,
+        "regain": 21,
+        "broken": 73,
+        "bypassed": 1,
+        "expired": 5,
+        "isolatedStart": 60,
+        "regainSecs": 25,
+        "regainPct": 18
+      },
+      "recoverySecs": 0.2,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 30,
+      "longKinds": {
+        "clear": 109,
+        "long": 54,
+        "fk:long": 1
+      },
+      "directPasses": 369,
+      "directLongStat": 55,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 4,
+          "t": 186,
+          "x": 35.5,
+          "y": 20.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 7,
+          "t": 416,
+          "x": 40.2,
+          "y": 12.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 9,
+          "t": 482,
+          "x": 40.4,
+          "y": 21.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 11,
+          "t": 618.5,
+          "x": 20.4,
+          "y": 19.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 11,
+          "t": 649,
+          "x": 24.8,
+          "y": 23.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 18,
+          "t": 1065.5,
+          "x": 18.9,
+          "y": 14.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 21,
+          "t": 1218,
+          "x": 51.4,
+          "y": 10
+        },
+        {
+          "k": "isolated-presser",
+          "min": 22,
+          "t": 1266,
+          "x": 63.7,
+          "y": 14.6
+        },
+        {
+          "k": "isolated-presser",
+          "min": 24,
+          "t": 1410.5,
+          "x": 56.8,
+          "y": 37.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 27,
+          "t": 1586,
+          "x": 42.3,
+          "y": 21.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 30,
+          "t": 1748.5,
+          "x": 37.9,
+          "y": 16.7
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 30,
+          "t": 1766.5,
+          "x": 38.1,
+          "y": 85.8
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 1ST (swapped)",
+      "seed": 20261023,
+      "swap": true,
+      "score": "0-0 (press-direct)",
+      "shots": [
+        5,
+        2
+      ],
+      "possPress": 76,
+      "buildUps": 75,
+      "pressedBuildUps": 49,
+      "pressedOutcome": {
+        "lostOwnThird": 2,
+        "shortEscape": 0,
+        "longRelease": 49,
+        "reachedFinalThird": 8,
+        "shot": 1
+      },
+      "isolatedPressPct": 26,
+      "coveredPressPct": 73,
+      "highPressFrames": 509,
+      "longBalls": 138,
+      "longUnderPressure": 116,
+      "longToTarget": 42,
+      "secondBallWonPct": 42,
+      "deadAfterLong": 27,
+      "supportAtLanding": 1.1,
+      "oppAtLanding": 1.4,
+      "freeReceiverFinalThirdPct": {
+        "direct": 67,
+        "press": 67
+      },
+      "counterpress": {
+        "starts": 116,
+        "regain": 21,
+        "broken": 80,
+        "bypassed": 0,
+        "expired": 3,
+        "isolatedStart": 69,
+        "regainSecs": 35,
+        "regainPct": 18
+      },
+      "recoverySecs": 0.2,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 34,
+      "longKinds": {
+        "clear": 96,
+        "long": 42
+      },
+      "directPasses": 291,
+      "directLongStat": 42,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 12,
+          "x": 48.9,
+          "y": 78.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 2,
+          "t": 75,
+          "x": 26.8,
+          "y": 100.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 9,
+          "t": 493,
+          "x": 29.9,
+          "y": 101.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 15,
+          "t": 877.5,
+          "x": 34.5,
+          "y": 92.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 21,
+          "t": 1256.5,
+          "x": 27.4,
+          "y": 83
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 24,
+          "t": 1421,
+          "x": 35.1,
+          "y": 92.7
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 35,
+          "t": 2048,
+          "x": 36.2,
+          "y": 5.6
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 39,
+          "t": 2335,
+          "x": 39.9,
+          "y": 23.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 40,
+          "t": 2343.5,
+          "x": 33.8,
+          "y": 90.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 44,
+          "t": 2625,
+          "x": 33.6,
+          "y": 95.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 53,
+          "t": 3142.5,
+          "x": 47.1,
+          "y": 84.8
+        },
+        {
+          "k": "isolated-presser",
+          "min": 57,
+          "t": 3365.5,
+          "x": 13.5,
+          "y": 81.9
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 2ST",
+      "seed": 20261023,
+      "swap": false,
+      "score": "4-0 (press-direct)",
+      "shots": [
+        29,
+        4
+      ],
+      "possPress": 67,
+      "buildUps": 93,
+      "pressedBuildUps": 63,
+      "pressedOutcome": {
+        "lostOwnThird": 2,
+        "shortEscape": 3,
+        "longRelease": 60,
+        "reachedFinalThird": 14,
+        "shot": 2
+      },
+      "isolatedPressPct": 28,
+      "coveredPressPct": 68,
+      "highPressFrames": 739,
+      "longBalls": 167,
+      "longUnderPressure": 135,
+      "longToTarget": 63,
+      "secondBallWonPct": 45,
+      "deadAfterLong": 26,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.4,
+      "freeReceiverFinalThirdPct": {
+        "direct": 50,
+        "press": 69
+      },
+      "counterpress": {
+        "starts": 123,
+        "regain": 19,
+        "broken": 83,
+        "bypassed": 6,
+        "expired": 5,
+        "isolatedStart": 61,
+        "regainSecs": 31.5,
+        "regainPct": 15
+      },
+      "recoverySecs": 0.5,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 36,
+      "longKinds": {
+        "clear": 104,
+        "long": 63
+      },
+      "directPasses": 458,
+      "directLongStat": 63,
+      "events": [
+        {
+          "k": "free-receiver-P",
+          "min": 1,
+          "t": 44.5,
+          "x": 43,
+          "y": 22.6
+        },
+        {
+          "k": "isolated-presser",
+          "min": 2,
+          "t": 72,
+          "x": 18.8,
+          "y": 59.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 9,
+          "t": 503.5,
+          "x": 33.4,
+          "y": 10.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 9,
+          "t": 505,
+          "x": 23.1,
+          "y": 14.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 9,
+          "t": 512.5,
+          "x": 18.2,
+          "y": 19.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 9,
+          "t": 536.5,
+          "x": 23.4,
+          "y": 21.5
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 13,
+          "t": 774.5,
+          "x": 26.5,
+          "y": 82.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 14,
+          "t": 785.5,
+          "x": 30.7,
+          "y": 21.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 21,
+          "t": 1256.5,
+          "x": 34,
+          "y": 8.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 23,
+          "t": 1353,
+          "x": 41.4,
+          "y": 3.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 26,
+          "t": 1556.5,
+          "x": 61.8,
+          "y": 40.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 29,
+          "t": 1700.5,
+          "x": 33.8,
+          "y": 9.2
+        }
+      ]
+    },
+    {
+      "scenario": "press 1ST v direct 2ST (swapped)",
+      "seed": 20261023,
+      "swap": true,
+      "score": "3-0 (press-direct)",
+      "shots": [
+        16,
+        3
+      ],
+      "possPress": 62,
+      "buildUps": 75,
+      "pressedBuildUps": 53,
+      "pressedOutcome": {
+        "lostOwnThird": 2,
+        "shortEscape": 5,
+        "longRelease": 51,
+        "reachedFinalThird": 13,
+        "shot": 2
+      },
+      "isolatedPressPct": 27,
+      "coveredPressPct": 69,
+      "highPressFrames": 850,
+      "longBalls": 188,
+      "longUnderPressure": 145,
+      "longToTarget": 87,
+      "secondBallWonPct": 54,
+      "deadAfterLong": 23,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.2,
+      "freeReceiverFinalThirdPct": {
+        "direct": 100,
+        "press": 57
+      },
+      "counterpress": {
+        "starts": 120,
+        "regain": 15,
+        "broken": 93,
+        "bypassed": 6,
+        "expired": 12,
+        "isolatedStart": 63,
+        "regainSecs": 16,
+        "regainPct": 13
+      },
+      "recoverySecs": 0.3,
+      "slowRecoveries": 1,
+      "blockOver40mPct": 34,
+      "longKinds": {
+        "long": 87,
+        "clear": 101
+      },
+      "directPasses": 578,
+      "directLongStat": 87,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 13,
+          "x": 35.6,
+          "y": 84.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 4,
+          "t": 223.5,
+          "x": 33.8,
+          "y": 102.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 6,
+          "t": 311,
+          "x": 15.3,
+          "y": 68.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 9,
+          "t": 496.5,
+          "x": 26.7,
+          "y": 86.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 14,
+          "t": 798,
+          "x": 23.9,
+          "y": 93.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 14,
+          "t": 807,
+          "x": 20.6,
+          "y": 89.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 17,
+          "t": 985.5,
+          "x": 29.1,
+          "y": 81.2
+        },
+        {
+          "k": "isolated-presser",
+          "min": 22,
+          "t": 1266,
+          "x": 30.2,
+          "y": 83.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 23,
+          "t": 1348,
+          "x": 33.8,
+          "y": 93.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 27,
+          "t": 1604.5,
+          "x": 45.9,
+          "y": 92.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 29,
+          "t": 1725,
+          "x": 17,
+          "y": 85.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 38,
+          "t": 2222,
+          "x": 22.8,
+          "y": 79.2
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 1ST",
+      "seed": 20261023,
+      "swap": false,
+      "score": "3-0 (press-direct)",
+      "shots": [
+        17,
+        2
+      ],
+      "possPress": 79,
+      "buildUps": 40,
+      "pressedBuildUps": 30,
+      "pressedOutcome": {
+        "lostOwnThird": 0,
+        "shortEscape": 2,
+        "longRelease": 29,
+        "reachedFinalThird": 10,
+        "shot": 0
+      },
+      "isolatedPressPct": 15,
+      "coveredPressPct": 81,
+      "highPressFrames": 381,
+      "longBalls": 126,
+      "longUnderPressure": 108,
+      "longToTarget": 64,
+      "secondBallWonPct": 54,
+      "deadAfterLong": 13,
+      "supportAtLanding": 1.1,
+      "oppAtLanding": 1.2,
+      "freeReceiverFinalThirdPct": {
+        "direct": 90,
+        "press": 59
+      },
+      "counterpress": {
+        "starts": 67,
+        "regain": 5,
+        "broken": 59,
+        "bypassed": 5,
+        "expired": 1,
+        "isolatedStart": 48,
+        "regainSecs": 16.5,
+        "regainPct": 7
+      },
+      "recoverySecs": 0.2,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 35,
+      "longKinds": {
+        "long": 64,
+        "clear": 62
+      },
+      "directPasses": 302,
+      "directLongStat": 64,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 4,
+          "t": 199,
+          "x": 49.2,
+          "y": 21.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 11,
+          "t": 601,
+          "x": 8,
+          "y": 20
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 16,
+          "t": 919,
+          "x": 46.3,
+          "y": 10.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 31,
+          "t": 1801.5,
+          "x": 54.3,
+          "y": 9.6
+        },
+        {
+          "k": "isolated-presser",
+          "min": 32,
+          "t": 1914.5,
+          "x": 37.1,
+          "y": 21.9
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 37,
+          "t": 2207.5,
+          "x": 34.3,
+          "y": 82.4
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 37,
+          "t": 2217.5,
+          "x": 20.4,
+          "y": 86.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 40,
+          "t": 2383.5,
+          "x": 37.8,
+          "y": 12.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 41,
+          "t": 2401.5,
+          "x": 21.9,
+          "y": 18.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 46,
+          "t": 2727,
+          "x": 10.8,
+          "y": 74.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 50,
+          "t": 2992,
+          "x": 31.9,
+          "y": 22.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 67,
+          "t": 3991.5,
+          "x": 23.4,
+          "y": 16.4
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 1ST (swapped)",
+      "seed": 20261023,
+      "swap": true,
+      "score": "1-0 (press-direct)",
+      "shots": [
+        19,
+        2
+      ],
+      "possPress": 78,
+      "buildUps": 58,
+      "pressedBuildUps": 39,
+      "pressedOutcome": {
+        "lostOwnThird": 5,
+        "shortEscape": 2,
+        "longRelease": 33,
+        "reachedFinalThird": 8,
+        "shot": 0
+      },
+      "isolatedPressPct": 18,
+      "coveredPressPct": 79,
+      "highPressFrames": 388,
+      "longBalls": 119,
+      "longUnderPressure": 96,
+      "longToTarget": 48,
+      "secondBallWonPct": 51,
+      "deadAfterLong": 13,
+      "supportAtLanding": 1,
+      "oppAtLanding": 1.1,
+      "freeReceiverFinalThirdPct": {
+        "direct": 50,
+        "press": 59
+      },
+      "counterpress": {
+        "starts": 89,
+        "regain": 8,
+        "broken": 70,
+        "bypassed": 3,
+        "expired": 3,
+        "isolatedStart": 54,
+        "regainSecs": 16,
+        "regainPct": 9
+      },
+      "recoverySecs": 0.6,
+      "slowRecoveries": 2,
+      "blockOver40mPct": 34,
+      "longKinds": {
+        "long": 48,
+        "clear": 71
+      },
+      "directPasses": 312,
+      "directLongStat": 48,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 2,
+          "t": 87,
+          "x": 51.8,
+          "y": 92
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 4,
+          "t": 221,
+          "x": 16,
+          "y": 90.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 7,
+          "t": 402,
+          "x": 39,
+          "y": 86.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 19,
+          "t": 1139,
+          "x": 52.1,
+          "y": 84.9
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 23,
+          "t": 1343.5,
+          "x": 38.4,
+          "y": 82
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 23,
+          "t": 1345,
+          "x": 28.2,
+          "y": 82.4
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 25,
+          "t": 1497.5,
+          "x": 32.1,
+          "y": 8.1
+        },
+        {
+          "k": "isolated-presser",
+          "min": 33,
+          "t": 1924.5,
+          "x": 17.8,
+          "y": 85.5
+        },
+        {
+          "k": "isolated-presser",
+          "min": 47,
+          "t": 2803.5,
+          "x": 43.5,
+          "y": 80.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 49,
+          "t": 2928,
+          "x": 23.3,
+          "y": 87
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 70,
+          "t": 4176,
+          "x": 29,
+          "y": 81.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 71,
+          "t": 4200.5,
+          "x": 36.6,
+          "y": 82.6
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 2ST",
+      "seed": 20261023,
+      "swap": false,
+      "score": "0-0 (press-direct)",
+      "shots": [
+        14,
+        3
+      ],
+      "possPress": 71,
+      "buildUps": 79,
+      "pressedBuildUps": 57,
+      "pressedOutcome": {
+        "lostOwnThird": 3,
+        "shortEscape": 10,
+        "longRelease": 55,
+        "reachedFinalThird": 11,
+        "shot": 1
+      },
+      "isolatedPressPct": 14,
+      "coveredPressPct": 84,
+      "highPressFrames": 527,
+      "longBalls": 161,
+      "longUnderPressure": 131,
+      "longToTarget": 65,
+      "secondBallWonPct": 47,
+      "deadAfterLong": 33,
+      "supportAtLanding": 1.2,
+      "oppAtLanding": 1.3,
+      "freeReceiverFinalThirdPct": {
+        "direct": 57,
+        "press": 83
+      },
+      "counterpress": {
+        "starts": 119,
+        "regain": 13,
+        "broken": 97,
+        "bypassed": 4,
+        "expired": 11,
+        "isolatedStart": 73,
+        "regainSecs": 22,
+        "regainPct": 11
+      },
+      "recoverySecs": 0.3,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 37,
+      "longKinds": {
+        "clear": 96,
+        "long": 65
+      },
+      "directPasses": 407,
+      "directLongStat": 65,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 3,
+          "t": 147,
+          "x": 41.3,
+          "y": 20
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 17,
+          "t": 967,
+          "x": 24.7,
+          "y": 21.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 22,
+          "t": 1293.5,
+          "x": 40,
+          "y": 6.5
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 24,
+          "t": 1393.5,
+          "x": 34.9,
+          "y": 88.9
+        },
+        {
+          "k": "isolated-presser",
+          "min": 24,
+          "t": 1394.5,
+          "x": 35.4,
+          "y": 77.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 29,
+          "t": 1693.5,
+          "x": 29,
+          "y": 21.7
+        },
+        {
+          "k": "isolated-presser",
+          "min": 32,
+          "t": 1919.5,
+          "x": 27.2,
+          "y": 19.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 34,
+          "t": 1982,
+          "x": 20.4,
+          "y": 18.9
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 43,
+          "t": 2554,
+          "x": 23.5,
+          "y": 83.7
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 44,
+          "t": 2613.5,
+          "x": 34.5,
+          "y": 21.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 45,
+          "t": 2647,
+          "x": 45.1,
+          "y": 17.2
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 45,
+          "t": 2667,
+          "x": 26.8,
+          "y": 12.6
+        }
+      ]
+    },
+    {
+      "scenario": "press 2ST v direct 2ST (swapped)",
+      "seed": 20261023,
+      "swap": true,
+      "score": "4-1 (press-direct)",
+      "shots": [
+        28,
+        5
+      ],
+      "possPress": 66,
+      "buildUps": 65,
+      "pressedBuildUps": 48,
+      "pressedOutcome": {
+        "lostOwnThird": 5,
+        "shortEscape": 7,
+        "longRelease": 43,
+        "reachedFinalThird": 9,
+        "shot": 2
+      },
+      "isolatedPressPct": 14,
+      "coveredPressPct": 83,
+      "highPressFrames": 661,
+      "longBalls": 175,
+      "longUnderPressure": 133,
+      "longToTarget": 88,
+      "secondBallWonPct": 60,
+      "deadAfterLong": 23,
+      "supportAtLanding": 1.3,
+      "oppAtLanding": 1.5,
+      "freeReceiverFinalThirdPct": {
+        "direct": 61,
+        "press": 63
+      },
+      "counterpress": {
+        "starts": 103,
+        "regain": 16,
+        "broken": 75,
+        "bypassed": 8,
+        "expired": 7,
+        "isolatedStart": 52,
+        "regainSecs": 23,
+        "regainPct": 16
+      },
+      "recoverySecs": 0.5,
+      "slowRecoveries": 0,
+      "blockOver40mPct": 32,
+      "longKinds": {
+        "clear": 87,
+        "long": 88
+      },
+      "directPasses": 530,
+      "directLongStat": 88,
+      "events": [
+        {
+          "k": "isolated-presser",
+          "min": 1,
+          "t": 26,
+          "x": 29.7,
+          "y": 87.5
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 3,
+          "t": 176.5,
+          "x": 27,
+          "y": 81.4
+        },
+        {
+          "k": "isolated-presser",
+          "min": 12,
+          "t": 693,
+          "x": 12.8,
+          "y": 36.4
+        },
+        {
+          "k": "free-receiver-D",
+          "min": 12,
+          "t": 704.5,
+          "x": 19.4,
+          "y": 18.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 13,
+          "t": 751,
+          "x": 27.1,
+          "y": 87.1
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 13,
+          "t": 752.5,
+          "x": 39.9,
+          "y": 87.3
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 15,
+          "t": 890.5,
+          "x": 42.6,
+          "y": 90.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 17,
+          "t": 967.5,
+          "x": 27.3,
+          "y": 82.3
+        },
+        {
+          "k": "isolated-presser",
+          "min": 19,
+          "t": 1108.5,
+          "x": 12.7,
+          "y": 88.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 21,
+          "t": 1254,
+          "x": 32,
+          "y": 84.6
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 24,
+          "t": 1389.5,
+          "x": 47.6,
+          "y": 86.4
+        },
+        {
+          "k": "free-receiver-P",
+          "min": 28,
+          "t": 1659,
+          "x": 33.6,
+          "y": 84.8
+        }
+      ]
+    }
+  ]
+}

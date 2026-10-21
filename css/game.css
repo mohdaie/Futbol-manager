@@ -127,7 +127,7 @@ img.crest-art { object-fit: contain; max-width: none; vertical-align: middle; }
 .row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; min-height: 40px; border-bottom: 1px solid var(--line); width: 100%; min-width: 0; }
 .row:last-child { border-bottom: 0; }
 .row.sm { min-height: 32px; padding: 4px 8.5px; }
-.row.act:not(:disabled):active, .row.act:not(:disabled):hover { background: rgba(255,255,255,.04); }
+.row.act:not(:disabled):active { background: rgba(255,255,255,.04); }
 .row.sel { background: rgba(255,181,71,.12); box-shadow: inset 2.5px 0 0 var(--amber); }
 .row.me, tr.me td { background: rgba(255,181,71,.08); }
 .row.add b { color: var(--amber); }
@@ -350,14 +350,14 @@ textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; wor
 
 /* ---------- sheets & toast ---------- */
 #layer { position: fixed; inset: 0; z-index: 30; }
-.scrim { position: absolute; inset: 0; background: rgba(4,10,14,.62); animation: fade .2s; }
-.sheet { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 480px; max-height: 88%; overflow-y: auto; background: var(--stand); border: 1px solid var(--line); border-bottom: 0; border-radius: 15px 15px 0 0; padding-block: 6.5px calc(15px + env(safe-area-inset-bottom, 0px)); padding-left: max(13.5px, env(safe-area-inset-left, 0px)); padding-right: max(13.5px, env(safe-area-inset-right, 0px)); animation: up .22s ease; box-shadow: 0 -8.5px 33.5px rgba(0,0,0,.5); }
+.scrim { position: absolute; inset: 0; background: rgba(4,10,14,.62); animation: fade 180ms ease-out; }
+.sheet { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 480px; max-height: 88%; overflow-y: auto; background: var(--stand); border: 1px solid var(--line); border-bottom: 0; border-radius: 15px 15px 0 0; padding-block: 6.5px calc(15px + env(safe-area-inset-bottom, 0px)); padding-left: max(13.5px, env(safe-area-inset-left, 0px)); padding-right: max(13.5px, env(safe-area-inset-right, 0px)); animation: up 180ms var(--motion-ease); box-shadow: 0 -8.5px 33.5px rgba(0,0,0,.5); }
 .sh-body { display: flex; flex-direction: column; gap: 8.5px; }
 .grab { width: 33.5px; height: 3.5px; border-radius: 2px; background: var(--line); margin: 0 auto 6.5px; }
 .sh-x { position: absolute; top: 6.5px; right: max(8.5px, env(safe-area-inset-right, 0px)); width: 30px; height: 30px; border-radius: 15px; font-size: 20px; line-height: 1; color: var(--mute); display: grid; place-items: center; }
 .sh-t { margin: 0; padding-right: 30px; font-family: var(--f-disp); font-size: 19.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .01em; line-height: 1.05; text-wrap: balance; }
 .sh-t small { font-family: var(--f-body); font-size: 10px; color: var(--mute); text-transform: none; font-weight: 500; letter-spacing: 0; }
-@keyframes up { from { transform: translate(-50%, 25px); opacity: 0; } }
+@keyframes up { from { transform: translate(-50%,12px); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
 @keyframes fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sheet, .scrim { animation: none; } }
 .toast { position: fixed; left: 50%; bottom: calc(111px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 8.5px); z-index: 40; max-width: min(440px, calc(100% - 27px)); padding: 8.5px 12px; border-radius: 8.5px; background: var(--chalk); color: var(--night); font-weight: 600; font-size: 12px; box-shadow: 0 6.5px 20px rgba(0,0,0,.4); opacity: 0; transition: opacity .2s, transform .2s; }
@@ -738,3 +738,24 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .shape-readout { font-size: 12px; }
 .shape-readout p { margin: 6px 0; font-size: 11px; }
 .shape-readout small { font-size: 10px; opacity: .75; line-height: 1.5; }
+
+/* Shared UI motion: immediate press, short release, and quiet view changes. */
+:root { --motion-press: 80ms; --motion-enter: 160ms; --motion-ease: cubic-bezier(.2,.8,.2,1); }
+button:not(.tok) { touch-action: manipulation; transition: filter var(--motion-press) ease, background-color 120ms ease, border-color 120ms ease, transform var(--motion-press) ease; }
+button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-duration: 0s; }
+.btn:not(:disabled):active, .cta:not(:disabled):active, .chip:not(:disabled):active, .iconbtn:not(:disabled):active, .sh-x:not(:disabled):active { transform: translateY(1px); }
+@media (hover:hover) and (pointer:fine) {
+  .row.act:not(:disabled):hover { background: rgba(255,255,255,.04); }
+  button:not(.tok):not(:disabled):hover { filter: brightness(1.1); }
+  button:not(.tok):not(:disabled):active { filter: brightness(.86); }
+}
+.ui-enter { animation: uiEnter var(--motion-enter) var(--motion-ease); }
+@keyframes uiEnter { from { opacity: .65; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.sheet-exit { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+.sheet-exit .sheet, .sheet-exit .scrim { animation: none; }
+.toast { transition: opacity 160ms ease, transform 160ms var(--motion-ease); }
+@media (prefers-reduced-motion:reduce) {
+  button:not(.tok), .tok, .toast, .pbar i { transition: none; }
+  .ui-enter, .sheet, .scrim, .feed li, .dr-cal.flip { animation: none; }
+  .btn:not(:disabled):active, .cta:not(:disabled):active, .chip:not(:disabled):active, .iconbtn:not(:disabled):active, .sh-x:not(:disabled):active { transform: none; }
+}

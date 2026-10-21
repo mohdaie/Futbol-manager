@@ -1,0 +1,16 @@
+0s blue(press) MC on the ball, middle third, left half-space; within 12 m: blue 2, red 3
+1s ball in the air, middle third, centre; within 12 m: blue 3, red 3
+2s ball in the air, red's attacking third, right half-space; within 12 m: blue 4, red 0
+3s blue(press) DR on the ball, red's attacking third, right wing; within 12 m: blue 3, red 0
+4s blue(press) DM on the ball, red's attacking third, right half-space; within 12 m: blue 4, red 3
+5s blue(press) MC on the ball, red's attacking third, right wing; within 12 m: blue 3, red 3
+6s ball in the air, middle third, right half-space; within 12 m: blue 3, red 2
+7s ball in the air, middle third, right half-space; within 12 m: blue 0, red 1
+8s red(direct) DC on the ball, red's defensive third, centre; within 12 m: blue 1, red 4
+9s red(direct) DC on the ball, red's defensive third, centre; within 12 m: blue 2, red 4
+10s red(direct) MC on the ball, red's defensive third, right half-space; within 12 m: blue 3, red 3
+11s ground pass, red's defensive third, centre; within 12 m: blue 0, red 1
+12s ground pass, red's defensive third, centre; within 12 m: blue 0, red 1
+13s red(direct) GK on the ball, red's defensive third, centre; within 12 m: blue 0, red 1
+14s ground pass, red's defensive third, centre; within 12 m: blue 1, red 2
+15s red(direct) DC on the ball, red's defensive third, centre; within 12 m: blue 1, red 1

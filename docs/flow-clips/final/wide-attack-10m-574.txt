@@ -1,0 +1,16 @@
+0s restart thr, red's defensive third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+1s restart thr, red's defensive third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+2s restart thr, red's defensive third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+3s restart thr, red's defensive third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+4s restart thr, red's defensive third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+5s restart thr, red's defensive third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+6s blue(press) DL on the ball, red's defensive third, left wing; within 12 m: blue 2, red 1; blue attackers in the box: 1
+7s loose ball, red's defensive third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+8s blue(press) DL on the ball, red's defensive third, left wing; within 12 m: blue 2, red 1; blue attackers in the box: 1
+9s ball in the air, red's defensive third, left half-space; within 12 m: blue 2, red 2; red attackers in the box: 0
+10s ball in the air, red's defensive third, centre; within 12 m: blue 4, red 3; red attackers in the box: 0
+11s red(direct) GK on the ball, red's defensive third, left half-space; within 12 m: blue 3, red 2; red attackers in the box: 0
+12s ground pass, red's defensive third, left half-space; within 12 m: blue 3, red 4; red attackers in the box: 0
+13s red(direct) MR on the ball, red's defensive third, left wing; within 12 m: blue 1, red 2; red attackers in the box: 0
+14s red(direct) MR on the ball, red's defensive third, left wing; within 12 m: blue 0, red 2; red attackers in the box: 0
+15s red(direct) MC on the ball, red's defensive third, left half-space; within 12 m: blue 3, red 2; red attackers in the box: 0

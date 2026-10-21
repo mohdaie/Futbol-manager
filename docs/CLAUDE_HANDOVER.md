@@ -274,3 +274,69 @@ this as an unresolved attacking/defensive interaction to investigate before rele
 do not tune style win rates or silently adjust ENG to hide it.
 This remains a diagnostic, not calibrated league output. Full report:
 `docs/engine-qa/transitions-batch.json`.
+
+## Session update (Claude, 21 October 2026, branch `ccr-063c99f1-fomx5n`, based on PR #40 head `e81b69c`)
+
+1. **Jev-led loop implemented and verified with genuine replies.** `js/systems/jev-lead.js`,
+   `scripts/jev-lead.cjs`, `tests/jev-lead.cjs` (14 mocked contract checks), `.github/workflows/jev-decide.yml`.
+   Commit a proposal JSON under `docs/engine-qa/proposals/` and push: Actions asks Jev with the owner's secret
+   and prints `JEV_DECISION_RECORD`; commit the record to `docs/engine-qa/decisions/`. Decision proposals carry
+   options + candidate criteria (Jev picks the option and marks each criterion require/optional/drop);
+   acceptance proposals carry before/after evidence with `after.checks` (Jev: accept/revise/investigate).
+   Unavailable, invalid or under-0.6 answers are **pending** (no local fallback); accept with a failing check
+   is a **conflict**.
+2. **Match-flow scenarios**: `scripts/flow-scenarios.cjs` (gegenpress v long ball, 1/2 strikers each side,
+   swapped sides, seeds; 24 matches in ~45 s), instrumentation `scripts/flow-scan.js`, clips from the engine's
+   own frames `scripts/flow-clips.cjs` (needs ffmpeg). Baseline `docs/engine-qa/flow-baseline.json`, clips in
+   `docs/flow-clips/`.
+3. **Decisions so far (all genuine):** flow-001 pending (direct_outlets 0.35) -> more evidence -> flow-002
+   decided **direct_outlets** (0.81). Implemented (`directOutlet`, `secondBallSupport`, `aerialContest` in
+   sim.js). flow-003 acceptance: **revise** (0.88). After: clearances 108 -> 32, isolated counter-press starts
+   54% -> 27%, landing support 1.2 -> 2.3, regression 9/9 suites pass; still missing: long passes 174/match
+   (target 50-90; mostly middle third under pressure after second balls), support 2.3 (2.5), short escapes
+   15% (20%), second balls won 74% (real nearer 50%). `docs/engine-qa/flow-after-direct-outlets.json`.
+   **Next:** the revision of direct_outlets, then resubmit flow-004 for acceptance.
+4. **Later rounds (all genuine Jev replies):** flow-004 acceptance of direct_outlets revision 1: **revise** (0.64).
+   flow-005 (first **blind** proposal): Jev chose **fix_pass_volume** (0.85), requiring long passes 50-90 and
+   escapes 20%; four criteria it was unsure of stay pending. Root cause found: ball in play 90 of 95 minutes
+   (real 55-58) because restarts took 3-10 s and the ball rarely left the pitch. Implemented real restart times
+   (`restartWait()`), proper deflections, blocked crosses for corners, putting it out under touchline pressure.
+   Result: passes/team 1137 -> 912, ball in play 90 -> 72 min, throw-ins 13 -> 21, corners 3.5 -> 5.8, escapes
+   13% -> 17%, long passes 182 -> 155, all 9 suites pass. Slower decisions were tested and rejected (escapes
+   collapse). flow-006 acceptance: **revise** (0.94).
+   Jev loop changes: blind proposals (`blind: true`), criteria under 0.6 confidence stay pending, clip timelines
+   (`.txt` next to each clip, `clips` in proposals). **Next:** the ball still leaves play too rarely (21 throw-ins v
+   about 40-45, corners 5.8 v 10) and the possession side still makes ~1270 passes; then resubmit for acceptance.
+
+## Session update 2 (Claude, owner decides; Jev paused by the owner)
+
+The owner took Jev out of the loop ("I trust your judgement") and set the rule now written as rulebook **11c**:
+every change starts from a rulebook section; statistics only check (and calibrate league averages at the end).
+
+Rulebook additions: **1b** ball in and out of play, **3.10** individual tempo, **4.9** loose and second balls,
+**7.2** when/how the box fills, **7.4** the wide player's decision, **11c** how the rulebook is used.
+
+Engine changes (sim.js), each from its section:
+- 1b: real restart dead time (`restartWait()`), goal celebration 35 s, deflections off tackles/interceptions,
+  blocked crosses (mostly corners), mishit/overhit balls and heavy touches by technique and pressure, putting it out
+  under touchline pressure. Ball in play ~70 min (was 90).
+- 3.10: unpressed (nobody within 10 m) in the middle/final third: a touch and a look (1.2-1.8 s); build-up keeps
+  its tempo; under pressure quick.
+- 4.9: loose balls: a pass is only its receiver's while he can still get there first; landed long balls are loose
+  (both sides go) - fixed a 2-second "nobody goes" bug in `chase()`.
+- 7.2: `boxPlan()` near post / far post / penalty spot / edge from non-rest-defence attackers as soon as the ball
+  is wide in the attacking half; runners hold onside then `attackTheBox()` when the cross is struck; the cross is
+  aimed at a space a runner attacks; box runs are sprints; re-read every second near the box.
+- 7.1/7.4: cut-back preference from the byline; Winger down the line to the byline then cut-back; Inside Forward /
+  Inverted Winger cut inside (stronger foot); cross when runners are attacking the box.
+- 9.5 (earlier): `directOutlet()`, `secondBallSupport()`, `aerialContest()`.
+- Final calibration (rulebook 12.8, league averages only): `ENG.keepShot` 0.12, `ENG.xg` 1.1.
+
+League (browser, 150 matches): goals 2.73, shots 20.0, on target 6.7, corners 8.3, fouls 24.1, yellows 3.5,
+penalties 0.17, home/draw 42%/27%. 12 suites pass (defending, transitions, intent, engine-qa, jev-lead, audit
+--strict, 12-match --strict, shape, live, navigation, deals, mood).
+
+Clips: `docs/flow-clips/final/` (+ `.txt` timelines), showreel `docs/flow-clips/final-showreel.mp4`.
+
+Known gaps (next, from the rulebook): box at cross arrival averages 1.6 attackers (7.2 says 3+: the late 8 from
+deep); passes per team ~750 (real ~450-550); offsides ~1.7 (real ~4); match simulation ~0.55 s in a browser.

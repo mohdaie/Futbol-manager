@@ -52,6 +52,23 @@ Lines come from the penalty box (40.3 m wide) and the 6-yard box (18.3 m wide).
 
 ---
 
+## 1b. The ball in and out of play
+
+A real match is not 90 minutes of play. The ball is in play for only about **55-58 minutes** (Premier League);
+the rest is restarts, goals, fouls, injuries and substitutions. This sets the rhythm of the game.
+
+- **Restarts take real time:** throw-in about 10-15 s, goal kick 20-25 s, corner 25-30 s, free kick about 15-20 s
+  (25-35 s near goal with a wall), penalty about a minute, a goal and kick-off 45-60 s.
+- **Why the ball goes out:** deflections off tackles and blocks; mishit and overhit passes, long balls and crosses;
+  blocked crosses (usually behind for a corner); heavy first touches near the line; a defender pressed on the
+  touchline putting it out on purpose. A clean pass to a team-mate does not go out.
+- **How often (per match, approximately):** 40-45 throw-ins, 16-18 goal kicks, about 10 corners, 22-25 fouls.
+- How likely a mishit or a heavy touch is depends on the player's technique (Passing, Crossing, First Touch) and on
+  pressure; good players under no pressure rarely give the ball away.
+
+**You should see:** play stopping and restarting like a real match, with the ball going out mostly from
+contested, hurried or overhit balls.
+
 ## 2. Phases of the game
 
 The team is always in one phase. The phase decides the shape and what the ball carrier looks for.
@@ -102,7 +119,11 @@ These hold in every style; styles change the numbers, not the principles.
    the man who just passed it is a **one-two**, used to get past someone, not a habit.
 9. **Momentum.** After a forward pass that breaks a line, the next actions continue forward (turn, carry,
    combine, runners go past). Going back right after breaking a line is the exception (receiver closed down).
-10. **Patience in the box.** In chance creation, don't shoot from poor positions if a better chance can be
+10. **Individual tempo: scan, touch, play.** A player with nobody within about 10 m, in the middle or final third,
+    takes a touch and looks up before passing (about 1.5 s): it lets runs develop. When a press is coming he plays
+    early (one or two touches); under pressure he plays quickly to the free man. In build-up against a press the
+    team keeps a quick tempo. Decisions and Composure decide how well he judges which is which.
+11. **Patience in the box.** In chance creation, don't shoot from poor positions if a better chance can be
     made; but **a clear chance (inside the box, unmarked, decent angle) is always taken**.
 
 **You should see:** a clear attacking structure (five lanes filled near goal), the ball moving forward in phases,
@@ -128,6 +149,10 @@ switches of play, triangles around the ball, and players staying back as rest de
    trap.
 8. **Box defending.** In the low block the box is defended zonally (near post, 6-yard box, penalty spot, far post)
    plus marking of runners; the 6 protects the edge of the box (Zone 14 and cut-backs).
+
+9. **Loose and second balls.** A loose ball (a deflection, a miscontrol, a long ball that has landed, a pass that
+   has missed its man) is attacked at once by the nearest player of each side; the first there wins it, the next
+   ones get close for the second ball. A pass only belongs to its receiver while he can still get to it first.
 
 **You should see:** two or three tight lines that slide together, the far side tucked in, the centre closed,
 one man pressing the ball with another covering, the line stepping up when the ball goes back.
@@ -251,11 +276,25 @@ inverting by role.
 6. **Long shots** from outside the box: low quality; taken when the block is deep and set, by good long shooters.
 
 ### 7.2 Filling the box on a wide attack (minimum three)
-- **Near post:** the 9 (or the first runner).
-- **Far post:** the far-side winger / inside forward.
-- **Penalty spot:** an 8 or 10 arriving late.
+- **Near post:** the 9 (or the first runner) attacks the front of the 6-yard box.
+- **Far post:** the far-side winger / inside forward, arriving late.
+- **Penalty spot:** an 8 or 10 arriving late, for the cut-back and the second ball.
 - **Edge of the box:** the other 8 / 10 for cut-backs and second balls.
 - Rest defence stays.
+- **When:** the box fills as soon as the ball goes wide in the attacking half: runners anticipate the cross; they
+  do not wait until the ball reaches the byline. Near the box everyone re-reads the situation every second.
+- **How:** runners hold onside on the defensive line, then attack the space as the ball is delivered (Off the
+  Ball, Anticipation). The cross is aimed at a space (near post, penalty spot, far post), not just at a man.
+
+### 7.4 The wide player's decision
+- **Cross early** (from deep or wide of the box) when two or more runners are already attacking the box and the
+  defence is not set; whipped to the near post or floated to the far post.
+- **Go to the byline and cut back** when he has beaten his man or the full-back is caught square; the cut-back goes
+  to the penalty spot or the edge.
+- **Cut inside** (Inside Forward / Inverted Winger) onto his stronger foot into the half-space to shoot or slide a
+  pass.
+- **Recycle** (back to the full-back or the 8) when the box is empty or he is double-marked; the attack is rebuilt.
+- His role, Crossing, Dribbling, Flair and Decisions decide what he chooses and how well it comes off.
 
 ### 7.3 Shooting rules
 - Inside the box, unmarked, central or half-space: **shoot** (or square to a better-placed team-mate).
@@ -399,6 +438,12 @@ Each style uses its standard routines (section 9). League targets (Premier Leagu
 - **Goal kicks:** short build-up for possession styles, long for direct and counter styles (about half of all
   goal kicks now go long).
 - **Kick-off:** played back to build (possession) or diagonally long to the winger and pressed (gegenpress).
+
+## 11c. How this rulebook is used (owner's rule)
+
+Every engine change starts from a section of this rulebook and says which one. If football needs something the
+rulebook does not cover, the rulebook is updated first. Statistics only **check** the result (and calibrate league
+averages at the end); behaviour is never changed just to move a number.
 
 ## 12. Build order (one layer at a time, each shown on the 2D before the next)
 

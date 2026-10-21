@@ -1,0 +1,33 @@
+{
+  "id": "flow-001-first-fix",
+  "kind": "decision",
+  "question": "Gegenpressing v long ball, 24 seeded matches (one/two strikers each side, sides swapped, 3 seeds). Which concrete match-flow defect should be fixed first, and which acceptance criteria are required?",
+  "evidence": {
+    "source": "scripts/flow-scenarios.cjs --seeds 3 (docs/engine-qa/flow-baseline.json); clips in docs/flow-clips from the real simulation",
+    "matches": 24,
+    "directSide": { "longPassesPerMatch": 106, "clearancesPerMatch": 108, "pressedBuildUpOutcomePct": { "lostInOwnThird": 5, "shortEscape": 12, "longRelease": 94, "reachedFinalThird": 22, "shot": 2 }, "teammatesWithin15mAtLanding": 1.2, "opponentsWithin15mAtLanding": 1.3, "secondBallWonPct": 57 },
+    "pressingSide": { "counterpressPerMatch": 114, "counterpressStartedWithUnder3NearbyPct": 54, "counterpressRegainPct": 13, "singlePresserWithoutCoverPct": 19, "blockDeeperThan40mInMiddleThirdPct": 36, "possessionPct": 68 },
+    "bothSides": { "receptionsInFinalThirdWithNoDefenderWithin4mPct": { "direct": 74, "press": 69 } },
+    "secondary": { "goalsPerMatch": 2.3 },
+    "realReference": "Approximate top-flight figures, not sourced per metric: direct teams about 60-80 long passes and 25-35 clearances per match with target man plus 2 supporting runners near the landing zone; counter-pressing teams keep the attack compact so 3-4 players can press after a loss; blocks about 30-35 m deep.",
+    "clips": ["pressed-long-clear-27m-1593.mp4", "pressed-long-long-32m-1909.mp4", "counterpress-isolated-17m-988.mp4", "counterpress-regain-33m-1967.mp4", "free-receiver-P-22m-1309.mp4", "isolated-presser-10m-575.mp4"],
+    "clipObservation": "Pressed clearances land in empty space with no direct-side runner following; when the pressing side loses the ball, only 2-3 of its players are near it and the rest are spread 25-40 m away."
+  },
+  "options": {
+    "direct_outlets": { "summary": "Direct side: aimed long balls to the target man or a runner in the channel instead of blind clearances, 2-3 support runners and second-ball midfielders moving to the landing zone, and short escapes when a free man exists (rulebook 9.5).", "tradeoffs": "Touches decision scoring for clear/long and off-ball support; may raise the direct side's attacking output." },
+    "compact_attack": { "summary": "Pressing side: keep the attack compact around the ball and rest defence in place so 3-4 players are near any loss (rulebook 5.4 steps 1-2).", "tradeoffs": "Touches attacking shape; may reduce width and change possession numbers." },
+    "final_third_marking": { "summary": "Both sides: defenders pick up and track receivers in their own defensive third (box and Zone 14 marking).", "tradeoffs": "Touches marking and tracking; may lower chances and goals." },
+    "block_compactness": { "summary": "Pressing side: keep the out-of-possession block within 30-35 m (40 m when pressing high).", "tradeoffs": "Touches line step/drop; may leave space behind." }
+  },
+  "recommendation": "direct_outlets",
+  "criteria": {
+    "clearances": "Direct side clearances at most 40 per match and long passes 50-90 per match in the same 24 scenarios.",
+    "support": "At least 2.5 direct-side teammates within 15 m of the landing point on average.",
+    "escapes": "Short escapes in at least 20% of pressed build-ups.",
+    "counterpress": "Counter-presses starting with fewer than 3 nearby players at most 30%.",
+    "marking": "Final-third receptions with no defender within 4 m at most 50% for both sides.",
+    "regression": "All existing test suites pass, all matches finish with finite positions, zero defensive assignment violations.",
+    "clips": "New clips of the same passage types show the change in the real simulation.",
+    "goals": "Goals per match between 2.0 and 3.2 (secondary signal only)."
+  }
+}

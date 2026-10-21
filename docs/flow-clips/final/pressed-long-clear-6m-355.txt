@@ -1,0 +1,14 @@
+0s ball in the air, middle third, centre; within 12 m: blue 3, red 2; red attackers in the box: 0
+1s ball in the air, middle third, left half-space; within 12 m: blue 2, red 4; red attackers in the box: 0
+2s red(direct) ST on the ball, middle third, left half-space; within 12 m: blue 4, red 4; red attackers in the box: 0
+3s red(direct) ST on the ball, middle third, left half-space; within 12 m: blue 4, red 4; red attackers in the box: 0
+4s ball in the air, middle third, left wing; within 12 m: blue 0, red 1; red attackers in the box: 0
+5s red(direct) DR on the ball, middle third, left wing; within 12 m: blue 0, red 1; red attackers in the box: 0
+6s red(direct) DR on the ball, middle third, left wing; within 12 m: blue 0, red 2; red attackers in the box: 0
+7s red(direct) ST on the ball, middle third, left wing; within 12 m: blue 2, red 3; red attackers in the box: 0
+8s restart thr, middle third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+9s restart thr, middle third, left wing; within 12 m: blue 2, red 1; red attackers in the box: 0
+10s restart thr, middle third, left wing; within 12 m: blue 2, red 2; red attackers in the box: 0
+11s restart thr, middle third, left wing; within 12 m: blue 1, red 2; red attackers in the box: 0
+12s restart thr, middle third, left wing; within 12 m: blue 1, red 2; red attackers in the box: 0
+13s restart thr, middle third, left wing; within 12 m: blue 1, red 2; red attackers in the box: 0

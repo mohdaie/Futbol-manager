@@ -1,0 +1,9 @@
+0s red(direct) MC on the ball, red's defensive third, right half-space; within 12 m: blue 2, red 1; red attackers in the box: 0
+1s red(direct) MC on the ball, red's defensive third, right half-space; within 12 m: blue 2, red 1; red attackers in the box: 0
+2s loose ball, red's defensive third, right wing; within 12 m: blue 1, red 2; red attackers in the box: 0
+3s red(direct) ML on the ball, red's defensive third, right wing; within 12 m: blue 1, red 1; red attackers in the box: 0
+4s ground pass, red's defensive third, right wing; within 12 m: blue 1, red 2; red attackers in the box: 0
+5s red(direct) DL on the ball, red's defensive third, right wing; within 12 m: blue 1, red 1; red attackers in the box: 0
+6s ball in the air, red's defensive third, right wing; within 12 m: blue 3, red 2; red attackers in the box: 0
+7s ball in the air, red's defensive third, centre; within 12 m: blue 0, red 2; red attackers in the box: 0
+8s red(direct) GK on the ball, red's defensive third, centre; within 12 m: blue 0, red 1; red attackers in the box: 0

@@ -1,0 +1,9 @@
+0s ground pass, red's defensive third, right wing; within 12 m: blue 1, red 3
+1s red(direct) DC on the ball, red's defensive third, right half-space; within 12 m: blue 0, red 1
+2s ground pass, red's defensive third, right wing; within 12 m: blue 0, red 4
+3s red(direct) MC on the ball, red's defensive third, right wing; within 12 m: blue 0, red 3
+4s ground pass, red's defensive third, right wing; within 12 m: blue 1, red 4
+5s red(direct) DC on the ball, red's defensive third, right half-space; within 12 m: blue 0, red 1
+6s ground pass, red's defensive third, right wing; within 12 m: blue 2, red 2
+7s red(direct) DL on the ball, red's defensive third, right wing; within 12 m: blue 1, red 1
+8s ball in the air, red's defensive third, right wing; within 12 m: blue 1, red 3

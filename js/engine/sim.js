@@ -39,7 +39,7 @@ function duelRoll(M, t, y, a, d, base, close = 1, S = null, O = null) {
 const COHESION_K = 0.35;
 const PHYS = new Set(['pac', 'sta', 'agi', 'str']);
 // Engine levers for league averages only (calibrated with Admin > Run test season).
-const ENG = { xg: 0.77, shoot: 1, foul: 1.1, intercept: 1.1, offFoul: 0.06, keepShot: 0.2, carry: 1, carryRisk: 1, thr: 0.28, sharp: 60, touch: 1.1, tackleFoul: 0.05, cross: 0.45, fin: 1.1 };
+const ENG = { xg: 1.1, shoot: 1, foul: 1.1, intercept: 1.1, offFoul: 0.06, keepShot: 0.12, carry: 1, carryRisk: 1, thr: 0.28, sharp: 60, touch: 1.1, tackleFoul: 0.05, cross: 0.45, fin: 1.1 };
 
 // Form of each player this minute: morale, condition, sharpness, position fit, captain.
 function refreshForm(M, S) {
@@ -170,6 +170,8 @@ function giveBall(M, s, i) {
   if (toOwn(s, p.x, p.y)[1] < 0.3 && M.sim.t - (M.sim.lastAtt || -99) > 8) { M.sim.lastAtt = M.sim.t; mark(M, 'attack', s); }
   B.os = s; B.oi = i; B.ls = s; B.li = i; B.fl = null; B.x = p.x; B.y = p.y; B.z = 0; B.vx = B.vy = B.vz = 0;
   B.dt = decideDelay(M, s, i, ENG.touch) * (transition(M, s) === 'ctr' ? 0.6 : 1);
+  // Unpressed, a player takes a touch and looks up before passing; pressed, he plays quickly.
+  if (pressureOn(M, s, i)[2] > 10 && toOwn(s, p.x, p.y)[1] < 0.66 && transition(M, s) !== 'ctr') B.dt = Math.max(B.dt, 1.2 + R() * 0.6); // nobody within 10 m (build-up keeps its tempo)
 }
 // Straight after a change of possession: 'ctr' (counter: quick and forward), 'hold' (keep it, wait for the shape),
 // or null. Set by "When the ball is won".
@@ -194,11 +196,22 @@ function kickOff(M, s) {
   });
 }
 // A restart for side s at (X, Y): 'thr' throw-in, 'gk' goal kick, 'ck' corner, 'fk' free kick, 'pen' penalty.
+// Dead time before a restart is taken, in seconds, as in real matches (the ball is in play for only about
+// 55-58 of 90+ minutes): a throw-in about 15 s, a goal kick about 24 s, a corner about 28 s, a free kick in
+// the attacking half about 30 s (wall, set-up) and about 18 s elsewhere, a penalty about 50 s.
+function restartWait(k, s, X, Y) {
+  if (k === 'thr') return 15;
+  if (k === 'gk') return 24;
+  if (k === 'ck') return 28;
+  if (k === 'pen') return 50;
+  if (k === 'fk') return dGoal(s, X, Y) < 38 ? 30 : 18;
+  return 4;
+}
 function setRestart(M, k, s, X, Y, ev) {
   const sim = M.sim;
   sim.momentum = null; sim.counterpress = null;
   looseBall(M); sim.B.offSet = 0;
-  sim.rs = { k, s, x: clamp(X, 0, PW), y: clamp(Y, 0, PL), w: k === 'thr' ? 3 : k === 'gk' ? 5 : k === 'ck' ? 7 : k === 'pen' ? 10 : 4, ev: ev || null };
+  sim.rs = { k, s, x: clamp(X, 0, PW), y: clamp(Y, 0, PL), w: restartWait(k, s, X, Y), ev: ev || null };
   Object.assign(sim.B, { x: sim.rs.x, y: sim.rs.y, z: 0, vx: 0, vy: 0, vz: 0 });
   if (sim.poss !== s) { sim.poss = s; sim.turn = sim.t; }
   if (k === 'ck') { M.sides[s].st.co++; mark(M, 'corner', s); }
@@ -331,13 +344,23 @@ function carrierDecide(M, s, i, o = {}) {
     if (len < 4 || len > (thr ? 22 : range)) return;
     const air = !thr && len > 32;
     if (air && !longOk) return;
-    const risk = clamp(passRisk(M, s, p.x, p.y, tx, ty, air) + len * (0.003 + (20 - pas) * 0.0006) + (air ? 0.12 : 0) + press * 0.08 - (ac(S, j, 'fir') - 10) * 0.006, 0.02, 0.95);
+    const risk = clamp(passRisk(M, s, p.x, p.y, tx, ty, air) + len * (0.003 + (20 - pas) * 0.0006) + (air ? 0.12 + aerialContest(M, s, j, tx, ty) : 0) + press * 0.08 - (ac(S, j, 'fir') - 10) * 0.006, 0.02, 0.95);
     const [, rpress] = recvPressure(M, s, tx, ty);
-    const val = threat(s, tx, ty) * (1 - rpress * 0.45);
+    // A free team-mate close by under pressure deep: the short escape out of the press.
+    // Out of the press: a ground ball to a free team-mate past two or more pressers (a press-breaking pass) is
+    // what a pressed side looks for first; a free short option close by is also worth more than usual.
+    let esc = 1;
+    if (!air && oy > 0.55 && press > 0.4 && rpress < 0.35) {
+      const beat = sim.P[1 - s].filter((z, n) => z && n && hyp(z.x - p.x, z.y - p.y) < 12 && (z.y - ty) * fwdY(s) < 0).length;
+      esc = beat >= 2 && (ty - p.y) * fwdY(s) > 8 ? 1.6 : len < 25 ? 1.3 : 1;
+    }
+    // The cut-back: from the byline area to the penalty spot or the edge, the best chance in open play (7.1).
+    const cutback = !air && oy < 0.13 && Math.abs(ox - 0.5) > 0.12 && dGoal(s, tx, ty) > 7 && dGoal(s, tx, ty) < 20 && Math.abs(tx - PW / 2) < 12 && rpress < 0.5;
+    const val = threat(s, tx, ty) * (1 - rpress * 0.45) * esc * (cutback ? 1.5 : 1);
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > (20 - vis) / 160) return; // he sees the flag coming (poor Vision misses it now and then)
-    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk, rpress });
+    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk, rpress, esc });
     // Through ball into the space in behind for a player making a run.
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
     if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03))) {
@@ -349,7 +372,8 @@ function carrierDecide(M, s, i, o = {}) {
   // Cross from a wide area near the box.
   const wide = ox < 0.22 || ox > 0.78;
   if (!gk && !thr && wide && oy < 0.33) {
-    const inBox = TP.filter((q, j) => q && j && j !== i && toOwn(s, q.x, q.y)[1] < 0.2 && Math.abs(toOwn(s, q.x, q.y)[0] - 0.5) < 0.22).length;
+    // 7.4: cross when runners are attacking the box (already in it or on their way to it).
+    const inBox = TP.filter((q, j) => q && j && j !== i && ((toOwn(s, q.x, q.y)[1] < 0.2 && Math.abs(toOwn(s, q.x, q.y)[0] - 0.5) < 0.22) || (toOwn(s, q.tx, q.ty)[1] < 0.2 && Math.abs(toOwn(s, q.tx, q.ty)[0] - 0.5) < 0.22))).length;
     if (inBox) opts.push({ k: 'cross', v: ENG.cross * (0.03 + inBox * 0.018) * (1 + b('cr') * 0.6) * (ac(S, i, 'cro') / 12) * [0.75, 1, 1.25][S.width ?? 1] * (1 + (O.line === 2 ? 0.05 : 0)) });
   }
   // Carry it forward, or take the defender on.
@@ -379,8 +403,15 @@ function carrierDecide(M, s, i, o = {}) {
       opts.push({ k: 'round', v: pr * 0.6 * (1 + b('dr') * 0.3) - (1 - pr) * 0.05 });
     }
   }
-  // Clear it when under pressure deep in his own half.
-  if (oy > 0.72 && press > 0.35) opts.push({ k: 'clear', v: 0.02 + press * 0.05 + (oy > 0.84 ? 0.04 : 0) + (gk ? 0.02 : 0) });
+  // Under pressure deep in his own half: an aimed ball to the outlet (target man or a runner in the channel),
+  // worth what winning it there brings, and a blind clearance only as a last resort in real danger.
+  if (oy > 0.72 && press > 0.35) {
+    const out = directOutlet(M, s, i);
+    if (out) opts.push({ k: 'long', j: out.j, tx: out.x, ty: out.y, v: out.win * threat(s, out.x, out.y) - (1 - out.win) * 0.04, risk: 1 - out.win, outlet: true });
+    if (oy > 0.84 && press > 0.7) opts.push({ k: 'clear', v: 0.01 + press * 0.04 + (gk ? 0.01 : 0) });
+  }
+  // Cornered on the touchline under pressure in his own half: put it out for a throw-in.
+  if (!gk && oy > 0.5 && press > 0.6 && (p.x < 4 || p.x > PW - 4)) opts.push({ k: 'touch', v: 0.004 + press * 0.012 });
   if (!opts.length) { B.dt = 0.5; return; }
   sim.intent = applyTeamIntent(M, s, i, opts, press, o);
   // He weighs the few best passes he sees (Vision finds them), not every team-mate equally.
@@ -402,8 +433,18 @@ function recvPressure(M, s, X, Y) {
 }
 // Which way to carry the ball: towards goal, away from defenders.
 function carryDir(M, s, i) {
-  const p = P_(M, s, i);
+  const p = P_(M, s, i), S = M.sides[s], [ox, oy] = toOwn(s, p.x, p.y), role = roleName(S, i);
   let dx = (PW / 2 - p.x) * 0.25, dy = fwdY(s) * 10;
+  // 7.4: in the attacking half a Winger goes down the line to the byline, then turns towards the cut-back
+  // zone; an Inside Forward / Inverted Winger cuts inside into the half-space (more so on his stronger foot).
+  if (oy < 0.5 && (ox < 0.25 || ox > 0.75)) {
+    const side = ox < 0.5 ? -1 : 1, pl = G.players[S.on[i]];
+    if (role === 'Winger' || role === 'Wing-Back' || role === 'Wide Midfielder') { dx = oy < 0.12 ? (PW / 2 - p.x) * 0.6 : (PW / 2 - p.x) * 0.05; dy = fwdY(s) * (oy < 0.12 ? 2 : 10); }
+    else if (role === 'Inside Forward' || role === 'Inverted Winger') {
+      const strong = pl && (pl.foot === 'Either' || (side > 0 ? pl.foot === 'Left' : pl.foot === 'Right')) ? 1 : 0.55;
+      const [hx] = toWorld(s, 0.5 + side * 0.17, oy); dx = (hx - p.x) * 0.9 * strong; dy = fwdY(s) * 6;
+    }
+  }
   M.sim.P[1 - s].forEach(q => { if (!q) return; const d = hyp(q.x - p.x, q.y - p.y); if (d < 9) { dx -= (q.x - p.x) / d * (9 - d) * 0.9; dy -= (q.y - p.y) / d * (9 - d) * 0.5; } });
   const L = hyp(dx, dy) || 1;
   return [dx / L, dy / L];
@@ -452,9 +493,12 @@ function playOption(M, s, i, op, press) {
   if (op.k === 'cross') return crossBall(M, s, i, {});
   if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; return; }
   if (op.k === 'round') return roundKeeper(M, s, i);
+  if (op.k === 'touch') return kick(M, s, i, 'clear', p.x < PW / 2 ? -3 : PW + 3, p.y + fwdY(s) * rf(2, 10), -1, { air: false, err: 1 });
   if (op.k === 'clear') {
-    const [tx, ty] = toWorld(s, clamp(toOwn(s, p.x, p.y)[0] + rf(-0.3, 0.3), 0.08, 0.92), rf(0.3, 0.5));
-    return kick(M, s, i, 'clear', tx, ty, -1, { air: true, err: 6 });
+    // Away from danger, towards the outlet if there is one, otherwise up the near channel.
+    const out = directOutlet(M, s, i), [px] = toOwn(s, p.x, p.y);
+    const [tx, ty] = out ? [out.x, out.y] : toWorld(s, px < 0.5 ? rf(0.08, 0.3) : rf(0.7, 0.92), rf(0.3, 0.5));
+    return kick(M, s, i, 'clear', tx, ty, out ? out.j : -1, { air: true, err: 6 });
   }
   // A pass: off-target by the passer's technique, more so under pressure, on the weaker foot or in the wind.
   const pl = G.players[S.on[i]], len = hyp(op.tx - p.x, op.ty - p.y);
@@ -467,7 +511,13 @@ function playOption(M, s, i, op, press) {
 // The ball leaves the player's foot: speed and height by the kind of ball, aimed with some error.
 function kick(M, s, i, k, tx, ty, j, o = {}) {
   const sim = M.sim, B = sim.B, p = P_(M, s, i);
-  const e = o.err || 0, ex = tx + gauss() * e * 0.6, ey = ty + gauss() * e * 0.6;
+  let e = o.err || 0, ex = tx + gauss() * e * 0.6, ey = ty + gauss() * e * 0.6;
+  // Now and then a ball is mishit: overhit or sliced well off line (more likely for a poor or hurried kick,
+  // and for crosses). These are what run out for throw-ins and goal kicks in a real match.
+  if (k !== 'shot' && R() < clamp(0.035 + e * 0.006 + (k === 'cross' ? 0.1 : 0), 0.03, 0.22)) {
+    const L0 = hyp(tx - p.x, ty - p.y) || 1, over = rf(0.15, 0.5) * L0 + 3;
+    ex = tx + (tx - p.x) / L0 * over + gauss() * L0 * 0.18; ey = ty + (ty - p.y) / L0 * over + gauss() * L0 * 0.18;
+  }
   const len = hyp(ex - p.x, ey - p.y) || 1;
   const sp = k === 'shot' ? 26 : k === 'clear' ? 24 : o.air ? clamp(14 + len * 0.18, 16, 26) : clamp(9 + len * 0.42, 10, 22);
   B.os = -1; B.oi = -1; B.x = p.x; B.y = p.y; B.z = o.air ? 0.1 : 0;
@@ -481,6 +531,7 @@ function kick(M, s, i, k, tx, ty, j, o = {}) {
   B.offS = s; B.offSet = 0;
   if (k !== 'shot') { const line = offsideY(M, s), P = sim.P[s]; for (let m = 1; m < P.length; m++) { const q = P[m]; if (q && m !== i && beyond(s, q.y, line)) B.offSet |= 1 << m; } }
   if (j >= 0) { const r = P_(M, s, j); if (r) { r.tx = ex; r.ty = ey; r.want = sim.t + flight + 0.5; } }
+  if (o.air && (k === 'long' || k === 'clear')) secondBallSupport(M, s, i, j, ex, ey, flight);
 }
 
 // Taking the ball round the keeper: past him and an open goal, or he smothers it (now and then a penalty).
@@ -498,6 +549,67 @@ function roundKeeper(M, s, i) {
   if (R() < 0.08 * M.mod.foul) return foul(M, s, i, 1 - s, 0);
   pstat(O, 0, 'sv'); bump(O, 0, 0.2);
   giveBall(M, 1 - s, 0);
+}
+
+// A lofted pass has to be won in the air: the receiver against the nearest defender at the landing point
+// (Heading, Jumping via height, Strength through aerialAt), so a marked target is a riskier ball than a free one.
+function aerialContest(M, s, j, x, y) {
+  const OP = M.sim.P[1 - s];
+  let dj = -1, dd = 99;
+  for (let k = 1; k < OP.length; k++) { const z = OP[k]; if (z) { const d = hyp(z.x - x, z.y - y); if (d < dd) { dd = d; dj = k; } } }
+  if (dj < 0 || dd > 5) return 0;
+  return (1 - sigm((aerialAt(M.sides[s], j) - aerialAt(M.sides[1 - s], dj)) / 3)) * 0.6 * (1 - dd / 5);
+}
+// The outlet for a ball forward from deep (rulebook 9.5, 1.3): the target man or a forward/runner well up the
+// pitch, preferring height and Heading; the landing point is just ahead of him. win: chance his side wins the
+// first contact or the knock-down (his aerial ability against the nearest defender, plus team-mates near it).
+function directOutlet(M, s, i) {
+  const S = M.sides[s], O = M.sides[1 - s], P = M.sim.P[s], OP = M.sim.P[1 - s], p = P[i], fw = fwdY(s);
+  let best = null;
+  for (let j = 1; j < P.length; j++) {
+    const q = P[j];
+    if (!q || j === i || (q.y - p.y) * fw < 25 || hyp(q.x - p.x, q.y - p.y) > 62 || offsideNow(M, s, j)) continue;
+    const role = LINE[FORMATIONS[S.ip][j][0]];
+    if (role < 3) continue;
+    const x = clamp(q.x + q.vx * 0.8, 4, PW - 4), y = q.y + fw * 3;
+    let dj = -1, dd = 99;
+    for (let k = 1; k < OP.length; k++) { const z = OP[k]; if (z) { const d = hyp(z.x - x, z.y - y); if (d < dd) { dd = d; dj = k; } } }
+    const air = aerialAt(S, j) * (1 + bh(S, j, 'aer') * 0.3) + clamp(dd - 2, 0, 6) - (dj > 0 ? aerialAt(O, dj) : 0);
+    const help = P.filter((z, n) => z && n && n !== j && n !== i && hyp(z.x - x, z.y - y) < 18).length;
+    const win = clamp(sigm(air / 3) * 0.75 + help * 0.05, 0.1, 0.85), v = win * (1 + bh(S, j, 'aer') * 0.3 + bh(S, j, 'hold') * 0.2);
+    if (!best || v > best.v) best = { j, x, y, win, v };
+  }
+  return best;
+}
+// When the ball is played long, two or three nearby team-mates go for the knock-down and the second ball:
+// one behind the landing point, one to the side and a runner beyond it (rulebook 9.5: midfielders win the
+// second balls, runners attack the flick-on). The rest keep their shape.
+function secondBallSupport(M, s, i, j, x, y, flight) {
+  const sim = M.sim, P = sim.P[s], fw = fwdY(s), S = M.sides[s];
+  const near = P.map((q, n) => q && n && n !== i && n !== j ? { n, d: hyp(q.x - x, q.y - y), role: LINE[FORMATIONS[S.ip][n][0]] } : null)
+    .filter(z => z && z.d < 45 && z.role >= 2).sort((a, b) => a.d - b.d).slice(0, 3);
+  const side = x < PW / 2 ? 1 : -1;
+  const spots = [[0, -6], [side * 6, -2], [-side * 4, 7]]; // behind, inside, beyond
+  near.forEach((z, k) => {
+    const q = P[z.n], [dx, dy] = spots[k];
+    q.tx = clamp(x + dx, 1, PW - 1); q.ty = clamp(y + dy * fw, 1, PL - 1);
+    q.sup = sim.t + flight + 2.5; q.run = sim.t + flight + 1;
+  });
+  // The defender nearest the landing point attacks the ball (a centre-back challenging the target man).
+  {
+    const OP0 = sim.P[1 - s];
+    let dj = -1, dd = 30;
+    for (let n = 1; n < OP0.length; n++) { const q = OP0[n]; if (q) { const d = hyp(q.x - x, q.y - y); if (d < dd) { dd = d; dj = n; } } }
+    if (dj > 0) { const q = OP0[dj]; q.tx = x; q.ty = clamp(y - fw * 0.8, 1, PL - 1); q.sup = sim.t + flight + 1; q.run = sim.t + flight + 1; }
+  }
+  // The defending side reacts too: its two nearest midfielders drop on to the landing zone, goal-side, to
+  // contest the second ball (Anticipation reads it earlier: a closer starting spot).
+  const O = M.sides[1 - s], OP = sim.P[1 - s];
+  OP.map((q, n) => q && n ? { n, d: hyp(q.x - x, q.y - y), role: LINE[FORMATIONS[O.ip][n][0]] } : null)
+    .filter(z => z && z.d < 35 && z.role >= 2 && z.role <= 3).sort((a, b) => a.d - b.d).slice(0, 2).forEach((z, k) => {
+      const q = OP[z.n], read = clamp((ac(O, z.n, 'ant') - 8) * 0.4, 0, 4);
+      q.tx = clamp(x + (k ? -side : side) * 4, 1, PW - 1); q.ty = clamp(y - fw * (6 - read), 1, PL - 1); q.sup = sim.t + flight + 2; q.run = sim.t + flight + 1;
+    });
 }
 
 /* ---------- shots ---------- */
@@ -561,7 +673,7 @@ function shotArrives(M, fl) {
     S.on.forEach(id => bumpRating(S, id, 0.05));
     onPitch(O).forEach(z => bumpRating(O, z.p.id, z.pos === 'GK' ? -0.35 : LINE[z.pos] <= 2 ? -0.22 : -0.05));
     mark(M, 'goal', s);
-    M.sim.celebrate = 4;
+    M.sim.celebrate = 35; // celebration and the walk back for the kick-off
     return kickOff(M, 1 - s);
   }
   if (fl.res === 'save') {
@@ -583,8 +695,38 @@ function shotArrives(M, fl) {
 
 /* ---------- crosses and headers ---------- */
 function crossBall(M, s, i, o) {
+  // A defender close to the crosser can block it: most go behind for a corner, the rest loose.
+  if (!o.ck && !o.fk) {
+    const p0 = P_(M, s, i), O = M.sides[1 - s];
+    const bl = M.sim.P[1 - s].findIndex((q, j) => q && j && hyp(q.x - p0.x, q.y - p0.y) < 2.2);
+    if (bl > 0 && R() < 0.28 + (ac(O, bl, 'pos') - 10) * 0.015) {
+      pstat(O, bl, 'blk'); M.sides[s].st.cr = (M.sides[s].st.cr || 0) + 1;
+      if (R() < 0.6) return setRestart(M, 'ck', s, p0.x < PW / 2 ? 0.5 : PW - 0.5, goalY(s));
+      const B = M.sim.B; looseBall(M); B.x = p0.x; B.y = p0.y; B.vx = rf(-7, 7); B.vy = -fwdY(s) * rf(2, 8); B.ls = 1 - s; B.li = bl; return;
+    }
+  }
   const S = M.sides[s], TP = M.sim.P[s], p = P_(M, s, i);
-  // Target: the best header of the ball among team-mates in the box, else the penalty spot area.
+  // 7.2: the cross is aimed at a space a runner is attacking (near post whipped, penalty spot, far post floated),
+  // chosen by the runner's aerial ability, how close he is to arriving and how crowded the space is.
+  if (S._box && S._box.spots && !o.ck && !o.fk) {
+    let pick = null, pv = -1e9;
+    for (const sp of S._box.spots) {
+      const q = TP[sp.i];
+      if (!q || sp.i === i || sp.k === 'edge') continue;
+      const crowd = M.sim.P[1 - s].filter((z, n) => z && n && hyp(z.x - sp.x, z.y - sp.y) < 3).length;
+      const v = aerialAt(S, sp.i) * (1 + bh(S, sp.i, 'aer')) - hyp(q.x - sp.x, q.y - sp.y) * 0.4 - crowd * 2.5 + R() * 3;
+      if (v > pv) { pv = v; pick = sp; }
+    }
+    if (pick) {
+      const del = ac(S, i, 'cro'), r = TP[pick.i];
+      S.st.cr = (S.st.cr || 0) + 1; pstat(S, i, 'cr'); S.st.pa++; pstat(S, i, 'pa');
+      kick(M, s, i, 'cross', pick.x, pick.y, pick.i, { air: true, err: (20 - del) * 0.35 + 1.5 });
+      Object.assign(M.sim.B.fl, { del, ck: false, fk: false });
+      attackTheBox(M, s, S._box.spots, i);
+      return;
+    }
+  }
+  // Otherwise: the best header of the ball among team-mates in the box, else the penalty spot area.
   let best = -1, bv = -1;
   TP.forEach((q, j) => { if (!q || j === i || j === 0 || offsideNow(M, s, j)) return; const [x, y] = toOwn(s, q.x, q.y); if (y < 0.24 && Math.abs(x - 0.5) < 0.26) { const v = aerialAt(S, j) * (1 + bh(S, j, 'aer')) + R() * 4; if (v > bv) { bv = v; best = j; } } });
   const tq = best > 0 ? P_(M, s, best) : null, [tx, ty] = tq ? [clamp(tq.x, PW * 0.3, PW * 0.7), tq.y] : toWorld(s, rf(0.4, 0.6), rf(0.07, 0.13));
@@ -702,8 +844,8 @@ function receive(M, s, j, fl, d) {
     if (fl?.linesBroken && fl.j === j) sim.momentum = { s, until: sim.t + 6 };
     return;
   }
-  // Heavy touch: it runs loose.
-  B.fl = null; B.vx *= 0.35; B.vy *= 0.35;
+  // Heavy touch: the ball bounces off him a few metres (out of play if he is on the line).
+  B.fl = null; { const a = Math.atan2(B.vy, B.vx) + rf(-1.2, 1.2), v = rf(3, 7); B.vx = Math.cos(a) * v; B.vy = Math.sin(a) * v; }
 }
 // A pressing trigger for the other side: a back pass, a poor touch, a receiver facing his own goal, the ball on
 // the touchline. The presser's Work Rate and the receiver's First Touch decide whether it is pounced on.
@@ -727,7 +869,7 @@ function pressTrigger(M, s, j, fl, poor) {
 function controlOrLoose(M, t, j, sp, cut) {
   const S = M.sides[t], B = M.sim.B;
   if (R() < clamp(0.8 + (ac(S, j, 'fir') - 10) * 0.015 - (cut ? sp * 0.012 : 0), 0.35, 0.97)) { giveBall(M, t, j); return; }
-  B.fl = null; B.vx = B.vx * -0.3 + rf(-3, 3); B.vy = B.vy * -0.3 + rf(-3, 3); B.ls = t; B.li = j; // deflected
+  B.fl = null; B.vx = B.vx * rf(-0.5, 0.3) + rf(-6, 6); B.vy = B.vy * rf(-0.5, 0.3) + rf(-6, 6); B.ls = t; B.li = j; // deflected
   if (B.offS !== t) B.offSet = 0;
 }
 function offside(M, s, j, fl) {
@@ -780,7 +922,7 @@ function challenges(M) {
     }
     pstat(O, j, 'tk'); bump(O, j, 0.06); bump(S, i, -0.04);
     if (R() < 0.65) return giveBall(M, o, j);
-    looseBall(M); B.vx = rf(-5, 5); B.vy = rf(-5, 5); B.ls = o; B.li = j;
+    looseBall(M); { const a = rf(0, 6.283), v = rf(5, 11); B.vx = Math.cos(a) * v + (B.x < PW / 2 ? -2 : 2); B.vy = Math.sin(a) * v; } B.ls = o; B.li = j; // poked away
   });
 }
 // A foul by side o's player j on side s's player i: free kick or penalty, and maybe a card.
@@ -813,6 +955,8 @@ function targets(M, all) {
     const bx = s === 0 ? B.x / PW : 1 - B.x / PW, by = s === 0 ? B.y / PL : 1 - B.y / PL;
     const pos = shapeOf(M, s, has, bx, by), carrier = has && own ? B.oi : -1, line = offsideY(M, s), fw = fwdY(s);
     const reserves = new Set([...(S._teamPlan?.rest.back || []), ...(S._teamPlan?.rest.screen || [])]);
+    const box = has && own ? boxPlan(M, s, ip, bx, by, carrier, reserves, line) : null;
+    if (has) S._box = box;
     const gx = PW / 2, gy = goalY(1 - s); // their own goal
     const unitStep = !has && own ? defensiveLineStep(M, s) : 0;
     S._defStep = unitStep;
@@ -828,6 +972,7 @@ function targets(M, all) {
       const p = P[i];
       if (!p || !pos[i] || i === carrier) continue;
       if (B.fl && B.fl.s === s && B.fl.j === i && sim.t < (p.want || 0)) continue; // running onto a pass
+      if ((p.sup || 0) > sim.t) continue; // going for the knock-down / second ball
       let X = s === 0 ? pos[i][0] * PW : (1 - pos[i][0]) * PW, Y = s === 0 ? pos[i][1] * PL : (1 - pos[i][1]) * PL;
       const role = LINE[ip[i][0]], defRole = LINE[FORMATIONS[S.oop][(S.map || shapeMap(S.ip, S.oop))[i]][0]];
       if (!has && i) Y += fw * unitStep;
@@ -850,15 +995,26 @@ function targets(M, all) {
           const pr = ok ? (trig || ctr || (drop && role <= 3) ? 0.24 : 0.04) * (ac(S, i, 'otb') / 12) * clamp(1 + im * 0.3, 0.15, 2) * (ctr ? 2 : 1) * (hold ? 0.2 : 1) : 0;
           if (R() < pr) { p.run = sim.t + 2 + ac(S, i, 'ant') * 0.04; if (role <= 3) cover--; }
         }
-        if (p.run > sim.t) { X = clamp(p.x + (PW / 2 - p.x) * 0.15, 3, PW - 3); Y = line + fw * (6 + ac(S, i, 'pac') * 0.3); }
+        // 7.2: on a wide attack his box spot comes first, and getting there is a run (a sprint), not a jog.
+        const boxTo = box && box.get(i);
+        if (boxTo) { X = boxTo[0]; Y = boxTo[1]; if (hyp(p.x - X, p.y - Y) > 3) p.boxRun = sim.t + 1.5; }
+        else if (p.run > sim.t) { X = clamp(p.x + (PW / 2 - p.x) * 0.15, 3, PW - 3); Y = line + fw * (6 + ac(S, i, 'pac') * 0.3); }
         else {
           if (role >= 3 && beyond(s, Y, line)) Y = line - fw * 1.2; // stay onside
           // Support: midfielders offer a pass.
           if (own && role >= 2 && role <= 3) { const dx = X - own.x, dy = Y - own.y; if (dx * dx + dy * dy > 484) { const k = clamp(0.1 + ac(S, i, 'tea') * 0.015, 0.1, 0.45); X += (own.x - X) * k; Y += (own.y - Y) * k; } } // Teamwork: comes to help
-          // Late runs into the box when the ball is wide in the final third.
-          if (!droppingNine && by < 18 / PL && (bx < 0.25 || bx > 0.75) && role >= 3 && R() < ac(S, i, 'otb') / 30) { const sp = boxSpot(s, i); X = sp[0]; Y = sp[1]; }
+          // Filling the box when the ball is wide in the final third or in the cut-back zone (rulebook 7.2).
+          const inBox = box && box.get(i);
+          if (inBox) { X = inBox[0]; Y = inBox[1]; }
+          // Direct play (long passing) building from the back: the midfielder further from the ball pushes up near
+          // the target man for the knock-down and second ball; the nearer one stays short as the escape pass.
+          if ((S.pass ?? 1) === 2 && role === 3 && by > 0.55) {
+            const mids = ip.map((q, n) => LINE[q[0]] === 3 && P[n] ? n : -1).filter(n => n > 0), far = mids.sort((a, b) => hyp(P[b].x - B.x, P[b].y - B.y) - hyp(P[a].x - B.x, P[a].y - B.y))[0];
+            const tg = ip.map((q, n) => LINE[q[0]] === 5 && P[n] ? n : -1).filter(n => n > 0)[0];
+            if (i === far && tg) { X += (P[tg].x - X) * 0.4; Y = P[tg].y - fw * 10; }
+          }
           // Find space near that spot (Off the Ball, Anticipation).
-          else if (own && role >= 2 && Math.abs(Y - own.y) < 40) [X, Y] = findSpace(M, s, i, X, Y, own, line);
+          else if (!inBox && own && role >= 2 && Math.abs(Y - own.y) < 40) [X, Y] = findSpace(M, s, i, X, Y, own, line);
         }
       } else if (defRole <= 3) {
         // Marking: stay goal-side of the nearest attacker in his zone, tighter with Marking (and the instruction).
@@ -885,6 +1041,50 @@ function targets(M, all) {
     }
   }
 }
+// Filling the box (rulebook 7.2): with the ball wide in the final third or in the cut-back zone, the attackers
+// who are not rest defence take the near post (usually the 9), the far post (the far-side wide forward), the
+// penalty spot (an 8 or 10 arriving late) and the edge of the box (a midfielder, for cut-backs and second balls).
+// Off the Ball and the run instruction pick who gets there; nobody stands offside before the ball is played.
+function boxPlan(M, s, ip, bx, by, carrier, reserves, line) {
+  const wide = bx < 0.3 || bx > 0.7, cut = by < 0.13 && (bx < 0.38 || bx > 0.62);
+  if (!(by < 0.5 && (wide || cut))) return null; // 7.2: the box fills as soon as the ball is wide in the attacking half
+  const S = M.sides[s], P = M.sim.P[s], sgn = bx < 0.5 ? -1 : 1;
+  const cand = P.map((q, i) => q && i && i !== carrier && !reserves.has(i) && LINE[ip[i][0]] >= 3 ? i : -1).filter(i => i > 0);
+  if (!cand.length) return null;
+  const L = i => LINE[ip[i][0]], farSide = i => (ip[i][1] - 0.5) * sgn < -0.05;
+  const spots = [
+    ['near', 0.5 + sgn * 0.06, 0.055, i => (L(i) === 5 ? 3 : L(i) === 4 && !farSide(i) ? 1 : 0)],
+    ['far', 0.5 - sgn * 0.08, 0.065, i => (L(i) === 4 && farSide(i) ? 3 : L(i) === 5 ? 2 : farSide(i) ? 1 : 0)],
+    ['spot', 0.5 - sgn * 0.02, 0.105, i => (ip[i][0] === 'AMC' ? 3 : L(i) === 3 ? 2 : 1)],
+    ['edge', 0.5 + sgn * 0.03, 0.185, i => (L(i) === 3 ? 2 : 0)],
+  ];
+  const out = new Map();
+  for (const [, x, y, pref] of spots) {
+    const [wx, wy] = toWorld(s, x, y);
+    let best = -1, bv = -1e9;
+    for (const i of cand) {
+      if (out.has(i)) continue;
+      const q = P[i], v = pref(i) * 10 - hyp(q.x - wx, q.y - wy) * 0.25 + bh(S, i, 'run') * 2 + ac(S, i, 'otb') * 0.15;
+      if (v > bv) { bv = v; best = i; }
+    }
+    if (best < 0) break;
+    out.set(best, [wx, beyond(s, wy, line) ? line - fwdY(s) * 0.8 : wy]);
+    out.spots = out.spots || []; out.spots.push({ i: best, x: wx, y: wy, k: spots[out.spots.length][0] }); // the spaces themselves, for the cross
+  }
+  return out;
+}
+
+// 7.2: as the cross is struck, every box runner leaves the line and attacks his space (offside was judged at the
+// kick, so he is free to go); Pace and Off the Ball decide who gets there first.
+function attackTheBox(M, s, spots, crosser) {
+  const P = M.sim.P[s], t = M.sim.t;
+  for (const sp of spots) {
+    const q = P[sp.i];
+    if (!q || sp.i === crosser) continue;
+    q.tx = sp.x; q.ty = sp.y; q.boxRun = t + 2.5; q.sup = t + 2.5;
+  }
+}
+
 // Space search off the ball: a few spots around where the role wants him, scored by how free they are, whether
 // the ball can reach them, how dangerous they are, staying onside and out of a team-mate's space. Off the Ball
 // picks the right one, Anticipation reads where the defenders are going; free roles look further.
@@ -928,7 +1128,7 @@ function movePlayers(M) {
       if (carrier) { const O = sim.P[1 - s]; for (let j = 0; j < O.length; j++) { const q = O[j]; if (q && (q.x - p.x) * (q.x - p.x) + (q.y - p.y) * (q.y - p.y) < 9 && (q.y - p.y) * fwdY(s) > -0.5) { top *= 0.55; break; } } }
       // Sprint only when it matters: on the ball, making a run, pressing, going for a loose ball, a restart, or
       // getting back goal-side; otherwise jog into position (most of a match is jogging).
-      const urgent = carrier || p.run > sim.t || p.eng === sim.t || p.chase === sim.t || sim.t < (p.want || 0) || (rs && d > 12) || (sim.poss !== s && (p.y - ty) * fwdY(s) > 21 - ac(M.sides[s], i, 'wor') * 0.6);
+      const urgent = carrier || p.run > sim.t || (p.boxRun || 0) > sim.t || p.eng === sim.t || p.chase === sim.t || sim.t < (p.want || 0) || (rs && d > 12) || (sim.poss !== s && (p.y - ty) * fwdY(s) > 21 - ac(M.sides[s], i, 'wor') * 0.6);
       let want = urgent ? top : Math.min(top * (0.4 + ac(M.sides[s], i, 'wor') * 0.01), d / 2); // Work Rate: gets into position
       if (want > d / 0.6) want = d / 0.6;
       const vx = d > 0.2 ? dx / d * want : 0, vy = d > 0.2 ? dy / d * want : 0;
@@ -1024,8 +1224,12 @@ function keepOnside(M) {
 function chase(M) {
   const sim = M.sim, B = sim.B, fl = B.fl;
   if (fl && (fl.k === 'shot' || fl.air && !fl.landed)) return;
-  // A pass on its way to a team-mate who can get to it is his: nobody chases it.
-  if (fl && fl.j >= 0) { const r = P_(M, fl.s, fl.j); if (r && hyp(r.x - fl.tx, r.y - fl.ty) < 9 && hyp(B.vx, B.vy) > 3) return; }
+  // Rulebook 4.9: a pass on its way to a team-mate is his only while he can still get to it first; a landed long
+  // ball or a pass that has run past its man is a loose ball, and both sides go for it.
+  if (fl && fl.j >= 0 && !fl.landed && hyp(B.vx, B.vy) > 3) {
+    const r = P_(M, fl.s, fl.j), sx = B.x + B.vx / 0.55, sy = B.y + B.vy / 0.55; // where it would stop
+    if (r && (hyp(r.x - fl.tx, r.y - fl.ty) < 9 || segD(r.x, r.y, B.x, B.y, sx, sy) < 4)) return;
+  }
   for (let t = 0; t < 2; t++) {
     const P = sim.P[t];
     let best = -1, bt = 1e9, bx = 0, by = 0;
@@ -1058,7 +1262,9 @@ function tickSim(M) {
   }
   if (!sim.rs) challenges(M);
   const tk = Math.round(sim.t / TICK);
-  if (!sim.rs && (tk % 2 === 0 || sim.turn >= sim.t - TICK)) targets(M, tk % 4 === 0 || sim.turn >= sim.t - TICK);
+  // 7.2: near the box everyone re-reads the situation every second; elsewhere the side with the ball every two.
+  const near = B.os >= 0 && toOwn(B.os, B.x, B.y)[1] < 0.45;
+  if (!sim.rs && (tk % 2 === 0 || sim.turn >= sim.t - TICK)) targets(M, tk % 4 === 0 || (near && tk % 2 === 0) || sim.turn >= sim.t - TICK);
   engage(M);
   keepOnside(M);
   movePlayers(M);

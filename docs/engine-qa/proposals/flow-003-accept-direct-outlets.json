@@ -1,0 +1,32 @@
+{
+  "id": "flow-003-accept-direct-outlets",
+  "kind": "acceptance",
+  "question": "You decided direct_outlets (flow-002, confidence 0.81) with required criteria clearances, support, escapes, counterpress, regression and clips. Here is the before/after evidence from the same 24 scenarios (3 seeds). Accept, revise or investigate?",
+  "decision": { "id": "flow-002-first-fix-more-evidence", "choice": "direct_outlets", "run": "39611598458" },
+  "criteria": {
+    "clearances": "Direct side clearances at most 40 per match and long passes 50-90 per match.",
+    "support": "At least 2.5 direct-side teammates within 15 m of the landing point.",
+    "escapes": "Short escapes in at least 20% of pressed build-ups.",
+    "counterpress": "Counter-presses starting with fewer than 3 nearby players at most 30%.",
+    "regression": "All existing suites pass, finite positions, zero assignment violations.",
+    "clips": "New clips of the same passage types show the change.",
+    "goals": "Goals 2.0-3.2 (optional)."
+  },
+  "evidence": {
+    "implementation": "sim.js: directOutlet() aims balls from deep at the target man / a forward runner with a win chance from aerial ability, the nearest defender and nearby team-mates; a blind clearance is only a last resort in real danger (deep, heavy pressure) and is aimed at the outlet or the near channel; secondBallSupport() sends 3 team-mates to the landing zone (behind, inside, beyond) and the defending side's 2 nearest midfielders drop goal-side to contest; any lofted pass now includes the aerial contest at the landing point in its risk; a free short option close by under pressure in the own half is valued higher.",
+    "before": { "clearancesPerMatch": 108, "longPassesPerMatch": 106, "supportAtLanding": 1.2, "opponentsAtLanding": 1.3, "shortEscapePct": 12, "counterpressIsolatedStartPct": 54, "secondBallWonPct": 57, "goalsPerMatch": 2.3, "directSidePassesPerMatch": 416 },
+    "after": {
+      "clearancesPerMatch": 31.6, "longPassesPerMatch": 174.1, "supportAtLanding": 2.3, "opponentsAtLanding": 2.4, "shortEscapePct": 15, "counterpressIsolatedStartPct": 26.8, "secondBallWonPct": 74.2, "goalsPerMatch": 2.6, "directSidePassesPerMatch": 662,
+      "checks": {
+        "clearancesAtMost40": { "pass": true, "value": 31.6 },
+        "longPasses50to90": { "pass": false, "value": 174.1 },
+        "supportAtLeast2_5": { "pass": false, "value": 2.3 },
+        "shortEscapesAtLeast20pct": { "pass": false, "value": 15 },
+        "counterpressIsolatedAtMost30pct": { "pass": true, "value": 26.8 },
+        "regressionSuites": { "pass": true, "value": "9/9 suites: jev-lead, defending, transitions, intent, engine-qa, audit --strict, 12-match --strict, shape (browser), live (browser)" },
+        "clips": { "pass": true, "value": "docs/flow-clips/after-direct-outlets: runners now gather around the landing point; clearances are aimed" }
+      }
+    },
+    "analysis": "Blind clearances fell from 108 to 32 and the counter-press now starts with 3+ players in 73% of losses. But the direct side now keeps the ball much more (416 -> 662 passes) and plays 174 aimed long passes per match, mostly from the middle third under pressure after winning a second ball, so long passes exceed the 50-90 target; second balls are won 74% (real top-flight duels are closer to 50%). Global pass volume in the engine is about 1.4x real, which inflates every absolute pass count. Support 2.3 and short escapes 15% are just below their targets."
+  }
+}
