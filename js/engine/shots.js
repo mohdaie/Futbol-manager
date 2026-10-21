@@ -8,7 +8,8 @@
      who has already caused danger is marked more tightly and found less.
    - layOff(): a marked player about to shoot can square or cut it back to a free team-mate instead.
    Attention: each side remembers the danger every opponent has caused this match (shots, xG, goals)
-   and marks him more closely, so a lone striker cannot take every shot. Players with good Teamwork,
+   and marks him more closely. How much that bites depends on the defenders' marking and on the attacker's
+   ability to find space (markGrip), so an ordinary striker cannot take every shot but a great one still can. Players with good Teamwork,
    Vision and Decisions share the ball; selfish, high-Flair finishers still shoot more. */
 
 // How readily each position shoots when it has the ball in a shooting position. A striker gets far more of those
@@ -19,12 +20,32 @@ const SHOT_TUNE = { rate: 1.35, mark: 0.3, double: 0.25, late: 0.55 };
 const posOf = (S, i) => FORMATIONS[S.ip][i][0];
 // Attention counts most for the player who causes most of his side's danger: a team that shoots a lot does not get
 // its striker doubled up just for having the ball, only a striker who takes the lion's share.
+// How much the marking actually bites depends on both sides' players (markGrip): no player is held to a number.
 function attention(O, pid) {
   const A = O.att, a = (A && A[pid]) || 0;
   if (!a) return 0;
   const tot = O.attSum || a;
-  return a * clamp(2 * a / tot, 0.3, 1.2);
+  return a * clamp(2 * a / tot, 0.3, 1.2) * markGrip(O, pid);
 }
+// Marking quality of side O: Marking, Positioning, Anticipation and Teamwork of its defenders and holding midfielders.
+// Escape: an attacker with Dribbling, Flair, Agility, First Touch, Composure, Decisions, Off the Ball and Anticipation
+// finds space even when doubled up (a Messi-level player still gets his shots; an ordinary striker does not).
+function markGrip(O, pid) {
+  const key = O.on.join(',');
+  if (O.mqKey !== key) {
+    const ds = O.on.map((id, i) => (id && i && LINE[posOf(O, i)] <= 2 ? G.players[id] : null)).filter(Boolean);
+    O.mq = ds.length ? ds.reduce((t, p) => t + p.at[A.mar] + p.at[A.pos] + p.at[A.ant] + p.at[A.tea], 0) / (ds.length * 4) : 10;
+    O.mqKey = key;
+  }
+  const E = O.esc || (O.esc = {});
+  if (E[pid] == null) {
+    const p = G.players[pid];
+    const m = p ? ESCAPE_ATTRS.reduce((t, k) => t + p.at[A[k]], 0) / ESCAPE_ATTRS.length : 10;
+    E[pid] = clamp((m - 12) * 0.09, 0, 0.75);
+  }
+  return clamp(1 + (O.mq - 12) * 0.06 - E[pid], 0.15, 1.5);
+}
+const ESCAPE_ATTRS = ['dri', 'fla', 'agi', 'fir', 'cmp', 'dec', 'otb', 'ant'];
 // Marking factor for a player: 1 when nobody pays him special attention, lower the more danger he has caused.
 // It grows faster than the danger itself: after several shots he is doubled up on.
 const watchF = (O, pid) => { const a = attention(O, pid); return 1 / (1 + SHOT_TUNE.mark * a + SHOT_TUNE.double * a * a); };
@@ -84,14 +105,18 @@ function layOff(S, O, i, x, y, posS, posO, pressure) {
   const cands = posS.map((q, k) => (q && k && k !== i && q[1] < 0.34 && Math.abs(q[1] - y) < 0.2 && dist(q, [x, y]) < 0.3 ? k : -1)).filter(k => k > 0);
   if (!cands.length) return -1;
   const marked = attention(O, S.on[i]);
-  const giving = (av(S, i, 'tea') + av(S, i, 'vis') + av(S, i, 'dec') - 36) * 0.012 - (av(S, i, 'fla') - 12) * 0.01;
+  const giving = (av(S, i, 'tea') - 12) * 0.02 - (av(S, i, 'fla') - 12) * 0.01;
   // Strikers, closest to goal and most closely watched, lay it off most; their team-mates arrive facing goal.
   // Possession sides look for the cut-back more, if their players suit it.
   const patient = (S.tempo ?? 1) === 0 ? clamp(0.06 + 0.12 * (S.fit ? S.fit.poss : 0), -0.05, 0.2) : 0;
   const p = clamp(0.12 + (posOf(S, i) === 'ST' ? 0.18 : 0) + pressure * 0.3 + marked * 0.07 + giving + patient, 0, 0.75);
   if (R() >= p) return -1;
   // The best-placed free team-mate: open, close to goal, and likely to finish.
-  return wpick(cands, k => { const op = nearest(posO, posS[k])[1]; return Math.pow(op + 0.02, 1.5) * (1.2 - posS[k][1]) * (SHOT_POS[posOf(S, k)] ?? 0.6) * (av(S, k, 'fin') / 12) * watchF(O, S.on[k]); });
+  const k = wpick(cands, k => { const op = nearest(posO, posS[k])[1]; return Math.pow(op + 0.02, 1.5) * (1.2 - posS[k][1]) * (SHOT_POS[posOf(S, k)] ?? 0.6) * (av(S, k, 'fin') / 12) * watchF(O, S.on[k]); });
+  // Decisions and Vision: a good decision maker gives it only when the team-mate is the better bet,
+  // and keeps it when he is the better finisher (a great finisher still takes his chance).
+  const edge = av(S, i, 'fin') + av(S, i, 'cmp') * 0.5 - av(S, k, 'fin') - av(S, k, 'cmp') * 0.5, judge = (av(S, i, 'dec') + av(S, i, 'vis')) / 24;
+  return R() < clamp(1 - edge * 0.06 * judge, 0.15, 1) ? k : -1;
 }
 
 // Who a cross is aimed at: players in the box, plus a wide player arriving at the far post. Heading and height
