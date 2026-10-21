@@ -42,6 +42,9 @@ function defensiveUnit(M, s, gap, jump = false, counterpress = false, cohort = n
   let ax = ux, ay = uy;
   if (outlet) { ax = (outlet.q.x - p.x) / outlet.d; ay = (outlet.q.y - p.y) / outlet.d; }
   if (wide) { ax = ux + inside * .7; ay = uy; const n = hyp(ax, ay) || 1; ax /= n; ay /= n; }
+  // 4.8: in shooting range he comes at the ball goal-side to block the shot; the cover takes the pass inside.
+  const range = L < 25;
+  if (range) { ax = ux; ay = uy; }
   const g = jump || counterpress ? .9 : Math.max(.8, gap);
   const assignments = [], put = (n, job, x, y) => {
     if (!nearest[n]) return;
@@ -49,7 +52,7 @@ function defensiveUnit(M, s, gap, jump = false, counterpress = false, cohort = n
   };
   put(0, 'press', p.x + ax * g, p.y + ay * g);
   // Cover sits five metres goal-side of the presser, angled towards the centre.
-  if (nearest[1]?.d < (counterpress ? 24 : 20)) put(1, 'cover', p.x + ax * g + ux * 5 + inside * 1.5, p.y + ay * g + uy * 5);
+  if (nearest[1]?.d < (counterpress ? 24 : 20)) put(1, 'cover', p.x + ax * g + ux * (range ? 3 : 5) + inside * (range ? 3.5 : 1.5), p.y + ay * g + uy * (range ? 3 : 5));
   if ((jump || counterpress) && nearest[2]?.d < 24) {
     if (outlet) put(2, wide ? 'trap' : 'screen', p.x + (outlet.q.x - p.x) * .65, p.y + (outlet.q.y - p.y) * .65);
     else put(2, 'balance', p.x + ux * 9 + inside * 6, p.y + uy * 9);

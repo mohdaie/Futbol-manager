@@ -612,3 +612,20 @@ cut-backs, wingers to the byline and inside forwards cutting in (7.1, 7.4). Leag
 goals 2.73, shots 20, corners 8.3, fouls 24. Developer tools: `scripts/flow-scenarios.cjs` (gegenpress v long ball),
 `scripts/flow-clips.cjs` (clips with timelines), Admin shape demo, Jev decision loop (`js/systems/jev-lead.js`,
 paused by the owner). Handover: `docs/CLAUDE_HANDOVER.md`.
+
+## Shot quality and defending near goal (2026.10.21.27)
+From the analysis loop (reports in `docs/analysis/`; rulebook first, every change cites its section).
+- **Shot quality** (7.5, `chanceAt` / `xgAt` in sim.js): distance, goal-mouth angle, how much of the goal the
+  shooter sees past the keeper and defenders, bodies in the shooting triangle, pressure, header. Structure as in
+  professional shot models; own coefficients fitted to public reference values. Used for the shot decision and
+  the chance itself; replaces the fixed one-on-one value.
+- **Keeper** (6.1): on the line from the middle of his goal to the ball (near post at a tight angle), resetting at
+  full speed with every pass near his goal.
+- **Defending near goal**: box marking goal-side, tight and at full speed (4.8); the first defender in shooting
+  range blocks goal-side and the cover takes the pass inside (4.8); delay rather than dive in near the box (4.5);
+  midfielders pass runners on at the back line (4.7); through balls need time on the ball (7.1).
+- **Shape** (3.2-3.7, 6.2-6.6): build-up positions, the space between the opponent's lines, the back line squeezes
+  up behind the ball, centre-backs step into midfield with the ball.
+- **Calibration** (league averages only, three seeded worlds of 100 matches): `ENG.xg` 1, `ENG.fin` 0.85; goals
+  2.5-3.0, shots 25-28, on target 7.8-8.9, draws 22-36%.
+- Analysis tools: `scripts/match-analysis.cjs`, `scripts/analysis-render.cjs`, `scripts/analysis-summary.cjs`.

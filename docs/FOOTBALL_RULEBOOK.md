@@ -143,12 +143,23 @@ switches of play, triangles around the ball, and players staying back as rest de
    block). Wide is less dangerous than centre.
 5. **Cover and balance.** The first defender presses the ball; the second covers him at an angle (~5 m behind,
    inside); the third balances on the far side. Never two defenders pressing the same man while a runner is free.
+   **Near his own box the first defender delays rather than dives in:** on his feet, side-on, showing the attacker
+   away from goal, until the ball is exposed (the attacker turns away from goal or loses control) or a team-mate
+   is covering him. A defender who dives in and misses is out of the game, and the attacker is through.
 6. **Cover shadow.** A presser runs on the line that cuts off the pass behind him (usually into the 6).
 7. **Back line moves as one.** It steps up when the ball goes back or the carrier is pressed and can't play forward;
    it drops when the carrier is free and facing forward ("ball pressure / no ball pressure"). This is the offside
    trap.
+   A midfielder tracking a runner goes with him up to the back line and passes him on to the defenders; dropping
+   behind his own back line plays everyone onside and leaves the line stranded.
 8. **Box defending.** In the low block the box is defended zonally (near post, 6-yard box, penalty spot, far post)
    plus marking of runners; the 6 protects the edge of the box (Zone 14 and cut-backs).
+   **In shooting range (about 25 m and closer) the first defender comes at the ball on the goal side**, between the
+   ball and the goal, to block the shot; showing him to the passing lane is for midfield. The second defender
+   covers the pass inside (the cut-back or the square ball). Most shots in a real match go through at least one
+   body; a shooter with nobody between him and the goal is a defensive mistake, not the normal case.
+   **In and around the box every defender is goal-side of his man and close (1-2 m), with ball and man in view.**
+   Halfway between his zone and his man is ball-watching: the runner arrives in front of him.
 
 9. **Loose and second balls.** A loose ball (a deflection, a miscontrol, a long ball that has landed, a pass that
    has missed its man) is attacked at once by the nearest player of each side; the first there wins it, the next
@@ -201,8 +212,10 @@ Each position has a job per phase. Roles (our role names) change the job within 
 
 ### 6.1 Goalkeeper (1)
 - Build-up: an extra passer behind the centre-backs; long when pressed (Sweeper/Ball-playing keeper: more involved).
-- OOP: positioned on the line between ball and goal centre; comes off his line behind a high line (sweeper);
-  claims crosses into the 6-yard box; narrows the angle in one-on-ones.
+- OOP: positioned on the line between ball and goal centre (at a tight angle that puts him at the near post), and he
+  resets quickly with every pass near his goal: a keeper caught on the wrong line after a cut-back or a square ball
+  shows the shooter most of the goal. Comes off his line behind a high line (sweeper); claims crosses into the
+  6-yard box; narrows the angle in one-on-ones.
 
 ### 6.2 Centre-backs (4, 5)
 - Build-up: split wide (to the edge of the box) to give the keeper and 6 angles; carry forward into midfield when
@@ -270,6 +283,10 @@ inverting by role.
 ### 7.1 Ways to create (in order of quality in open play)
 1. **Cut-back** from the byline/half-space by the box to the penalty spot or edge.
 2. **Through ball** into the space behind (from Zone 14 or the half-space) for a runner timed onside.
+   It needs a picture: the passer must have time to lift his head and see the run (facing forward, not tightly
+   pressed). A pressed player who tries it mostly gives the ball away; only great Vision and Composure find it
+   with a man on his back. Under pressure the normal choice is the safe pass, and the through ball comes from
+   the team-mate who receives it free.
 3. **Turn and shoot / slip** from Zone 14.
 4. **Inside forward cutting in** to shoot from the half-space edge of the box.
 5. **Cross** from the wide lane (whipped, early, or from deep): lower quality, many attempts.
@@ -303,6 +320,23 @@ inverting by role.
 
 **You should see:** most chances from cut-backs, through balls and cut-ins; three or more players in the box when
 the ball is wide; clear chances finished.
+
+### 7.5 What makes a chance good (shot quality)
+A chance is judged the moment the ball is struck, from what the shooter sees (the structure follows the
+professional shot models; the numbers are our own, set against public football figures):
+1. **Distance and angle.** The goal mouth he can aim at narrows with distance and with the angle from the side.
+   With the keeper set and nobody in the way: about 0.6 from 3 m, 0.4 from 6 m, 0.2-0.25 from the penalty spot,
+   0.13 from the edge of the box, 0.04 from 25 m, 0.04 from a tight angle by the byline.
+2. **How much of the goal he can see.** The keeper and any defender between ball and goal hide part of it. A keeper
+   out of position (caught off his line, beaten by the pass) shows more of the goal: an open goal is a big
+   chance even from distance; a well-set keeper closes it.
+3. **Bodies in the way.** Each defender in the triangle between the ball and the posts makes it worse (and may block
+   it): shots through a crowd rarely go in.
+4. **Pressure on the shooter.** A man on him hurries the shot.
+5. **The kind of shot.** A header is worth well under half of a shot with the foot from the same spot; free kicks
+   and penalties are their own case (penalty about 0.76).
+A one-on-one is not a fixed value: it is this same reading with nobody in the way and the keeper's position deciding
+how much goal he shows.
 
 ---
 
