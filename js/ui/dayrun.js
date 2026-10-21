@@ -4,7 +4,7 @@
    matches are played, transfer business, contracts and scouting happen on their days, and the squad recovers.
    It stops by itself on matchday, at the end of the season, or when important news comes in
    (transfers, bids, contracts, injuries, suspensions, the board: newsImportant() in state.js).
-   Tap Stop to pause at any time; Continue picks up from the same day. */
+   Tap Stop to pause at any time; Continue picks up from the same day. Every day is saved as it passes. */
 
 const DAY_MS = 520;   // time each day stays on screen
 const DAYRUN_MAX = 35; // safety stop after five weeks without anything happening
@@ -30,6 +30,7 @@ function dayTick() {
   const firstNews = G.nextId, playedBefore = G.fixtures.filter(played).length, wasDay = today();
   const r = advanceDay();
   DAYRUN.days++;
+  if (r === 'ok') saveGame(); // every day is saved, so a refresh never loses days
   const games = G.fixtures.filter(played).length - playedBefore;
   const fresh = G.news.filter(n => n.id >= firstNews);
   const line = [];

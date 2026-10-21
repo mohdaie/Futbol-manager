@@ -155,7 +155,9 @@ function newGame(clubId, manager, avatar) {
     const id = 'F' + i;
     const cl = { ...f, id, city: NATIONS[f.nat].n, ground: '', cap: 0, squad: [], bal: 50e6, tac: aiTactic(), foreign: true, code: f.name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() };
     G.clubs[id] = cl;
-    genSquad(cl, 18);
+    // Real-based first team when there is one (with the real player each is inspired by), otherwise generated.
+    if (typeof FOREIGN_ROSTERS !== 'undefined' && FOREIGN_ROSTERS[f.ros]) FOREIGN_ROSTERS[f.ros].forEach(row => addToClub(playerFromRoster(row, id), cl));
+    else genSquad(cl, 18);
   });
   G.clubs.FA = { id: 'FA', name: 'Free agents', city: '', rep: 50, c1: '#55646B', c2: '#D8E0E2', squad: [], foreign: true, fa: true, code: 'FA', bal: 0 };
   for (let i = 0; i < 50; i++) genFreeAgent();
