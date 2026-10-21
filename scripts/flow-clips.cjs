@@ -9,7 +9,7 @@ const cfgs = []; for (const pSt of [1, 2]) for (const dSt of [1, 2]) for (const 
 const rt = createMatchQaRuntime(seed);
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'flow-scan.js'), 'utf8'), rt.ctx, { filename: 'flow-scan.js' });
 rt.ctx.CFG = { ...cfgs[sc], n: sc, seed, pair: 0, live: true };
-const res = rt.run(`(() => { newGame(CLUBS[0].id, 'Flow QA', 1); G.flags.fixedTac = true; FLOW_BASE = JSON.stringify(G); const r = flowMatch(CFG); return { frames: r.frames, ev: r.M.flow.events, p: r.M.flow.p, sum: flowSummary(r.M, CFG) }; })()`);
+const res = rt.run(`(() => { newGame(CLUBS[0].id, 'Flow QA', 1); G.flags.fixedTac = true; FLOW_BASE = JSON.stringify(G); const r = flowMatch(CFG); return { frames: r.frames, ev: r.M.flow.events, p: r.M.flow.p, sum: flowSummary(r.M, CFG), pos: r.M.sides.map(S => FORMATIONS[S.ip].map(x => x[0])) }; })()`);
 fs.mkdirSync(outDir, { recursive: true });
 const W = 340, H = 520, sx = x => 10 + x / 68 * (W - 20), sy = y => 10 + y / 105 * (H - 20);
 function frameImg(f, label) {
@@ -24,6 +24,28 @@ function frameImg(f, label) {
   disc(f[2], f[3], 3 + Math.min(4, f[4] * 0.6), [255, 255, 255]);
   return buf;
 }
+// Second-by-second description of a clip for Jev (who cannot watch video): who has the ball, where (third and
+// lane from the direct side's point of view), numbers near the ball, and changes of possession or flight.
+const side = s => (s === res.p ? 'blue(press)' : 'red(direct)');
+function where(x, y) {
+  const d = res.p === 0 ? y : 105 - y; // distance from the direct side's own goal line (away attacks +Y)
+  const third = d < 35 ? "red's defensive third" : d < 70 ? 'middle third' : "red's attacking third";
+  const lx = res.p === 0 ? x : 68 - x, lane = lx < 13.8 ? 'left wing' : lx < 24.8 ? 'left half-space' : lx < 43.2 ? 'centre' : lx < 54.2 ? 'right half-space' : 'right wing';
+  return third + ', ' + lane;
+}
+function describe(sel) {
+  const out = [], t0 = sel[0][1];
+  let last = '';
+  for (let k = 0; k < sel.length; k += 2) {
+    const f = sel[k], bx = f[2], by = f[3], bz = f[4], os = f[5], oi = f[6], rs = f[7];
+    const near = [0, 1].map(s => { let n = 0; for (let i = 0; i < 11; i++) { const x = f[8 + (s * 11 + i) * 2], y = f[9 + (s * 11 + i) * 2]; if (x != null && Math.hypot(x - bx, y - by) < 12) n++; } return n; });
+    const who = rs ? 'restart ' + rs : os >= 0 ? side(os) + ' ' + res.pos[os][oi] + ' on the ball' : bz > 1 ? 'ball in the air' : 'loose ball';
+    const line = `${(f[1] - t0).toFixed(0)}s ${who}, ${where(bx, by)}; within 12 m: blue ${near[res.p]}, red ${near[1 - res.p]}`;
+    if (line.split(';')[0] !== last || k % 6 === 0) out.push(line);
+    last = line.split(';')[0];
+  }
+  return out.slice(0, 16);
+}
 const fr = res.frames, made = [], kinds = {};
 for (const e of res.ev) {
   if ((kinds[e.k] = (kinds[e.k] || 0) + 1) > 2) continue; // two clips of each kind
@@ -34,6 +56,6 @@ for (const e of res.ev) {
   const imgs = [];
   for (let k = 0; k < sel.length - 1; k++) for (let u = 0; u < 5; u++) imgs.push(frameImg(sel[k].map((v, n) => n < 2 || v == null || sel[k + 1][n] == null || typeof v !== 'number' ? v : v + (sel[k + 1][n] - v) * u / 5)));
   const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${W}x${H}`, '-r', '10', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file], { input: Buffer.concat(imgs) });
-  if (r.status === 0) made.push({ file, kind: e.k, minute: e.min, at: e.t });
+  if (r.status === 0) { const timeline = describe(sel); fs.writeFileSync(file.replace(/\.mp4$/, '.txt'), timeline.join('\n') + '\n'); made.push({ file, kind: e.k, minute: e.min, at: e.t, timeline }); }
 }
 console.log(JSON.stringify({ scenario: res.sum.scenario, pressingSide: res.p ? 'away (blue)' : 'home (blue)', clips: made }, null, 2));

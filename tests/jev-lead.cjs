@@ -36,6 +36,14 @@ const ask = (rt, p) => { rt.ctx.P = p; return rt.run('jevLead(P, { mocked: true 
   check('Owner rules travel with every request', ok.calls[0].state.ownerRules.some(x => x.includes('win rates')));
   check('Mocked replies are labelled as mocked', r1.source === 'mocked' && r1.mocked === true);
 
+  const blind = service(pick('runner_handoff'));
+  const rb = await ask(blind, { ...decision, blind: true });
+  check('Blind proposal hides the recommendation from Jev but records the comparison', !('recommendation' in blind.calls[0].state) && rb.blind && rb.followedRecommendation === false);
+  const unsure = await ask(service(body => Object.fromEntries(Object.keys(body.questions).map(k => [k, { choice: k === 'decision' ? 'press_cover' : 'require', confidence: k === 'criterion_0' ? .4 : .9 }]))), decision);
+  check('A criterion Jev is unsure about is pending, not binding', unsure.status === 'decided' && unsure.criteria.isolated.verdict === 'pending' && !unsure.required.includes('isolated') && unsure.pendingCriteria.includes('isolated'));
+  const withClips = service(pick('press_cover'));
+  await ask(withClips, { ...decision, clips: [{ clip: 'a.mp4', timeline: ['0s red keeper has it'] }] });
+  check('Clip descriptions travel with the proposal', withClips.calls[0].state.clips.length === 1);
   const low = await ask(service(pick('press_cover', .4)), decision);
   check('Low confidence leaves the decision pending with the reason', low.status === 'pending' && /low confidence/.test(low.reason));
   const unlisted = await ask(service(pick('rewrite_engine')), decision);
