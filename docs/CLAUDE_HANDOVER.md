@@ -30,6 +30,44 @@ and provide a playable preview or deployment when they request one.
 Keep updates concise, avoid repeatedly reading all files/running unchanged
 suites, finish one reviewable layer at a time and show it in 2D.
 
+## Owner update: Jev is the lead development decision-maker (21 October 2026)
+
+**This instruction supersedes the earlier advisory-only Jev workflow.**
+The owner wants **ChatGPT and Claude to analyse and propose; Jev to make the
+final development decision based on their analysis and measured evidence.**
+Do not treat Jev as merely a second opinion.
+
+- ChatGPT/Claude inspect code, diagnose issues, gather measurements and prepare
+  concise options with supporting evidence, trade-offs and a recommendation.
+  Send conclusions and rationale, not private internal reasoning.
+- Jev selects the next development priority and approach, and determines the
+  acceptance criteria within the owner's requirements and football rulebook.
+  ChatGPT/Claude implement the selected approach and run the relevant checks.
+- Return before/after results, regressions, limitations and visible match evidence
+  to Jev. Jev decides accept, revise or investigate further for that development
+  iteration. Record its decision and the evidence used in the handover/QA report.
+- Jev's decision does not waive failing checks or override explicit owner
+  requirements. Surface a conflict with evidence and request a revised Jev
+  decision; do not silently substitute ChatGPT/Claude's preferred approach.
+- If Jev is unavailable or its reply is invalid/insufficient, continue independent
+  evidence collection and existing approved work, but mark the new decision as
+  pending rather than claiming Jev approval or falling back silently.
+- Use the existing working GitHub Actions secret and relay. Batch meaningful
+  decisions, reuse decisions only while their evidence/scope remains applicable,
+  and respect existing budgets. No need to ask the owner for each routine
+  development choice within the authorised scope.
+- This is development/QA authority, not runtime player control. Merge and
+  deployment still require an owner request.
+
+**Implementation status:** this update records the owner's requested operating
+model. The existing integration is still a constrained priority recommender with
+confidence-based local fallback; this documentation change does not implement
+decision authority. First extend the prompt/response contract, validation,
+decision records and workflow to support the proposal → Jev decision →
+implementation → evidence → Jev acceptance loop. Replace advisory fallback for
+new decisions with an explicit pending state. Clearly distinguish mocked replies
+from genuine Jev decisions and verify the loop with a real provider response.
+
 ## What is implemented
 
 1. **Pitch/team shape:** `js/engine/shape.js` supplies exact zones/lanes, phases,
@@ -117,7 +155,7 @@ node tests/transitions.cjs
 node tests/intent.cjs
 node tests/engine-qa.cjs
 node scripts/engine-qa.cjs --matches 12 --strict
-# Optional genuine review with an environment credential:
+# Existing genuine-review command (decision workflow extension pending):
 node scripts/engine-qa.cjs --matches 6 --jev --strict
 CHROMIUM_PATH=/opt/pw-browsers/chromium node tests/shape.cjs
 CHROMIUM_PATH=/opt/pw-browsers/chromium node tests/live.cjs
@@ -136,7 +174,8 @@ read-only contents permission and never deploys. Admin review is explicit;
 opening a page doesn't query. Real requests use the existing `jevAsk()` client.
 A prior genuine review passed in Actions run **39602677053**, selecting momentum
 at **0.89 confidence**. The latest branch workflow will show the layers 4–5 review.
-Valid confidence below 0.6 is recorded separately and leaves the local priority;
+Current legacy behaviour: valid confidence below 0.6 is recorded separately and leaves the local priority;
+this fallback must be superseded by the owner update above for new Jev-led decisions.
 invalid/missing provider responses fail an explicitly requested CLI review.
 See `docs/ENGINE_QA.md`. Synthetic provider replies in tests are clearly mocked.
 
