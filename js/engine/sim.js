@@ -16,7 +16,7 @@
    challenges, Heading and height win the ball in the air, Off the Ball and Anticipation time runs,
    Finishing and Composure finish, the goalkeeping attributes save, Work Rate and Stamina keep players
    pressing, Flair and Dribbling take players on, Crossing delivers, Leadership (captain) lifts the side.
-   Tactics move the shape (positions()), set tempo (time on the ball), directness and risk, width,
+   Tactics move the shape (teamPlan()/positions()), set tempo (time on the ball), directness and risk, width,
    pressing (who goes and how far), the defensive line and what happens on winning or losing the ball;
    roles and player instructions (beh()) shape each player's choices and runs. */
 
@@ -50,9 +50,7 @@ function refreshForm(M, S) {
     return pForm(S, p) * fam(p, FORMATIONS[S.ip][i][0]) * (S.capF || 1) * (S.idx === 0 ? 1.015 : 1) * (losingLate && p.pers === 'Determined' ? 1.05 : 1);
   });
   S.fam = S.user ? G.training.fam : 85;
-  S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null;
-  const tk = [S.ip, S.oop, S.ment, S.width, S.line, S.press, S.tempo, S.pass, S.on.join(), (S.roles || []).join(), JSON.stringify(S.pi || {})].join('|');
-  if (M.min % 15 === 0 || tk !== S._tk) { S._shape = null; S._base = null; S._tk = tk; } // the shape changes with tiredness and tactics
+  S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null; S._shape = null;
 }
 // Attribute k of the player in slot i, as it counts right now.
 function av(S, i, k) {
@@ -82,29 +80,22 @@ function bh(S, i, k) {
   const key = i * BEH_K.length + BEH_I[k], v = c[key];
   return v === v ? v : (c[key] = beh(S, i, k));
 }
-// Team shape for a ball position, cached for the minute on a 2.5% grid (positions() is the costly part).
-// Defending block (own frame): the out-of-possession formation squeezed into a compact block between the
-// ball and the goal, slid across towards the ball. The defensive line sets how deep it sits; pressing lets
-// the forwards stay higher; familiarity with the tactic keeps it tidy (positions() noise).
-function defShape(S, bx, by) {
-  const base = S._base || (S._base = positions(S, false, 0.5, 0.5)), line = S.line ?? 1, press = S.press ?? 1, ip = FORMATIONS[S.ip];
-  const yc = clamp(by + [0.2, 0.16, 0.13][line], [0.62, 0.55, 0.48][line], 0.88); // where the back line sits
-  return base.map((q, i) => {
-    if (!q || i === 0) return q;
-    const role = LINE[ip[i][0]];
-    let y = yc - (0.8 - q[1]) * 0.62, x = 0.5 + (q[0] - 0.5) * 0.78 + (bx - 0.5) * 0.32;
-    if (role >= 4) y = Math.min(y, Math.max(by + 0.04, 0.32 - press * 0.06)); // forwards: on the ball side of halfway, higher with a press
-    else y = Math.max(y, by + 0.03); // midfield and defence stay goal-side of the ball
-    return [clamp(x, 0.04, 0.96), clamp(y, 0.1, 0.95)];
-  });
-}
+// Shared rulebook anchors, cached on a one-metre grid for this minute.
+function defShape(S, bx, by) { return blockPlan(S, bx, by).positions; }
 function shapeOf(M, s, has, bx, by) {
-  if (!(M.sides[s]._shape instanceof Map)) M.sides[s]._shape = new Map(); // (a saved match comes back as a plain object)
-  const S = M.sides[s], c = S._shape, qx = Math.round(clamp(bx, 0, 1) * 12), qy = Math.round(clamp(by, 0, 1) * 14);
-  const key = (has ? 1 : 0) * 10000 + qx * 64 + qy;
-  let v = c.get(key);
-  if (!v) { v = has ? positions(S, true, qx / 12, qy / 14) : defShape(S, qx / 12, qy / 14); c.set(key, v); }
-  return v;
+  const S = M.sides[s];
+  if (!(S._shape instanceof Map)) S._shape = new Map(); // caches are rebuilt after loading a saved match
+  const carrier = has && M.sim && M.sim.B.os === s ? M.sim.B.oi : -1;
+  const qx = Math.round(clamp(bx, 0, 1) * 68), qy = Math.ceil(clamp(by, 0, 1) * 105);
+  const restart = !!M.sim?.rs, key = [has, qx, qy, carrier, restart].join('|');
+  let plan = S._shape.get(key);
+  if (!plan) {
+    plan = teamPlan(S, has, qx / 68, qy / 105, carrier);
+    if (restart) plan.phase = 'restart';
+    S._shape.set(key, plan);
+  }
+  S._teamPlan = plan;
+  return plan.positions;
 }
 const avg2 = (S, i, ks) => ks.reduce((t, [k, w]) => t + ac(S, i, k) * w, 0) / ks.reduce((t, [, w]) => t + w, 0);
 const aerialAt = (S, i) => { const p = G.players[S.on[i]]; return ac(S, i, 'hea') + clamp(((p && p.ht || 182) - 182) / 4, -3, 4); };
@@ -805,6 +796,7 @@ function targets(M, all) {
     if (has && !all) continue; // the side with the ball re-plans every two seconds, the defenders every second
     const bx = s === 0 ? B.x / PW : 1 - B.x / PW, by = s === 0 ? B.y / PL : 1 - B.y / PL;
     const pos = shapeOf(M, s, has, bx, by), carrier = has && own ? B.oi : -1, line = offsideY(M, s), fw = fwdY(s);
+    const reserves = new Set([...(S._teamPlan?.rest.back || []), ...(S._teamPlan?.rest.screen || [])]);
     const gx = PW / 2, gy = goalY(1 - s); // their own goal
     // Run triggers (with the ball): the man on the ball facing forward or unpressed, or a forward dropping deep
     // to leave space behind him; after winning the ball, Counter sends runners at once and Hold Shape waits.
@@ -822,14 +814,17 @@ function targets(M, all) {
       const role = LINE[ip[i][0]];
       if (i === 0) { // keeper: on his line, covering the angle; a sweeper higher behind a high line
         const ky = gy + fw * (1.5 + (by > 0.5 ? 0 : (S.line ?? 1) * 3 + bh(S, 0, 'sweep') * 6));
-        p.tx = PW / 2 + (B.x - PW / 2) * 0.12; p.ty = has ? ky + fw * 4 : ky; continue;
+        p.tx = has ? X : PW / 2 + (B.x - PW / 2) * 0.12; p.ty = has ? Y : ky; continue;
       }
+      if (reserves.has(i)) p.run = 0; // the chosen cover cannot join an attacking run
       const running = p.run > sim.t;
       if (has) {
         // Runs in behind: forwards and runners, timed by Off the Ball and Anticipation, when the ball can be played.
         // Runs in behind, like duties: how attacking the player is (team mentality, role, instruction) sets how
         // often he goes; Off the Ball times it; anyone from midfield back only goes if enough stay behind the ball.
-        if (!running && own && by > 0.18 && (role >= 3 || bh(S, i, 'run') > 0.2 || bh(S, i, 'fw') > 0.3) && Math.abs(own.x - p.x) + Math.abs(own.y - p.y) < 55) {
+        const droppingNine = roleName(S, i) === 'False Nine' && S._teamPlan.phase !== 'finish';
+        if (droppingNine) p.run = 0;
+        if (!droppingNine && !reserves.has(i) && !running && own && by > 0.18 && (role >= 3 || bh(S, i, 'run') > 0.2 || bh(S, i, 'fw') > 0.3) && Math.abs(own.x - p.x) + Math.abs(own.y - p.y) < 55) {
           const im = (S.ment ?? 2) - 2 + bh(S, i, 'fw') + bh(S, i, 'run') * 1.5 + (role >= 4 ? 1 : role === 3 ? 0 : -1);
           const ok = role >= 4 || cover >= 4 + ((S.ment ?? 2) <= 1 ? 1 : 0);
           const pr = ok ? (trig || ctr || (drop && role <= 3) ? 0.24 : 0.04) * (ac(S, i, 'otb') / 12) * clamp(1 + im * 0.3, 0.15, 2) * (ctr ? 2 : 1) * (hold ? 0.2 : 1) : 0;
@@ -841,7 +836,7 @@ function targets(M, all) {
           // Support: midfielders offer a pass.
           if (own && role >= 2 && role <= 3) { const dx = X - own.x, dy = Y - own.y; if (dx * dx + dy * dy > 484) { const k = clamp(0.1 + ac(S, i, 'tea') * 0.015, 0.1, 0.45); X += (own.x - X) * k; Y += (own.y - Y) * k; } } // Teamwork: comes to help
           // Late runs into the box when the ball is wide in the final third.
-          if (by < 0.33 && (bx < 0.25 || bx > 0.75) && role >= 3 && R() < ac(S, i, 'otb') / 30) { const sp = boxSpot(s, i); X = sp[0]; Y = sp[1]; }
+          if (!droppingNine && by < 18 / PL && (bx < 0.25 || bx > 0.75) && role >= 3 && R() < ac(S, i, 'otb') / 30) { const sp = boxSpot(s, i); X = sp[0]; Y = sp[1]; }
           // Find space near that spot (Off the Ball, Anticipation).
           else if (own && role >= 2 && Math.abs(Y - own.y) < 40) [X, Y] = findSpace(M, s, i, X, Y, own, line);
         }
@@ -859,6 +854,11 @@ function targets(M, all) {
           const w = clamp((danger ? 0.55 : 0.35) + ac(S, i, 'pos') * 0.02 + (ac(S, i, 'tea') - 10) * 0.012 + bh(S, i, 'mk') * 0.15, 0.2, 0.92);
           X += (mx - X) * w; Y += (my - Y) * w;
         }
+      }
+      // Individual support/search must not pull the reserved cover ahead of its team anchor.
+      if (has && reserves.has(i)) {
+        const anchorY = toWorld(s, pos[i][0], pos[i][1])[1];
+        Y = s === 0 ? Math.max(Y, anchorY) : Math.min(Y, anchorY);
       }
       p.tx = clamp(X, 0.5, PW - 0.5); p.ty = clamp(Y, 0.5, PL - 0.5);
     }
