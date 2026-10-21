@@ -68,6 +68,46 @@ implementation → evidence → Jev acceptance loop. Replace advisory fallback f
 new decisions with an explicit pending state. Clearly distinguish mocked replies
 from genuine Jev decisions and verify the loop with a real provider response.
 
+## Owner update: realistic 2D match flow is the primary acceptance goal
+
+The owner explicitly prioritises believable sequences of play and tactical
+interaction over goals per match. Evaluate actual match movement and decisions,
+not only static shape targets or aggregate statistics. Goals per match is a
+secondary regression/calibration signal, never the primary pass/fail condition.
+Do not force goals, prescribe winners, or equalise style win rates.
+
+Required next validation work:
+- Build reproducible matchup scenarios, starting with gegenpressing versus long
+  ball. Vary one versus two strikers, formations, role combinations, player
+  abilities, fatigue and game state; swap sides and use multiple seeds.
+- Trace complete passages: build-up → pressing trigger → pressure with cover and
+  blocked outlets → short escape or long release → aerial contest/second-ball
+  support → regain/counterpress or recovery → next attack. Inspect both successful
+  and failed presses; long-ball teams must have credible direct outlets and
+  supporting runners rather than simply kicking long on a script.
+- Assess whether pressing direction, back-line step/drop, tracking, spacing,
+  pass selection, ball travel, runs and transition timing make football sense in
+  context. Distinguish high pressing from counterpressing after possession loss.
+- Use paired before/after setups, event/position traces and representative 2D
+  clips of actual simulation, including failures. The existing shape rehearsal
+  alone cannot demonstrate realistic match flow.
+- Ground expectations in sourced real-match examples or credible coaching
+  analysis; the rulebook is a specification, not independent proof of realism.
+  Document legitimate variation instead of forcing one predetermined sequence.
+- Report concrete behavioural defects with timestamps and relevant measures:
+  isolated pressers, uncovered receivers/runners, block gaps, viable escape
+  routes, second-ball support and recovery after a bypassed press. Define
+  scenario-specific acceptance criteria before using them to judge a change.
+- ChatGPT/Claude prepare evidence and proposals; Jev decides the development
+  response under the lead-decision workflow above. Do not reduce its input to
+  scorelines or aggregate goals, or claim it watched clips if it only received
+  text/structured traces.
+
+Status: these are the owner's new validation requirements, not a claim that the
+scenario suite, clip capture or Jev decision-workflow extension is implemented.
+The low-goal observation remains diagnostic; first establish whether a concrete
+flow defect exists rather than assuming the scoring average itself is a defect.
+
 ## What is implemented
 
 1. **Pitch/team shape:** `js/engine/shape.js` supplies exact zones/lanes, phases,
