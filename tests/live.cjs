@@ -76,7 +76,7 @@ const assert = require('node:assert/strict');
 
     const min = await page.evaluate(() => LIVE.M.min);
     const score = await page.evaluate(() => LIVE.M.sides.map(S => S.st.g).join('-'));
-    await act('back'); await page.waitForTimeout(100);
+    await act('back'); await page.waitForFunction(() => UI.s !== 'match');
     check('Back leaves the match', (await state()).screen, 'prematch');
     check('Match is kept in the save', await page.evaluate(id => JSON.parse(localStorage.getItem(SAVE_KEY)).live.fid === id, fid), true);
     await act('go', { s: 'home' });
