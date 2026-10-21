@@ -39,6 +39,7 @@ function service(mode = 'ok') {
     const rt = service(mode), r = await rt.run('reviewEngineAudit(engineAudit())');
     check(mode + ' response retains deterministic recommendation', r.source === 'local');
     check(mode + ' response never becomes a cached success', rt.run('ENGINE_QA_CACHE') === null);
+    if (mode === 'low') check('A valid uncertain review is recorded without adopting the suggestion', r.providerReview?.source === 'jev' && r.providerReview.confidence === .2 && !r.providerReview.accepted);
   }
   const budget = service(); budget.run("aiUsage('jev').cost=1");
   const blocked = await budget.run('reviewEngineAudit(engineAudit())');
@@ -64,5 +65,13 @@ function service(mode = 'ok') {
   check('Jev cannot rewrite test verdicts', failed.calls[0].body.state.failed > 0 && result.failed == null);
   const cli = require('node:child_process').spawnSync(process.execPath, [require('node:path').resolve(__dirname, '../scripts/engine-qa.cjs'), '--jev', '--strict'], { encoding: 'utf8', env: { ...process.env, JEV_API_KEY: '', TYPESAFE_API_KEY: '' } });
   check('CLI cannot claim a successful Jev run without credentials', cli.status === 2 && JSON.parse(cli.stdout).review.source === 'local');
+  const fs = require('node:fs'), path = require('node:path'), dir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'engine-qa-'));
+  try {
+    const hook = path.join(dir, 'mock-provider.cjs');
+    fs.writeFileSync(hook, `global.fetch=async()=>new Response(JSON.stringify({answers:{priority:{choice:'match_regression',confidence:.2}}}));`);
+    const uncertain = require('node:child_process').spawnSync(process.execPath, ['--require', hook, path.resolve(__dirname, '../scripts/engine-qa.cjs'), '--jev', '--strict'], { encoding: 'utf8', env: { ...process.env, JEV_API_KEY: 'mock-test-credential', TYPESAFE_API_KEY: '' } });
+    const review = JSON.parse(uncertain.stdout).review;
+    check('CLI records a valid uncertain review without adopting it', uncertain.status === 0 && review.source === 'local' && review.providerReview?.confidence === .2 && !review.providerReview.accepted);
+  } finally { fs.rmSync(dir, {recursive:true,force:true}); }
   console.log(JSON.stringify({ passed: checks.length, checks, scenarios: report.scenarios, assertions: report.checked, auditMs: report.ms, realProviderCalls: 0 }, null, 2));
 })().catch(e => { console.error(e); process.exitCode = 1; });

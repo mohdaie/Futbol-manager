@@ -2,6 +2,12 @@
 // Instrumentation wraps actual action/receive functions in this test runtime.
 // It is not loaded by index.html and never changes a game player's experience.
 const QA_PLAY = playOption, QA_KICK = kick, QA_RECEIVE = receive;
+const QA_INTENT = applyTeamIntent;
+let QA_BASELINE_INTENT = false;
+applyTeamIntent = function(M, s, i, options, press, context) {
+  // Baseline mode measures the same opportunities without changing scores.
+  return QA_INTENT(M, s, i, QA_BASELINE_INTENT ? options.map(op => ({ ...op })) : options, press, context);
+};
 playOption = function(M, s, i, op, press) {
   const q = M.qa, p = P_(M, s, i), pass = ['pass', 'long', 'thru'].includes(op.k);
   if (q) {
@@ -14,7 +20,10 @@ playOption = function(M, s, i, op, press) {
     }
     const m = q.momentum;
     if (m && M.sim.t - m.t < 8 && M.sim.poss === m.s && s === m.s && i === m.i) {
-      q.afterBreak++; if (pass && fwd < -2) q.backAfterBreak++; q.momentum = null;
+      const back = pass && fwd < -2;
+      q.afterBreak++; if (back) q.backAfterBreak++;
+      if (press < .4 && M.sim.intent?.forward) { q.openAfterBreak++; if (back) q.backOpenAfterBreak++; }
+      q.momentum = null;
     }
   }
   return QA_PLAY(M, s, i, op, press);
@@ -42,7 +51,8 @@ receive = function(M, s, j, fl, d) {
   return result;
 };
 
-function matchQaBatch(n = 12) {
+function matchQaBatch(n = 12, baselineIntent = false) {
+  QA_BASELINE_INTENT = baselineIntent;
   const started = performance.now(), names = Object.keys(STYLES);
   newGame(CLUBS[0].id, 'Engine QA', 1); G.flags.fixedTac = true;
   const baseline = JSON.stringify(G), rows = [];
@@ -54,7 +64,7 @@ function matchQaBatch(n = 12) {
     G.club = 'QA-unmanaged';
     [h, a].forEach((id, s) => { applyStyle(G.clubs[id].tac, styles[s]); });
     const M = createMatch({ id: -1 - k, h, a });
-    M.qa = { passes: 0, forward: 0, backward: 0, sideways: 0, returnPass: 0, backwardReturn: 0, lineBreaks: 0, afterBreak: 0, backAfterBreak: 0, momentum: null };
+    M.qa = { passes: 0, forward: 0, backward: 0, sideways: 0, returnPass: 0, backwardReturn: 0, lineBreaks: 0, afterBreak: 0, backAfterBreak: 0, openAfterBreak: 0, backOpenAfterBreak: 0, momentum: null };
     let minutes = 0;
     while (!M.ended && minutes++ < 110) { simMinute(M); M.sides.forEach(S => injurySubs(M, S)); }
     const st = M.sides.map(S => S.st), qa = { ...M.qa }; delete qa.momentum;
@@ -64,9 +74,10 @@ function matchQaBatch(n = 12) {
       attempts: st[0].pa + st[1].pa, complete: st[0].pc + st[1].pc, ...qa });
   }
   const sum = key => rows.reduce((t, r) => t + (r[key] || 0), 0), rate = (a, b) => Math.round(1000 * sum(a) / Math.max(1, sum(b))) / 10;
-  return { schema: 1, seed: MATCH_QA_SEED, matches: n, fixedTactics: true, ms: Math.round(performance.now() - started),
+  return { schema: 2, seed: MATCH_QA_SEED, matches: n, fixedTactics: true, baselineIntent, ms: Math.round(performance.now() - started),
     finished: rows.every(r => r.finished), finite: rows.every(r => r.finite),
     goalsPerMatch: +(sum('goals') / n).toFixed(2), shotsPerMatch: +(sum('shots') / n).toFixed(2), passesPerMatch: Math.round(sum('attempts') / n), completionPct: rate('complete', 'attempts'),
     forwardPct: rate('forward', 'passes'), backwardPct: rate('backward', 'passes'), returnPct: rate('returnPass', 'passes'), backwardReturnPct: rate('backwardReturn', 'passes'),
-    lineBreaks: sum('lineBreaks'), afterBreak: sum('afterBreak'), backAfterBreak: sum('backAfterBreak'), backAfterBreakPct: rate('backAfterBreak', 'afterBreak'), rows };
+    lineBreaks: sum('lineBreaks'), afterBreak: sum('afterBreak'), backAfterBreak: sum('backAfterBreak'), backAfterBreakPct: rate('backAfterBreak', 'afterBreak'),
+    openAfterBreak: sum('openAfterBreak'), backOpenAfterBreak: sum('backOpenAfterBreak'), backOpenAfterBreakPct: rate('backOpenAfterBreak', 'openAfterBreak'), rows };
 }

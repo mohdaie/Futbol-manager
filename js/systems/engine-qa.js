@@ -1,7 +1,7 @@
 'use strict';
 /* Fast deterministic checks first; one bounded Jev review per distinct result.
    AI selects an investigation, never alters a verdict, code, tactic or tuning. */
-const ENGINE_QA_VERSION = 2;
+const ENGINE_QA_VERSION = 3;
 const ENGINE_QA_GROUPS = {
   geometry: { name: 'Pitch geometry', action: 'Repair pitch boundaries and named-zone classification.', severity: 10 },
   shape: { name: 'Team block', action: 'Repair finite positions, compactness and OOP line membership.', severity: 9 },
@@ -76,7 +76,7 @@ function engineAudit(planner = teamPlan) {
   checkRole(8, 'Winger', .2, .4, q => pitchZone(...q).lane === 0, 'Winger supplies chosen width');
   checkRole(10, 'Inside Forward', .8, .25, q => pitchZone(...q).lane === 3, 'Inside forward moves inside');
   const checked = Object.values(groups).reduce((n, g) => n + g.checked, 0), failed = Object.values(groups).reduce((n, g) => n + g.failed, 0);
-  const engine = hash01([positionJobs, attackPlan, blockPlan, restSlots, positions, teamPhase].map(String).join('\n')).toString(36);
+  const engine = hash01([positionJobs, attackPlan, blockPlan, restSlots, positions, teamPhase].map(String).join('\n') + TEAM_INTENT_SOURCE).toString(36);
   return { schema: ENGINE_QA_VERSION, engine, scenarios, checked, failed, groups, ms: Math.round(performance.now() - started) };
 }
 
@@ -91,7 +91,7 @@ async function reviewEngineAudit(report) {
   const facts = engineQaFacts(report), key = JSON.stringify(facts);
   const candidates = Object.entries(report.groups).filter(([, g]) => g.failed).sort((a, b) => b[1].severity - a[1].severity);
   const next = report.match ? {
-    momentum: `Investigate continuity after a line break: ${report.match.backAfterBreak}/${report.match.afterBreak} next actions were backward passes (${report.match.backAfterBreakPct}%).`,
+    momentum: `Investigate continuity after a line break: ${report.match.backAfterBreak}/${report.match.afterBreak} next actions were backward passes (${report.match.backAfterBreakPct}%). Of the unpressured receivers with a viable forward option, ${report.match.backOpenAfterBreak}/${report.match.openAfterBreak} went backward (${report.match.backOpenAfterBreakPct}%). Judge the open cases; pressure/closed routes justify recycling.`,
     forward_first: `Investigate forward-first decisions: ${report.match.forwardPct}% forward and ${report.match.backwardPct}% backward passes. Check pressure and available options before judging.`,
     one_twos: `Investigate repeated return passes: ${report.match.returnPct}% returned to the previous passer; ${report.match.backwardReturnPct}% of all passes were backward returns. Preserve purposeful one-twos.`,
   } : { match_regression: 'Validate the changes in full matches before moving to the next layer.' };
@@ -105,8 +105,10 @@ async function reviewEngineAudit(report) {
     const response = await jevAsk(facts, { priority: { type: 'choice', instructions: 'Select the most useful existing investigation for the developer. Test results are authoritative. Return only a listed criterion; you cannot approve a release or change code.', criteria } }, 'Engine QA review');
     const a = response.answers?.priority;
     if (G !== game) return { ...fallback, status: 'Career changed; review discarded.' };
-    if (!aiReady('jev', 'engine') || !a || !Object.hasOwn(criteria, a.choice) || !Number.isFinite(a.confidence) || a.confidence < .6 || a.confidence > 1) return { ...fallback, status: 'Jev answer was not usable; local priority retained.',
+    if (!aiReady('jev', 'engine') || !a || !Object.hasOwn(criteria, a.choice) || !Number.isFinite(a.confidence) || a.confidence < 0 || a.confidence > 1) return { ...fallback, status: 'Jev answer was not usable; local priority retained.',
       diagnostic: { choice: a && Object.hasOwn(criteria, a.choice) ? a.choice : 'missing-or-unlisted', confidence: Number.isFinite(a?.confidence) ? a.confidence : null } };
+    if (a.confidence < .6) return { ...fallback, status: 'Jev reviewed the batch with low confidence; local priority retained.',
+      providerReview: { source: 'jev', choice: a.choice, confidence: a.confidence, accepted: false } };
     const review = { source: 'jev', priority: a.choice, confidence: a.confidence, action: report.groups[a.choice]?.action || criteria[a.choice], status: 'Reviewed by Jev' };
     ENGINE_QA_CACHE = { key, review }; return review;
   } catch (e) { return { ...fallback, status: 'Jev failed: ' + String(e.message).slice(0, 180) }; }

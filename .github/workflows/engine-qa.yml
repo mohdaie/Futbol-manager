@@ -27,6 +27,8 @@ jobs:
         run: node scripts/engine-qa.cjs --strict
       - name: Jev client contract tests (mocked)
         run: node tests/engine-qa.cjs
+      - name: Team intent and possession lifecycle
+        run: node tests/intent.cjs
       - name: One genuine Jev review
         env:
           JEV_API_KEY: ${{ secrets.JEV_API_KEY }}

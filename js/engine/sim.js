@@ -161,7 +161,7 @@ function giveBall(M, s, i) {
   if (!p) return looseBall(M);
   if (B.offSet && B.offS === s && (B.offSet & (1 << i)) && !M.sim.rs) { B.offSet = 0; return offside(M, s, i, null); }
   if (B.offS !== s) B.offSet = 0;
-  if (M.sim.poss !== s) { M.sim.poss = s; M.sim.turn = M.sim.t; if (!M.sim.rs) M.sim.tr = { s, t: M.sim.t }; } // won in open play: a transition
+  if (M.sim.poss !== s) { M.sim.momentum = null; M.sim.poss = s; M.sim.turn = M.sim.t; if (!M.sim.rs) M.sim.tr = { s, t: M.sim.t }; } // won in open play: a transition
   if (toOwn(s, p.x, p.y)[1] < 0.3 && M.sim.t - (M.sim.lastAtt || -99) > 8) { M.sim.lastAtt = M.sim.t; mark(M, 'attack', s); }
   B.os = s; B.oi = i; B.ls = s; B.li = i; B.fl = null; B.x = p.x; B.y = p.y; B.z = 0; B.vx = B.vy = B.vz = 0;
   B.dt = decideDelay(M, s, i, ENG.touch) * (transition(M, s) === 'ctr' ? 0.6 : 1);
@@ -179,6 +179,7 @@ function looseBall(M) { const B = M.sim.B; B.os = -1; B.oi = -1; B.fl = null; }
 /* ---------- restarts ---------- */
 function kickOff(M, s) {
   const sim = M.sim;
+  sim.momentum = null;
   sim.rs = { k: 'ko', s, x: PW / 2, y: PL / 2, w: 3 };
   looseBall(M); Object.assign(sim.B, { x: PW / 2, y: PL / 2, z: 0, vx: 0, vy: 0, vz: 0 });
   [0, 1].forEach(t => {
@@ -189,6 +190,7 @@ function kickOff(M, s) {
 // A restart for side s at (X, Y): 'thr' throw-in, 'gk' goal kick, 'ck' corner, 'fk' free kick, 'pen' penalty.
 function setRestart(M, k, s, X, Y, ev) {
   const sim = M.sim;
+  sim.momentum = null;
   looseBall(M); sim.B.offSet = 0;
   sim.rs = { k, s, x: clamp(X, 0, PW), y: clamp(Y, 0, PL), w: k === 'thr' ? 3 : k === 'gk' ? 5 : k === 'ck' ? 7 : k === 'pen' ? 10 : 4, ev: ev || null };
   Object.assign(sim.B, { x: sim.rs.x, y: sim.rs.y, z: 0, vx: 0, vy: 0, vz: 0 });
@@ -329,13 +331,13 @@ function carrierDecide(M, s, i, o = {}) {
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > (20 - vis) / 160) return; // he sees the flag coming (poor Vision misses it now and then)
-    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk });
+    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk, rpress });
     // Through ball into the space in behind for a player making a run.
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
     if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03))) {
       const ahead = 9 + ac(S, j, 'pac') * 0.3, sx = clamp(q.x + q.vx * 1.2, 4, PW - 4), sy = clamp(q.y + fwdY(s) * ahead, 2, PL - 2);
       const tl = hyp(sx - p.x, sy - p.y), r2 = clamp(passRisk(M, s, p.x, p.y, sx, sy, false) + 0.12 + (20 - vis) * 0.012 + tl * 0.004 - b('thr') * 0.05, 0.05, 0.95);
-      opts.push({ k: 'thru', j, tx: sx, ty: sy, v: ((1 - r2) * threat(s, sx, sy) * 1.15 - r2 * lossCost) * (1 + b('thr') * 0.4 + b('rk') * 0.2) * [0.85, 1, 1.15][pass], risk: r2 });
+      opts.push({ k: 'thru', j, tx: sx, ty: sy, v: ((1 - r2) * threat(s, sx, sy) * 1.15 - r2 * lossCost) * (1 + b('thr') * 0.4 + b('rk') * 0.2) * [0.85, 1, 1.15][pass], risk: r2, rpress: recvPressure(M, s, sx, sy)[1] });
     }
   });
   // Cross from a wide area near the box.
@@ -374,6 +376,7 @@ function carrierDecide(M, s, i, o = {}) {
   // Clear it when under pressure deep in his own half.
   if (oy > 0.72 && press > 0.35) opts.push({ k: 'clear', v: 0.02 + press * 0.05 + (oy > 0.84 ? 0.04 : 0) + (gk ? 0.02 : 0) });
   if (!opts.length) { B.dt = 0.5; return; }
+  sim.intent = applyTeamIntent(M, s, i, opts, press, o);
   // He weighs the few best passes he sees (Vision finds them), not every team-mate equally.
   const PK = { pass: 1, long: 1, thru: 1 }, passes = opts.filter(x => PK[x.k]);
   if (passes.length > 4) { passes.sort((a, b) => b.v - a.v); const keep = new Set(passes.slice(0, 4)); for (let k = opts.length - 1; k >= 0; k--) if (PK[opts[k].k] && !keep.has(opts[k])) opts.splice(k, 1); }
@@ -465,7 +468,8 @@ function kick(M, s, i, k, tx, ty, j, o = {}) {
   B.vx = (ex - p.x) / len * sp; B.vy = (ey - p.y) / len * sp;
   const flight = len / sp;
   B.vz = o.air ? 9.8 * flight / 2 : 0;
-  B.fl = { k, s, i, j, tx: ex, ty: ey, t0: sim.t, arr: sim.t + flight, off: !!o.off, air: !!o.air, len, xg: o.xg || 0, aid: o.aid || null, sp };
+  B.fl = { k, s, i, j, tx: ex, ty: ey, t0: sim.t, arr: sim.t + flight, off: !!o.off, air: !!o.air, len, xg: o.xg || 0, aid: o.aid || null, sp,
+    linesBroken: INTENT_PASSES.has(k) ? brokenLines(M, s, p.y, ey) : 0 };
   B.ls = s; B.li = i; p.carry = 0;
   // Offside: every team-mate beyond the second-last defender (and the ball) when the ball is played.
   B.offS = s; B.offSet = 0;
@@ -689,6 +693,7 @@ function receive(M, s, j, fl, d) {
     if (fl && fl.i != null && fl.j === j) { S.st.pc++; pstat(S, fl.i, 'pc'); if (toOwn(s, B.x, B.y)[1] < 0.3) bump(S, fl.i, 0.03); sim.lastPass = { s, id: S.on[fl.i], t: sim.t }; }
     if (fl && fl.k === 'thru') mark(M, 'chance', s);
     giveBall(M, s, j);
+    if (fl?.linesBroken && fl.j === j) sim.momentum = { s, until: sim.t + 6 };
     return;
   }
   // Heavy touch: it runs loose.

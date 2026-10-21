@@ -1,6 +1,8 @@
 # Pitch language and team shape: first review
 
-Draft foundation for rulebook v2, section 12, layers 1–2. This branch changes the
+Draft foundation for rulebook v2, section 12, layers 1–2.
+Layer 3 carrier decisions and their measured limits are now described in
+[TEAM_INTENT.md](TEAM_INTENT.md). This branch changes the
 simulation's team anchors and adds a rehearsal at **More → Admin → Engine →
 Watch shape demo**. It is not a completed implementation of the rulebook.
 
