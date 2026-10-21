@@ -170,6 +170,8 @@ function giveBall(M, s, i) {
   if (toOwn(s, p.x, p.y)[1] < 0.3 && M.sim.t - (M.sim.lastAtt || -99) > 8) { M.sim.lastAtt = M.sim.t; mark(M, 'attack', s); }
   B.os = s; B.oi = i; B.ls = s; B.li = i; B.fl = null; B.x = p.x; B.y = p.y; B.z = 0; B.vx = B.vy = B.vz = 0;
   B.dt = decideDelay(M, s, i, ENG.touch) * (transition(M, s) === 'ctr' ? 0.6 : 1);
+  // Unpressed, a player takes a touch and looks up before passing; pressed, he plays quickly.
+  if (pressureOn(M, s, i)[2] > 10 && toOwn(s, p.x, p.y)[1] < 0.66 && transition(M, s) !== 'ctr') B.dt = Math.max(B.dt, 1.2 + R() * 0.6); // nobody within 10 m (build-up keeps its tempo)
 }
 // Straight after a change of possession: 'ctr' (counter: quick and forward), 'hold' (keep it, wait for the shape),
 // or null. Set by "When the ball is won".
@@ -352,7 +354,9 @@ function carrierDecide(M, s, i, o = {}) {
       const beat = sim.P[1 - s].filter((z, n) => z && n && hyp(z.x - p.x, z.y - p.y) < 12 && (z.y - ty) * fwdY(s) < 0).length;
       esc = beat >= 2 && (ty - p.y) * fwdY(s) > 8 ? 1.6 : len < 25 ? 1.3 : 1;
     }
-    const val = threat(s, tx, ty) * (1 - rpress * 0.45) * esc;
+    // The cut-back: from the byline area to the penalty spot or the edge, the best chance in open play (7.1).
+    const cutback = !air && oy < 0.13 && Math.abs(ox - 0.5) > 0.12 && dGoal(s, tx, ty) > 7 && dGoal(s, tx, ty) < 20 && Math.abs(tx - PW / 2) < 12 && rpress < 0.5;
+    const val = threat(s, tx, ty) * (1 - rpress * 0.45) * esc * (cutback ? 1.5 : 1);
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > (20 - vis) / 160) return; // he sees the flag coming (poor Vision misses it now and then)
@@ -496,7 +500,13 @@ function playOption(M, s, i, op, press) {
 // The ball leaves the player's foot: speed and height by the kind of ball, aimed with some error.
 function kick(M, s, i, k, tx, ty, j, o = {}) {
   const sim = M.sim, B = sim.B, p = P_(M, s, i);
-  const e = o.err || 0, ex = tx + gauss() * e * 0.6, ey = ty + gauss() * e * 0.6;
+  let e = o.err || 0, ex = tx + gauss() * e * 0.6, ey = ty + gauss() * e * 0.6;
+  // Now and then a ball is mishit: overhit or sliced well off line (more likely for a poor or hurried kick,
+  // and for crosses). These are what run out for throw-ins and goal kicks in a real match.
+  if (k !== 'shot' && R() < clamp(0.035 + e * 0.006 + (k === 'cross' ? 0.1 : 0), 0.03, 0.22)) {
+    const L0 = hyp(tx - p.x, ty - p.y) || 1, over = rf(0.15, 0.5) * L0 + 3;
+    ex = tx + (tx - p.x) / L0 * over + gauss() * L0 * 0.18; ey = ty + (ty - p.y) / L0 * over + gauss() * L0 * 0.18;
+  }
   const len = hyp(ex - p.x, ey - p.y) || 1;
   const sp = k === 'shot' ? 26 : k === 'clear' ? 24 : o.air ? clamp(14 + len * 0.18, 16, 26) : clamp(9 + len * 0.42, 10, 22);
   B.os = -1; B.oi = -1; B.x = p.x; B.y = p.y; B.z = o.air ? 0.1 : 0;
@@ -803,8 +813,8 @@ function receive(M, s, j, fl, d) {
     if (fl?.linesBroken && fl.j === j) sim.momentum = { s, until: sim.t + 6 };
     return;
   }
-  // Heavy touch: it runs loose.
-  B.fl = null; B.vx *= 0.35; B.vy *= 0.35;
+  // Heavy touch: the ball bounces off him a few metres (out of play if he is on the line).
+  B.fl = null; { const a = Math.atan2(B.vy, B.vx) + rf(-1.2, 1.2), v = rf(3, 7); B.vx = Math.cos(a) * v; B.vy = Math.sin(a) * v; }
 }
 // A pressing trigger for the other side: a back pass, a poor touch, a receiver facing his own goal, the ball on
 // the touchline. The presser's Work Rate and the receiver's First Touch decide whether it is pounced on.
@@ -914,6 +924,7 @@ function targets(M, all) {
     const bx = s === 0 ? B.x / PW : 1 - B.x / PW, by = s === 0 ? B.y / PL : 1 - B.y / PL;
     const pos = shapeOf(M, s, has, bx, by), carrier = has && own ? B.oi : -1, line = offsideY(M, s), fw = fwdY(s);
     const reserves = new Set([...(S._teamPlan?.rest.back || []), ...(S._teamPlan?.rest.screen || [])]);
+    const box = has && own ? boxPlan(M, s, ip, bx, by, carrier, reserves, line) : null;
     const gx = PW / 2, gy = goalY(1 - s); // their own goal
     const unitStep = !has && own ? defensiveLineStep(M, s) : 0;
     S._defStep = unitStep;
@@ -957,8 +968,9 @@ function targets(M, all) {
           if (role >= 3 && beyond(s, Y, line)) Y = line - fw * 1.2; // stay onside
           // Support: midfielders offer a pass.
           if (own && role >= 2 && role <= 3) { const dx = X - own.x, dy = Y - own.y; if (dx * dx + dy * dy > 484) { const k = clamp(0.1 + ac(S, i, 'tea') * 0.015, 0.1, 0.45); X += (own.x - X) * k; Y += (own.y - Y) * k; } } // Teamwork: comes to help
-          // Late runs into the box when the ball is wide in the final third.
-          if (!droppingNine && by < 18 / PL && (bx < 0.25 || bx > 0.75) && role >= 3 && R() < ac(S, i, 'otb') / 30) { const sp = boxSpot(s, i); X = sp[0]; Y = sp[1]; }
+          // Filling the box when the ball is wide in the final third or in the cut-back zone (rulebook 7.2).
+          const inBox = box && box.get(i);
+          if (inBox) { X = inBox[0]; Y = inBox[1]; }
           // Direct play (long passing) building from the back: the midfielder further from the ball pushes up near
           // the target man for the knock-down and second ball; the nearer one stays short as the escape pass.
           if ((S.pass ?? 1) === 2 && role === 3 && by > 0.55) {
@@ -967,7 +979,7 @@ function targets(M, all) {
             if (i === far && tg) { X += (P[tg].x - X) * 0.4; Y = P[tg].y - fw * 10; }
           }
           // Find space near that spot (Off the Ball, Anticipation).
-          else if (own && role >= 2 && Math.abs(Y - own.y) < 40) [X, Y] = findSpace(M, s, i, X, Y, own, line);
+          else if (!inBox && own && role >= 2 && Math.abs(Y - own.y) < 40) [X, Y] = findSpace(M, s, i, X, Y, own, line);
         }
       } else if (defRole <= 3) {
         // Marking: stay goal-side of the nearest attacker in his zone, tighter with Marking (and the instruction).
@@ -994,6 +1006,38 @@ function targets(M, all) {
     }
   }
 }
+// Filling the box (rulebook 7.2): with the ball wide in the final third or in the cut-back zone, the attackers
+// who are not rest defence take the near post (usually the 9), the far post (the far-side wide forward), the
+// penalty spot (an 8 or 10 arriving late) and the edge of the box (a midfielder, for cut-backs and second balls).
+// Off the Ball and the run instruction pick who gets there; nobody stands offside before the ball is played.
+function boxPlan(M, s, ip, bx, by, carrier, reserves, line) {
+  const wide = bx < 0.3 || bx > 0.7, cut = by < 0.13 && (bx < 0.38 || bx > 0.62);
+  if (!(by < 0.45 && (wide || cut))) return null; // runners anticipate: they go as soon as the ball is wide in the attacking half
+  const S = M.sides[s], P = M.sim.P[s], sgn = bx < 0.5 ? -1 : 1;
+  const cand = P.map((q, i) => q && i && i !== carrier && !reserves.has(i) && LINE[ip[i][0]] >= 3 ? i : -1).filter(i => i > 0);
+  if (!cand.length) return null;
+  const L = i => LINE[ip[i][0]], farSide = i => (ip[i][1] - 0.5) * sgn < -0.05;
+  const spots = [
+    ['near', 0.5 + sgn * 0.06, 0.055, i => (L(i) === 5 ? 3 : L(i) === 4 && !farSide(i) ? 1 : 0)],
+    ['far', 0.5 - sgn * 0.08, 0.065, i => (L(i) === 4 && farSide(i) ? 3 : L(i) === 5 ? 2 : farSide(i) ? 1 : 0)],
+    ['spot', 0.5 - sgn * 0.02, 0.105, i => (ip[i][0] === 'AMC' ? 3 : L(i) === 3 ? 2 : 1)],
+    ['edge', 0.5 + sgn * 0.03, 0.185, i => (L(i) === 3 ? 2 : 0)],
+  ];
+  const out = new Map();
+  for (const [, x, y, pref] of spots) {
+    const [wx, wy] = toWorld(s, x, y);
+    let best = -1, bv = -1e9;
+    for (const i of cand) {
+      if (out.has(i)) continue;
+      const q = P[i], v = pref(i) * 10 - hyp(q.x - wx, q.y - wy) * 0.25 + bh(S, i, 'run') * 2 + ac(S, i, 'otb') * 0.15;
+      if (v > bv) { bv = v; best = i; }
+    }
+    if (best < 0) break;
+    out.set(best, [wx, beyond(s, wy, line) ? line - fwdY(s) * 0.8 : wy]);
+  }
+  return out;
+}
+
 // Space search off the ball: a few spots around where the role wants him, scored by how free they are, whether
 // the ball can reach them, how dangerous they are, staying onside and out of a team-mate's space. Off the Ball
 // picks the right one, Anticipation reads where the defenders are going; free roles look further.
@@ -1167,7 +1211,9 @@ function tickSim(M) {
   }
   if (!sim.rs) challenges(M);
   const tk = Math.round(sim.t / TICK);
-  if (!sim.rs && (tk % 2 === 0 || sim.turn >= sim.t - TICK)) targets(M, tk % 4 === 0 || sim.turn >= sim.t - TICK);
+  // The side with the ball re-plans every two seconds, every second near the opponent's box.
+  const near = B.os >= 0 && toOwn(B.os, B.x, B.y)[1] < 0.45;
+  if (!sim.rs && (tk % 2 === 0 || sim.turn >= sim.t - TICK)) targets(M, tk % 4 === 0 || (near && tk % 2 === 0) || sim.turn >= sim.t - TICK);
   engage(M);
   keepOnside(M);
   movePlayers(M);
