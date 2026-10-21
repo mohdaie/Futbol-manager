@@ -45,6 +45,7 @@ function advanceDay() {
   if (fx && (fx.d ?? 5) <= G.day) return 'match';
   G.fixtures.filter(f => f.w === G.week && (f.d ?? 5) === G.day && !played(f) && !isUserFx(f)).sort(fxSort).forEach(f => quickSim(f));
   DAY_JOBS.forEach(([d, k, fn]) => { if (d === G.day) dayJob(k, fn); });
+  scoutDay();
   if (G.day >= 6) return advanceWeek();
   G.day++;
   squadOf(G.club).forEach(p => recoverTo(p, todayNo()));

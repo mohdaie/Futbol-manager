@@ -210,7 +210,7 @@ function agentPitch() {
   const ask = G.clubs[p.club].fa ? 0 : roundMoney(pValue(p) * rf(0.9, 1.15));
   G.pitches.unshift({ pid: p.id, ask, date: weekDate(G.week).getTime() });
   G.pitches = G.pitches.slice(0, 8);
-  G.know[p.id] = Math.max(knowOf(p), 60);
+  G.know[p.id] = Math.max(knowOf(p), 30); scoutFile(p);
   addNews('transfer', `Agent pitch: ${fullName(p)}`, `An agent says ${fullName(p)} (${p.age}, ${POS_NAME[p.pos]}, ${clubName(p.club)}) is available${ask ? ' for ' + money(ask) : ' on a free'}. Your ${POS_NAME[pos].toLowerCase()} spot is the weakest in your XI.`, { t: 'player', pid: p.id });
 }
 

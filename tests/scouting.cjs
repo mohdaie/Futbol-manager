@@ -1,0 +1,102 @@
+// Run with Playwright installed: node tests/scouting.cjs [existing server URL]
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+
+(async () => {
+  const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox', '--disable-dev-shm-usage'] } : {}) });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const errors = [], checks = [];
+  page.on('pageerror', e => errors.push(e.message));
+  const fs = require('node:fs'), path = require('node:path');
+  const root = path.resolve(__dirname, '..');
+  const server = require('node:http').createServer((req, res) => {
+    const file = path.resolve(root, '.' + new URL(req.url, 'http://localhost').pathname.replace(/\/$/, '/index.html'));
+    if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
+    try {
+      res.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.webp': 'image/webp' })[path.extname(file)] || 'application/octet-stream');
+      res.end(fs.readFileSync(file));
+    } catch { res.writeHead(404).end(); }
+  });
+  if (!process.argv[2]) await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = process.argv[2] || 'http://127.0.0.1:' + server.address().port;
+  await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  const check = (name, actual, expected) => { assert.deepEqual(actual, expected, name); checks.push(name); };
+  const state = () => page.evaluate(() => ({ screen: UI.s, popup: UI.popup?.key || null, index: VIEW_HISTORY.index }));
+  const act = (name, ds = {}) => page.evaluate(({ name, ds }) => viewAction(() => ACT[name](ds)), { name, ds });
+  const back = async () => { await page.evaluate(() => history.back()); await page.waitForTimeout(100); };
+  const appBack = async () => { await act('back'); await page.waitForTimeout(100); };
+  try {
+    await page.goto(base + '/');
+    await page.locator('[data-a="titleNew"]').click();
+    await page.locator('[data-a="startGame"]').click();
+    const r = await page.evaluate(() => {
+      const out = {};
+      const others = Object.values(G.players).filter(p => p.club !== G.club && p.club !== 'FA');
+      const p = others.find(x => G.clubs[x.club].pl && lvlOf(x) === 'A' && x.ca > 70);
+      const vis = (k) => { G.know[p.id] = k; return ATTRS.map((a, i) => { const s = seenAttr(p, i); return s.unk ? 'u' : s.ok ? 'x' : 'r'; }); };
+      const grp = g => ATTRS.map((a, i) => i).filter(i => ATTRS[i][2] === g);
+      const at10 = vis(10), at40 = vis(40), at60 = vis(60), at80 = vis(80), at90 = vis(90);
+      out.at10 = at10.every(v => v === 'u');
+      out.phys40 = grp('P').some(i => at40[i] === 'x') && grp('T').every(i => at40[i] === 'u') && grp('M').every(i => at40[i] === 'u');
+      out.at60 = grp('P').every(i => at60[i] === 'x') && grp('T').some(i => at60[i] !== 'u') && grp('M').every(i => at60[i] === 'u');
+      out.at80 = grp('T').every(i => at80[i] === 'x') && grp('M').some(i => at80[i] !== 'u');
+      out.at90 = at90.every(v => v === 'x') && seenOvr(p).txt === String(p.ca);
+      // The share of exact values grows with knowledge.
+      out.share = [25, 50, 75, 90].map(k => { const v = vis(k); return Math.round(v.filter(x => x === 'x').length / v.length * 100); });
+      // Ranges always contain the true value.
+      let bad = 0;
+      others.slice(0, 300).forEach(q => { const k0 = G.know[q.id]; [30, 55, 80].forEach(k => { G.know[q.id] = k; ATTRS.forEach((a, i) => { const s = seenAttr(q, i); if (!s.unk && (q.at[i] < s.lo || q.at[i] > s.hi)) bad++; }); }); G.know[q.id] = k0; });
+      out.bad = bad;
+      G.know[p.id] = 10;
+      out.pid = p.id;
+      out.foreign = others.find(x => !G.clubs[x.club].pl && lvlOf(x) === 'A').id;
+      out.video = others.find(x => x.id !== p.id && x.id !== out.foreign && G.clubs[x.club].pl).id;
+      return out;
+    });
+    check('Unscouted player shows no attributes', r.at10, true);
+    check('Watched stage confirms physical attributes first', r.phys40, true);
+    check('Scouted stage: physical exact, technical arriving, mental hidden', r.at60, true);
+    check('Detailed stage: technical exact, mental arriving', r.at80, true);
+    check('Full file: every value exact', r.at90, true);
+    console.log('exact share at 25/50/75/90%:', r.share.join('/'));
+    check('Exact share rises with knowledge', r.share.every((v, i) => i === 0 || v > r.share[i - 1]), true);
+    check('Estimates always contain the true value', r.bad, 0);
+
+    const send = await page.evaluate(({ pid, foreign, video }) => [scoutPlayer(G.players[pid]).ok, scoutPlayer(G.players[foreign]).ok, scoutPlayer(G.players[video], 'video').ok, scoutPlayer(G.players[pid]).ok], r);
+    check('Scout and video jobs start; no double booking', send, [true, true, true, false]);
+    const cap = await page.evaluate(() => { const n = staffOf('Scout').length * SCOUT_LOAD; const pool = Object.values(G.players).filter(p => p.club !== G.club && p.club !== 'FA' && !G.scout.jobs.some(j => j.pid === p.id)); let ok = 0; for (let i = 0; i < 12; i++) if (scoutPlayer(pool[i]).ok) ok++; const jobs = G.scout.jobs.filter(j => j.mode === 'watch').length; G.scout.jobs = G.scout.jobs.slice(0, 3); return [jobs, n, ok]; });
+    check('Each scout follows up to three players', cap[0], cap[1]);
+    const run = await page.evaluate(({ pid, foreign, video }) => {
+      const k0 = [knowOf(G.players[pid]), knowOf(G.players[foreign])];
+      let days = 0, vk = null;
+      while (days < 24) { const res = advanceDay(); if (res === 'match') { playUserInstant(userFixture()); continue; } days++; if (days === 3) vk = knowOf(G.players[video]); }
+      const f = G.scout.reports.find(x => x.pid === pid), ff = G.scout.reports.find(x => x.pid === foreign);
+      return { k0, k1: [knowOf(G.players[pid]), knowOf(G.players[foreign])], vk, seen: f.seen.length, rt: f.seen.find(x => x.rt != null)?.rt ?? null, fseen: ff.seen.length, left: G.scout.jobs.filter(j => j.pid === pid).length, news: G.news.some(n => n.action && n.action.t === 'scoutfile' && n.action.pid === pid), grade: f.grade, hist: f.hist.length };
+    }, r);
+    console.log('scouting run', JSON.stringify(run));
+    check('Watching league matches adds knowledge over time', run.k1[0] > run.k0[0] + 20 && run.seen >= 2, true);
+    check('Matches watched are logged with ratings', typeof run.rt, 'number');
+    check('Overseas players are watched at weekends', run.k1[1] > run.k0[1] && run.fseen >= 2, true);
+    check('Video analysis files within days and stops at 74%', run.vk > 10 && run.vk <= 74, true);
+    check('Job ends after three weeks with a news item', [run.left, run.news], [0, true]);
+    check('File keeps a history of the report', run.hist >= 2, true);
+
+    await page.evaluate(id => { G.know[id] = 82; scoutFileSheet(id); }, r.pid);
+    check('Scouting file opens', await page.locator('#layer .sfile').count(), 1);
+    check('File shows confirmed, estimated and locked parts', await page.evaluate(() => [!!document.querySelector('#layer .sfile b.est, #layer .sfile b.unk'), !!document.querySelector('#layer .sfile .lock'), !!document.querySelector('#layer .sf-stamp')]), [true, true, true]);
+    check('File fits the phone screen', await page.evaluate(() => document.querySelector('#layer .sheet').scrollWidth <= document.querySelector('#layer .sheet').clientWidth + 1), true);
+    await page.screenshot({ path: '/tmp/futbol-scouting.png' });
+    await page.locator('#layer [data-a="fileFolder"][data-v="rec"]').click();
+    check('Files can be moved to a folder', await page.evaluate(id => G.scout.reports.find(x => x.pid === id).folder, r.pid), 'rec');
+    await page.evaluate(() => { closeSheet(true); UI.tab.tr = 'scout'; UI.tab.sfold = 'rec'; go('transfers'); });
+    check('Folder lists the file', await page.locator('.main .grade').count() >= 1, true);
+    await page.screenshot({ path: '/tmp/futbol-scouting-tab.png', fullPage: true });
+
+    const old = await page.evaluate(() => { G.scout.reports.push({ pid: Object.keys(G.players)[5] * 1, grade: 'B', date: 0 }); delete G.scout.jobs; saveGame(); loadGame(); return [Array.isArray(G.scout.jobs), G.scout.reports.every(x => x.folder && Array.isArray(x.seen))]; });
+    check('Older saves load with folders and jobs', old, [true, true]);
+    const asg = await page.evaluate(() => { G.scout.jobs = []; G.scout.assign = []; addAssignment('Europe', 'Any', 30, 2); const before = G.scout.reports.length; weeklyScouting(); const fresh = G.scout.reports.slice(0, G.scout.reports.length - before).map(x => x.k); return fresh; });
+    check('Assignments file first reports (Watched stage)', asg.length === 2 && asg.every(k => k >= 25 && k < 60), true);
+    check('No browser runtime errors', errors, []);
+    console.log(JSON.stringify({ passed: checks.length, checks }, null, 2));
+  } finally { await browser.close(); server.close(); }
+})().catch(e => { console.error(e); process.exitCode = 1; });

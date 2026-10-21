@@ -240,6 +240,7 @@ function quickSim(fx) {
 }
 
 function finishMatch(M) {
+  if (typeof scoutWatchMatch === 'function') scoutWatchMatch(M);
   if (typeof brainCloudDuels === 'function') brainCloudDuels(M);
   brainScore(M);
   const fx = G.fixtures.find(f => f.id === M.fid);
