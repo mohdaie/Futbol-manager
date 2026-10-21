@@ -11,6 +11,42 @@ function moodFace(m) {
   return `<span class="mood ${cls}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="${col}"/><circle cx="8.5" cy="9.5" r="1.4" fill="#22082F"/><circle cx="15.5" cy="9.5" r="1.4" fill="#22082F"/><path d="${mouth}" stroke="#22082F" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>${label}</span>`;
 }
 
+function assistantBriefingCard(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
+  const priority = briefingPriority(facts, b), attention = facts.departments.filter(d => d.status === 'attention');
+  const healthy = facts.departments.filter(d => d.status === 'healthy'), watching = facts.departments.filter(d => d.status === 'monitor');
+  const link = d => `<button class="chip" data-a="briefDept" data-id="${d.id}">${esc(d.name)}</button>`;
+  const fallback = `${facts.result} ${priority ? priority.name + ' needs attention first.' : 'No urgent department issues are flagged.'}`;
+  const source = [b.sources.jev ? 'Jev priorities' : '', b.sources.ds ? 'DeepSeek summary' : ''].filter(Boolean).join(' · ') || 'Club facts';
+  return `<section id="clubBriefing" class="dcard assistant-brief" aria-label="Assistant briefing">
+    <div class="dcard-h"><div><h2>Assistant briefing</h2><small>${esc(facts.assistant)} · ${esc(facts.date)}</small></div></div>
+    <p class="brief-summary">${esc(b.text || fallback)}</p>
+    ${priority ? `<button class="brief-priority" data-a="briefDept" data-id="${priority.id}"><small>First priority</small><b>${esc(priority.name)} →</b></button>` : ''}
+    ${attention.length ? `<h3 class="lbl warnc">Needs attention · ${attention.length}</h3><div class="chips brief-attention">${attention.map(link).join('')}</div>` : ''}
+    ${healthy.length ? `<h3 class="lbl good">Healthy · ${healthy.length}</h3><div class="chips brief-healthy">${healthy.map(link).join('')}</div>` : ''}
+    <details class="brief-details"><summary>Full club report${watching.length ? ` · ${watching.length} to monitor` : ''}</summary>
+      ${facts.events.length ? `<h3 class="lbl">Recent events</h3><div class="list">${facts.events.map(e => `<button class="row act" data-a="news" data-id="${e.id.slice(5)}"><span class="grow">${esc(e.title)}</span><span>›</span></button>`).join('')}</div>` : ''}
+      ${facts.departments.map(d => `<div class="brief-department"><b>${esc(d.name)} <small class="${d.status === 'healthy' ? 'good' : d.status === 'attention' ? 'warnc' : ''}">${BRIEF_STATUS[d.status]}</small></b><p>${esc(d.evidence)}</p><button class="link" data-a="briefDept" data-id="${d.id}">${d.action} →</button></div>`).join('')}
+    </details>
+    <div class="brief-footer"><small role="status">${BRIEF_PENDING === b ? 'Updating assistant briefing…' : source}${!aiReady('jev', 'briefing') && !aiReady('ds', 'briefing') ? ' · AI is off or not configured' : ''}</small><button class="link" data-a="briefAI">AI settings</button></div>
+  </section>`;
+}
+function paintClubBriefing(facts, b) {
+  const el = document.getElementById('clubBriefing');
+  if (!el) return;
+  const open = el.querySelector('details').open;
+  el.outerHTML = assistantBriefingCard(facts, b);
+  const next = document.getElementById('clubBriefing');
+  next.querySelector('details').open = open;
+  linkEntities(next);
+}
+ACT.briefDept = ds => {
+  const d = clubBriefingFacts().departments.find(x => x.id === ds.id);
+  if (!d) return;
+  if (d.screen === 'transfers') UI.tab.tr = d.tab || 'deals';
+  go(d.screen);
+};
+ACT.briefAI = () => { UI.tab.adm = !aiReady('jev', 'briefing') ? 'jev' : 'ds'; go('admin'); };
+
 SCREENS.home = {
   render() {
     const c = userClub(), fx = nextUserFixture(), tbl = leagueTable();
@@ -63,10 +99,11 @@ SCREENS.home = {
     </section>`;
 
     return `<div class="dash-h"><h1 class="h1">Dashboard</h1></div>
-      ${clubCard}${next}${players}${finance}
+      ${assistantBriefingCard()}${clubCard}${next}${players}${finance}
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="go" data-s="news">All news</button></div>
       <div class="list">${G.news.slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
   },
+  after() { updateClubBriefing(); },
 };
 CHG.dashSort = v => { UI.f.dash = v; render(); };
 
