@@ -1,0 +1,92 @@
+'use strict';
+/* ===== dayrun.js =====
+   Continue moves the calendar on day by day. A calendar card flips through the days while the other
+   matches are played, transfer business, contracts and scouting happen on their days, and the squad recovers.
+   It stops by itself on matchday, at the end of the season, or when important news comes in
+   (transfers, bids, contracts, injuries, suspensions, the board: newsImportant() in state.js).
+   Tap Stop to pause at any time; Continue picks up from the same day. */
+
+const DAY_MS = 520;   // time each day stays on screen
+const DAYRUN_MAX = 35; // safety stop after five weeks without anything happening
+const DAYRUN = { on: false, timer: 0, days: 0, feed: [], stop: null };
+
+function startDayRun() {
+  if (!G || DAYRUN.on) return;
+  const fx = userFixture();
+  if (fx && !played(fx) && (fx.d ?? 5) <= G.day) return matchdayNow(fx);
+  Object.assign(DAYRUN, { on: true, days: 0, feed: [], stop: null });
+  drawDayRun(true);
+  DAYRUN.timer = setTimeout(dayTick, DAY_MS * 0.6);
+}
+
+function matchdayNow(fx) {
+  simUpTo(fx, false); G.day = fx.d ?? 5; saveGame();
+  return go('prematch');
+}
+
+function dayTick() {
+  DAYRUN.timer = 0;
+  if (!DAYRUN.on || !G) return;
+  const firstNews = G.nextId, playedBefore = G.fixtures.filter(played).length, wasDay = today();
+  const r = advanceDay();
+  DAYRUN.days++;
+  const games = G.fixtures.filter(played).length - playedBefore;
+  const fresh = G.news.filter(n => n.id >= firstNews);
+  const line = [];
+  if (games) line.push(`${games} match${games > 1 ? 'es' : ''} played`);
+  fresh.filter(n => !newsImportant(n)).slice(0, 2).forEach(n => line.push(n.title));
+  if (line.length) DAYRUN.feed.unshift({ d: wasDay, t: line.join(' · ') });
+  DAYRUN.feed.length = Math.min(DAYRUN.feed.length, 4);
+  const imp = fresh.filter(newsImportant);
+  if (r === 'match') return finishDayRun(() => matchdayNow(userFixture()));
+  if (r === 'season') return finishDayRun(() => go('review'));
+  if (r === 'sacked') return finishDayRun(() => go('home'));
+  if (imp.length) { DAYRUN.stop = { kind: 'news', items: imp.slice(0, 4), at: wasDay }; return pauseDayRun(); }
+  if (DAYRUN.days >= DAYRUN_MAX) { DAYRUN.stop = { kind: 'quiet' }; return pauseDayRun(); }
+  drawDayRun();
+  const sb = document.querySelector('.subbar > span:last-child'); // the date in the header follows the calendar
+  if (sb) sb.innerHTML = ICON.cal + fmtDate(today());
+  DAYRUN.timer = setTimeout(dayTick, DAY_MS);
+}
+
+// Stop and leave the card up, showing why (important news) or that the manager paused it.
+function pauseDayRun() {
+  DAYRUN.on = false; clearTimeout(DAYRUN.timer); DAYRUN.timer = 0;
+  saveGame();
+  if (UI.s === 'home') render();
+  drawDayRun();
+}
+function finishDayRun(next) {
+  DAYRUN.on = false; clearTimeout(DAYRUN.timer); DAYRUN.timer = 0;
+  closeDayRun();
+  saveGame();
+  next();
+}
+function closeDayRun() {
+  const el = document.getElementById('dayrun');
+  if (el) el.remove();
+  DAYRUN.stop = null;
+}
+
+function drawDayRun(first) {
+  let el = document.getElementById('dayrun');
+  if (!el) { el = document.createElement('div'); el.id = 'dayrun'; el.className = 'dayrun'; document.body.appendChild(el); }
+  const S = DAYRUN.stop, d = (S && S.at) || today(), nf = nextUserFixture(); // news shows on the day it happened
+  const toMatch = nf ? Math.max(0, fxDayNo(nf) - todayNo()) : null;
+  const items = S && S.kind === 'news' ? S.items : [];
+  el.innerHTML = `<div class="dr-card" role="dialog" aria-live="polite" aria-label="Calendar">
+      <div class="dr-cal${first ? '' : ' flip'}"><span class="dr-mon">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><b class="dr-day">${d.getDate()}</b><span class="dr-wd">${WDAYS[d.getDay()]}</span></div>
+      <p class="dr-phase">${esc(phaseLabel())}${nf ? ` · ${toMatch === 0 ? 'matchday' : toMatch === 1 ? 'next match tomorrow' : `next match in ${toMatch} days`}` : ''}</p>
+      ${items.length ? `<h3 class="dr-h">News just in</h3><div class="list">${items.map(n => `<button class="row act news unread" data-a="dayRunOpen" data-id="${n.id}"><span class="grow"><b>${esc(n.title)}</b><small>${esc(String(n.body).slice(0, 90))}${String(n.body).length > 90 ? '…' : ''}</small></span></button>`).join('')}</div>`
+        : S && S.kind === 'quiet' ? '<p class="muted">Nothing has happened for a while. Continue when you are ready.</p>'
+        : `<ul class="dr-feed">${DAYRUN.feed.map(f => `<li><b>${WDAYS[f.d.getDay()]} ${f.d.getDate()}</b> ${esc(f.t)}</li>`).join('') || '<li class="muted">Moving through the week…</li>'}</ul>`}
+      <div class="btns">${DAYRUN.on ? '<button class="btn wide" data-a="dayRunStop">Stop</button>'
+        : `<button class="btn ghost" data-a="dayRunClose">Close</button><button class="btn pri" data-a="dayRunGo">Continue</button>`}</div>
+    </div>`;
+}
+
+ACT.continue = () => startDayRun();
+ACT.dayRunStop = () => { DAYRUN.stop = { kind: 'paused' }; pauseDayRun(); };
+ACT.dayRunGo = () => { closeDayRun(); startDayRun(); };
+ACT.dayRunClose = () => { closeDayRun(); render(); };
+ACT.dayRunOpen = ds => { closeDayRun(); go('news'); ACT.news(ds); };

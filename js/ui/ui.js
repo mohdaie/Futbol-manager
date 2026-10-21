@@ -52,7 +52,7 @@ function render(reset) {
 
 function shell(body) {
   const c = userClub(), unread = G.news.filter(n => !n.read).length, reports = G.scout.reports.length;
-  const fx = userFixture(), matchNow = fx && !played(fx);
+  const fx = userFixture(), matchNow = fx && !played(fx) && (fx.d ?? 5) <= G.day;
   const cur = NAV.some(n => n[0] === UI.s) ? UI.s : Object.keys(NAV_GROUPS).find(k => NAV_GROUPS[k].includes(UI.s)) || 'more';
   return `<div class="app">
     <header class="top">
@@ -171,18 +171,7 @@ ACT.back = () => backView();
 ACT.closeSheet = () => closeSheet();
 ACT.dismissSheet = () => dismissPopup();
 ACT.tab = ds => { UI.tab[ds.key] = ds.v; render(); };
-ACT.continue = () => {
-  if (!G) return;
-  const fx = userFixture();
-  if (fx && !played(fx)) { simUpTo(fx, false); G.day = fx.d ?? 5; saveGame(); return go('prematch'); }
-  const r = advanceWeek();
-  if (r === 'sacked') return go('home');
-  if (r === 'season') return go('review');
-  const nx = userFixture();
-  if (nx && !played(nx)) toast('Matchday: ' + clubName(nx.h) + ' v ' + clubName(nx.a));
-  else toast(phaseLabel() + ' · ' + fmtDate(today(), false));
-  go('home');
-};
+// Continue: the calendar moves day by day (dayrun.js).
 
 function boot() {
   loadGame();

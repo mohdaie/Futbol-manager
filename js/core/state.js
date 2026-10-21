@@ -262,8 +262,11 @@ function autoSetPieces() {
 
 function emptyLedger() { return { tv: 0, gate: 0, spon: 0, merch: 0, sales: 0, prize: 0, wages: 0, staff: 0, buys: 0, ops: 0, scout: 0 }; }
 
+// News that stops the day-by-day calendar: transfers, offers, contracts, injuries, suspensions, the board.
+const NEWS_STOP = /injur|hurt|suspend|contract|released|board|sack|takes over|scouting assignment|youth intake|season begins/i;
+const newsImportant = n => n.cat === 'transfer' || n.cat === 'inbox' || (n.cat === 'club' && NEWS_STOP.test(n.title));
 function addNews(cat, title, body, action) {
-  G.news.unshift({ id: G.nextId++, date: weekDate(G.week).getTime(), cat, title, body: body || '', action: action || null, read: false, done: false });
+  G.news.unshift({ id: G.nextId++, date: (typeof today === 'function' ? today() : weekDate(G.week)).getTime(), cat, title, body: body || '', action: action || null, read: false, done: false });
   if (G.news.length > 160) G.news.length = 160;
 }
 

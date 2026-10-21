@@ -27,7 +27,7 @@ function duelRoll(M, t, y, a, d, base, close = 1, S = null, O = null) {
 const dist = (a, b) => Math.hypot((a[0] - b[0]) * 0.65, a[1] - b[1]); // pitch is 68 x 105 m
 const metres = (x, y) => Math.hypot((x - 0.5) * 68, y * 105);
 // Fast tempo: every forward action is rushed, which costs accuracy unless the players suit fast, direct play (tactic fit).
-const COHESION_K = 0.35, TEMPO_RISK = 0.05, ftp = S => (S.fit && S.fit.tempo != null ? S.fit.tempo : 0);
+const ONE_ON_ONE_XG = 0.85, COHESION_K = 0.35, TEMPO_RISK = 0.05, ftp = S => (S.fit && S.fit.tempo != null ? S.fit.tempo : 0);
 const PHYS = new Set(['pac', 'sta', 'agi', 'str']);
 
 // Form of each player this minute: morale, condition, sharpness, position fit, captain/shouts are in S.form.
@@ -95,6 +95,7 @@ function chooseAction(M, S, O, i, x, y, posS, posO, pressure, counter, step) {
   if (!gk) {
     if (y < 0.3) w.shot = (0.32 - y) * 3.2 * (inBox ? 2 : 1) * (1 + b('sh') * 0.6) * (pk('fin') / 12) * [0.75, 0.88, 1, 1.12, 1.25][ment];
     else if (y < 0.34) w.shot = 0.3 * (1 + b('sh') * 0.8) * ((pk('fin') + pk('fla')) / 24) * (ment >= 3 ? 1.3 : 1);
+    if (w.shot) w.shot *= shotWill(S, O, i); // shot engine (shots.js): position, selfishness, tight marking
     if (wide && y < 0.42 && box) w.cross = 0.9 * [0.6, 1, 1.45][width] * (1 + b('cr') * 0.7) * (pk('cro') / 12) * (1 + box * 0.15);
     w.drib = 0.32 * (inBox ? 1.6 : 1) * ((pk('dri') + pk('fla')) / 24) * (1 + b('dr') * 0.7) * (1 - pressure * 0.3) * (y < 0.5 ? 1.25 : 0.8);
     if (runners && y < 0.7) w.thru = 0.15 * (pk('vis') / 12) * (1 + b('thr') * 0.7 + b('rk') * 0.3) * [0.75, 1, 1.25][pass] * [0.6, 1, 1.45][O.line ?? 1] * (counter ? 1.5 : 1) * [0.8, 1, 1.2][tempo];
@@ -115,14 +116,18 @@ function takeShot(M, S, O, ev, seq, i, x, y, o = {}) {
   const d = metres(x, y), ang = Math.max(0.25, 1 - Math.abs(x - 0.5) * 1.6);
   let xg = o.pen ? 0.76 : clamp(0.75 * Math.exp(-d / 7.8) * ang, 0.01, 0.65);
   if (o.header) xg *= 0.55 * (o.del ? 0.8 + o.del / 50 : 1);
-  if (o.oneOnOne) xg = Math.max(xg, rf(0.25, 0.42));
+  if (o.oneOnOne) xg = Math.max(xg, rf(0.2, 0.36));
+  if (o.cutback) xg = Math.max(xg, rf(0.1, 0.26)); // squared or cut back to a free team-mate: a clear sight of goal
   if (o.fk) xg = rf(0.05, 0.11);
   const weak = !o.header && !o.pen && p.foot !== 'Either' && R() < ((x < 0.45) === (p.foot === 'Right') ? 0.4 : 0.12);
   if (weak) xg *= 0.8;
-  if (!o.pen) xg = clamp(xg * (1 - (o.pressure || 0) * 0.3) * tune('xgScale') * M.mod.xg * (S.idx === 0 ? tune('homeShot') * M.mod.home : 1) * (1 + S.boost - O.guard), 0.01, 0.85);
+  // One-on-ones have their own fixed quality: the chance-quality slider tunes ordinary shots only, so it cannot
+  // make getting in behind a high line (and so every style's defending) stronger or weaker.
+  if (!o.pen) xg = clamp(xg * (1 - (o.pressure || 0) * 0.3) * (o.oneOnOne ? ONE_ON_ONE_XG : tune('xgScale')) * M.mod.xg * (S.idx === 0 ? tune('homeShot') * M.mod.home : 1) * (1 + S.boost - O.guard), 0.01, 0.85);
   // Blocked by a defender in the way?
   const [bi, bd] = o.pen || o.fk ? [-1, 9] : nearest(o.posO || [], [x, y * 0.6]);
   S.st.sh++; S.st.xg += xg; pstat(S, i, 'sh');
+  if (!o.pen) noteThreat(O, p.id, o.aid, xg, false);
   if (o.pen) S.st.pk++;
   if (o.aid && o.aid !== p.id && S.on.includes(o.aid)) { pstat(S, S.on.indexOf(o.aid), 'kp'); bumpRating(S, o.aid, 0.08); } // key pass: the pass that set up the shot
   const step = { k: o.header ? 'head' : 'shot', s: S.idx, pid: p.id, x0: x, y0: y, x1: 0.5 + rf(-0.05, 0.05), y1: 0, xg };
@@ -140,6 +145,7 @@ function takeShot(M, S, O, ev, seq, i, x, y, o = {}) {
   if (R() < pg) {
     S.st.g++; S.st.sot++; pstat(S, i, 'sot');
     if (o.pen) S.st.pkg++;
+    if (!o.pen) noteThreat(O, p.id, null, 0, true);
     ev.t = 'goal'; step.res = 'goal';
     S.goals.push({ min: M.min, pid: p.id, aid: ev.aid, pen: !!o.pen });
     moodSwing(S, 'all', 4); moodSwing(S, p.id, 5); if (ev.aid) moodSwing(S, ev.aid, 3);
@@ -147,7 +153,7 @@ function takeShot(M, S, O, ev, seq, i, x, y, o = {}) {
     bumpRating(S, p.id, o.pen ? 0.6 : 1.0); bumpRating(S, ev.aid, 0.6);
     S.on.forEach(id => bumpRating(S, id, 0.05));
     onPitch(O).forEach(z => bumpRating(O, z.p.id, z.pos === 'GK' ? -0.35 : LINE[z.pos] <= 2 ? -0.22 : -0.05));
-  } else if (R() < clamp(0.22 + xg * 0.6, 0, 0.95)) {
+  } else if (R() < clamp(0.25 + xg * 0.6, 0, 0.95)) {
     S.st.sot++; pstat(S, i, 'sot'); pstat(O, 0, 'sv');
     if (xg > 0.3) { moodSwing(O, O.on[0], 4); moodSwing(S, p.id, -2); } // big save, big chance missed
     ev.t = 'save'; step.res = 'save'; step.x1 = 0.5 + rf(-0.04, 0.04); step.y1 = 0.03;
@@ -228,7 +234,7 @@ function playMinute(M) {
     const k = wpick(passers, q => ({ 0: 0.35, 1: 1.1, 2: 1.4, 3: 1.4, 4: 0.9, 5: 0.6 }[LINE[FORMATIONS[S.ip][q][0]]] || 1) * (0.6 + av(S, q, 'pas') / 25));
     pstat(S, k, 'pa'); if (R() < rate + (av(S, k, 'pas') - 13) * 0.01) pstat(S, k, 'pc');
   }
-  let x = st.x, y = st.y, i = -1, counter = st.counter, lastPasser = null;
+  let x = st.x, y = st.y, i = -1, counter = st.counter, lastPasser = null, runs = null;
   const turnover = (tx, ty) => {
     const won = O.won ?? 1, regroup = (S.lost ?? 1) === 0;
     // An attacking side leaves space behind it when it loses the ball.
@@ -236,22 +242,34 @@ function playMinute(M) {
     M.carry = { side: O.idx, x: 1 - tx, y: won === 0 ? Math.min(0.85, 1 - ty + 0.15) : 1 - ty, counter: c && ty < 0.6 };
   };
   for (let step = 0; step < 8; step++) {
-    const posS = positions(S, true, x, y), posO = positions(O, false, 1 - x, 1 - y).map(flip);
+    if (!runs && y <= 0.36) runs = lateRuns(S, y, counter) || [];
+    const posS = applyRuns(positions(S, true, x, y), runs), posO = positions(O, false, 1 - x, 1 - y).map(flip);
     S.pos = posS; O.pos = posO;
     if (i < 0 || !S.on[i]) i = y > 0.87 ? 0 : nearest(posS, [x, y])[0];
     if (i < 0) break;
     const [di, dd] = nearest(posO, [x, y]);
     // Patient possession play (slow tempo): players who suit it find space and ease the pressure on the ball.
-    const pressure = (di > 0 ? clamp(1 - dd / 0.16, 0, 1) * (0.85 + beh(O, di, 'pr') * 0.2) * (av(O, di, 'wor') / 13) : 0) * ((S.tempo ?? 1) === 0 ? clamp(1 - 0.3 * (0.4 + (S.fit ? S.fit.poss : 0)), 0.55, 1.1) : 1);
+    const pressure = (di > 0 ? clamp(1 - dd / 0.16, 0, 1) * (0.85 + beh(O, di, 'pr') * 0.2) * (av(O, di, 'wor') / 13) : 0) * ((S.tempo ?? 1) === 0 ? clamp(1 - 0.35 * (0.6 + (S.fit ? S.fit.poss : 0)), 0.5, 1.1) : 1);
     const act = chooseAction(M, S, O, i, x, y, posS, posO, pressure, counter, step);
     const p0 = [x, y], A0 = S.on[i];
-    if (act === 'shot') { takeShot(M, S, O, ev, seq, i, x, y, { pressure, aid: lastPasser, posO }); break; }
+    if (act === 'shot') {
+      // A marked player can lay it off to a free team-mate, who shoots instead (shots.js).
+      const k = layOff(S, O, i, x, y, posS, posO, pressure);
+      if (k > 0) {
+        const q = posS[k];
+        seq.push({ k: 'pass', s: S.idx, pid: A0, x0: x, y0: y, x1: q[0], y1: q[1], to: S.on[k], res: 'ok' });
+        S.st.pa++; S.st.pc++; pstat(S, i, 'pa'); pstat(S, i, 'pc');
+        const [, kd] = nearest(posO, q);
+        takeShot(M, S, O, ev, seq, k, q[0], q[1], { pressure: clamp(1 - kd / 0.16, 0, 1) * 0.6, aid: A0, posO, cutback: true });
+      } else takeShot(M, S, O, ev, seq, i, x, y, { pressure, aid: lastPasser, posO });
+      break;
+    }
     if (act === 'keep') { // keep the ball: a safe pass sideways or back; patient sides keep probing, others reset
       const nx = clamp(x + rf(-0.3, 0.3), 0.1, 0.9), ny = clamp(y + rf(0.03, 0.12), 0.1, 0.9);
       seq.push({ k: 'pass', s: S.idx, pid: A0, x0: x, y0: y, x1: nx, y1: ny, res: 'ok', quiet: true });
       if (R() < [0.3, 0.5, 0.7][S.tempo ?? 1]) {
         // The move resets but the ball is kept: next minute starts with the same side, if they are good on the ball.
-        if (R() < clamp(((S.tempo ?? 1) === 0 ? 0.58 : 0.52) + 0.35 * (S.fit ? S.fit.poss : 0) + (av(S, i, 'pas') - 12) * 0.02, 0.15, 0.9)) M.carry = { side: S.idx, x: nx, y: Math.max(ny, 0.45), counter: false, keep: true };
+        if (R() < clamp(((S.tempo ?? 1) === 0 ? 0.62 : 0.52) + 0.35 * (S.fit ? S.fit.poss : 0) + (av(S, i, 'pas') - 12) * 0.02, 0.15, 0.9)) M.carry = { side: S.idx, x: nx, y: Math.max(ny, 0.45), counter: false, keep: true };
         break;
       }
       // Keeping the ball under pressure needs the right players.
@@ -264,7 +282,7 @@ function playMinute(M) {
       if (act === 'pass') {
         const opts = posS.map((q, k) => (q && k && k !== i && q[1] < y + 0.08 && dist(q, p0) < 0.34 ? k : -1)).filter(k => k > 0);
         if (!opts.length) { i = -1; continue; }
-        j = wpick(opts, k => { const op = nearest(posO, posS[k])[1]; return Math.pow(op + 0.02, 1.5) * (1 + Math.max(0, y - posS[k][1]) * 3) * (posS[k][1] < 0.17 ? 0.6 : 1) * (1 + av(S, k, 'otb') / 40); });
+        j = wpick(opts, k => { const op = nearest(posO, posS[k])[1]; return Math.pow(op + 0.02, 1.5) * (1 + Math.max(0, y - posS[k][1]) * 3) * (posS[k][1] < 0.17 ? 0.6 : 1) * (1 + av(S, k, 'otb') / 40) * targetWeight(S, O, k, y); });
         tgt = posS[j];
         const fpo = S.fit ? S.fit.poss : 0;
         base = 0.86 + (S.pass === 0 ? 0.04 * fpo : 0) + (S.tempo === 2 ? -TEMPO_RISK * (1 - ftp(S)) : 0) + (S.tempo === 0 && y < 0.45 ? 0.05 * fpo : 0) - ((O.press ?? 1) === 2 ? 0.03 * (O.fit ? O.fit.press : 0) : 0) - pressure * 0.1 - dist(tgt, p0) * 0.25 - (M.mod.xg < 1 ? 0.02 : 0);
@@ -272,7 +290,7 @@ function playMinute(M) {
       } else if (act === 'thru') {
         const opts = posS.map((q, k) => (q && k && k !== i && q[1] < y - 0.06 && (LINE[FORMATIONS[S.ip][k][0]] >= 4 || beh(S, k, 'run') > 0.2) ? k : -1)).filter(k => k > 0);
         if (!opts.length) { i = -1; continue; }
-        j = wpick(opts, k => (av(S, k, 'otb') + av(S, k, 'pac')) * (1 + beh(S, k, 'run')));
+        j = wpick(opts, k => (av(S, k, 'otb') + av(S, k, 'pac')) * (1 + beh(S, k, 'run')) * targetWeight(S, O, k, 0));
         const line = offsideLine(O, positions(O, false, 1 - x, 1 - y));
         // Timing of the run against the line. Precise: offside only if he is beyond the line when the pass is played.
         const timing = gauss() * 0.032 + 0.011 + (avg2(S, j, [['otb', 1], ['dec', 0.6], ['ant', 0.6]]) - 12) * 0.003 - (O.line === 2 ? 0.006 * ((O.fit ? O.fit.line : 0) + 0.5) : 0)
@@ -287,14 +305,14 @@ function playMinute(M) {
         }
         tgt = [posS[j][0], Math.max(0.06, line - rf(0.04, 0.12))];
         // Space behind a high line, unless the defenders are quick and organised; counters need quick, sharp forwards.
-        base = 0.32 + (S.tempo === 2 ? -TEMPO_RISK * (1 - ftp(S)) : 0) + ((S.tempo ?? 1) === 0 ? 0.04 * (S.fit ? S.fit.poss : 0) : 0) + ((O.line ?? 1) === 2 ? 0.06 * (1 - (O.fit ? O.fit.line : 0)) : (O.line ?? 1) === 0 ? -0.04 * (0.4 + (O.fit ? O.fit.deep : 0)) : 0) + (counter ? 0.08 * (0.1 + (S.fit ? S.fit.counter : 0)) : 0);
+        base = 0.32 + (S.tempo === 2 ? -TEMPO_RISK * (1 - ftp(S)) : 0) + ((S.tempo ?? 1) === 0 ? 0.04 * (S.fit ? S.fit.poss : 0) : 0) + ((O.line ?? 1) === 2 ? 0.06 * (1 - (O.fit ? O.fit.line : 0)) : (O.line ?? 1) === 0 ? -0.04 * (0.1 + (O.fit ? O.fit.deep : 0)) : 0) + (counter ? 0.07 * ((S.fit ? S.fit.counter : 0) - 0.3) : 0);
         a = avg2(S, i, [['pas', 0.6], ['vis', 0.7], ['tea', 0.2]]) + beh(S, i, 'rk') * 0.8;
       } else {
         const opts = posS.map((q, k) => (q && k && k !== i && q[1] < y - 0.15 ? k : -1)).filter(k => k > 0);
         if (!opts.length) { i = -1; continue; }
         j = wpick(opts, k => Math.pow(aerialAt(S, k), 2) * (1 + beh(S, k, 'aer') * 2) * (LINE[FORMATIONS[S.ip][k][0]] >= 4 ? 2.5 : 0.4));
         tgt = [posS[j][0], posS[j][1]];
-        base = (0.58 + 0.2 * (S.fit ? S.fit.long : 0)) * M.mod.wind;
+        base = (0.55 + 0.2 * (S.fit ? S.fit.long : 0)) * M.mod.wind;
         a = i === 0 ? av(S, 0, 'kic') : avg2(S, i, [['pas', 1], ['vis', 0.3]]);
       }
       const mid = [(p0[0] + tgt[0]) / 2, (p0[1] + tgt[1]) / 2];
@@ -327,7 +345,8 @@ function playMinute(M) {
         const [ri2] = nearest(posO, tgt);
         const sweep = beh(O, 0, 'sweep') > 0 && y < 0.2;
         const da = sweep ? avg2(O, 0, [['one', 1], ['pac', 0.6], ['ant', 0.4]]) : ri2 > 0 ? avg2(O, ri2, [['pac', 1], ['ant', 0.5], ['agi', 0.3]]) : 6;
-        if (duelRoll(M, 'race', y, avg2(S, j, [['pac', 1], ['fir', 0.5], ['otb', 0.3]]), da, 0.45, 1, S, O)) {
+        // A runner who has already caused danger has a marker tight on him (shots.js attention).
+        if (duelRoll(M, 'race', y, avg2(S, j, [['pac', 1], ['fir', 0.5], ['otb', 0.3]]), da + Math.min(3, attention(O, S.on[j]) * 0.6), 0.45, 1, S, O)) {
           takeShot(M, S, O, ev, seq, j, x, Math.max(0.07, y - 0.05), { oneOnOne: true, aid: A0, posO: [] });
           break;
         }
@@ -394,9 +413,8 @@ function playMinute(M) {
     }
     if (act === 'cross') {
       const p = G.players[A0], natural = p.foot === 'Either' || (x < 0.5) === (p.foot === 'Left');
-      const cands = posS.map((q, k) => (q && k && k !== i && q[1] < 0.3 ? k : -1)).filter(k => k > 0);
-      if (!cands.length) { i = -1; continue; }
-      const t = wpick(cands, k => (aerialAt(S, k) + av(S, k, 'otb')) * (1 + beh(S, k, 'aer')));
+      const t = crossTarget(S, O, i, x, posS); // shots.js
+      if (t < 0) { i = -1; continue; }
       const tgt = [clamp(posS[t][0], 0.32, 0.68), clamp(posS[t][1], 0.05, 0.16)];
       const [dI] = nearest(posO, tgt);
       S.st.cr = (S.st.cr || 0) + 1; pstat(S, i, 'cr');
