@@ -30,6 +30,7 @@ const ICON = {
 function go(s, p = {}) {
   return viewAction(() => {
     if (s === 'team') s = 'squad';
+    if (UI.s === 'tactics' && s !== 'tactics') { UI.swapMode = false; UI.swapFrom = null; }
     if (UI.s === 'match' && s !== 'match') stopLive();
     hideSheet();
     UI.s = s; UI.p = p;
