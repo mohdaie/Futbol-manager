@@ -46,6 +46,7 @@ function advanceDay() {
   G.fixtures.filter(f => f.w === G.week && (f.d ?? 5) === G.day && !played(f) && !isUserFx(f)).sort(fxSort).forEach(f => quickSim(f));
   DAY_JOBS.forEach(([d, k, fn]) => { if (d === G.day) dayJob(k, fn); });
   scoutDay();
+  dealsDay();
   if (G.day >= 6) return advanceWeek();
   G.day++;
   squadOf(G.club).forEach(p => recoverTo(p, todayNo()));
@@ -166,6 +167,7 @@ function retire(p) {
 }
 
 function rollover() {
+  if (typeof payInstalments === 'function') payInstalments();
   seasonFavourites();
   staffSeasonEnd();
   const S = G.season, c = userClub(), left = [];

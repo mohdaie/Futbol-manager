@@ -1,0 +1,119 @@
+'use strict';
+/* ===== screens-deals.js =====
+   Transfers > Deals and the deal sheet: stage progress, what the manager must decide, the agreed terms,
+   the Director of Football's memo and the timeline of every step. */
+
+const WHO_TXT = { dof: 'Director of Football', club: 'Club', agent: 'Agent', player: 'Player', medical: 'Medical', you: 'You', done: 'Done', fail: 'Off' };
+function dealStages(d) {
+  const st = DEAL_STAGES[d.dir], i = st.findIndex(s => s[0] === d.stage);
+  return `<ol class="dstages">${st.map((s, k) => `<li class="${d.closed ? (d.closed.ok || k < i ? 'ok' : k === i ? 'off' : '') : k < i ? 'ok' : k === i ? 'now' : ''}">${s[1]}</li>`).join('')}</ol>`;
+}
+function dealStatus(d) {
+  const p = G.players[d.pid];
+  if (d.closed) return d.closed.why;
+  if (d.need) return { meeting: 'Meet the Director of Football', bidlimit: 'Their price is above your limit', notforsale: 'Not for sale', agentfee: 'The agent wants his fee', wagelimit: 'Wage demand above your limit', final: 'Ready to sign: your decision', offer: 'An offer: your decision', finalout: 'Sale ready: your decision' }[d.need.k] || 'Your decision';
+  const days = d.next != null ? Math.max(0, d.next - dayAbs()) : 0;
+  const what = { review: 'Director of Football reviewing the file', interest: 'Sounding out his club and agent', bid: d.bidOut ? 'Waiting for the club\'s answer' : 'Preparing an offer', agent: 'Talking to his agent', terms: 'Negotiating personal terms', player: `Waiting for ${p ? pname(p) : 'the player'} to decide`, medical: 'Medical', offer: 'Waiting for their answer', talks: 'In talks' }[d.stage] || '';
+  return what + (days ? ` · ${days} day${days > 1 ? 's' : ''}` : '') + (!inWindow() && WINDOW_STAGES.includes(d.stage) ? ' · waits for the window' : '');
+}
+function dealRow(d) {
+  const p = G.players[d.pid];
+  if (!p) return '';
+  const sub = `${d.dir === 'out' ? '→ ' + clubName(d.to) : d.dir === 'ai' ? clubName(d.from) + ' → ' + clubName(d.to) : clubName(d.from)} · ${dealStatus(d)}`;
+  return `<button class="row act deal ${d.need ? 'need' : ''} ${d.closed ? (d.closed.ok ? 'won' : 'lost') : ''}" data-a="deal" data-id="${d.id}"><span class="grow"><b>${esc(fullName(p))}</b><small>${esc(sub)}</small></span>${d.need ? '<em class="tag warn">Decide</em>' : ''}<span class="chev">›</span></button>`;
+}
+
+TR_TABS.deals = () => {
+  const open = G.deals.filter(dealOpen), need = open.filter(d => d.need), mine = open.filter(d => !d.need && d.dir === 'in'), sell = open.filter(d => !d.need && d.dir === 'out');
+  const league = open.filter(d => d.dir === 'ai').slice(0, 8), closed = G.deals.filter(d => d.closed && d.dir !== 'ai').slice(0, 10);
+  const sec = (t, list, e) => `<div class="sec-h"><h2>${t}</h2><span class="muted">${list.length}</span></div><div class="list">${list.map(dealRow).join('') || (e ? empty(e[0], e[1]) : '')}</div>`;
+  return `<div class="card"><h3>Director of Football <small>${staffOf('Director')[0] ? esc(staffOf('Director')[0].name) + ' · rating ' + staffOf('Director')[0].rating : 'Vacant'}</small></h3>
+      <p class="muted">Every player your scouts file at 90% or more comes to him. He reviews finance, tactics and harmony, meets you, then runs the deal within the limits you set. You make the final call.</p></div>
+    ${sec('Needs your decision', need, ['Nothing to decide', 'Decisions on deals appear here.'])}
+    ${sec('Signing', mine, ['No deals in progress', 'Scout a player fully, or open a player and choose Make an offer.'])}
+    ${sell.length ? sec('Selling', sell) : ''}
+    ${league.length ? sec('Around the league', league) : ''}
+    ${closed.length ? sec('Recently closed', closed) : ''}`;
+};
+
+function dealSheet(id) {
+  const d = G.deals.find(x => x.id === id);
+  if (!d) return toast('That deal has been cleared.');
+  const p = G.players[d.pid], M = d.memo, n = d.need;
+  const memoHtml = M ? `<section class="fsec memo"><h4>Director of Football's memo <small>${fmtDate(M.date, false)} · file ${M.k}% · rating ${M.r}</small></h4>
+      <div class="memo-v v-${M.verdict.toLowerCase()}"><b>${M.verdict}</b><span>${DOF_SAYS[M.verdict]}</span></div>
+      ${[['Finance', M.fin], ['Tactics', M.tac], ['Harmony', M.har]].map(([t, l]) => `<h5>${t}</h5><ul class="notes">${l.map(([k, txt]) => `<li class="${k}">${esc(txt)}</li>`).join('') || '<li>Nothing to note.</li>'}</ul>`).join('')}
+      ${M.k < 90 ? `<p class="note">The file is only ${M.k}% complete, so this is a rougher judgement.</p>` : ''}</section>` : '';
+  let act = '';
+  if (n && n.k === 'meeting') {
+    const F = UI.dealForm && UI.dealForm.id === d.id ? UI.dealForm : (UI.dealForm = { id: d.id, approach: 'quiet', fee: M.max || 0, wage: M.wmax });
+    const fs = F.fee >= 20e6 ? 1e6 : F.fee >= 2e6 ? 250e3 : 50e3, ws = F.wage >= 50000 ? 5000 : F.wage >= 10000 ? 1000 : 250;
+    act = `<section class="fsec"><h4>Your decision</h4>
+      <h5>Approach</h5><div class="seg">${[['quiet', 'Quiet talks with his agent'], ['open', 'Open approach to his club']].map(([k, t]) => `<button class="${F.approach === k ? 'on' : ''}" data-a="dealForm" data-k="approach" data-v="${k}">${t}</button>`).join('')}</div>
+      <p class="muted">${F.approach === 'open' ? 'Quicker, but it becomes public: rival clubs and the press will hear.' : 'Slower and private. The agent tells you first if he is interested.'}</p>
+      ${M.est ? `<h5>Most you will pay <small>(he estimates ${money(M.est)})</small></h5><div class="stepper"><button class="btn" data-a="dealForm" data-k="fee" data-v="${-fs * 4}">−−</button><button class="btn" data-a="dealForm" data-k="fee" data-v="${-fs}">−</button><b>${money(F.fee)}</b><button class="btn" data-a="dealForm" data-k="fee" data-v="${fs}">+</button><button class="btn" data-a="dealForm" data-k="fee" data-v="${fs * 4}">++</button></div>` : ''}
+      <h5>Most wage a week <small>(he expects about ${wageFmt(M.wage)})</small></h5><div class="stepper"><button class="btn" data-a="dealForm" data-k="wage" data-v="${-ws * 5}">−−</button><button class="btn" data-a="dealForm" data-k="wage" data-v="${-ws}">−</button><b>${wageFmt(F.wage)}</b><button class="btn" data-a="dealForm" data-k="wage" data-v="${ws}">+</button><button class="btn" data-a="dealForm" data-k="wage" data-v="${ws * 5}">++</button></div>
+      <p class="muted c">Budget ${money(G.fin.tb)} · wage room ${wageFmt(Math.max(0, G.fin.wb - clubWageBill(userClub())))}</p>
+      <div class="btns col"><button class="btn pri wide" data-a="dealGo" data-id="${d.id}" data-k="proceed">Proceed</button><button class="btn wide" data-a="dealGo" data-id="${d.id}" data-k="monitor">Keep monitoring</button><button class="btn wide ghost" data-a="dealGo" data-id="${d.id}" data-k="drop">Drop him</button></div></section>`;
+  } else if (n) {
+    const btn = (k, t, cls = '') => `<button class="btn wide ${cls}" data-a="dealGo" data-id="${d.id}" data-k="${k}">${t}</button>`;
+    const body = {
+      bidlimit: () => btn('raise', 'Raise the limit to ' + money(n.fee), 'pri') + btn('walk', 'Walk away', 'ghost'),
+      notforsale: () => btn('raise', 'Bid ' + money(n.fee) + ' anyway', 'pri') + btn('walk', 'Walk away', 'ghost'),
+      agentfee: () => btn('raise', 'Pay ' + money(d.agentFee), 'pri') + btn('walk', 'Walk away', 'ghost'),
+      wagelimit: () => btn('raise', 'Offer ' + wageFmt(n.wage) + ' a week', 'pri') + btn('walk', 'Walk away', 'ghost'),
+      final: () => btn('complete', 'Complete the transfer', 'pri') + btn('pull', 'Pull out', 'ghost'),
+      offer: () => btn('accept', 'Accept ' + money(d.fee), 'pri') + btn('counter', 'Ask for ' + money(roundMoney(d.fee * 1.2))) + btn('reject', 'Reject', 'ghost'),
+      finalout: () => btn('sell', 'Sanction the sale', 'pri') + btn('block', 'Block the move', 'ghost'),
+    }[n.k];
+    act = body ? `<section class="fsec"><h4>Your decision</h4><p>${esc(dealStatus(d))}.</p><div class="btns col">${body()}</div></section>` : '';
+  }
+  const terms = dealSummary(d);
+  sheet(`<article class="dealsheet">
+    <div class="eyebrow">${d.dir === 'out' ? 'Selling' : d.dir === 'ai' ? 'Around the league' : 'Signing'} · ${esc(clubName(d.from))} → ${esc(clubName(d.to))}</div>
+    <h3 class="sh-t" data-no-links>${esc(fullName(p))}</h3>
+    <p class="muted">${POS_NAME[p.pos]} · ${p.age} · ${natName(p.nat)}</p>
+    ${dealStages(d)}
+    <p class="dstatus ${d.closed ? (d.closed.ok ? 'good' : 'bad') : d.need ? 'warn' : ''}">${esc(dealStatus(d))}</p>
+    ${act}
+    ${terms ? `<section class="fsec"><h4>Terms so far</h4><p>${esc(terms)}</p>${d.lim ? `<p class="muted">Your limits: ${money(d.lim.fee)} · ${wageFmt(d.lim.wage)} a week</p>` : ''}</section>` : ''}
+    ${memoHtml}
+    <section class="fsec"><h4>Timeline</h4><div class="list">${d.log.map(l => `<div class="row tl tl-${l.who}"><span class="grow"><b>${esc(l.txt)}</b><small>${fmtDate(l.date, false)} · ${WHO_TXT[l.who] || ''}</small></span></div>`).join('')}</div></section>
+    <div class="btns"><button class="btn" data-a="player" data-id="${p.id}">Player profile</button>${d.dir !== 'ai' && G.scout.reports.some(r => r.pid === p.id) ? `<button class="btn" data-a="scoutFile" data-id="${p.id}">Scouting file</button>` : ''}</div>
+  </article>`, { key: 'deal:' + id, restore: () => dealSheet(id), valid: () => G?.deals?.some(x => x.id === id) });
+}
+ACT.deal = ds => dealSheet(+ds.id);
+ACT.dealForm = ds => {
+  const F = UI.dealForm;
+  if (ds.k === 'approach') F.approach = ds.v;
+  if (ds.k === 'fee') F.fee = Math.max(0, roundMoney(F.fee + +ds.v));
+  if (ds.k === 'wage') F.wage = Math.max(300, roundWage(F.wage + +ds.v));
+  dealSheet(F.id);
+};
+ACT.dealGo = ds => {
+  const d = G.deals.find(x => x.id === +ds.id);
+  if (!d || !d.need) return;
+  let msg = '';
+  const k = ds.k;
+  if (k === 'proceed') { const F = UI.dealForm; dealProceed(d, F.approach, F.fee, F.wage); msg = 'The Director of Football is on it.'; }
+  if (k === 'monitor') { dealMonitor(d); msg = 'Kept on file.'; }
+  if (k === 'drop') { dealDrop(d); msg = 'Dropped.'; }
+  if (k === 'raise') msg = dealRaise(d, d.need.k === 'wagelimit' ? d.need.wage : d.need.k === 'agentfee' ? d.agentFee : d.need.fee);
+  if (k === 'walk' || k === 'pull') { dealWalk(d); msg = 'You walked away.'; }
+  if (k === 'complete') { msg = completeIn(d); if (!d.closed) return toast(msg); }
+  if (['accept', 'counter', 'reject'].includes(k)) msg = answerOffer(d, k);
+  if (k === 'sell') msg = completeOut(d);
+  if (k === 'block') { blockOut(d); msg = 'Sale blocked.'; }
+  G.news.forEach(x => { if (x.action && x.action.t === 'deal' && x.action.id === d.id) x.done = true; });
+  saveGame(); toast(msg); dealSheet(d.id); render();
+};
+// Make an offer: the Director of Football takes it on (straight to the meeting, with a quick memo).
+ACT.offer = ds => {
+  const p = G.players[+ds.id];
+  if (!p || p.club === G.club) return;
+  const d = activeDeal(p.id, 'in');
+  if (d) return dealSheet(d.id);
+  const n = startDeal(p, 'review');
+  DEAL_STEP.in.review(n, p);
+  saveGame(); dealSheet(n.id);
+};

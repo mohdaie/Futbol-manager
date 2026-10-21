@@ -647,3 +647,22 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .lock { margin: 0; padding: 10px; border-radius: 8px; background: rgba(127,127,127,.1); font-size: 13px; opacity: .8; }
 .seg.wrap { flex-wrap: wrap; }
 .grade.g\? { background: rgba(127,127,127,.35); }
+
+/* deals (2026.10.21.12) */
+.dstages { display: flex; gap: 3px; margin: 10px 0 6px; padding: 0; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.dstages li { flex: 1 0 auto; min-width: 46px; padding: 6px 4px 4px; border-top: 3px solid rgba(127,127,127,.3); font-size: 10px; font-weight: 600; text-align: center; opacity: .6; }
+.dstages li.ok { border-color: var(--good); opacity: 1; }
+.dstages li.now { border-color: var(--amber); opacity: 1; }
+.dstages li.off { border-color: #F0605D; opacity: 1; }
+.dstatus { margin: 4px 0 8px; font-weight: 700; }
+.dstatus.warn { color: var(--amber); } .dstatus.good { color: var(--good); } .dstatus.bad { color: #F0605D; }
+.dealsheet h5 { margin: 10px 0 6px; font-size: 12px; }
+.dealsheet h5 small { font-weight: 500; opacity: .7; }
+.memo-v { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 8px; background: rgba(127,127,127,.12); }
+.memo-v.v-proceed b { color: var(--good); } .memo-v.v-drop b { color: #F0605D; } .memo-v.v-monitor b { color: var(--amber); }
+.row.deal.need { box-shadow: inset 3px 0 0 var(--amber); }
+.row.deal.won small { color: var(--good); } .row.deal.lost small { opacity: .7; }
+.row.tl { padding-top: 6px; padding-bottom: 6px; }
+.row.tl b { font-weight: 500; font-size: 13px; }
+.row.tl-you b { font-weight: 700; } .row.tl-fail b { color: #F0605D; } .row.tl-done b { color: var(--good); }
+.btns.col { flex-direction: column; }

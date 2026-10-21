@@ -165,18 +165,12 @@ function aiMarket() {
     const pos = FORMATIONS[c.tac.ip][worst][0];
     const pool = Object.values(G.players).filter(p => {
       const sc = G.clubs[p.club];
-      return p.pos === pos && lvlOf(p) !== 'Y' && p.club !== G.club && p.club !== c.id && p.ca > wv + 2 && p.age <= 30 && sc && sc.rep <= c.rep + 4 && (sc.fa || askingPrice(p) <= c.bal * 0.4);
+      return p.pos === pos && lvlOf(p) !== 'Y' && p.club !== G.club && p.club !== c.id && p.ca > wv + 2 && p.age <= 30 && sc && sc.rep <= c.rep + 4 && (sc.fa || askingPrice(p) <= c.bal * 0.4) && !activeDeal(p.id, 'ai');
     });
     if (!pool.length) continue;
     const p = wpick(pool, x => Math.pow(1.1, x.ca - 60));
     const from = G.clubs[p.club];
-    const fee = from.fa ? 0 : roundMoney(askingPrice(p) * rf(0.95, 1.1));
-    if (!from.fa) from.bal += fee;
-    c.bal -= fee;
-    moveClub(p, c.id);
-    p.wage = wageFor(p, c.rep); p.con = G.season + ri(2, 5);
-    G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: from.id, to: c.id, fee });
-    if (fee >= 15e6 || from.pl) addNews('transfer', `${fullName(p)} joins the ${c.name}`, `The ${c.name} sign ${fullName(p)} (${p.age}, ${p.pos}) from ${from.fa ? 'free agency' : 'the ' + from.name}${fee ? ' for ' + money(fee) : ''}.`);
+    aiDeal(c, p, from.fa ? 0 : roundMoney(askingPrice(p) * rf(0.95, 1.1)));
   }
   if (G.tHist.length > 120) G.tHist.length = 120;
 }
@@ -185,13 +179,13 @@ function aiBidsForUser() {
   seniorSquad(G.club).forEach(p => {
     const chance = p.listed ? 0.3 : p.ca > 72 ? 0.025 : 0.01;
     if (R() > chance) return;
-    if (G.news.some(n => n.action && n.action.t === 'bid' && n.action.pid === p.id && !n.done)) return;
+    if (activeDeal(p.id, 'out')) return;
     const val = pValue(p);
     const buyers = Object.values(G.clubs).filter(c => c.id !== G.club && !c.fa && c.rep >= p.ca - 12 && c.bal > val * 0.8);
     if (!buyers.length) return;
     const b = pick(buyers);
     const fee = roundMoney(val * (p.listed ? rf(0.7, 1.05) : rf(0.95, 1.3)));
-    addNews('inbox', `Bid for ${pname(p)}`, `The ${b.name} have offered ${money(fee)} for ${fullName(p)} (valued at ${money(val)}).`, { t: 'bid', pid: p.id, from: b.id, fee });
+    bidForUser(b, p, fee);
   });
 }
 
