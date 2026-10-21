@@ -562,3 +562,7 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - Tactics has a mobile-friendly **Swap positions** mode: tap one starter, then another pitch position. Both players exchange slots; the bench, position roles/instructions and tactical familiarity stay unchanged. Swaps save immediately. Tap the same starter twice to clear selection, or **Done swapping** to return to the ordinary picker. Changing shape/view, auto-picking or leaving Tactics clears the pending selection.
 - Pitch tokens show familiar position labels (ST, RW, LW, etc.). The normal player picker now separates **Starting XI — swap positions**, **Substitutes** and **Other squad players**, instead of burying starters in one suitability-sorted list. Existing substitute replacement behavior is retained, and picker changes save immediately too.
 - `tests/lineup.cjs`: 23 mobile checks cover ST/RW swaps, unchanged bench/roles/instructions, persistence, ordinary picker swaps, substitute replacement, out-of-possession mapping and the XI used at kick-off. Match-time swaps are not added by this change.
+
+## Return to title from Settings (2026.10.21.20)
+- Settings starts with **Save & return to title**. It stops calendar/live playback, saves the career and clears the remembered page so refreshing stays at the title. **Continue game** resumes the same career. A failed save leaves Settings open with export advice.
+- `tests/navigation.cjs` covers returning, refresh, continuing, saved progress and failed storage on a 390×844 viewport.
