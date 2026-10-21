@@ -1,6 +1,7 @@
 # Football rulebook for the match engine
 
-Status: draft for the owner's review. Nothing here is built yet.
+Status: version 2, with the owner's answers (2026-10-21). Nothing here is built yet.
+Research notes behind it: `research_notes/Football styles study/` (kept outside the repo).
 
 This is the football the engine must play. The engine is built from it top-down:
 **team plan first, then each position's job, then the individual decision**. Physics (speed, ball flight)
@@ -82,8 +83,11 @@ These hold in every style; styles change the numbers, not the principles.
    the far side holds width for the switch.
 2. **Lane rule.** In progression and chance creation: **at most 2 players in one lane**, and **never 3 in one
    horizontal line** in the same third. (Positional-play rule: it creates diagonals and triangles.)
-3. **Five across the front line** in chance creation (wide, half-space, centre, half-space, wide), e.g. a 2-3-5
-   or 3-2-5 attacking structure. Which players fill which lane depends on roles (section 6).
+3. **The attacking structure comes purely from the roles the manager picks** (owner's decision). There is no
+   fixed 2-3-5 or 3-2-5: each role's job (section 6) says which lane and line it occupies in each phase, and the
+   structure is what those jobs add up to. Example: two inverted full-backs + a 6 give a 2-3 behind the ball;
+   wing-backs holding width + inside forwards give five across the front. The engine only enforces the lane rule
+   (2) and rest defence (7); if the chosen roles leave a lane empty, it stays empty (that is the manager's choice).
 4. **Triangles and diamonds around the ball.** The carrier has a short option (8-15 m), a forward option
    (between the lines or in behind) and a back/switch option. Supporting players move to open angles, never
    standing in a straight line behind a defender (out of the "cover shadow").
@@ -151,8 +155,10 @@ ball-side full-back and 8 close the touchline, the 6 cuts the pass inside.
 ### 5.4 Gegenpress (the foundation, in order)
 1. **Rest defence is set before the ball is lost** (3+2 or 2+2 behind the ball).
 2. **Compact attack:** players near the ball in attack are close together (that is what makes the counter-press work).
-3. **On losing the ball: 5-second rule.** The nearest 3-4 players press the ball immediately, cut its nearest
-   passes and the escape lane forward; the rest step up to squeeze.
+3. **On losing the ball: counter-press window.** Guardiola's rule is about 5-6 seconds; Klopp and Rangnick aim
+   to win it back within about 8 seconds (and shoot within about 10 after winning it). Engine: a window of
+   5-8 s, longer for players with high Work Rate and Stamina and shorter when tired. The nearest 3-4 players press
+   the ball immediately, cut its nearest passes and the escape lane forward; the rest step up to squeeze.
 4. **If won back:** attack at once (the opponent is out of shape).
 5. **If the press is broken** (they play forward past the pressers, or after ~5 s): stop and **drop into the
    block** quickly; the rest defence delays the counter.
@@ -276,22 +282,69 @@ the ball is wide; clear chances finished.
 
 ---
 
-## 9. Styles (presets) = principles + numbers
+## 9. Styles (presets): how each one attacks and defends
 
-| Style | With the ball | Without the ball | Transitions |
-|---|---|---|---|
-| **Gegenpressing** | Fast, vertical; ball into half-spaces quickly; many runners; compact attack | High press, high line; triggers + traps | Counter-press 5 s; counter at once |
-| **Tiki-taka (positional play)** | Five lanes, triangles, third-man passing, patient build-up, switch after overload | High press, high line | Counter-press; secure on winning it |
-| **Balanced** | Mixed; forward when on | Mid block | Standard |
-| **Counter-attack** | Few in possession; fast direct ball to runners; 3-4 attack | Low/mid block, compact, centre closed | Regroup on losing it; counter on winning it |
-| **Long ball** | Target man + second balls; early long balls; wide play and crosses | Mid block | Standard |
-| (Low block / park the bus) | Rare, counter | Deep block in our third, box protected | Regroup |
+Each style is a set of principles and numbers. **Defending follows the style** (owner's decision).
 
-**Measured checks per style** (approximate, top-flight): possession (tiki-taka 60-65%, counter 35-45%);
-passes per match (tiki-taka 600+, long ball 350-400); PPDA (opponent passes per defensive action in their 60%
-of the pitch: high press 8-10, mid 11-13, low block 15+); long-ball share; crosses; counter-attacks.
+### 9.1 Gegenpressing (Klopp's Dortmund/Liverpool, Rangnick's Red Bull school)
+- **Defending:** high press, line of engagement in their defensive third, high back line (offside trap), compact
+  block about 30 m deep pushed up. Man-oriented pressing near the ball, zonal further away. Triggers: back pass,
+  pass to the full-back, poor touch, receiver facing his own goal, the touchline. Traps: force play wide, then
+  close the touchline (winger, full-back, 8), the 6 cuts the pass inside. Forwards curve their runs to cut the
+  pass into the 6. Rest defence 2+2 or 3+1 (CBs + 6 + one FB). Expect the opponent to make few passes per
+  defensive action (PPDA about 8-10) and many high turnovers.
+- **Attacking:** vertical and fast; into the half-spaces quickly; compact attack (players near the ball so the
+  counter-press works); full-backs give width; many runners; shoot within about 10 s of winning the ball.
+- **Transitions:** counter-press 5-8 s; counter at once on winning the ball.
+- **Set pieces:** quick corners, outswingers to runners from deep; short throw-ins kept; mixed goal kicks;
+  kick-off played diagonally to the winger and pressed.
 
----
+### 9.2 Positional play / tiki-taka (Guardiola)
+- **Defending:** counter-press first (about 5-6 s), then a high press or a mid block 4-4-2/4-1-4-1 shape when set;
+  very high line, keeper sweeps. Defend by keeping the ball and by rest defence: 3+2 behind the ball (CBs, an
+  inverted full-back and the 6) controlling the counter. Tactical fouls to stop counters.
+- **Attacking:** short build-up with the keeper; five lanes filled; at most 2 per lane; third-man combinations;
+  overload one side then switch; inverted full-backs into midfield; false 9 or a 9 pinning; patience; 600+
+  passes, 60-65% possession; chances from cut-backs and half-space passes.
+- **Transitions:** counter-press; secure the ball on winning it (hold shape).
+- **Set pieces:** 25-45% short corners; short goal kicks 70-85%; short throw-ins; quick short free kicks;
+  defend corners with a hybrid (zonal arc + man-markers).
+
+### 9.3 Balanced (Ancelotti, many national teams)
+- **Defending:** mid block, 4-4-2 or 4-5-1 out of possession, line of engagement around halfway, back line
+  30-40 m from goal; press on triggers only; zonal with man-marking in the box.
+- **Attacking:** flexible; build short or long by the pressure; forward when it is on; good players given freedom.
+- **Transitions:** standard (forward if on, otherwise secure; delay then recover).
+- **Set pieces:** standard mix; hybrid corner defence.
+
+### 9.4 Counter-attack (Mourinho, Simeone, Ranieri's Leicester)
+- **Defending:** low or mid block, two banks of four (4-4-2 or 4-4-1-1), very compact (lines about 10 m apart,
+  block about 25-30 m deep), the whole block shifts to the ball and the far side tucks in; centre and Zone 14
+  closed, let them cross from wide; strong box defending; few players forward (1-2 outlets).
+- **Attacking:** win the ball, play forward in 1-2 passes to fast runners; 3-4 attack, the rest stay; long
+  diagonals into the channels; 35-45% possession; few passes per possession.
+- **Transitions:** regroup on losing the ball; counter on winning it.
+- **Set pieces:** crossed corners, long goal kicks (60%+), long throws in range; zonal-heavy corner defence with
+  1-2 left up for the counter.
+
+### 9.5 Long ball / direct (Dyche, Allardyce, Pulis)
+- **Defending:** mid or low block 4-4-2, compact and narrow, lots of heading and blocking; man-marking heavy in
+  the box; all 11 back for set pieces.
+- **Attacking:** long balls to a target man (flick-ons and knock-downs), midfielders win the second balls;
+  early crosses, wide play; few passes (350-400), lots of aerial duels.
+- **Transitions:** standard; second balls are the key.
+- **Set pieces:** a big weapon: inswinging corners onto the keeper with 4-6 big players and a near-post flick;
+  every wide free kick crossed; long throws whenever in range; 70-80% long goal kicks.
+
+### 9.6 Low block ("park the bus") - an option, used as a tactic or as a shout (owner's decision)
+- As a **tactic**: deep block (defensive line 16-25 m from goal), 4-5-1 or 5-4-1, extremely compact, box and
+  Zone 14 protected, wide areas given away, one outlet up front; possession often under 35%.
+- As a **shout** (during a match, e.g. protecting a lead): the team drops to the low block straight away and
+  regroups on losing the ball, whatever the base style, until the shout is cancelled.
+- **Set pieces:** everyone back, zonal-heavy; long goal kicks.
+
+**Measured checks per style** (approximate, top-flight): possession; passes per match; PPDA (high press 8-10,
+mid 11-13, low block 15+); share of long balls; crosses; high turnovers; counter-attacks; set-piece goals.
 
 ## 10. Our tactic settings, mapped to these rules
 
@@ -328,6 +381,25 @@ helping (none useless, none deciding everything).
 
 ---
 
+## 11b. Set pieces: standard routines and numbers
+
+Each style uses its standard routines (section 9). League targets (Premier League, Opta):
+- Set pieces: about 20-27% of goals (excluding penalties).
+- **Corners:** about 10 a match; about 3-3.5% of corners produce a goal; 20-25% produce a shot; about 0.03 xG
+  per corner (an elite set-piece team 0.06-0.07). Inswingers and outswingers score at about the same rate;
+  central 6-yard-box headers are the best chances.
+- Attacking corner routine (standard): near-post runner, central runner, far-post runner, 1-3 players around the
+  keeper (screens), one on the edge of the box, rest defence 2-3 back. Short corner sometimes (more in possession styles).
+- Defending corners: hybrid (4-6 zonal players across the 6-yard box and near post + man-markers on the best
+  headers + one on the edge); counter styles leave 1-2 up.
+- **Direct free kicks:** only 3-7% scored (specialists more); taken from 18-27 m; wall 4-5 centrally at 16-22 m,
+  3-4 at 22-27 m, 2-3 further, 0-1 from wide; wide free kicks are crossed.
+- **Penalties:** about 78-80% scored.
+- **Throw-ins:** short and kept by most; long throws into the box (about 0.04-0.05 xG each) by direct teams.
+- **Goal kicks:** short build-up for possession styles, long for direct and counter styles (about half of all
+  goal kicks now go long).
+- **Kick-off:** played back to build (possession) or diagonally long to the winger and pressed (gegenpress).
+
 ## 12. Build order (one layer at a time, each shown on the 2D before the next)
 
 1. **Pitch language + team shape as a unit.** Thirds, lanes, zones; phase detection; in-possession structure
@@ -339,7 +411,7 @@ helping (none useless, none deciding everything).
 4. **Defending as a team.** Pressing levels, cover/balance, triggers, traps, line stepping (sections 4-5).
 5. **Transitions.** Section 8 and gegenpress 5.4.
 6. **The box.** Section 7: cut-backs, filling the box, shooting rules.
-7. **Set pieces.** Corners (near-post, far-post, short), free kicks, throw-ins: basic routines.
+7. **Set pieces.** The standard routines per style (sections 9 and 11b).
 8. **Calibration.** League averages only, plus the per-style checks in section 9.
 
 At each layer I report what changed with screenshots and the checks (e.g. "passes back after a line-breaking
@@ -347,13 +419,12 @@ pass", "players in the box on a wide attack", "block depth").
 
 ---
 
-## 13. Questions for the owner
+## 13. Owner's decisions (2026-10-21)
 
-1. **Attacking structure:** should the default in-possession structure be **2-3-5** (full-backs push, the 6 + two
-   8s behind five forwards) or **3-2-5**, or should it come purely from the roles you pick?
-2. **Rest defence:** 3+2 for all styles, and 2+2 only for very attacking mentality - agree?
-3. **Gegenpress window:** about 5 seconds - keep, or should it depend on Work Rate/Stamina more?
-4. **Low block as its own style** (park the bus), separate from Counter-attack?
-5. **Set pieces:** do you want to design routines yourself later (near post, far post, short corner), or should
-   the engine use standard routines for now?
-6. Anything in sections 4-8 that does not match how you see the game?
+1. Attacking structure: **comes purely from the roles the manager picks** (section 3.3).
+2. Defending: **follows the style**; each style's defending is in section 9.
+3. Gegenpress window: from the research, 5-8 s depending on Work Rate and Stamina (section 5.4).
+4. Low block: **a tactic option, usable as a whole tactic or as a shout** (section 9.6).
+5. Set pieces: **standard routines each style uses** (sections 9 and 11b).
+6. Sections 4-8 confirmed; keep deepening them with study (attacking and defending notes per style are in the
+   research folder and should be read before building each layer).
