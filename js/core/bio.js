@@ -58,6 +58,7 @@ function ensureWorld() {
   if (G.scout && typeof ensureScouting === 'function') ensureScouting();
   if (typeof ensureAgents === 'function') ensureAgents();
   if (typeof ensureDeals === 'function') ensureDeals();
+  if (typeof ensureSocial === 'function') ensureSocial();
   Object.values(G.players).forEach(p => { migrateAttrs(p); if (p.ht == null) genBio(p); });
   Object.values(G.players).forEach(p => { if (p.fpn == null) linkBio(p); });
   // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.

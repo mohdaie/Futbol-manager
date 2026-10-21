@@ -47,6 +47,7 @@ function advanceDay() {
   DAY_JOBS.forEach(([d, k, fn]) => { if (d === G.day) dayJob(k, fn); });
   scoutDay();
   dealsDay();
+  socialDay();
   if (G.day >= 6) return advanceWeek();
   G.day++;
   squadOf(G.club).forEach(p => recoverTo(p, todayNo()));

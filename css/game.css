@@ -627,7 +627,7 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 @media (prefers-reduced-motion: reduce) { .dr-cal.flip { animation: none; } }
 
 /* scouting files (2026.10.21.11) */
-.attrs b.unk, .pov b.unk { color: var(--mut, #8b8f98); font-weight: 600; }
+.attrs b.unk, .pov b.unk { color: var(--mute); font-weight: 600; }
 .attrs b.est { font-style: italic; opacity: .78; }
 .sfile { display: grid; gap: 12px; }
 .sf-tab { justify-self: start; padding: 4px 10px; border-radius: 8px 8px 0 0; background: #E9DFC6; color: #4A3F28; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: -12px; }
@@ -666,3 +666,21 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .row.tl b { font-weight: 500; font-size: 13px; }
 .row.tl-you b { font-weight: 700; } .row.tl-fail b { color: #F0605D; } .row.tl-done b { color: var(--good); }
 .btns.col { flex-direction: column; }
+
+/* social feed (2026.10.21.14) */
+.nviews { margin-bottom: 12px; }
+.feed-s { display: grid; gap: 1px; border-radius: 12px; overflow: hidden; background: rgba(127,127,127,.18); }
+.spost { display: grid; grid-template-columns: 36px 1fr; gap: 10px; padding: 12px; background: var(--stand); cursor: pointer; }
+.spost.full { cursor: default; background: transparent; padding: 10px 0; }
+.sav { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--sc, #666); color: #10061A; font-size: 12px; font-weight: 800; overflow: hidden; }
+.sbody header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font-size: 13px; }
+.sbody header span { opacity: .6; font-size: 12px; }
+.sbody .tick { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: #1D9BF0; color: #fff; font-size: 9px; font-style: normal; }
+.sbody p { margin: 4px 0 6px; font-size: 14px; line-height: 1.4; }
+.sbody footer { display: flex; gap: 14px; font-size: 12px; opacity: .7; }
+.sbody footer .rel { margin-left: auto; }
+.sreplies { margin-left: 18px; padding-left: 12px; border-left: 2px solid rgba(127,127,127,.25); }
+.preq { padding: 10px 0; border-top: 1px dashed rgba(127,127,127,.3); }
+.preq p { margin: 0 0 4px; }
+.preq .btn { display: grid; text-align: left; }
+.preq .btn small { font-weight: 500; opacity: .75; }

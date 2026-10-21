@@ -80,8 +80,11 @@ function newsRow(n) {
 
 SCREENS.news = {
   render() {
-    const f = UI.f.news, list = G.news.filter(n => f === 'all' || n.cat === f);
-    return `<h1 class="h1">News</h1>
+    const f = UI.f.news, list = G.news.filter(n => f === 'all' || n.cat === f), v = UI.tab.nv || 'news';
+    const head = `<h1 class="h1">News</h1><div class="seg nviews">${NEWS_VIEWS.map(([k, n]) => `<button class="${v === k ? 'on' : ''}" data-a="newsView" data-v="${k}">${n}</button>`).join('')}</div>`;
+    if (v === 'tc') return head + transferCentre();
+    if (v === 'social') return head + socialFeed();
+    return `${head}
       <div class="chips">${NEWS_CATS.map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="newsF" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="sec-h"><span class="muted">${list.length} items</span><button class="link" data-a="readAll">Mark all read</button></div>
       <div class="list">${list.map(newsRow).join('') || empty('Nothing here', 'News in this category will appear as the season goes on.')}</div>`;
@@ -96,6 +99,7 @@ ACT.news = ds => {
   let actions = '';
   const a = n.action;
   if (a && !n.done && a.t === 'bid') actions = `<div class="btns"><button class="btn pri" data-a="bid" data-id="${n.id}" data-c2="accept">Accept ${money(a.fee)}</button><button class="btn" data-a="bid" data-id="${n.id}" data-c2="counter">Ask for ${money(roundMoney(a.fee * 1.2))}</button><button class="btn ghost" data-a="bid" data-id="${n.id}" data-c2="reject">Reject</button></div>`;
+  if (a && a.t === 'press') { const r = (G.media.req || []).find(x => x.id === a.id); if (r && !r.done) actions = `<div class="btns col">${STATEMENTS[r.kind].map(([k, t]) => `<button class="btn wide ${k === r.advice ? 'pri' : ''}" data-a="press" data-id="${r.id}" data-k="${k}">${esc(t)}${k === r.advice ? ' (advised)' : ''}</button>`).join('')}</div>`; }
   if (a && a.t === 'deal' && G.deals.some(d => d.id === a.id)) actions = `<div class="btns"><button class="btn pri" data-a="deal" data-id="${a.id}">Open the deal</button></div>`;
   if (a && a.t === 'scoutfile' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="scoutFile" data-id="${a.pid}">Open scouting file</button></div>`;
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;

@@ -35,6 +35,7 @@ function needDecision(d, k, title, body, extra = {}) {
   dealNews(d, title, body, true);
 }
 function closeDeal(d, ok, why, loud = true) {
+  if (!ok && (d.dir !== 'in' || d.pub || d.leaked || d.approach === 'open') && !['review', 'meeting'].includes(d.stage) && typeof dealMedia === 'function') dealMedia(d, 'off');
   d.closed = { ok, why, date: today().getTime() }; d.need = null; d.next = null;
   dealLog(d, why, ok ? 'done' : 'fail');
   if (d.dir !== 'ai') dealNews(d, (ok ? 'Done deal: ' : 'Deal off: ') + pname(G.players[d.pid]), why, loud);
@@ -125,6 +126,7 @@ function willOf(p, d) {
   let s = me.rep - p.ca + joinPull(p) + (from && !from.fa ? (me.rep - from.rep) * 0.4 : 4) + (p.mor < 45 ? 4 : 0) + (p.pers === 'Loyal' ? -3 : 0) + (p.pers === 'Ambitious' ? (me.rep >= (from ? from.rep : 0) ? 2 : -3) : 0);
   if (d.status === 'Key player') s += 3;
   s += agentRel(agentOf(p)) / 6; // an agent who likes your club talks his client into it
+  if (d.pub) s += 2; // public interest flatters him
   return (d.will = s > 6 ? 'keen' : s > -2 ? 'open' : s > -9 ? 'hesitant' : 'refuses');
 }
 const WILL_TXT = { keen: 'is keen on the move', open: 'is open to the move', hesitant: 'is hesitant', refuses: 'does not want to join' };
@@ -142,7 +144,7 @@ const DEAL_STEP = {
       if (will === 'refuses') return closeDeal(d, false, `${agentOf(p) ? agentOf(p).name : 'His agent'} says ${fullName(p)} does not want to join the ${userClub().name}.`);
       dealLog(d, `${agentOf(p) ? agentOf(p).name + ', his agent' : 'His agent'}: ${fullName(p)} ${WILL_TXT[will]}.`, 'agent');
       if (fa) { d.stage = 'agent'; d.next = wait(1, 2); return; }
-      const ask = askingPrice(p), key = isKeyPlayer(p), long = p.con - G.season >= 3;
+      const ask = roundMoney(askingPrice(p) * (d.pub ? 1.05 : 1)), key = isKeyPlayer(p), long = p.con - G.season >= 3; // public interest raises the price
       d.ask = ask;
       if (key && long && c.rep >= userClub().rep && !p.listed) {
         dealLog(d, `The ${c.name}: he is not for sale.`, 'club');
@@ -162,6 +164,7 @@ const DEAL_STEP = {
         if (value >= need) {
           dealLog(d, `The ${c.name} accept ${money(d.fee)}${d.add ? ' plus ' + money(d.add) + ' in add-ons' : ''}${d.inst ? ', paid over ' + (d.inst + 1) + ' years' : ''}.`, 'club');
           dealNews(d, `Fee agreed for ${pname(p)}`, `The ${c.name} accept ${money(d.fee)} for ${fullName(p)}. Next: talks with his agent.`);
+          if (d.pub || d.leaked) dealMedia(d, 'agreed');
           d.stage = 'agent'; d.next = wait(1, 3); return;
         }
         if (d.round >= 4 || value < ask * 0.6) return closeDeal(d, false, `The ${c.name} end talks over ${fullName(p)}.`);
@@ -209,6 +212,7 @@ const DEAL_STEP = {
       if (p.inj && p.inj.w >= 6) return closeDeal(d, false, `${fullName(p)} failed his medical (${p.inj.n}).`);
       dealLog(d, p.inj ? `Medical passed with a note: ${p.inj.n}.` : 'Medical passed.', 'medical');
       d.stage = 'final';
+      if (d.pub || d.leaked) dealMedia(d, 'here');
       needDecision(d, 'final', `Ready to sign ${pname(p)}`, `Everything is agreed for ${fullName(p)}: ${dealSummary(d)}. Complete the transfer or pull out.`);
     },
   },
@@ -240,6 +244,7 @@ const DEAL_STEP = {
     talks(d, p) {
       if (hash01(d.id + 'a') < 0.14) return closeDeal(d, false, 'Talks broke down.', false);
       d.stage = 'terms'; d.next = wait(1, 4);
+      dealMedia(d, 'agreed');
       const hit = activeDeal(p.id, 'in');
       if (hit && hit.stage !== 'review' && hit.stage !== 'meeting') dealLog(hit, `The ${clubName(d.to)} have agreed a fee too. Move fast.`, 'club');
     },
@@ -253,6 +258,7 @@ const DEAL_STEP = {
       G.tHist.unshift({ date: today().getTime(), pid: p.id, name: fullName(p), from: from.id, to: c.id, fee });
       if (G.tHist.length > 120) G.tHist.length = 120;
       closeDeal(d, true, 'Done.', false);
+      dealMedia(d, 'here'); dealMedia(d, 'done');
       if (fee >= 15e6 || from.pl) { addNews('transfer', `${fullName(p)} joins the ${c.name}`, `The ${c.name} sign ${fullName(p)} (${p.age}, ${p.pos}) from ${from.fa ? 'free agency' : 'the ' + from.name}${fee ? ' for ' + money(fee) : ''}.`); G.news[0].q = 1; }
     },
   },
@@ -277,8 +283,9 @@ function dealProceed(d, approach, feeLim, wageLim) {
   const p = G.players[d.pid];
   d.lim = { fee: feeLim, wage: wageLim }; d.approach = approach; d.need = null;
   d.stage = 'interest'; d.next = approach === 'open' ? wait(1, 2) : wait(2, 4);
-  dealLog(d, `You and the Director of Football agree to go for ${fullName(p)}: ${approach === 'open' ? 'an open approach to his club' : 'quiet talks with his agent first'}. Limits: ${money(feeLim)}, ${wageFmt(wageLim)} a week.`, 'you');
-  if (approach === 'open') rumour(p, `The ${userClub().name} have made an approach for ${fullName(p)}.`);
+  dealLog(d, `You and the Director of Football agree to go for ${fullName(p)}: ${{ open: 'an open approach to his club', quiet: 'quiet talks with his agent first', leak: 'interest leaked to the press first' }[approach]}. Limits: ${money(feeLim)}, ${wageFmt(wageLim)} a week.`, 'you');
+  if (approach !== 'quiet') d.pub = true;
+  if (typeof dealMedia === 'function') { if (approach === 'open') dealMedia(d, 'approach'); if (approach === 'leak') dealMedia(d, 'leak'); }
 }
 function dealMonitor(d) { closeDeal(d, false, 'Kept on file to monitor. The Director of Football will review him again if you ask.', false); const r = scoutFile(G.players[d.pid]); r.folder = 'mon'; }
 function dealDrop(d) { closeDeal(d, false, 'Dropped after the meeting.', false); const r = scoutFile(G.players[d.pid]); r.folder = 'rej'; }
@@ -314,6 +321,7 @@ function completeIn(d) {
   if (d.clause) p.rc = d.clause;
   if (d.add) G.addOns.push({ pid: p.id, to: from.id, amount: d.add, apps: 25 });
   agentRelMove(p, 8, `Completed ${fullName(p)}'s move`);
+  dealMedia(d, 'done');
   closeDeal(d, true, `${fullName(p)} has signed: ${dealSummary(d)}.`, false);
   return `${fullName(p)} signs for the ${me.name}.`;
 }
@@ -322,6 +330,7 @@ function completeOut(d) {
   sellPlayer(p, d.to, d.fee);
   if (p.sellOn && G.clubs[p.sellOn.club]) { const cut = roundMoney(d.fee * p.sellOn.pct / 100); userClub().bal -= cut; G.clubs[p.sellOn.club].bal += cut; }
   agentRelMove(p, 4, `Sanctioned ${fullName(p)}'s move`);
+  dealMedia(d, 'here'); dealMedia(d, 'done');
   closeDeal(d, true, `${fullName(p)} has joined the ${clubName(d.to)} for ${money(d.fee)}.`, false);
   return `${fullName(p)} sold for ${money(d.fee)}.`;
 }
@@ -331,7 +340,7 @@ function blockOut(d) { const p = G.players[d.pid]; agentRelMove(p, d.will === 'k
 function answerOffer(d, choice) {
   const p = G.players[d.pid];
   d.need = null;
-  if (choice === 'accept') { dealLog(d, `You accept ${money(d.fee)}.`, 'you'); d.stage = 'terms'; d.next = wait(1, 2); return `Offer accepted. ${pname(p)} will talk to the ${clubName(d.to)}.`; }
+  if (choice === 'accept') { dealMedia(d, 'agreed'); dealLog(d, `You accept ${money(d.fee)}.`, 'you'); d.stage = 'terms'; d.next = wait(1, 2); return `Offer accepted. ${pname(p)} will talk to the ${clubName(d.to)}.`; }
   if (choice === 'counter') { d.round++; d.fee = roundMoney(d.fee * 1.2); dealLog(d, `You ask for ${money(d.fee)}.`, 'you'); d.next = wait(1, 2); return `You asked for ${money(d.fee)}. Waiting for the ${clubName(d.to)}.`; }
   p.mor = clamp(p.mor - (p.listed ? 0 : 3), 0, 100);
   closeDeal(d, false, `You rejected the offer from the ${clubName(d.to)}.`, false);
@@ -354,8 +363,6 @@ function payInstalments() {
   (G.payments || []).filter(x => x.season <= G.season).forEach(x => { userClub().bal -= x.amount; G.ledger.buys += x.amount; if (G.clubs[x.to]) G.clubs[x.to].bal += x.amount; });
   G.payments = (G.payments || []).filter(x => x.season > G.season);
 }
-// Rumours are logged for the transfer news and social feed (press officer, later phases).
-function rumour(p, txt) { (G.rumours || (G.rumours = [])).unshift({ date: today().getTime(), pid: p.id, txt }); G.rumours.length = Math.min(G.rumours.length, 60); }
 
 /* ---------- computer clubs and bids for your players ---------- */
 // A computer club starts a deal instead of signing at once.
@@ -364,7 +371,7 @@ function aiDeal(c, p, fee) {
   const d = { id: G.nextId++, dir: 'ai', pid: p.id, from: p.club, to: c.id, stage: 'talks', next: wait(2, 6), fee, log: [], created: today().getTime(), round: 0, opened: true };
   G.deals.unshift(d);
   dealLog(d, `The ${c.name} open talks for ${fullName(p)}.`, 'club');
-  if (fee >= 8e6) rumour(p, `The ${c.name} are in talks to sign ${fullName(p)}.`);
+  dealMedia(d, 'talks');
 }
 // A bid for one of your players starts a deal; a bid that meets his release clause cannot be refused.
 function bidForUser(b, p, fee) {
@@ -379,6 +386,7 @@ function bidForUser(b, p, fee) {
   const val = pValue(p), key = isKeyPlayer(p);
   const advice = fee >= val * 1.25 ? 'A strong offer. I would accept.' : key ? 'He is a key player. I would reject or ask for more.' : fee >= val * 0.95 ? 'A fair offer.' : 'Below his value. Ask for more.';
   dealLog(d, `The ${b.name} offer ${money(fee)} for ${fullName(p)} (valued at ${money(val)}). Director of Football: ${advice}`, 'club');
+  if (hash01(d.id + 'pub') < 0.5) dealMedia(d, 'bid');
   needDecision(d, 'offer', `Bid for ${pname(p)}`, `The ${b.name} have offered ${money(fee)} for ${fullName(p)} (valued at ${money(val)}). Director of Football: ${advice}`);
 }
 
