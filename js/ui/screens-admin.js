@@ -110,6 +110,9 @@ function labReportHtml(T) {
       ${kv('Offsides per match', T.off, L.off)}${kv('Penalties per match', `${T.pk} (${T.pkConv}% scored)`, L.pk)}${kv('Corners per match', T.co, L.co)}${kv('Crosses / long balls', `${T.cr} / ${T.lp}`)}
       ${kv('Top scorer', T.top)}${kv('Champions', esc(T.champ))}${kv('Points range', T.range)}</div>
     <h4 class="lbl">By style</h4>${table(Object.entries(T.styles).map(([k, g]) => [k === 'custom' ? 'Custom' : STYLES[k].n, g]), 'Style')}
+    <h4 class="lbl">Style with poorly and well suited players</h4>
+    <div class="tablewrap"><table class="tbl lab"><tr><th>Style</th><th>Poor fit: vs strength</th><th>Good fit: vs strength</th></tr>${Object.entries(T.styles).filter(([, g]) => g.vsLow != null).map(([k, g]) => `<tr><td><b>${esc(k === 'custom' ? 'Custom' : STYLES[k].n)}</b></td><td class="${g.vsLow > 0.1 ? 'warn' : ''}">${sign(g.vsLow)}</td><td>${sign(g.vsHigh)}</td></tr>`).join('')}</table></div>
+    <p class="muted">Styles are not balanced against each other: if the engine suits one style better, it wins more. The only check is for a style clearly ahead even with poorly suited players (marked in yellow), which would mean a bonus built into the engine rather than a better fit. Use several seasons before reading anything into it.</p>
     <h4 class="lbl">By tactic fit</h4>${table(FIT_BANDS.filter(([b]) => T.fit[b]).map(([b]) => [b + '%', T.fit[b]]), 'Fit')}
     <p class="muted">"vs strength" is points per match above or below what the strength gap between the two elevens (and home advantage) predicts, so a style is not flattered by the clubs that use it. One season is noisy: differences under about 0.1 are within chance. All numbers are league averages, never targets for single matches.</p>`;
 }

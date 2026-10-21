@@ -141,7 +141,7 @@ function takeShot(M, S, O, ev, seq, i, x, y, o = {}) {
   }
   const fin = o.header ? (aerialAt(S, i) + av(S, i, 'fin')) / 2 : o.fk ? fkSkill(p) : av(S, i, 'fin');
   const gkv = o.oneOnOne ? av(O, gkI, 'one') * 5 : O.u.gk;
-  const pg = xg * (0.75 + (fin - 10) / 30) * (1.25 - gkv / 250) * (0.92 + 0.08 * av(S, i, 'cmp') / 10) * (1 - gkReach(gk));
+  const pg = xg * (0.82 + (fin - 12) / 20) * (1.25 - gkv / 250) * (0.92 + 0.08 * av(S, i, 'cmp') / 10) * (1 - gkReach(gk));
   if (R() < pg) {
     S.st.g++; S.st.sot++; pstat(S, i, 'sot');
     if (o.pen) S.st.pkg++;

@@ -63,7 +63,15 @@ function labGroup(rows, exp) {
 function labReport(T, rows, extra) {
   const n = T.n, f1 = v => +(v / n).toFixed(1), f2 = v => +(v / n).toFixed(2), exp = strengthModel(rows);
   const styles = {}, fit = {};
-  [...Object.keys(STYLES), 'custom'].forEach(k => { const g = rows.filter(r => r.sty === k); if (g.length) styles[k] = labGroup(g, exp); });
+  [...Object.keys(STYLES), 'custom'].forEach(k => {
+    const g = rows.filter(r => r.sty === k);
+    if (!g.length) return;
+    styles[k] = labGroup(g, exp);
+    // Free-bonus check: the same style split at its median fit. A style should only win with players who suit it;
+    // one that is clearly ahead even with poorly suited players has a bonus built into the engine.
+    const srt = g.slice().sort((a, b) => a.fit - b.fit), h = srt.length >> 1, vs = rs => rs.reduce((t, r) => t + r.pts - exp(r), 0) / Math.max(1, rs.length);
+    styles[k].vsLow = +vs(srt.slice(0, h)).toFixed(2); styles[k].vsHigh = +vs(srt.slice(h)).toFixed(2);
+  });
   FIT_BANDS.forEach(([b, lo, hi]) => { const g = rows.filter(r => r.fit >= lo && r.fit < hi); if (g.length) fit[b] = labGroup(g, exp); });
   return {
     gpg: f2(T.goals), h: Math.round(T.h / n * 100), d: Math.round(T.d / n * 100), a: Math.round((n - T.h - T.d) / n * 100),
