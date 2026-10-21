@@ -124,6 +124,7 @@ function willOf(p, d) {
   const me = userClub(), from = G.clubs[p.club];
   let s = me.rep - p.ca + joinPull(p) + (from && !from.fa ? (me.rep - from.rep) * 0.4 : 4) + (p.mor < 45 ? 4 : 0) + (p.pers === 'Loyal' ? -3 : 0) + (p.pers === 'Ambitious' ? (me.rep >= (from ? from.rep : 0) ? 2 : -3) : 0);
   if (d.status === 'Key player') s += 3;
+  s += agentRel(agentOf(p)) / 6; // an agent who likes your club talks his client into it
   return (d.will = s > 6 ? 'keen' : s > -2 ? 'open' : s > -9 ? 'hesitant' : 'refuses');
 }
 const WILL_TXT = { keen: 'is keen on the move', open: 'is open to the move', hesitant: 'is hesitant', refuses: 'does not want to join' };
@@ -138,8 +139,8 @@ const DEAL_STEP = {
     },
     interest(d, p) {
       const c = G.clubs[p.club], fa = c.fa, will = willOf(p, d);
-      if (will === 'refuses') return closeDeal(d, false, `${fullName(p)}'s agent says he does not want to join the ${userClub().name}.`);
-      dealLog(d, `${fullName(p)}'s agent: he ${WILL_TXT[will]}.`, 'agent');
+      if (will === 'refuses') return closeDeal(d, false, `${agentOf(p) ? agentOf(p).name : 'His agent'} says ${fullName(p)} does not want to join the ${userClub().name}.`);
+      dealLog(d, `${agentOf(p) ? agentOf(p).name + ', his agent' : 'His agent'}: ${fullName(p)} ${WILL_TXT[will]}.`, 'agent');
       if (fa) { d.stage = 'agent'; d.next = wait(1, 2); return; }
       const ask = askingPrice(p), key = isKeyPlayer(p), long = p.con - G.season >= 3;
       d.ask = ask;
@@ -178,16 +179,17 @@ const DEAL_STEP = {
       d.bidOut = true; d.next = wait(1, 3);
     },
     agent(d, p) {
-      const fa = G.clubs[p.club].fa, pct = 5 + Math.round(hash01(p.id + 'agent') * 6);
+      const fa = G.clubs[p.club].fa, ag = agentOf(p), pct = agentFeePct(ag);
       d.agentFee = fa ? roundMoney(wageDemand(p, false) * 12) : roundMoney(d.fee * pct / 100);
       d.bonus = roundMoney(wageDemand(p, false) * (fa ? 20 : 8));
-      if (!fa && pct > 8) return needDecision(d, 'agentfee', `${pname(p)}'s agent wants ${money(d.agentFee)}`, `The agent asks for ${pct}% of the fee (${money(d.agentFee)}) to complete the deal. Pay it, or walk away.`);
-      dealLog(d, `Agent's fee agreed: ${money(d.agentFee)}.`, 'agent');
+      const who = ag ? ag.name : `${pname(p)}'s agent`;
+      if (!fa && pct > 8) return needDecision(d, 'agentfee', `${who} wants ${money(d.agentFee)}`, `${who}${ag ? ' (' + ag.agency + ')' : ''} asks for ${pct}% of the fee (${money(d.agentFee)}) to complete the deal. Pay it, or walk away.`);
+      dealLog(d, `${who}'s fee agreed: ${money(d.agentFee)} (${fa ? 'free transfer' : pct + '%'}).`, 'agent');
       d.stage = 'terms'; d.next = wait(1, 3);
     },
     terms(d, p) {
       const will = willOf(p, d), fit = fileFit(p);
-      const demand = roundWage(wageDemand(p, false) * { keen: 0.95, open: 1, hesitant: 1.12 }[will]);
+      const demand = roundWage(wageDemand(p, false) * { keen: 0.95, open: 1, hesitant: 1.12 }[will] * agentWageMul(agentOf(p)));
       d.years = d.years || (p.age <= 27 ? (p.age <= 23 ? 5 : 4) : p.age <= 30 ? 3 : 2);
       d.status = d.status || (fit && fit.est >= fit.curV + 2 ? 'Key player' : fit && fit.est >= fit.curV - 2 ? 'First team' : 'Rotation');
       if (p.pers === 'Ambitious' || will === 'hesitant') d.clause = d.clause || roundMoney(Math.max(pValue(p) * 2, (d.fee || 0) * 1.8));
@@ -284,12 +286,16 @@ function dealRaise(d, amount) {
   const p = G.players[d.pid];
   if (d.need.k === 'bidlimit' || d.need.k === 'notforsale') { d.lim.fee = Math.max(d.lim.fee, amount); d.fee = amount; d.stage = 'bid'; d.bidOut = false; if (d.need.k === 'notforsale') d.ask = amount; }
   if (d.need.k === 'wagelimit') { d.lim.wage = Math.max(d.lim.wage, amount); d.stage = 'terms'; }
-  if (d.need.k === 'agentfee') { dealLog(d, `Agent's fee agreed: ${money(d.agentFee)}.`, 'you'); d.stage = 'terms'; }
+  if (d.need.k === 'agentfee') { dealLog(d, `Agent's fee agreed: ${money(d.agentFee)}.`, 'you'); d.stage = 'terms'; agentRelMove(p, 3, 'Paid his fee in full'); }
   dealLog(d, d.need.k === 'agentfee' ? 'You agree to the agent\'s fee.' : `You raise the limit to ${d.need.k === 'wagelimit' ? wageFmt(amount) : money(amount)}.`, 'you');
   d.need = null; d.next = wait(0, 1);
   return `${pname(p)}: talks continue.`;
 }
-function dealWalk(d) { closeDeal(d, false, 'You walked away from the deal.', false); }
+function dealWalk(d) {
+  const late = ['agent', 'terms', 'player', 'medical', 'final'].includes(d.stage);
+  if (late) agentRelMove(G.players[d.pid], d.stage === 'final' ? -10 : -5, d.stage === 'final' ? 'You pulled out at the last moment' : 'You walked away during talks');
+  closeDeal(d, false, d.stage === 'final' ? 'You pulled out.' : 'You walked away from the deal.', false);
+}
 
 function completeIn(d) {
   const p = G.players[d.pid], me = userClub(), cost = (d.fee || 0) + (d.agentFee || 0) + (d.bonus || 0);
@@ -307,6 +313,7 @@ function completeIn(d) {
   me.bal -= extra; G.fin.tb = Math.max(0, G.fin.tb - extra); G.ledger.buys += extra;
   if (d.clause) p.rc = d.clause;
   if (d.add) G.addOns.push({ pid: p.id, to: from.id, amount: d.add, apps: 25 });
+  agentRelMove(p, 8, `Completed ${fullName(p)}'s move`);
   closeDeal(d, true, `${fullName(p)} has signed: ${dealSummary(d)}.`, false);
   return `${fullName(p)} signs for the ${me.name}.`;
 }
@@ -314,10 +321,11 @@ function completeOut(d) {
   const p = G.players[d.pid];
   sellPlayer(p, d.to, d.fee);
   if (p.sellOn && G.clubs[p.sellOn.club]) { const cut = roundMoney(d.fee * p.sellOn.pct / 100); userClub().bal -= cut; G.clubs[p.sellOn.club].bal += cut; }
+  agentRelMove(p, 4, `Sanctioned ${fullName(p)}'s move`);
   closeDeal(d, true, `${fullName(p)} has joined the ${clubName(d.to)} for ${money(d.fee)}.`, false);
   return `${fullName(p)} sold for ${money(d.fee)}.`;
 }
-function blockOut(d) { const p = G.players[d.pid]; p.mor = clamp(p.mor - (d.will === 'keen' ? 14 : 4), 0, 100); closeDeal(d, false, `You blocked the sale of ${fullName(p)}${d.will === 'keen' ? '. He is unhappy' : ''}.`, false); }
+function blockOut(d) { const p = G.players[d.pid]; agentRelMove(p, d.will === 'keen' ? -8 : -3, `Blocked ${fullName(p)}'s move`); p.mor = clamp(p.mor - (d.will === 'keen' ? 14 : 4), 0, 100); closeDeal(d, false, `You blocked the sale of ${fullName(p)}${d.will === 'keen' ? '. He is unhappy' : ''}.`, false); }
 
 // Outgoing offer answers.
 function answerOffer(d, choice) {

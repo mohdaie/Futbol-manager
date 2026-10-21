@@ -101,7 +101,7 @@ const assert = require('node:assert/strict');
       const ready = d.need && d.need.k;
       if (ready === 'finalout') completeOut(d);
       // A bid that meets a release clause skips your answer.
-      const q = seniorSquad(G.club).find(x => x.id !== p.id); q.rc = 5e6;
+      const q = seniorSquad(G.club).find(x => x.id !== p.id && !activeDeal(x.id)); q.rc = 5e6;
       bidForUser(b, q, 6e6);
       const rc = activeDeal(q.id, 'out');
       return { first, ready, sold: p.club === b.id || !!(d.closed && !d.closed.ok), rcStage: rc.stage, rcNeed: rc.need || null };

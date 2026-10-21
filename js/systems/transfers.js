@@ -200,12 +200,14 @@ function agentPitch() {
     return lvlOf(p) !== 'Y' && p.club !== G.club && (p.pos === pos || p.alt.includes(pos)) && p.ca >= wv - 2 && p.ca <= wv + 10 && c.rep <= me.rep + 6 && (c.fa || askingPrice(p) <= G.fin.tb * 1.3) && !G.pitches.some(x => x.pid === p.id);
   });
   if (!pool.length) return;
-  const p = wpick(pool, x => Math.pow(1.1, x.ca - 60));
+  const pool2 = pool.filter(x => agentRel(agentOf(x)) > -25); // a hostile agent does not call you
+  if (!pool2.length) return;
+  const p = wpick(pool2, x => Math.pow(1.1, x.ca - 60) * (1 + Math.max(0, agentRel(agentOf(x))) / 20));
   const ask = G.clubs[p.club].fa ? 0 : roundMoney(pValue(p) * rf(0.9, 1.15));
   G.pitches.unshift({ pid: p.id, ask, date: weekDate(G.week).getTime() });
   G.pitches = G.pitches.slice(0, 8);
   G.know[p.id] = Math.max(knowOf(p), 30); scoutFile(p);
-  addNews('transfer', `Agent pitch: ${fullName(p)}`, `An agent says ${fullName(p)} (${p.age}, ${POS_NAME[p.pos]}, ${clubName(p.club)}) is available${ask ? ' for ' + money(ask) : ' on a free'}. Your ${POS_NAME[pos].toLowerCase()} spot is the weakest in your XI.`, { t: 'player', pid: p.id });
+  addNews('transfer', `Agent pitch: ${fullName(p)}`, `${agentOf(p) ? agentOf(p).name + ' (' + agentOf(p).agency + ')' : 'An agent'} says ${fullName(p)} (${p.age}, ${POS_NAME[p.pos]}, ${clubName(p.club)}) is available${ask ? ' for ' + money(ask) : ' on a free'}. Your ${POS_NAME[pos].toLowerCase()} spot is the weakest in your XI.`, { t: 'player', pid: p.id });
 }
 
 function weeklyContracts() {

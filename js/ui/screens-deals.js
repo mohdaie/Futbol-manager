@@ -72,7 +72,7 @@ function dealSheet(id) {
   sheet(`<article class="dealsheet">
     <div class="eyebrow">${d.dir === 'out' ? 'Selling' : d.dir === 'ai' ? 'Around the league' : 'Signing'} · ${esc(clubName(d.from))} → ${esc(clubName(d.to))}</div>
     <h3 class="sh-t" data-no-links>${esc(fullName(p))}</h3>
-    <p class="muted">${POS_NAME[p.pos]} · ${p.age} · ${natName(p.nat)}</p>
+    <p class="muted">${POS_NAME[p.pos]} · ${p.age} · ${natName(p.nat)}${agentOf(p) && (d.dir !== 'in' || d.stage !== 'review') ? ' · agent ' + agentLink(agentOf(p)) : ''}</p>
     ${dealStages(d)}
     <p class="dstatus ${d.closed ? (d.closed.ok ? 'good' : 'bad') : d.need ? 'warn' : ''}">${esc(dealStatus(d))}</p>
     ${act}
@@ -117,3 +117,31 @@ ACT.offer = ds => {
   DEAL_STEP.in.review(n, p);
   saveGame(); dealSheet(n.id);
 };
+
+/* ---------- agents ---------- */
+const agentLink = (a, txt) => (a ? `<button class="link" data-a="agent" data-id="${a.id}">${esc(txt || a.name)}</button>` : 'None');
+TR_TABS.agents = () => {
+  const list = Object.values(G.agents).map(a => ({ a, n: agentClients(a.id).length, mine: agentClients(a.id).filter(p => p.club === G.club).length })).sort((x, y) => y.a.rep - x.a.rep);
+  return `<p class="muted">Agents look after many players each. Their fee, their clients' wage demands and how keen a client is to join you depend on the agent and on how you have dealt with him.</p>
+    <div class="list">${list.map(({ a, n, mine }) => `<button class="row act" data-a="agent" data-id="${a.id}"><span class="grow"><b>${esc(a.name)}</b><small>${esc(a.agency)} · ${n} clients${mine ? ' · ' + mine + ' at your club' : ''} · ${relLabel(agentRel(a))}</small></span><span class="rt">${a.rep}</span><span class="chev">›</span></button>`).join('')}</div>`;
+};
+function agentSheet(id) {
+  const a = G.agents[id];
+  if (!a) return;
+  const cl = agentClients(id).sort((x, y) => y.ca - x.ca), mine = cl.filter(p => p.club === G.club), rel = agentRel(a);
+  const moves = G.tHist.filter(t => G.players[t.pid] && G.players[t.pid].ag === id).slice(0, 8);
+  const byClub = {};
+  cl.forEach(p => { if (!G.clubs[p.club].fa) byClub[p.club] = (byClub[p.club] || 0) + 1; });
+  const strong = Object.entries(byClub).filter(([, n]) => n >= 3).map(([c, n]) => `${clubName(c)} (${n})`);
+  sheet(`<div class="eyebrow">Agent · ${esc(a.agency)}</div><h3 class="sh-t" data-no-links>${esc(a.name)}</h3>
+    <p class="muted">${esc(AGENT_STYLE[a.style])}</p>
+    <div class="kv"><div><small>Reputation</small><b>${a.rep}/100</b></div><div><small>Style</small><b>${a.style}</b></div><div><small>Usual fee</small><b>${agentFeePct(a)}% of a transfer</b></div><div><small>Markets</small><b>${esc(a.markets.filter(m => m !== '*').map(m => (NATIONS[m] ? NATIONS[m].n : m)).join(', '))}${a.markets.includes('*') ? ', worldwide stars' : ''}</b></div></div>
+    <div class="card"><div class="kvrow"><span>Relationship with you</span><b>${relLabel(rel)}</b></div>${bar(50 + rel, rel <= -10 ? 'bad' : rel < 10 ? 'warn' : 'good')}${a.last ? `<p class="muted">Last: ${esc(a.last.txt)} (${a.last.d > 0 ? '+' : ''}${a.last.d}), ${fmtDate(a.last.date, false)}.</p>` : ''}
+      <p class="muted">${rel >= 10 ? 'He will push his clients towards your club and pitch players to you.' : rel <= -25 ? 'He will not pitch players to you, and his clients are harder to sign.' : 'Completed deals improve it; pulling out late or blocking a client\'s move hurts it.'}</p></div>
+    ${strong.length ? `<p class="note">Power at: ${esc(strong.join(', '))}. Several clients at one club give him leverage there.</p>` : ''}
+    ${mine.length ? `<div class="sec-h"><h2>At your club</h2><span class="muted">${mine.length}</span></div><div class="list">${mine.map(p => playerRow(p, '', { noBadge: true })).join('')}</div>` : ''}
+    <div class="sec-h"><h2>Clients</h2><span class="muted">${cl.length}</span></div><div class="list">${cl.filter(p => p.club !== G.club).slice(0, 25).map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`)).join('')}</div>
+    ${moves.length ? `<div class="sec-h"><h2>Recent moves</h2></div><div class="list">${moves.map(t => `<div class="row"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><span class="stat"><b>${t.fee ? money(t.fee) : 'Free'}</b></span></div>`).join('')}</div>` : ''}`,
+  { key: 'agent:' + id, restore: () => agentSheet(id), valid: () => !!G?.agents?.[id] });
+}
+ACT.agent = ds => agentSheet(ds.id);

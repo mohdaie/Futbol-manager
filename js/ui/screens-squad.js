@@ -62,6 +62,7 @@ function playerSheet(pid) {
     const yl = p.con - G.season;
     body = `<div class="kv"><div><small>Value</small><b>${money(pValue(p))}</b></div><div><small>Wage</small><b>${p.club === 'FA' ? 'Unattached' : mine || knowOf(p) >= 50 ? wageFmt(p.wage) : 'Unknown'}</b></div>
       <div><small>Contract ends</small><b>${p.club === 'FA' ? '-' : 'June ' + (p.con)}${p.club !== 'FA' && yl <= 1 ? ' <em class="tag warn">Expiring</em>' : ''}</b></div><div><small>${mine ? 'Squad status' : 'Asking price'}</small><b>${mine ? p.status : p.club === 'FA' ? 'Free' : knowOf(p) >= 50 ? '~' + money(askingPrice(p)) : 'Unknown'}</b></div>
+      <div><small>Agent</small><b>${mine || knowOf(p) >= 75 ? agentLink(agentOf(p)) : 'Unknown'}</b></div>
       ${mine ? `<div><small>Squad</small><b>${LEVELS[lvlOf(p)]}</b></div><div><small>Training focus</small><b>${INDIV_FOCUS[G.training.indiv[p.id] || 'none']}</b></div>` : ''}</div>`;
   }
   const actions = `<div class="btns"><button class="btn pri wide" data-a="pActions" data-id="${p.id}">Actions</button></div>`;
