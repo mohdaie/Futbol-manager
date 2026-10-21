@@ -48,6 +48,8 @@ function money(n) {
   return s + '£' + Math.round(n);
 }
 const wageFmt = n => money(n) + '/w';
+// Editable limits show every pound so small button presses remain visible.
+const moneyExact = n => '£' + Math.round(n).toLocaleString('en-GB');
 const roundMoney = v => (v >= 1e6 ? Math.round(v / 1e5) * 1e5 : Math.round(v / 25e3) * 25e3);
 const roundWage = v => (v >= 1e4 ? Math.round(v / 500) * 500 : Math.round(v / 100) * 100);
 

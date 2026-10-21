@@ -49,12 +49,13 @@ function dealSheet(id) {
   let act = '';
   if (n && n.k === 'meeting') {
     const F = UI.dealForm && UI.dealForm.id === d.id ? UI.dealForm : (UI.dealForm = { id: d.id, approach: 'quiet', fee: M.max || 0, wage: M.wmax });
-    const fs = F.fee >= 20e6 ? 1e6 : F.fee >= 2e6 ? 250e3 : 50e3, ws = F.wage >= 50000 ? 5000 : F.wage >= 10000 ? 1000 : 250;
+    const fs = F.feeStep ??= F.fee >= 20e6 ? 1e6 : F.fee >= 2e6 ? 250e3 : 50e3;
+    const ws = F.wageStep ??= F.wage >= 50000 ? 5000 : F.wage >= 10000 ? 1000 : 250;
     act = `<section class="fsec"><h4>Your decision</h4>
       <h5>Approach</h5><div class="seg">${[['quiet', 'Quiet talks'], ['open', 'Open approach'], ['leak', 'Leak to the press']].map(([k, t]) => `<button class="${F.approach === k ? 'on' : ''}" data-a="dealForm" data-k="approach" data-v="${k}">${t}</button>`).join('')}</div>
       <p class="muted">${{ open: 'An open approach to his club: quicker, but public. Rivals and the press will hear.', quiet: 'Quiet talks with his agent first: slower and private, unless it leaks. Your Press Officer keeps it quiet.', leak: 'Let the press know: he will be flattered and keener, but his club will ask for more.' }[F.approach]}</p>
-      ${M.est ? `<h5>Most you will pay <small>(he estimates ${money(M.est)})</small></h5><div class="stepper"><button class="btn" data-a="dealForm" data-k="fee" data-v="${-fs * 4}">−−</button><button class="btn" data-a="dealForm" data-k="fee" data-v="${-fs}">−</button><b>${money(F.fee)}</b><button class="btn" data-a="dealForm" data-k="fee" data-v="${fs}">+</button><button class="btn" data-a="dealForm" data-k="fee" data-v="${fs * 4}">++</button></div>` : ''}
-      <h5>Most wage a week <small>(he expects about ${wageFmt(M.wage)})</small></h5><div class="stepper"><button class="btn" data-a="dealForm" data-k="wage" data-v="${-ws * 5}">−−</button><button class="btn" data-a="dealForm" data-k="wage" data-v="${-ws}">−</button><b>${wageFmt(F.wage)}</b><button class="btn" data-a="dealForm" data-k="wage" data-v="${ws}">+</button><button class="btn" data-a="dealForm" data-k="wage" data-v="${ws * 5}">++</button></div>
+      ${M.est ? `<h5>Most you will pay <small>(he estimates ${money(M.est)})</small></h5><div class="stepper"><button class="btn" aria-label="Lower fee by ${moneyExact(fs * 4)}" data-a="dealForm" data-k="fee" data-v="${-fs * 4}">−−</button><button class="btn" aria-label="Lower fee by ${moneyExact(fs)}" data-a="dealForm" data-k="fee" data-v="${-fs}">−</button><b aria-live="polite" aria-atomic="true">${moneyExact(F.fee)}</b><button class="btn" aria-label="Raise fee by ${moneyExact(fs)}" data-a="dealForm" data-k="fee" data-v="${fs}">+</button><button class="btn" aria-label="Raise fee by ${moneyExact(fs * 4)}" data-a="dealForm" data-k="fee" data-v="${fs * 4}">++</button></div>` : ''}
+      <h5>Most wage a week <small>(he expects about ${wageFmt(M.wage)})</small></h5><div class="stepper"><button class="btn" aria-label="Lower weekly wage by ${moneyExact(ws * 5)}" data-a="dealForm" data-k="wage" data-v="${-ws * 5}">−−</button><button class="btn" aria-label="Lower weekly wage by ${moneyExact(ws)}" data-a="dealForm" data-k="wage" data-v="${-ws}">−</button><b aria-live="polite" aria-atomic="true">${moneyExact(F.wage)}/w</b><button class="btn" aria-label="Raise weekly wage by ${moneyExact(ws)}" data-a="dealForm" data-k="wage" data-v="${ws}">+</button><button class="btn" aria-label="Raise weekly wage by ${moneyExact(ws * 5)}" data-a="dealForm" data-k="wage" data-v="${ws * 5}">++</button></div>
       <p class="muted c">Budget ${money(G.fin.tb)} · wage room ${wageFmt(Math.max(0, G.fin.wb - clubWageBill(userClub())))}</p>
       <div class="btns col"><button class="btn pri wide" data-a="dealGo" data-id="${d.id}" data-k="proceed">Proceed</button><button class="btn wide" data-a="dealGo" data-id="${d.id}" data-k="monitor">Keep monitoring</button><button class="btn wide ghost" data-a="dealGo" data-id="${d.id}" data-k="drop">Drop him</button></div></section>`;
   } else if (n) {
@@ -89,8 +90,8 @@ ACT.deal = ds => dealSheet(+ds.id);
 ACT.dealForm = ds => {
   const F = UI.dealForm;
   if (ds.k === 'approach') F.approach = ds.v;
-  if (ds.k === 'fee') F.fee = Math.max(0, roundMoney(F.fee + +ds.v));
-  if (ds.k === 'wage') F.wage = Math.max(300, roundWage(F.wage + +ds.v));
+  if (ds.k === 'fee') F.fee = Math.max(0, F.fee + +ds.v);
+  if (ds.k === 'wage') F.wage = Math.max(300, F.wage + +ds.v);
   dealSheet(F.id);
 };
 ACT.dealGo = ds => {

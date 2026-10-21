@@ -11,6 +11,57 @@ function moodFace(m) {
   return `<span class="mood ${cls}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="${col}"/><circle cx="8.5" cy="9.5" r="1.4" fill="#22082F"/><circle cx="15.5" cy="9.5" r="1.4" fill="#22082F"/><path d="${mouth}" stroke="#22082F" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>${label}</span>`;
 }
 
+function assistantBriefingReport(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
+  const priority = briefingPriority(facts, b), attention = facts.departments.filter(d => d.status === 'attention');
+  const healthy = facts.departments.filter(d => d.status === 'healthy'), watching = facts.departments.filter(d => d.status === 'monitor');
+  const link = d => `<button class="chip" data-a="briefDept" data-id="${d.id}">${esc(d.name)}</button>`;
+  const fallback = `${facts.result} ${priority ? priority.name + ' needs attention first.' : 'No urgent department issues are flagged.'}`;
+  const source = [b.sources.jev ? 'Jev priorities' : '', b.sources.ds ? 'DeepSeek summary' : ''].filter(Boolean).join(' · ') || 'Club facts';
+  return `<section id="briefingReport" class="assistant-report" aria-label="Full assistant briefing">
+    <div class="dcard-h"><div><h2>Assistant briefing</h2><small>${esc(facts.assistant)} · ${esc(facts.date)}</small></div></div>
+    <p class="brief-summary">${esc(b.text || fallback)}</p>
+    ${priority ? `<button class="brief-priority" data-a="briefDept" data-id="${priority.id}"><small>First priority</small><b>${esc(priority.name)} →</b></button>` : ''}
+    ${attention.length ? `<h3 class="lbl warnc">Needs attention · ${attention.length}</h3><div class="chips brief-attention">${attention.map(link).join('')}</div>` : ''}
+    ${healthy.length ? `<h3 class="lbl good">Healthy · ${healthy.length}</h3><div class="chips brief-healthy">${healthy.map(link).join('')}</div>` : ''}
+    <details class="brief-details"><summary>Full club report${watching.length ? ` · ${watching.length} to monitor` : ''}</summary>
+      ${facts.events.length ? `<h3 class="lbl">Recent events</h3><div class="list">${facts.events.map(e => `<button class="row act" data-a="news" data-id="${e.id.slice(5)}"><span class="grow">${esc(e.title)}</span><span>›</span></button>`).join('')}</div>` : ''}
+      ${facts.departments.map(d => `<div class="brief-department"><b>${esc(d.name)} <small class="${d.status === 'healthy' ? 'good' : d.status === 'attention' ? 'warnc' : ''}">${BRIEF_STATUS[d.status]}</small></b><p>${esc(d.evidence)}</p><button class="link" data-a="briefDept" data-id="${d.id}">${d.action} →</button></div>`).join('')}
+    </details>
+    <div class="brief-footer"><small role="status">${BRIEF_PENDING === b ? 'Updating assistant briefing…' : source}${!aiReady('jev', 'briefing') && !aiReady('ds', 'briefing') ? ' · AI is off or not configured' : ''}</small><button class="link" data-a="briefAI">AI settings</button></div>
+  </section>`;
+}
+function assistantBriefingCard(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
+  const count = status => facts.departments.filter(d => d.status === status).length;
+  const priority = briefingPriority(facts, b);
+  const preview = b.text || (priority ? 'Priority: ' + priority.name : 'No urgent department issues flagged.');
+  return `<section id="clubBriefing" class="dcard assistant-compact" aria-label="Assistant briefing">
+    <div class="brief-top"><h2>Assistant briefing</h2><button class="btn sm" data-a="askBriefing" ${BRIEF_PENDING === b ? 'disabled' : ''}>${BRIEF_PENDING === b ? 'Asking…' : 'Ask assistant'}</button></div>
+    <button class="brief-counts" data-a="briefReport" aria-label="View full club report"><span class="warnc">${count('attention')} attention</span> · <span class="good">${count('healthy')} healthy</span> · ${count('monitor')} monitor</button>
+    <button class="brief-preview" data-a="briefReport" aria-label="Read assistant briefing">${esc(preview)}</button>
+  </section>`;
+}
+function showClubBriefing() {
+  sheet(assistantBriefingReport(), { key: 'clubBriefing', restore: showClubBriefing, valid: () => !!G });
+}
+function paintClubBriefing(facts, b) {
+  const el = document.getElementById('clubBriefing');
+  if (el) { el.outerHTML = assistantBriefingCard(facts, b); linkEntities(document.getElementById('clubBriefing')); }
+  if (UI.popup?.key === 'clubBriefing') {
+    const open = document.querySelector('#briefingReport details')?.open;
+    showClubBriefing();
+    if (open) document.querySelector('#briefingReport details').open = true;
+  }
+}
+ACT.briefReport = showClubBriefing;
+ACT.askBriefing = () => { showClubBriefing(); updateClubBriefing(true); };
+ACT.briefDept = ds => {
+  const d = clubBriefingFacts().departments.find(x => x.id === ds.id);
+  if (!d) return;
+  if (d.screen === 'transfers') UI.tab.tr = d.tab || 'deals';
+  go(d.screen);
+};
+ACT.briefAI = () => { UI.tab.adm = !aiReady('jev', 'briefing') ? 'jev' : 'ds'; go('admin'); };
+
 SCREENS.home = {
   render() {
     const c = userClub(), fx = nextUserFixture(), tbl = leagueTable();
@@ -63,7 +114,7 @@ SCREENS.home = {
     </section>`;
 
     return `<div class="dash-h"><h1 class="h1">Dashboard</h1></div>
-      ${clubCard}${next}${players}${finance}
+      ${assistantBriefingCard()}${clubCard}${next}${players}${finance}
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="go" data-s="news">All news</button></div>
       <div class="list">${G.news.slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
   },
@@ -242,6 +293,7 @@ SCREENS.settings = {
   render() {
     const exp = UI.tab.export;
     return `<h1 class="h1">Settings</h1>
+      <div class="card"><button class="btn pri wide" data-a="returnTitle">Save &amp; return to title</button></div>
       <div class="card"><h3>Manager portrait</h3>${avatarPicker(G.avatar || 1, 'setAvatar')}</div>
       <div class="card"><h3>Default match speed</h3><div class="seg">${[1, 2, 4].map(s => `<button class="${G.settings.speed === s ? 'on' : ''}" data-a="speed" data-v="${s}">${s}x</button>`).join('')}</div></div>
       <div class="card"><h3>Save game</h3><p class="muted">The game saves itself in this browser after every week and match. Clearing site data removes it, so export a copy to keep a backup.</p>
@@ -253,6 +305,15 @@ SCREENS.settings = {
 ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to Manager ' + ds.v + '.'); render(); };
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
 ACT.saveNow = () => toast(saveGame() ? 'Game saved.' : 'Saving failed. Browser storage is blocked here, so export your save instead.');
+ACT.returnTitle = () => {
+  DAYRUN.on = false; clearTimeout(DAYRUN.timer); DAYRUN.timer = 0;
+  closeDayRun();
+  stopLive();
+  if (!saveGame()) return toast('Saving failed. Stay here and export your save before leaving.');
+  try { sessionStorage.removeItem(LAST_VIEW_KEY); } catch (e) { /* storage blocked */ }
+  UI.tab = {};
+  go('title');
+};
 ACT.exportSave = () => { syncPlaytime(); UI.tab.export = btoa(unescape(encodeURIComponent(JSON.stringify(G)))); render(); };
 ACT.copySave = () => {
   const box = document.getElementById('saveBox');
