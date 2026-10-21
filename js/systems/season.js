@@ -13,10 +13,9 @@ function advanceWeek() {
   weeklyTraining(pw);
   weeklyMedical();
   weeklyFinance();
-  weeklyScouting();
   staffWeekly();
-  weeklyTransfers();
-  weeklyContracts();
+  // Day jobs not reached day by day this week (Admin time skips) still happen once.
+  DAY_JOBS.forEach(([, k, fn]) => dayJob(k, fn));
   monthly();
   youthIntake();
   if (G.week % 6 === 5) G.staffPool = genStaffPool(userClub().rep);
@@ -27,6 +26,28 @@ function advanceWeek() {
   const nx = userFixture();
   if (nx && !G.press[nx.id]) G.press[nx.id] = { Q: pickPress(), done: false };
   saveGame();
+  return 'ok';
+}
+
+/* ---------- day by day ---------- */
+// Jobs on a set day of the week (Monday = 0): transfer business midweek, contracts and scouting reports later.
+// Each runs once a week, whether the week is played day by day or skipped in one go.
+const DAY_JOBS = [[2, 'transfers', () => weeklyTransfers()], [3, 'contracts', () => weeklyContracts()], [4, 'scouting', () => weeklyScouting()]];
+function dayJob(key, fn) {
+  const d = G.flags.dj || (G.flags.dj = {}), stamp = G.season + ':' + G.week;
+  if (d[key] === stamp) return;
+  d[key] = stamp; fn();
+}
+// One calendar day: the other matches kicking off today, today's jobs, and the squad's recovery.
+// Returns 'match' (the user's match is today), 'season', 'sacked' or 'ok'. Sunday rolls into the next week.
+function advanceDay() {
+  const fx = userFixtures().find(f => !played(f));
+  if (fx && (fx.d ?? 5) <= G.day) return 'match';
+  G.fixtures.filter(f => f.w === G.week && (f.d ?? 5) === G.day && !played(f) && !isUserFx(f)).sort(fxSort).forEach(f => quickSim(f));
+  DAY_JOBS.forEach(([d, k, fn]) => { if (d === G.day) dayJob(k, fn); });
+  if (G.day >= 6) return advanceWeek();
+  G.day++;
+  squadOf(G.club).forEach(p => recoverTo(p, todayNo()));
   return 'ok';
 }
 

@@ -20,6 +20,7 @@ js/core/state.js           the game state object G, new-game world build, save/l
 js/core/playtime.js        per-career active time, session counts and background pause
 js/core/calendar.js        weeks and dates, fixture generator, transfer windows, league table
 js/engine/pitch.js         tactical styles, role behaviour, player instructions, positions() and the offside line
+js/engine/shots.js         shot engine: who gets the chances (late runs, lay-offs, crosses, tight marking)
 js/engine/sim.js           match engine v2: each minute's chain of player-against-player actions (ev.seq)
 js/engine/match.js         match setup, team summary units, subs, AI manager, results
 js/engine/live.js          2D canvas match: replays ev.seq (key moments), commentary, team talks, shouts
@@ -33,6 +34,7 @@ js/systems/brain-cloud.js  private incremental cloud uploads, legacy import, off
 js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
 js/systems/lab.js          Admin "Run test season": league averages against targets, results by style and by tactic fit
 js/ui/ui.js                router, app shell, bottom sheets, toasts, click dispatch
+js/ui/dayrun.js            Continue: the calendar moves day by day and stops on matchday or important news
 js/ui/navigation.js        browser/in-game Back history, view restoration, root guard
 js/ui/screens-hub.js       Dashboard, News, My Team, Facilities, More, Game Status,
                            Fixtures, Table, Stats, Club, Settings
@@ -432,3 +434,18 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 - **Coach outcomes** are now relative: each player is paired with a similar player (age within a year, similar potential) at another club, and the plan is judged on growth above that control group over the same four weeks (minus 0.05 per injury), so plans are compared with each other rather than on raw growth.
 - **Live commentary:** fouls and cards are told before the free kick or penalty they lead to; blocked shots, deflections for corners, keeper rushes and offsides have their own wording (no more "fires over the bar. Corner.").
 - **AI usage statistics:** in Personal relay mode the game sends the feature name and its anonymous AI Brain installation id with each call (`aiMeta()`, never forwarded to the AI). The relays log tokens, cache hits, cost and feature in `futbol_manager_ai_requests` (migration `20261020171000`); `futbol-brain` serves `/usage` from `futbol_ai_usage_stats()`.
+
+## Shot engine and day-by-day calendar (2026.10.21.2)
+- **Shot engine** (`js/engine/shots.js`, used by sim.js): decides who gets the chances.
+  - `shotWill()`: how keen the player on the ball is to shoot: position (`SHOT_POS`; a striker gets most chances, so his factor is lowest), Flair against Teamwork, tight marking, and patient possession sides (slow tempo, if the players suit it) waiting for the opening.
+  - `lateRuns()`: when a move reaches the final third, midfielders with Off the Ball, Teamwork, Stamina and a running role arrive in the box (more after patient build-up, fewer on a fast break).
+  - `targetWeight()` / `crossTarget()`: passes, through balls and crosses near the box go to attacking midfielders, wide players and late runners too, plus a far-post run on crosses.
+  - `layOff()`: a marked player (strikers most) squares or cuts it back to a free team-mate: a clear chance (`cutback`, xG at least 0.10-0.26).
+  - Attention: each side remembers the danger every opponent caused this match and marks the one causing most of it more tightly (doubled up after several shots), also in races in behind.
+  - One-on-ones have fixed chance quality (`ONE_ON_ONE_XG`), so the xG slider can't change how costly a high line is.
+  - `SHOT_TUNE` holds the levers (rate, mark, double, late).
+  - Result over 4-16 seasons: about 25 shots, 9 on target and 2.8 goals per match; strikers take about 30% of shots (were 56%); no player averages more than about 5-6 shots; top scorers 35-44 goals (were 59-81); styles still within about ±0.1 points per match of strength.
+- **Day by day** (`advanceDay()` in season.js, `js/ui/dayrun.js`):
+  - Continue flips a calendar card one day at a time (about half a second each): matches kick off on their own day, transfer business happens on Wednesdays, contracts on Thursdays, scouting reports on Fridays (`DAY_JOBS`, each once a week, and still once if a week is skipped in Admin), and your squad recovers day by day.
+  - It stops by itself on your matchday (to the pre-match screen), at season end, or when important news comes in (`newsImportant()`: transfers, bids, agent pitches, contracts, injuries, suspensions, the board, youth intake). The card then lists the news; tap one to read it, or Continue. Stop pauses at any time.
+  - News is now dated on the day it happens. Admin > Time still moves whole weeks.
