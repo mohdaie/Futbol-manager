@@ -127,8 +127,19 @@ function coachPlan() {
     const weak = teamAnalysis().find(x => x.kind === 'weak' && x.fix && x.fix.focus);
     if (weak && R() < 0.35 + r / 25) { focus = weak.fix.focus; why.push(`Working on our main weakness: ${weak.text.replace(/\.$/, '').toLowerCase()}.`); }
     else why.push('A balanced week.');
+    // Learning table: plans are compared with each other (growth against similar players at other clubs).
+    const evF = staffEvidence(`coach|${focus}|1`), evB = staffEvidence('coach|bal|1');
+    if (focus !== 'bal' && evF && evB && evF.mean < evB.mean - 0.1) { focus = 'bal'; why.push('In past weeks, balanced training has done more for the players than this focus, so we stay balanced.'); }
+    else if (focus === 'bal' && r >= 10) {
+      const best = TRAINING_FOCUS.filter(f => f.k !== 'rec').map(f => [f.k, staffEvidence(`coach|${f.k}|1`)]).filter(([, e]) => e && e.mean > (evB ? evB.mean : 0) + 0.15).sort((a, b) => b[1].mean - a[1].mean)[0];
+      if (best) { focus = best[0]; why.push(`${TRAINING_FOCUS.find(f => f.k === best[0]).n} training has worked best for us so far.`); }
+    }
     if (inj >= 4) { intensity = 0; why.push(`${inj} players injured: keep the load light.`); }
-    else if (r >= 12 && cond > 88 && (rest == null || rest >= 6)) { intensity = 2; why.push('Fresh squad and a long week: we can train hard.'); }
+    else if (r >= 12 && cond > 88 && (rest == null || rest >= 6)) {
+      const hard = staffEvidence(`coach|${focus}|2`), norm = staffEvidence(`coach|${focus}|1`);
+      if (hard && norm && hard.mean < norm.mean - 0.1) why.push('Hard weeks have not paid off before, so normal intensity.');
+      else { intensity = 2; why.push('Fresh squad and a long week: we can train hard.'); }
+    }
   }
   // Individual plans for young players with room to grow: work on their weakest area for their position.
   const indiv = {};
@@ -144,23 +155,45 @@ function applyCoachPlan(plan) {
   const T = G.training;
   T.focus = plan.focus; T.intensity = plan.intensity;
   Object.entries(plan.indiv).forEach(([id, g]) => { T.indiv[id] = g; });
-  logStaff({ k: 'coach', key: `coach|${plan.focus}|${plan.intensity}`, r: plan.r, week: G.week, attr: squadAttrSum(), inj: G.flags.injN || 0, n: squadOf(G.club).filter(p => lvlOf(p) !== 'Y').length });
+  const ours = squadOf(G.club).filter(p => lvlOf(p) !== 'Y');
+  logStaff({ k: 'coach', key: `coach|${plan.focus}|${plan.intensity}`, r: plan.r, week: G.week, season: G.season, inj: G.flags.injN || 0,
+    us: ours.map(p => [p.id, attrSum(p)]), ctrl: coachControl(ours) });
 }
-const squadAttrSum = () => squadOf(G.club).filter(p => lvlOf(p) !== 'Y').reduce((t, p) => t + p.at.reduce((a, b) => a + b, 0), 0);
+const attrSum = p => p.at.reduce((a, b) => a + b, 0);
+const squadAttrSum = () => squadOf(G.club).filter(p => lvlOf(p) !== 'Y').reduce((t, p) => t + attrSum(p), 0);
+// Control group: for each of our players, a similar player (age within a year, similar potential) at another club.
+// Comparing growth with them over the same weeks separates the coaching plan from age, potential and the time of year.
+function coachControl(ours) {
+  const pool = Object.values(G.players).filter(q => q.club !== G.club && G.clubs[q.club] && lvlOf(q) !== 'Y');
+  if (!pool.length) return [];
+  return ours.map(p => { const c = pool.filter(q => Math.abs(q.age - p.age) <= 1 && Math.abs(q.pa - p.pa) <= 12); const q = c.length ? pick(c) : pick(pool); return [q.id, attrSum(q)]; });
+}
+// Average attribute growth of the players in [[id, start sum]] who are still around.
+const growthOf = xs => { const g = (xs || []).filter(([id]) => G.players[id]).map(([id, v]) => attrSum(G.players[id]) - v); return g.length ? g.reduce((a, b) => a + b, 0) / g.length : 0; };
 
 // Physio: who should not play in the next match, and how risky the rest are.
 function physioAdvice() {
   const r = staffR('Physio'), nf = nextUserFixture(), rest = nf ? restDays(G.club, nf) : null, T = G.tactics;
   const xi = T.slots.concat(T.bench).map(id => G.players[id]).filter(Boolean);
-  const out = [];
+  const out = [], thr = physioThreshold();
   xi.forEach(p => {
     // Condition expected at kick-off after the days of rest still to come.
     const days = nf ? Math.max(0, fxDayNo(nf) - todayNo()) : 3, exp = Math.min(100, p.cond + days * recoveryRate(p));
     const risk = clamp((1.7 - exp / 100) * 2.2 * (p.age >= 32 ? 1.25 : 1) * (bmiOf(p) > 25 ? 1.1 : 1), 0.3, 4); // relative match-injury risk
-    if (exp < 80 && R() < 0.4 + r / 30) out.push({ id: p.id, exp: Math.round(exp), risk, starter: T.slots.includes(p.id) });
+    if (exp < thr && R() < 0.4 + r / 30) out.push({ id: p.id, exp: Math.round(exp), risk, starter: T.slots.includes(p.id) });
   });
   out.sort((a, b) => a.exp - b.exp);
-  return { r: Math.round(r), rest, list: out.slice(0, 1 + Math.floor(r / 4)) };
+  const list = out.slice(0, 1 + Math.floor(r / 4));
+  if (nf) G.physioLast = { fid: nf.id, ids: list.map(x => x.id), applied: G.physioLast && G.physioLast.fid === nf.id && G.physioLast.applied };
+  return { r: Math.round(r), rest, thr, list };
+}
+// Condition below which the physio advises rest. Learning table: if resting has kept players fit more often than
+// playing them anyway, warn earlier; if it has made no difference, warn only for the most tired.
+function physioThreshold() {
+  const rest = staffEvidence('physio|rested'), play = staffEvidence('physio|played');
+  if (!rest || !play) return 80;
+  const d = rest.mean - play.mean;
+  return d > 0.15 ? 84 : d < 0.05 ? 76 : 80;
 }
 function applyPhysio(adv) {
   const T = G.tactics, ids = adv.list.map(x => x.id);
@@ -170,6 +203,7 @@ function applyPhysio(adv) {
   const repl = ids.filter(id => T.slots.includes(id) || T.bench.includes(id));
   if (repl.length) { const pool = seniorSquad(G.club).filter(p => available(p) && !ids.includes(p.id) && !T.slots.includes(p.id) && !T.bench.includes(p.id)); T.slots = T.slots.map(id => (ids.includes(id) && pool.length ? pool.shift().id : id)); T.bench = T.bench.filter(id => !ids.includes(id)); }
   const nf = nextUserFixture();
+  if (G.physioLast && nf && G.physioLast.fid === nf.id) G.physioLast.applied = true;
   logStaff({ k: 'physio', key: 'physio|rested', r: adv.r, fid: nf && nf.id, ids, week: G.week });
 }
 
@@ -192,13 +226,15 @@ function scoutAdvice() {
   const r = staffR('Scout'), needs = teamNeeds(), budget = G.fin.tb, room = G.fin.wb - clubWageBill(userClub());
   const minKnow = Math.max(25, 72 - r * 2.5), recs = [];
   needs.forEach(nd => {
+    // Learning table: signings for this kind of need that rated well before count for more; ones that flopped count for less.
+    const ev = staffEvidence('scout|' + nd.type), evW = ev ? clamp(ev.mean, -0.6, 0.6) * 3 : 0;
     const pool = Object.values(G.players).filter(p => p.club !== G.club && lvlOf(p) !== 'Y' && knowOf(p) >= minKnow && (p.pos === nd.pos || p.alt.includes(nd.pos)) && p.age <= 33);
     const scored = pool.map(p => {
       const so = seenOvr(p), at = so.v + (ovrAt(p, nd.pos) - p.ca), fee = p.club === 'FA' ? 0 : askingPrice(p), wage = wageDemand(p, false);
       if (fee > budget || wage > room) return null;
       const gain = at - nd.cur, youth = p.age <= 23 ? (seenPot(p) - stars(p.ca)) * 2 : 0, unlikely = p.ca > userClub().rep + 6 + joinPull(p);
       if (gain < 2 || unlikely) return null;
-      return { p, nd, gain: r1(gain), fee, wage, score: gain + youth - fee / 8e6 + rf(-1, 1) * (20 - r) * 0.3 };
+      return { p, nd, gain: r1(gain), fee, wage, score: gain + youth + evW - fee / 8e6 + rf(-1, 1) * (20 - r) * 0.3 };
     }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 1 + Math.floor(r / 7));
     recs.push(...scored);
   });
@@ -206,6 +242,26 @@ function scoutAdvice() {
 }
 function logScoutRecs(adv) {
   adv.recs.forEach(x => { if (!(G.staffLog || []).some(e => e.k === 'scout' && e.pid === x.p.id && e.season === G.season)) logStaff({ k: 'scout', key: 'scout|' + x.nd.type, pid: x.p.id, pos: x.nd.pos, gain: x.gain, r: adv.r, season: G.season }); });
+}
+
+/* ---------- optional AI wording for every staff role ---------- */
+// DeepSeek rewords a staff member's advice from the computed facts only (AI settings: "Staff advice in words").
+// The same check as the assistant: any number, player or club not in the facts and the built-in wording is kept.
+const STAFF_WORDS = {};
+const STAFF_ROLE_TEXT = { Analyst: 'performance analyst', Coach: 'first-team coach', Physio: 'head physio', Scout: 'chief scout' };
+function staffWords(role, key, facts) {
+  if (typeof aiReady !== 'function' || !aiReady('ds', 'staff') || !facts || !facts.length) return null;
+  const c = STAFF_WORDS[key];
+  if (c) return c.text || null;
+  STAFF_WORDS[key] = {};
+  const r = Math.round(staffR(role)), data = { staffRating: r, role: STAFF_ROLE_TEXT[role], facts };
+  const sys = `You are the ${STAFF_ROLE_TEXT[role]} of a football club in a management game. Your ability is ${r}/20: ${r >= 15 ? 'be precise and confident' : r >= 9 ? 'be clear but not too detailed' : 'speak simply, you are not very insightful'}. ` +
+    'Write 2-3 short sentences to the manager summing up your advice. Use ONLY the facts given. Do not add any number, player, club or event that is not in the facts. Reply only with JSON {"text": "..."}.';
+  dsChat([{ role: 'system', content: sys }, { role: 'user', content: JSON.stringify(data) }], role + ' advice', { json: true, maxTokens: 220 }).then(res => {
+    const t = String(JSON.parse(res.text).text || '').trim();
+    if (t && staffTextValid(t, data)) { STAFF_WORDS[key].text = t; if (typeof render === 'function') render(); }
+  }).catch(() => { /* keep the built-in wording */ });
+  return null;
 }
 
 /* ---------- recording, outcomes, staff growth ---------- */
@@ -224,10 +280,13 @@ function staffOutcome(role, key, value, xp) {
 function staffWeekly() {
   (G.staffLog || []).forEach(e => {
     if (e.res && e.k !== 'assist') return;
-    if (e.k === 'coach' && G.week - e.week >= 4) {
-      const n = squadOf(G.club).filter(p => lvlOf(p) !== 'Y').length || 1, growth = (squadAttrSum() - e.attr) / n, injuries = (G.flags.injN || 0) - e.inj;
-      e.res = { growth: r1(growth), injuries };
-      staffOutcome('coach', e.key, growth - injuries * 0.15, growth > 0.6 && injuries <= 2 ? 2 : growth > 0.2 ? 1 : 0);
+    if (e.k === 'coach' && (G.week - e.week >= 4 || (e.season != null && e.season !== G.season))) {
+      const injuries = (G.flags.injN || 0) - e.inj;
+      if (!e.us) { e.res = { old: true }; return; } // logged before control groups existed: not comparable
+      // Growth of our players against the control group over the same weeks: positive means the plan beat normal development.
+      const growth = growthOf(e.us), ctrl = growthOf(e.ctrl), rel = growth - ctrl;
+      e.res = { growth: r1(growth), ctrl: r1(ctrl), rel: r1(rel), injuries };
+      staffOutcome('coach', e.key, rel - injuries * 0.05, rel > 0.3 && injuries <= 2 ? 2 : rel > 0 ? 1 : 0);
     }
     if (e.k === 'assist' && e.res && !e.judged) {
       e.judged = true;
@@ -239,6 +298,15 @@ function staffWeekly() {
       if (fx && played(fx)) { const hurt = e.ids.filter(id => G.players[id] && G.players[id].inj).length; e.res = { hurt }; staffOutcome('physio', 'physio|rested', hurt ? 0 : 1, hurt ? 0 : 1); }
     }
   });
+  // Physio advice that was not followed: did the flagged players who played get injured? (the comparison for 'rested')
+  const L = G.physioLast, fx = L && G.fixtures.find(f => f.id === L.fid);
+  if (L && fx && played(fx)) {
+    if (!L.applied && fx.ratings) {
+      const us = fx.h === G.club ? 0 : 1, ran = new Set((fx.ratings[us] || []).map(x => x[0]));
+      L.ids.filter(id => ran.has(id)).forEach(id => staffLearnAdd('physio|played', G.players[id] && G.players[id].inj ? 0 : 1));
+    }
+    G.physioLast = null;
+  }
 }
 // Scouts: judged at the end of the season, on how the players they recommended did.
 function staffSeasonEnd() {

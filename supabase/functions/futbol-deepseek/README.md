@@ -20,3 +20,10 @@ the relay if the game's public domain changes.
 In More → Admin → DeepSeek, supply a personal key and enable the required
 features: Second opinion and/or Press conference questions. These settings do
 not enable paid calls automatically. Use Test connection to verify the key.
+
+## Usage statistics (version 2)
+
+The game may add `meta: { f: feature, i: installation }` to the request body in Personal relay mode. The relay
+never forwards it. It logs the feature, cache-hit tokens, the cost in US$ (list prices, DeepSeek peak/off-peak)
+and the SHA-256 of the installation id in `futbol_manager_ai_requests` (migration `20261020171000`).
+Admin > AI usage reads it back through `futbol-brain` `/usage`.

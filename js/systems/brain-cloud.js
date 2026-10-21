@@ -16,7 +16,7 @@ function brainCloudSignal(ms) {
   const ctl = new AbortController(); setTimeout(() => ctl.abort(), ms); return ctl.signal;
 }
 function brainCloudEngine() { return String(brain().active || 'rules') + ':' + brainCloudHash(JSON.stringify(G && G.tune || {})); }
-function brainCloudEmpty() { return { stats: {}, records: [], snapshots: {}, omitted: 0 }; }
+function brainCloudEmpty() { return { stats: {}, records: [], snapshots: {}, omitted: 0, duels: {} }; }
 function brainCloudRow(e) {
   if (e.out == null || !Number.isFinite(e.out) || !MGR_OPTIONS[e.opt] || ['pending', 'late'].includes(e.src)) return null;
   const meta = e.cloudMeta || {};
@@ -72,7 +72,19 @@ function brainCloudRecord(B, e) {
   brainCloudKeepDetail(C, row);
 }
 function brainCloudPending(C) {
-  return C.inFlight || C.pending.records.length || Object.keys(C.pending.stats).length || Object.keys(C.pending.snapshots).length || C.pending.omitted;
+  return C.inFlight || C.pending.records.length || Object.keys(C.pending.stats).length || Object.keys(C.pending.snapshots).length || C.pending.omitted || Object.keys(C.pending.duels || {}).length;
+}
+// Engine plan stage E: add one real match's player duels (M.duels, written by duelRoll in sim.js) to the upload queue.
+// Tagged with the game version and tuning, so tuning data from different engines never mixes. Saved with the brain after the match.
+function brainCloudDuels(M) {
+  if (!M.duels || LAB_RUN || M.fid <= 0) return;
+  const C = brainCloudInit(brain()), D = C.pending.duels || (C.pending.duels = {});
+  const e = String(GAME_VERSION).slice(0, 30) + ':' + brainCloudHash(JSON.stringify(G.tune || {}));
+  Object.entries(M.duels).forEach(([k, [n, w, p]]) => {
+    const [t, z, g] = k.split('|'), key = e + '|' + k;
+    const x = D[key] || (D[key] = { e, t, z: +z, g: +g, n: 0, w: 0, p: 0 });
+    x.n += n; x.w += w; x.p = Math.round((x.p + p) * 1000) / 1000;
+  });
 }
 function brainCloudPersist(B) {
   try { localStorage.setItem(BRAIN_KEY, JSON.stringify(B)); return true; }
@@ -102,9 +114,10 @@ async function brainCloudSync(force = false) {
   try {
     for (let i = 0; i < 8 && brainCloudPending(C); i++) {
       if (!C.inFlight) {
-        const stats = Object.keys(C.pending.stats).slice(0, 80), snapshots = Object.keys(C.pending.snapshots).slice(0, 1);
+        const stats = Object.keys(C.pending.stats).slice(0, 80), snapshots = Object.keys(C.pending.snapshots).slice(0, 1), duels = Object.keys(C.pending.duels || {}).slice(0, 400);
         C.inFlight = { seq: C.seq + 1, stats: stats.map(k => C.pending.stats[k]), records: C.pending.records.splice(0, 100), snapshots: snapshots.map(k => C.pending.snapshots[k]), omitted: C.pending.omitted };
-        stats.forEach(k => delete C.pending.stats[k]); snapshots.forEach(k => delete C.pending.snapshots[k]); C.pending.omitted = 0;
+        if (duels.length) C.inFlight.duels = duels.map(k => ({ ...C.pending.duels[k], p: Math.min(C.pending.duels[k].p, C.pending.duels[k].n) }));
+        stats.forEach(k => delete C.pending.stats[k]); snapshots.forEach(k => delete C.pending.snapshots[k]); duels.forEach(k => delete C.pending.duels[k]); C.pending.omitted = 0;
       }
       if (!brainCloudPersist(B)) throw new Error(C.error);
       const response = await fetch(BRAIN_CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + C.token }, body: JSON.stringify(C.inFlight), signal: brainCloudSignal(18000) });
@@ -127,6 +140,14 @@ async function brainCloudSync(force = false) {
     brainCloudBusy = false; brainCloudDisplay();
     if (brainCloudPending(C)) brainCloudSchedule(Math.max(5000, brainCloudRetryAt - Date.now()));
   }
+}
+// AI usage statistics for this installation from the cloud log (Jev and DeepSeek relay calls).
+async function aiCloudUsage() {
+  const C = brainCloudInit(brain());
+  const r = await fetch(BRAIN_CLOUD_URL + '/usage', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + C.token }, body: '{}', signal: brainCloudSignal(12000) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Usage statistics are unavailable (' + r.status + ').');
+  return data;
 }
 window.addEventListener('online', () => { brainCloudRetryAt = 0; brainCloudSchedule(100); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) brainCloudSchedule(100); });

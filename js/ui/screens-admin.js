@@ -15,7 +15,7 @@ SCREENS.admin = {
     const t = UI.tab.adm || 'over';
     return `<h1 class="h1">Admin</h1>
       <div class="banner open"><b>Live editing</b><span>Changes apply to this save at once. Export a backup in Settings first if you want to undo.</span></div>
-      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['jev', 'Jev AI'], ['ds', 'DeepSeek'], ['data', 'Data']], t)}
+      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['jev', 'Jev AI'], ['ds', 'DeepSeek'], ['usage', 'AI usage'], ['data', 'Data']], t)}
       ${ADMIN_TABS[t]()}`;
   },
 };
@@ -78,9 +78,9 @@ const ADMIN_TABS = {
     return `<div class="card"><h3>Engine tuning</h3><p class="muted">Applies to every match from now on, including the live 2D view.</p>
         ${Object.entries(TUNE_DEFAULTS).map(([k, d]) => `<div class="field"><label for="tn-${k}">${d.n}: <b id="tv-${k}">${tune(k)}</b>${tune(k) !== d.v ? ` <small>(default ${d.v})</small>` : ''}</label><input id="tn-${k}" type="range" min="${d.min}" max="${d.max}" step="${d.step}" value="${tune(k)}" data-c="admTune" data-k="${k}"></div>`).join('')}
         <div class="btns"><button class="btn" data-a="admTuneReset">Reset to defaults</button></div></div>
-      <div class="card"><h3>Test season</h3><p class="muted">Plays all 380 matches on a copy of the save with the current tuning. Your real save does not change. Real-world targets: about 2.7 goals, 45% home wins, 25% draws.</p>
+      <div class="card"><h3>Test season</h3><p class="muted">Plays all 380 matches on a copy of the save with the current tuning. Your real save does not change. Every measure is compared with Premier League-like averages, and each style and level of tactic fit is shown against the strength of the teams using it.</p>
         <button class="btn pri" data-a="admTest">Run test season</button>
-        ${T ? `<div class="kv"><div><small>Goals per match</small><b>${T.gpg}</b></div><div><small>Home / draw / away</small><b>${T.h}% / ${T.d}% / ${T.a}%</b></div><div><small>Shots per team</small><b>${T.sh}</b></div><div><small>xG per team</small><b>${T.xg}</b></div><div><small>Cards per match</small><b>${T.cards}</b></div><div><small>Top scorer</small><b>${T.top}</b></div><div><small>Champions</small><b>${esc(T.champ)}</b></div><div><small>Points range</small><b>${T.range}</b></div></div>` : ''}</div>`;
+        ${T ? labReportHtml(T) : ''}</div>`;
   },
 
   data() {
@@ -98,6 +98,21 @@ const ADMIN_TABS = {
         <button class="btn ${c2('wipe')}" data-a="admConfirm" data-k="wipe">${ADM.confirm === 'wipe' ? 'Tap again to delete the save' : 'Delete save and restart'}</button></div></div>`;
   },
 };
+
+// Test season report: league averages against targets, then results by style and by tactic fit.
+function labReportHtml(T) {
+  const kv = (n, v, t) => `<div><small>${n}${t ? ` <em>(target ${t})</em>` : ''}</small><b>${v}</b></div>`, L = LAB_TARGETS;
+  const sign = v => (v > 0 ? '+' : '') + v.toFixed(2);
+  const table = (rows, first) => `<div class="tablewrap"><table class="tbl lab"><tr><th>${first}</th><th>Team-matches</th><th>Pts per match</th><th>vs strength</th><th>Goals for-against</th><th>Possession</th><th>Pass %</th><th>Long balls</th><th>Crosses</th><th>Shots</th><th>xG</th><th>Offsides</th><th>Fit</th></tr>
+    ${rows.map(([n, g]) => `<tr><td><b>${esc(n)}</b></td><td>${g.n}</td><td>${g.ppg}</td><td class="${g.vs > 0.05 ? 'good' : g.vs < -0.05 ? 'bad' : ''}">${sign(g.vs)}</td><td>${g.gf}-${g.ga}</td><td>${g.pos}%</td><td>${g.pass}%</td><td>${g.lp}</td><td>${g.cr}</td><td>${g.sh}</td><td>${g.xg}</td><td>${g.off}</td><td>${g.fit}%</td></tr>`).join('')}</table></div>`;
+  return `<div class="kv">${kv('Goals per match', T.gpg, L.gpg)}${kv('Home / draw / away', `${T.h}% / ${T.d}% / ${T.a}%`, '43 / 24 / 33')}${kv('Shots per match', T.shm, L.shm)}${kv('On target per match', T.sot, L.sot)}
+      ${kv('xG per team', T.xg)}${kv('Pass accuracy', T.pass + '%', L.pass + '%')}${kv('Fouls per match', T.fo, L.fo)}${kv('Cards per match', T.cards, L.cards)}
+      ${kv('Offsides per match', T.off, L.off)}${kv('Penalties per match', `${T.pk} (${T.pkConv}% scored)`, L.pk)}${kv('Corners per match', T.co, L.co)}${kv('Crosses / long balls', `${T.cr} / ${T.lp}`)}
+      ${kv('Top scorer', T.top)}${kv('Champions', esc(T.champ))}${kv('Points range', T.range)}</div>
+    <h4 class="lbl">By style</h4>${table(Object.entries(T.styles).map(([k, g]) => [k === 'custom' ? 'Custom' : STYLES[k].n, g]), 'Style')}
+    <h4 class="lbl">By tactic fit</h4>${table(FIT_BANDS.filter(([b]) => T.fit[b]).map(([b]) => [b + '%', T.fit[b]]), 'Fit')}
+    <p class="muted">"vs strength" is points per match above or below what the strength gap between the two elevens (and home advantage) predicts, so a style is not flattered by the clubs that use it. One season is noisy: differences under about 0.1 are within chance. All numbers are league averages, never targets for single matches.</p>`;
+}
 
 /* ---------- overview & clubs ---------- */
 ACT.admMgr = () => { G.manager = val('adMgr').trim() || G.manager; saveGame(); toast('Manager name saved.'); render(); };
@@ -205,26 +220,8 @@ CHG.admTune = (v, ds) => {
 document.addEventListener('input', e => { const el = e.target; if (el.dataset && el.dataset.c === 'admTune') { const out = document.getElementById('tv-' + el.dataset.k); if (out) out.textContent = el.value; } });
 ACT.admTuneReset = () => { G.tune = {}; saveGame(); toast('Engine back to defaults.'); render(); };
 ACT.admTest = () => {
-  const real = G;
   toast('Running test season…');
-  setTimeout(() => {
-    try {
-      G = JSON.parse(JSON.stringify(real));
-      G.fixtures.forEach(f => { f.hg = f.ag = null; });
-      Object.values(G.players).forEach(p => { p.st = newStats(); });
-      let goals = 0, h = 0, d = 0, sh = 0, xg = 0, cards = 0;
-      G.fixtures.forEach(f => {
-        Object.values(G.players).forEach(p => { p.cond = 100; p.inj = null; p.ban = 0; });
-        const M = quickSim(f);
-        goals += f.hg + f.ag; if (f.hg > f.ag) h++; else if (f.hg === f.ag) d++;
-        M.sides.forEach(S => { sh += S.st.sh; xg += S.st.xg; cards += S.st.yc + S.st.rc; });
-      });
-      const n = G.fixtures.length, tbl = leagueTable();
-      const top = Object.values(G.players).sort((a, b) => b.st.g - a.st.g)[0];
-      ADM.test = { gpg: (goals / n).toFixed(2), h: Math.round(h / n * 100), d: Math.round(d / n * 100), a: Math.round((n - h - d) / n * 100), sh: (sh / n / 2).toFixed(1), xg: (xg / n / 2).toFixed(2), cards: (cards / n).toFixed(1), top: top.st.g + ' (' + top.ln + ')', champ: G.clubs[tbl[0].id].name, range: tbl[19].pts + '-' + tbl[0].pts + ' pts' };
-    } finally { G = real; }
-    render();
-  }, 30);
+  setTimeout(() => { try { ADM.test = runTestSeason(); } catch (e) { toast('Test season failed: ' + e.message); } render(); }, 30);
 };
 
 /* ---------- data ---------- */
@@ -289,7 +286,7 @@ function aiTab(svc) {
       ${svc === 'ds' ? `<label class="tgl"><input id="ai-think" type="checkbox" ${c.thinking ? 'checked' : ''}><span>Thinking mode (slower, costs more; not recommended)</span></label>` : ''}
       <h4 class="lbl">Use it for</h4>
       ${AI_FEATURES[svc].map(([k, n]) => `<label class="tgl"><input type="checkbox" class="ai-feat" data-k="${k}" ${c.feat[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
-      <p class="note">Connected now: ${svc === 'jev' ? 'computer managers' : 'second opinions and the press question library'} (see the AI Brain tab). The other ticks are saved for features still to come.</p>
+      <p class="note">Connected now: ${svc === 'jev' ? 'computer managers' : 'second opinions, the press question library and staff advice in words'} (see the AI Brain and AI Staff tabs). Usage by feature is on the AI usage tab. The other ticks are saved for features still to come.</p>
       <div class="btns"><button class="btn pri" data-a="aiSave" data-svc="${svc}">Save settings</button><button class="btn" data-a="aiTest" data-svc="${svc}" ${T?.pending ? 'disabled' : ''}>${T?.pending ? 'Testing…' : 'Test connection'}</button>${c.key ? `<button class="btn ghost" data-a="aiClearKey" data-svc="${svc}">Remove key</button>` : ''}</div>
       ${T ? `<div class="aitest ${T.ok ? 'ok' : 'bad'}">${T.html}</div>` : ''}</div>
     <div class="card"><h3>This month</h3><div class="kv">
@@ -299,6 +296,33 @@ function aiTab(svc) {
       <div class="list">${aiCfg().log.filter(l => l.svc === svc).slice(0, 8).map(l => `<div class="row sm"><span class="grow"><b>${l.ok ? 'OK' : 'Failed'} · ${esc(l.note)}</b><small>${new Date(l.t).toLocaleString('en-GB')} · ${l.ms} ms · ${l.inTok}/${l.outTok} tok · $${l.cost.toFixed(5)}</small></span></div>`).join('') || '<p class="muted">No calls yet.</p>'}</div></div>
     <div class="card"><h3>Price and choice</h3><p class="muted">${rec}</p>${pricing}<p class="muted">Prices checked October 2026 at ${I.docs}. The estimate assumes AI decisions in every league match plus your own press, talks and reports.</p></div>`;
 }
+
+/* ---------- AI usage: tokens and cost for Jev and DeepSeek ---------- */
+// This device's own count (every call, any connection mode) and the cloud log kept by the relays (by feature and day).
+ADMIN_TABS.usage = () => {
+  const U = aiCfg().usage, months = Object.keys(U).sort().reverse().slice(0, 6), C = ADM.usage;
+  const svcName = k => (k === 'jev' ? 'Jev' : 'DeepSeek'), tok = n => Number(n || 0).toLocaleString('en-GB'), usd = n => '$' + Number(n || 0).toFixed(4);
+  const local = months.map(m => ['jev', 'ds'].filter(k => U[m][k]).map(k => { const u = U[m][k]; return `<div class="row sm"><span class="grow"><b>${m} · ${svcName(k)}</b><small>${u.calls} calls${u.fails ? `, ${u.fails} failed` : ''} · ${tok(u.inTok)} in / ${tok(u.outTok)} out tokens</small></span><span class="stat"><b>${usd(u.cost)}</b></span></div>`; }).join('')).join('');
+  const prov = p => (p === 'jev' ? 'Jev' : 'DeepSeek');
+  const cloud = !C ? '<p class="muted">Not loaded yet.</p>' : C.error ? `<p class="bad">${esc(C.error)}</p>` : !C.data ? '<p class="muted">Loading…</p>' : (() => {
+    const d = C.data, maxDay = Math.max(1e-9, ...d.days.map(x => +x.tokens));
+    return `<h4 class="lbl">This month</h4><div class="kv">${d.month.map(x => `<div><small>${prov(x.provider)}</small><b>${x.calls} calls · ${usd(x.cost)}</b><small>${tok(x.input)} in / ${tok(x.output)} out${+x.cache ? ` · ${tok(x.cache)} cached` : ''} · ${x.ms} ms avg${+x.fails ? ` · ${x.fails} failed` : ''}</small></div>`).join('') || '<div><small>No calls this month</small><b>-</b></div>'}</div>
+      <h4 class="lbl">All time</h4><div class="kv">${d.total.map(x => `<div><small>${prov(x.provider)}</small><b>${x.calls} calls · ${usd(x.cost)}</b><small>${tok(x.input)} in / ${tok(x.output)} out</small></div>`).join('') || '<div><small>None yet</small><b>-</b></div>'}</div>
+      <h4 class="lbl">By feature (last 30 days)</h4><div class="list">${d.features.map(x => `<div class="row sm"><span class="grow"><b>${esc(x.feature)}</b><small>${prov(x.provider)} · ${x.calls} calls · ${tok(x.tokens)} tokens</small></span><span class="stat"><b>${usd(x.cost)}</b></span></div>`).join('') || '<p class="muted">No calls in the last 30 days.</p>'}</div>
+      <h4 class="lbl">By day (last 14 days)</h4><div class="list">${d.days.map(x => `<div class="row sm"><span class="grow"><b>${x.day} · ${prov(x.provider)}</b><small>${x.calls} calls · ${tok(x.tokens)} tokens · ${usd(x.cost)}</small>${bar(+x.tokens / maxDay * 100, 'good')}</span></div>`).join('') || '<p class="muted">No calls in the last 14 days.</p>'}</div>
+      <h4 class="lbl">Every player this month</h4><div class="kv">${d.everyone.map(x => `<div><small>${prov(x.provider)}</small><b>${x.calls} calls · ${usd(x.cost)}</b><small>${tok(x.tokens)} tokens · ${x.installs} device${+x.installs === 1 ? '' : 's'} with stats</small></div>`).join('') || '<div><small>No calls</small><b>-</b></div>'}</div>
+      <p class="muted">Loaded ${new Date(C.at).toLocaleString('en-GB')}.</p>`;
+  })();
+  return `<div class="card"><h3>On this device</h3><p class="muted">Every Jev and DeepSeek call this browser made, by month. Costs use the list prices on the Jev and DeepSeek tabs.</p>
+      <div class="list">${local || '<p class="muted">No AI calls yet.</p>'}</div></div>
+    <div class="card"><h3>Cloud usage log</h3><p class="muted">The relays log every call in the database: tokens, cost and which game feature asked (never keys, prompts or player data). Shown here for this device, plus totals for everyone. Only calls through the Personal relay are logged with this device; direct calls appear above only.</p>
+      <div class="btns"><button class="btn pri" data-a="aiUsageLoad" ${C && C.busy ? 'disabled' : ''}>${C && C.busy ? 'Loading…' : C ? 'Refresh' : 'Load usage'}</button></div>${cloud}</div>`;
+};
+ACT.aiUsageLoad = async () => {
+  ADM.usage = { ...(ADM.usage || {}), busy: true }; render();
+  try { ADM.usage = { data: await aiCloudUsage(), at: Date.now() }; } catch (e) { ADM.usage = { error: e.message || 'Could not load usage.' }; }
+  render();
+};
 
 ACT.aiMode = ds => { readAISettings(ds.svc); aiCfg()[ds.svc].mode = ds.v; aiSave(); render(); };
 function readAISettings(svc) {

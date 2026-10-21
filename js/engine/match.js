@@ -34,7 +34,7 @@ function buildSide(cid, idx) {
     cid, idx, user, ip: tac.ip, oop: tac.oop, roles, ment: tac.ment, tempo: tac.tempo, width: tac.width, press: tac.press, line: tac.line, pass: tac.pass, lost: tac.lost ?? 1, won: tac.won ?? 1,
     pi: user ? JSON.parse(JSON.stringify(tac.pi || {})) : {}, ps: {}, form: [], pos: [],
     pk: user ? tac.pk : null, cap: user ? tac.cap : null, fk: user ? tac.fk : null, ck: user ? tac.ck : null, on: xi, bench, off: [], subs: 0, wins: 0, lastSubMin: -1, cond: {}, rat: {}, yc: {}, reds: [], injuries: [],
-    played: xi.filter(Boolean), st: { g: 0, sh: 0, sot: 0, xg: 0, pos: 0, fo: 0, yc: 0, rc: 0, co: 0, pa: 0, pc: 0, off: 0, cr: 0 }, goals: [],
+    played: xi.filter(Boolean), st: { g: 0, sh: 0, sot: 0, xg: 0, pos: 0, fo: 0, yc: 0, rc: 0, co: 0, pa: 0, pc: 0, off: 0, cr: 0, pk: 0, pkg: 0, lp: 0 }, goals: [],
     banned: c.squad.filter(id => G.players[id] && G.players[id].ban > 0), u: null, map: shapeMap(tac.ip, tac.oop), boost: 0, guard: 0, calm: 0,
   };
   xi.concat(bench).forEach(id => { if (id) { S.cond[id] = G.players[id].cond; S.rat[id] = 6.5; } });
@@ -54,7 +54,7 @@ function createMatch(fx) {
   if (fx.id > 0 && (fx.h === G.club || fx.a === G.club) && typeof adviceAtKickoff === 'function') adviceAtKickoff(fx);
   // Computer clubs set up for this match with the tactic their available players suit best.
   [[fx.h, fx.a], [fx.a, fx.h]].forEach(([c, o]) => { if (c !== G.club && G.clubs[c] && G.clubs[c].pl && !(G.flags && G.flags.fixedTac)) G.clubs[c].tac = aiChooseTactic(c, o); });
-  const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0), buildSide(fx.a, 1)], log: [], shout: null };
+  const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0), buildSide(fx.a, 1)], log: [], shout: null, duels: fx.id > 0 ? {} : null };
   M.sides.forEach(S => calcUnits(S));
   return M;
 }
@@ -127,7 +127,7 @@ function calcUnits(S) {
 
 function possShare(H, W) {
   // Short passing, patience and pressing only help keep the ball if the players suit them (tactic fit).
-  const fp = S => (S.fit ? S.fit.poss : 0) * 0.9 + 0.1, fr = S => (S.fit ? S.fit.press : 0) + 0.5;
+  const fp = S => (S.fit ? S.fit.poss : 0) * 0.9 + 0.3, fr = S => (S.fit ? S.fit.press : 0) + 0.5;
   const f = S => Math.pow(S.u.mid, 1.2) * (1 + 0.03 * (S.press - 1) * fr(S) + (S.pass === 0 ? 0.2 * fp(S) : -0.08 * (S.pass - 1)) + (S.tempo === 0 ? 0.14 * fp(S) : -0.06 * (S.tempo - 1))) * (S.u.n / 11);
   const a = f(H) * tune('homePoss'), b = f(W);
   return a / (a + b);
@@ -240,6 +240,7 @@ function quickSim(fx) {
 }
 
 function finishMatch(M) {
+  if (typeof brainCloudDuels === 'function') brainCloudDuels(M);
   brainScore(M);
   const fx = G.fixtures.find(f => f.id === M.fid);
   const [H, W] = M.sides;

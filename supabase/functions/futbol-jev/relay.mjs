@@ -13,6 +13,18 @@ const json = (status, data) => new Response(JSON.stringify(data), {
   status, headers: { ...CORS, 'Content-Type': 'application/json' },
 });
 
+// Usage statistics: the game names the feature and its anonymous installation (body.meta, never forwarded).
+const meta = body => {
+  const m = body && typeof body.meta === 'object' && body.meta ? body.meta : {};
+  return { feature: typeof m.f === 'string' && /^[a-z0-9 :_-]{1,40}$/i.test(m.f) ? m.f : null, install: typeof m.i === 'string' && /^[a-f0-9]{64}$/.test(m.i) ? m.i : null };
+};
+async function sourceOf(install) {
+  if (!install) return null;
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(install));
+  return [...new Uint8Array(bytes)].map(n => n.toString(16).padStart(2, '0')).join('');
+}
+const JEV_PRICE_IN = 0.042; // US$ per 1M input tokens; output is free
+
 export async function handleJev(req, fetcher = fetch, record = async () => {}) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-jev' });
   if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
@@ -35,7 +47,11 @@ export async function handleJev(req, fetcher = fetch, record = async () => {}) {
   const started = performance.now();
   const log = async (http_status, usage = {}, model = body.model, error_code = null) => {
     const count = n => Number.isFinite(n) && n > 0 ? Math.min(2147483647, Math.trunc(n)) : 0;
-    try { await record({ http_status, duration_ms: Math.round(performance.now() - started), model, input_tokens: count(usage.input_tokens), output_tokens: count(usage.output_tokens), error_code }); } catch { /* Diagnostics must not interrupt a match. */ }
+    try {
+      const m = meta(body), inTok = count(usage.input_tokens);
+      await record({ http_status, duration_ms: Math.round(performance.now() - started), model, input_tokens: inTok, output_tokens: count(usage.output_tokens), error_code,
+        feature: m.feature, cost_usd: http_status < 400 ? inTok * JEV_PRICE_IN / 1e6 : 0, source_id: await sourceOf(m.install) });
+    } catch { /* Diagnostics must not interrupt a match. */ }
   };
   try {
     const response = await fetcher(UPSTREAM, {

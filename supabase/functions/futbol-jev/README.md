@@ -32,3 +32,10 @@ Failed diagnostic writes do not interrupt the game.
 4. If the game's public domain changes, update `ORIGIN` in `relay.mjs`.
 5. Test using the Jev key already saved in the browser. Export/import existing
    diagnostic rows separately only if needed; they are not career saves.
+
+## Usage statistics (version 2)
+
+The game may add `meta: { f: feature, i: installation }` to the request body in Personal relay mode. The relay
+never forwards it. It logs the feature, cache-hit tokens, the cost in US$ (list prices, DeepSeek peak/off-peak)
+and the SHA-256 of the installation id in `futbol_manager_ai_requests` (migration `20261020171000`).
+Admin > AI usage reads it back through `futbol-brain` `/usage`.
