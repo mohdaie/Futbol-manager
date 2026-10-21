@@ -150,6 +150,10 @@ switches of play, triangles around the ball, and players staying back as rest de
 8. **Box defending.** In the low block the box is defended zonally (near post, 6-yard box, penalty spot, far post)
    plus marking of runners; the 6 protects the edge of the box (Zone 14 and cut-backs).
 
+9. **Loose and second balls.** A loose ball (a deflection, a miscontrol, a long ball that has landed, a pass that
+   has missed its man) is attacked at once by the nearest player of each side; the first there wins it, the next
+   ones get close for the second ball. A pass only belongs to its receiver while he can still get to it first.
+
 **You should see:** two or three tight lines that slide together, the far side tucked in, the centre closed,
 one man pressing the ball with another covering, the line stepping up when the ball goes back.
 

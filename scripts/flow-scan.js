@@ -46,6 +46,8 @@ tickSim = function(M) {
       else if (cover) F.covered++;
     }
   }
+  // Wide attacks in the final third (either side), for clips of box occupation (rulebook 7.2/7.4).
+  if (own && B.os >= 0 && !sim.rs) { const [ox, oy] = toOwn(B.os, own.x, own.y); if (oy < 0.33 && (ox < 0.25 || ox > 0.75) && sim.t - (F.lastWide || -99) > 120 && F.events.length < 400) { F.lastWide = sim.t; F.events.push({ k: 'wide-attack', min: M.min, t: +sim.t.toFixed(1) }); } }
   // Block depth and line gap of the pressing side when out of possession in the middle third.
   if (own && B.os === D && FLOW_THIRD(D, own.y) === 'mid') {
     const ys = sim.P[F.p].filter((z, j) => z && j).map(z => toOwn(F.p, z.x, z.y)[1] * PL).sort((a, b) => a - b);

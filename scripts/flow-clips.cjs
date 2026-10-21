@@ -41,7 +41,10 @@ function describe(sel) {
     const near = [0, 1].map(s => { let n = 0; for (let i = 0; i < 11; i++) { const x = f[8 + (s * 11 + i) * 2], y = f[9 + (s * 11 + i) * 2]; if (x != null && Math.hypot(x - bx, y - by) < 12) n++; } return n; });
     const g = sel[k + 1] || f, moving = Math.hypot(g[2] - bx, g[3] - by) > 2.5; // over 5 m/s: a pass, not a loose ball
     const who = rs ? 'restart ' + rs : os >= 0 ? side(os) + ' ' + res.pos[os][oi] + ' on the ball' : bz > 1 ? 'ball in the air' : moving ? 'ground pass' : 'loose ball';
-    const line = `${(f[1] - t0).toFixed(0)}s ${who}, ${where(bx, by)}; within 12 m: blue ${near[res.p]}, red ${near[1 - res.p]}`;
+    // Attackers in the penalty box of the side being attacked (by the side on the ball, else the last owner).
+    const att = os >= 0 ? os : (last.startsWith('blue') ? res.p : 1 - res.p), goalAtY = att === 0 ? 0 : 105;
+    let inBox = 0; for (let i = 1; i < 11; i++) { const x = f[8 + (att * 11 + i) * 2], y = f[9 + (att * 11 + i) * 2]; if (x != null && Math.abs(x - 34) < 20.2 && Math.abs(y - goalAtY) < 16.5) inBox++; }
+    const line = `${(f[1] - t0).toFixed(0)}s ${who}, ${where(bx, by)}; within 12 m: blue ${near[res.p]}, red ${near[1 - res.p]}; ${side(att).split('(')[0]} attackers in the box: ${inBox}`;
     if (line.split(';')[0] !== last || k % 6 === 0) out.push(line);
     last = line.split(';')[0];
   }
@@ -49,7 +52,7 @@ function describe(sel) {
 }
 const fr = res.frames, made = [], kinds = {};
 for (const e of res.ev) {
-  if ((kinds[e.k] = (kinds[e.k] || 0) + 1) > 2) continue; // two clips of each kind
+  if ((kinds[e.k] = (kinds[e.k] || 0) + 1) > (e.k === 'wide-attack' ? 4 : 2)) continue; // a few clips of each kind
   const sel = fr.filter(f => f[0] === e.min && f[1] >= e.t - 8 && f[1] <= e.t + 7);
   if (sel.length < 10) continue;
   const name = `${e.k}-${e.min}m-${Math.round(e.t)}.mp4`, file = path.join(outDir, name);

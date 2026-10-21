@@ -307,3 +307,36 @@ This remains a diagnostic, not calibrated league output. Full report:
    Jev loop changes: blind proposals (`blind: true`), criteria under 0.6 confidence stay pending, clip timelines
    (`.txt` next to each clip, `clips` in proposals). **Next:** the ball still leaves play too rarely (21 throw-ins v
    about 40-45, corners 5.8 v 10) and the possession side still makes ~1270 passes; then resubmit for acceptance.
+
+## Session update 2 (Claude, owner decides; Jev paused by the owner)
+
+The owner took Jev out of the loop ("I trust your judgement") and set the rule now written as rulebook **11c**:
+every change starts from a rulebook section; statistics only check (and calibrate league averages at the end).
+
+Rulebook additions: **1b** ball in and out of play, **3.10** individual tempo, **4.9** loose and second balls,
+**7.2** when/how the box fills, **7.4** the wide player's decision, **11c** how the rulebook is used.
+
+Engine changes (sim.js), each from its section:
+- 1b: real restart dead time (`restartWait()`), goal celebration 35 s, deflections off tackles/interceptions,
+  blocked crosses (mostly corners), mishit/overhit balls and heavy touches by technique and pressure, putting it out
+  under touchline pressure. Ball in play ~70 min (was 90).
+- 3.10: unpressed (nobody within 10 m) in the middle/final third: a touch and a look (1.2-1.8 s); build-up keeps
+  its tempo; under pressure quick.
+- 4.9: loose balls: a pass is only its receiver's while he can still get there first; landed long balls are loose
+  (both sides go) - fixed a 2-second "nobody goes" bug in `chase()`.
+- 7.2: `boxPlan()` near post / far post / penalty spot / edge from non-rest-defence attackers as soon as the ball
+  is wide in the attacking half; runners hold onside then `attackTheBox()` when the cross is struck; the cross is
+  aimed at a space a runner attacks; box runs are sprints; re-read every second near the box.
+- 7.1/7.4: cut-back preference from the byline; Winger down the line to the byline then cut-back; Inside Forward /
+  Inverted Winger cut inside (stronger foot); cross when runners are attacking the box.
+- 9.5 (earlier): `directOutlet()`, `secondBallSupport()`, `aerialContest()`.
+- Final calibration (rulebook 12.8, league averages only): `ENG.keepShot` 0.12, `ENG.xg` 1.1.
+
+League (browser, 150 matches): goals 2.73, shots 20.0, on target 6.7, corners 8.3, fouls 24.1, yellows 3.5,
+penalties 0.17, home/draw 42%/27%. 12 suites pass (defending, transitions, intent, engine-qa, jev-lead, audit
+--strict, 12-match --strict, shape, live, navigation, deals, mood).
+
+Clips: `docs/flow-clips/final/` (+ `.txt` timelines), showreel `docs/flow-clips/final-showreel.mp4`.
+
+Known gaps (next, from the rulebook): box at cross arrival averages 1.6 attackers (7.2 says 3+: the late 8 from
+deep); passes per team ~750 (real ~450-550); offsides ~1.7 (real ~4); match simulation ~0.55 s in a browser.
