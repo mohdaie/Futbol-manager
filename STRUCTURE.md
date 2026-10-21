@@ -477,3 +477,8 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 
 ## My Team opens Squad (2026.10.21.8)
 - My Team routes directly to Squad, including older saved `team` views. All eleven team sections appear in a horizontal tab row above the section content, with the active tab brought into view. The former grid of menu cards is removed; section routes, Back history and squad filters remain intact.
+
+## Title menu and updates (2026.10.21.9)
+- The title shows **Continue game** (with a save), **New game**, **Options** and **Check for updates**, with the version status underneath. New game asks first when a career is saved; the old save is only replaced once you take charge of a club.
+- **Updates** (`checkForUpdate()` in screens-match.js): opening the title reads `GAME_VERSION` from the published `js/core/data.js` (no cache). If it is newer, every script, stylesheet and the page are fetched again past the browser cache and the game reloads on the title, so players enter the latest version. The save is untouched. A version already tried in this tab is not reloaded again while GitHub Pages is still publishing it ("Try again in a minute"). It never reloads once you have gone into the game; offline it just says it could not check.
+- Test: `node tests/updates.cjs` (390×844).

@@ -16,14 +16,68 @@ SCREENS.title = {
       <div class="title-shade"></div>
       <h1 class="title-wordmark"><span>Futbol</span><small>Manager</small></h1>
       <div class="title-menu">
-        <button class="title-play" data-a="titleStart">Start Game ${ICON.arrow}</button>
+        ${G ? `<button class="title-play" data-a="titleContinue">Continue game ${ICON.arrow}</button>` : ''}
+        <button class="${G ? 'title-options' : 'title-play'}" data-a="titleNew">New game${G ? '' : ' ' + ICON.arrow}</button>
         <button class="title-options" data-a="titleOptions">Options</button>
-        ${G ? `<p class="title-save">Continue as ${esc(G.manager)}</p>` : ''}
+        <button class="title-options" data-a="titleUpdate">Check for updates</button>
+        <p class="title-save" id="title-update" role="status">${esc(updateText())}</p>
       </div>
     </section>`;
   },
 };
-ACT.titleStart = () => go(G ? 'home' : 'start');
+ACT.titleContinue = () => go('home');
+ACT.titleStart = () => go(G ? 'home' : 'start'); // older links and tests
+ACT.titleNew = () => G ? sheet(`<h3 class="sh-t">New game</h3>
+  <p class="muted">Starting a new career replaces ${esc(G.manager)}'s current save once you take charge of a club.</p>
+  <button class="btn pri wide" data-a="titleNewGo">Choose a club</button>
+  <button class="btn wide" data-a="closeSheet">Cancel</button>`, { key: 'title-new' }) : go('start');
+ACT.titleNewGo = () => go('start');
+
+/* ---------- updates ----------
+   The live game is served by GitHub Pages. The title screen reads GAME_VERSION from the published
+   data.js; when it is newer, every script and stylesheet is fetched again past the browser cache and
+   the page reloads, so players always enter the latest version. A version tried once this tab
+   (sessionStorage) is not reloaded again while Pages is still rolling it out. */
+const UPDATE = { state: 'idle', v: '', checked: false };
+const UPDATE_KEY = 'futbol-manager:update';
+function versionNewer(a, b) {
+  const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  return false;
+}
+function updateText() {
+  return ({
+    checking: 'Checking for updates…',
+    latest: `Up to date · version ${GAME_VERSION}`,
+    found: `Updating to version ${UPDATE.v}…`,
+    pending: `Version ${UPDATE.v} is still being published. Try again in a minute.`,
+    error: `Could not check for updates · version ${GAME_VERSION}`,
+  })[UPDATE.state] || `Version ${GAME_VERSION}`;
+}
+function updateShow() { const el = document.getElementById('title-update'); if (el) el.textContent = updateText(); }
+async function checkForUpdate() {
+  if (UPDATE.state === 'checking' || UPDATE.state === 'found') return;
+  UPDATE.state = 'checking'; UPDATE.checked = true; updateShow();
+  let v = '';
+  try {
+    const r = await fetch('js/core/data.js?check=' + Date.now(), { cache: 'no-store' });
+    v = ((await r.text()).match(/GAME_VERSION\s*=\s*'([^']+)'/) || [])[1] || '';
+  } catch { /* offline: the game still runs */ }
+  if (!v) { UPDATE.state = 'error'; updateShow(); return; }
+  UPDATE.v = v;
+  let tried = '';
+  try { tried = sessionStorage.getItem(UPDATE_KEY) || ''; } catch { /* private mode */ }
+  if (!versionNewer(v, GAME_VERSION)) { UPDATE.state = 'latest'; updateShow(); return; }
+  if (tried === v) { UPDATE.state = 'pending'; updateShow(); return; }
+  if (UI.s !== 'title') { UPDATE.state = 'idle'; return; } // never reload under a player who has already gone in
+  UPDATE.state = 'found'; updateShow();
+  try { sessionStorage.setItem(UPDATE_KEY, v); sessionStorage.removeItem(LAST_VIEW_KEY); } catch { /* reload anyway */ } // reopen on the title
+  const own = u => u && new URL(u, location.href).origin === location.origin;
+  const urls = [location.href, ...[...document.scripts].map(s => s.src), ...[...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href)].filter(own);
+  await Promise.all(urls.map(u => fetch(u, { cache: 'reload' }).catch(() => null)));
+  location.reload();
+}
+ACT.titleUpdate = () => checkForUpdate();
 ACT.titleOptions = () => sheet(`<h3 class="sh-t">Options</h3>
   <h4 class="lbl">Match speed</h4><div class="seg">${[1, 2, 4].map(n => `<button class="${titleSpeed() === n ? 'on' : ''}" data-a="titleSpeed" data-v="${n}">${n}x</button>`).join('')}</div>
   ${G ? '<button class="btn wide" data-a="go" data-s="settings">Game settings</button>' : ''}

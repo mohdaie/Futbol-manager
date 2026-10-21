@@ -24,7 +24,7 @@ const server = require('node:http').createServer((req, res) => {
   };
   try {
     await page.goto('http://127.0.0.1:' + server.address().port);
-    await page.locator('[data-a="titleStart"]').click(); await page.locator('[data-a="startGame"]').click();
+    await page.locator('[data-a="titleNew"]').click(); await page.locator('[data-a="startGame"]').click();
     const info = await page.evaluate(() => {
       const p = seniorSquad('CIT')[0], ours = seniorSquad(G.club)[0];
       addNews('transfer', 'An offer for ' + fullName(p), `${pname(p)} of ${clubName(p.club)} is available.`, { t: 'player', pid: p.id });

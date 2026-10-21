@@ -207,5 +207,6 @@ function boot() {
   if (G) restoreScreen();
   try { render(true); } catch (e) { UI.s = G ? 'home' : 'title'; UI.p = {}; render(true); } // a screen that no longer fits the save
   initViewHistory();
+  if (UI.s === 'title') checkForUpdate();
 }
 window.addEventListener('DOMContentLoaded', boot);
