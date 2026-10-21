@@ -52,16 +52,17 @@ function briefingPriority(facts, b) {
   return issues.find(d => d.id === b.priority) || issues[0] || null;
 }
 
-async function updateClubBriefing() {
+async function updateClubBriefing(requested = false) {
+  if (!requested) return; // only an explicit Ask assistant action may call AI
   const facts = clubBriefingFacts(), b = clubBriefingState(facts), game = G;
   if (BRIEF_PENDING === b) return;
-  const services = ['jev', 'ds'].filter(s => aiReady(s, 'briefing') && !b.tried[s]);
+  const services = ['jev', 'ds'].filter(s => aiReady(s, 'briefing') && !b.sources[s]);
   if (!services.length) return;
   services.forEach(s => { b.tried[s] = true; });
   BRIEF_PENDING = b;
-  saveGame(); // remember attempted services even if the page closes during a request
+  saveGame(); // retain the snapshot even if the page closes during a request
   const current = () => G === game && G.assistantBriefing === b;
-  const paint = () => { if (current() && UI.s === 'home' && !UI.popup) paintClubBriefing(facts, b); };
+  const paint = () => { if (current() && UI.s === 'home') paintClubBriefing(facts, b); };
   paint();
   try {
     const issues = facts.departments.filter(d => d.status === 'attention');

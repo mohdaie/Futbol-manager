@@ -11,13 +11,13 @@ function moodFace(m) {
   return `<span class="mood ${cls}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="${col}"/><circle cx="8.5" cy="9.5" r="1.4" fill="#22082F"/><circle cx="15.5" cy="9.5" r="1.4" fill="#22082F"/><path d="${mouth}" stroke="#22082F" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>${label}</span>`;
 }
 
-function assistantBriefingCard(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
+function assistantBriefingReport(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
   const priority = briefingPriority(facts, b), attention = facts.departments.filter(d => d.status === 'attention');
   const healthy = facts.departments.filter(d => d.status === 'healthy'), watching = facts.departments.filter(d => d.status === 'monitor');
   const link = d => `<button class="chip" data-a="briefDept" data-id="${d.id}">${esc(d.name)}</button>`;
   const fallback = `${facts.result} ${priority ? priority.name + ' needs attention first.' : 'No urgent department issues are flagged.'}`;
   const source = [b.sources.jev ? 'Jev priorities' : '', b.sources.ds ? 'DeepSeek summary' : ''].filter(Boolean).join(' · ') || 'Club facts';
-  return `<section id="clubBriefing" class="dcard assistant-brief" aria-label="Assistant briefing">
+  return `<section id="briefingReport" class="assistant-report" aria-label="Full assistant briefing">
     <div class="dcard-h"><div><h2>Assistant briefing</h2><small>${esc(facts.assistant)} · ${esc(facts.date)}</small></div></div>
     <p class="brief-summary">${esc(b.text || fallback)}</p>
     ${priority ? `<button class="brief-priority" data-a="briefDept" data-id="${priority.id}"><small>First priority</small><b>${esc(priority.name)} →</b></button>` : ''}
@@ -30,15 +30,30 @@ function assistantBriefingCard(facts = clubBriefingFacts(), b = clubBriefingStat
     <div class="brief-footer"><small role="status">${BRIEF_PENDING === b ? 'Updating assistant briefing…' : source}${!aiReady('jev', 'briefing') && !aiReady('ds', 'briefing') ? ' · AI is off or not configured' : ''}</small><button class="link" data-a="briefAI">AI settings</button></div>
   </section>`;
 }
+function assistantBriefingCard(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
+  const count = status => facts.departments.filter(d => d.status === status).length;
+  const priority = briefingPriority(facts, b);
+  const preview = b.text || (priority ? 'Priority: ' + priority.name : 'No urgent department issues flagged.');
+  return `<section id="clubBriefing" class="dcard assistant-compact" aria-label="Assistant briefing">
+    <div class="brief-top"><h2>Assistant briefing</h2><button class="btn sm" data-a="askBriefing" ${BRIEF_PENDING === b ? 'disabled' : ''}>${BRIEF_PENDING === b ? 'Asking…' : 'Ask assistant'}</button></div>
+    <button class="brief-counts" data-a="briefReport" aria-label="View full club report"><span class="warnc">${count('attention')} attention</span> · <span class="good">${count('healthy')} healthy</span> · ${count('monitor')} monitor</button>
+    <button class="brief-preview" data-a="briefReport" aria-label="Read assistant briefing">${esc(preview)}</button>
+  </section>`;
+}
+function showClubBriefing() {
+  sheet(assistantBriefingReport(), { key: 'clubBriefing', restore: showClubBriefing, valid: () => !!G });
+}
 function paintClubBriefing(facts, b) {
   const el = document.getElementById('clubBriefing');
-  if (!el) return;
-  const open = el.querySelector('details').open;
-  el.outerHTML = assistantBriefingCard(facts, b);
-  const next = document.getElementById('clubBriefing');
-  next.querySelector('details').open = open;
-  linkEntities(next);
+  if (el) { el.outerHTML = assistantBriefingCard(facts, b); linkEntities(document.getElementById('clubBriefing')); }
+  if (UI.popup?.key === 'clubBriefing') {
+    const open = document.querySelector('#briefingReport details')?.open;
+    showClubBriefing();
+    if (open) document.querySelector('#briefingReport details').open = true;
+  }
 }
+ACT.briefReport = showClubBriefing;
+ACT.askBriefing = () => { showClubBriefing(); updateClubBriefing(true); };
 ACT.briefDept = ds => {
   const d = clubBriefingFacts().departments.find(x => x.id === ds.id);
   if (!d) return;
@@ -103,7 +118,6 @@ SCREENS.home = {
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="go" data-s="news">All news</button></div>
       <div class="list">${G.news.slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
   },
-  after() { updateClubBriefing(); },
 };
 CHG.dashSort = v => { UI.f.dash = v; render(); };
 
