@@ -30,4 +30,4 @@ jobs:
       - name: One genuine Jev review
         env:
           JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
-        run: node scripts/engine-qa.cjs --jev --strict
+        run: node scripts/engine-qa.cjs --matches 6 --jev --strict
