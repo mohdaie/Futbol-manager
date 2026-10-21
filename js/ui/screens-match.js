@@ -270,7 +270,7 @@ window.addEventListener('resize', () => { if (UI.s === 'match' && LIVE) bindLive
 
 const liveSide = () => LIVE.M.sides[LIVE.bottom];
 ACT.pause = () => { const L = LIVE; if (!L || L.done || (L.overlay && L.overlay.stay)) return; L.paused = !L.paused; updateBoard(L); };
-ACT.hlCycle = () => { G.settings.hl = { key: 'ext', ext: 'full', full: 'key' }[G.settings.hl || 'ext']; if (LIVE && LIVE.mq) LIVE.mq.segs = segments(LIVE.M.marks || [], LIVE.mq.t0); updateBoard(LIVE); toast('Highlights: ' + HL[G.settings.hl]); };
+ACT.hlCycle = () => { G.settings.hl = { key: 'ext', ext: 'full', full: 'key' }[G.settings.hl || 'ext']; if (LIVE && LIVE.mq) LIVE.mq.segs = segments(LIVE.M.marks || [], LIVE.mq.t0, Math.min(0, LIVE.mq.p), LIVE.M); updateBoard(LIVE); toast('Highlights: ' + HL[G.settings.hl]); };
 ACT.camCycle = () => { G.settings.cam = (G.settings.cam || 'follow') === 'follow' ? 'full' : 'follow'; updateBoard(LIVE); };
 ACT.speedCycle = () => { G.settings.speed = { 1: 2, 2: 4, 4: 1 }[G.settings.speed] || 2; updateBoard(LIVE); };
 ACT.instant2 = () => { if (LIVE && !LIVE.done) liveInstant(); };

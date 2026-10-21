@@ -73,6 +73,43 @@ function beh(S, i, k) {
 }
 const roleName = (S, i) => { const pos = FORMATIONS[S.ip][i][0]; return (ROLES[pos][(S.roles || [])[i]] || ROLES[pos][0]).n; };
 
+/* Where each role goes with the ball, by the ball's zone (as FM's in-possession role movement):
+   fin/mid/own: how far the ball is into the final, middle or own third (0-1, blended), near/far: the ball is on
+   this player's flank or the other one, side: -1 left, +1 right. x, y: the formation spot (own frame). */
+function ballZone(x, bx, by) {
+  const side = x < 0.5 ? -1 : 1, lat = (bx - 0.5) * side;
+  return { fin: clamp((0.45 - by) / 0.2, 0, 1), own: clamp((by - 0.58) / 0.2, 0, 1), mid: 1 - clamp((by - 0.58) / 0.2, 0, 1), near: clamp(lat / 0.2, 0, 1), far: clamp(-lat / 0.2, 0, 1), side, bx };
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+const ROLE_Z = {
+  // Defenders: centre-backs split wide to build from the back; full-backs overlap on their side.
+  'Centre-Back': (x, y, z) => [x + z.side * 0.05 * z.own, y],
+  'Ball-Playing Defender': (x, y, z) => [x + z.side * 0.08 * z.own, y - 0.04 * z.mid],
+  'Full-Back': (x, y, z) => [x, y - 0.12 * z.fin * z.near - 0.05 * z.mid],
+  'Wing-Back': (x, y, z) => [x + z.side * 0.04, y - 0.1 * z.mid - 0.1 * z.fin * z.near],
+  'Inverted Full-Back': (x, y, z) => [lerp(x, 0.5 + z.side * 0.14, z.mid), lerp(y, 0.66, z.mid)], // steps into midfield next to the 6
+  // Midfield.
+  Anchor: (x, y, z) => [lerp(x, 0.5, 0.6), y],
+  'Deep-Lying Playmaker': (x, y, z) => [lerp(x, 0.5 + (z.bx - 0.5) * 0.3, 0.5), y + 0.06 * z.own], // drops to collect
+  'Box-to-Box': (x, y, z) => [x, lerp(y, 0.2, z.fin * 0.8)], // arrives at the edge of the box
+  Mezzala: (x, y, z) => [lerp(x, 0.5 + z.side * 0.2, z.mid), y - 0.1 * z.fin], // the half-space
+  Playmaker: (x, y, z) => [x + (z.bx - 0.5) * 0.25, y],
+  'Advanced Playmaker': (x, y, z) => [x + (z.bx - 0.5) * 0.25, lerp(y, 0.36, z.fin)], // between the lines
+  'Attacking Midfielder': (x, y, z) => [x, lerp(y, 0.3, z.fin)],
+  'Shadow Striker': (x, y, z) => [lerp(x, 0.5, z.fin * 0.6), lerp(y, 0.13, z.fin)], // arrives in the box
+  // Wide players.
+  Winger: (x, y, z) => [lerp(lerp(x, 0.5 + z.side * 0.47, z.mid), 0.5 + z.side * 0.12, z.fin * z.far), lerp(y, 0.1, z.fin * z.far)], // holds the touchline; back post when the ball is on the other side
+  'Wide Midfielder': (x, y, z) => [x, lerp(y, 0.14, z.fin * z.far * 0.7)],
+  'Inside Forward': (x, y, z) => [lerp(x, 0.5 + z.side * 0.17, z.fin), lerp(y, 0.14, z.fin)], // in off the flank to score
+  'Inverted Winger': (x, y, z) => [lerp(x, 0.5 + z.side * 0.22, z.mid * 0.7), y], // the half-space to create
+  'Wide Playmaker': (x, y, z) => [lerp(x, 0.5 + z.side * 0.26, z.mid), y + 0.04],
+  // Forwards.
+  'False Nine': (x, y, z) => [x + (z.bx - 0.5) * 0.15, y + 0.13 * z.mid], // drops between the lines
+  'Target Forward': (x, y, z) => [lerp(x, 0.5, 0.5), y], // pins the centre-backs
+  Poacher: (x, y, z) => [lerp(x, 0.5, z.fin * 0.7), y],
+  'Advanced Forward': (x, y, z) => [x + (z.bx - 0.5) * 0.1, y],
+};
+
 // Deterministic small error per slot: low tactical familiarity puts players slightly out of place.
 const slotNoise = (i, salt) => Math.sin(i * 12.9898 + salt * 78.233) * 0.5;
 
@@ -94,6 +131,8 @@ function positions(T, hasBall, bx = 0.5, by = 0.5) {
     }
     const back = LINE[pos] === 1, front = LINE[pos] >= 4;
     if (hasBall) {
+      const z = ROLE_Z[roleName(T, i)] || (back && LINE[pos] === 1 && pos === 'DC' ? ROLE_Z['Centre-Back'] : null);
+      if (z) [x, y] = z(x, y, ballZone(x, bx, by));
       x = 0.5 + (x - 0.5) * [0.8, 1, 1.16][width];
       y -= (ment - 2) * (back ? 0.015 : 0.03);
       y -= beh(T, i, 'fw') * 0.07 + beh(T, i, 'run') * 0.025;

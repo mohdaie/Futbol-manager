@@ -81,3 +81,38 @@ function labReport(T, rows, extra) {
 }
 // Targets for the report (Premier League-like league averages per match).
 const LAB_TARGETS = { gpg: '2.7-2.9', shm: '~25', sot: '~8.5', pass: '75-90', fo: '~21', cards: '~3.5', off: '~3.5', pk: '~0.27', co: '~10' };
+
+/* Attribute test (as FM-Arena's community tests): for each attribute, every match of the league is played with
+   one side's players all at `lo` and the other's at `hi` for that attribute only (home and away alternate), on a
+   copy of the save. Reports points per match and goals for and against of the high side: an attribute that
+   matters wins more; one that does nothing stays near 1.4 points. Async, so the page keeps responding. */
+async function runAttrTest(keys = ATTRS.map(a => a[0]), n = 40, lo = 8, hi = 16, onProg = null) {
+  const real = G, out = [];
+  LAB_RUN = true;
+  try {
+    const base = JSON.stringify(real);
+    for (const k of keys) {
+      const copy = JSON.parse(base);
+      G = copy;
+      const fx = G.fixtures.filter(f => f.h && f.a).slice(0, n), r = { k, n: ATTRS.find(a => a[0] === k)[1], m: 0, pts: 0, gf: 0, ga: 0 };
+      for (let x = 0; x < fx.length; x++) {
+        const f = fx[x]; f.hg = f.ag = null;
+        const hiSide = x % 2; // 0: home high, 1: away high
+        // Attributes change after the match is set up, so both sides keep the tactic they would normally pick.
+        [f.h, f.a].forEach(cid => Object.values(G.players).forEach(p => { if (p.club === cid) { p.cond = 100; p.inj = null; p.ban = 0; } }));
+        const M = createMatch(f);
+        M.sides.forEach((S, s) => { const v = s === hiSide ? hi : lo; [...S.on, ...S.bench].forEach(id => { if (id && G.players[id]) G.players[id].at[A[k]] = v; }); S.dirty = true; });
+        M.dirty = true;
+        while (!M.ended) stepMatch(M, true);
+        const H = M.sides[hiSide].st.g, L = M.sides[1 - hiSide].st.g;
+        r.m++; r.pts += H > L ? 3 : H === L ? 1 : 0; r.gf += H; r.ga += L;
+        // Let the page breathe between matches, with the real save back in place meanwhile.
+        if (x % 5 === 4) { G = real; await new Promise(res => setTimeout(res, 0)); G = copy; }
+      }
+      G = real;
+      out.push({ k, n: r.n, ppg: +(r.pts / r.m).toFixed(2), gf: +(r.gf / r.m).toFixed(2), ga: +(r.ga / r.m).toFixed(2), m: r.m });
+      if (onProg) onProg(out.length, keys.length);
+    }
+  } finally { G = real; LAB_RUN = false; }
+  return out.sort((a, b) => b.ppg - a.ppg);
+}

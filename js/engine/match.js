@@ -136,11 +136,16 @@ function possShare(H, W) {
 function drain(M, S) {
   // Pressing tires players; those built for it cope better.
   const pf = 1 - (S.fit ? S.fit.press : 0) * 0.35;
-  const rate = (tune('fatigue') + (0.06 * (S.press - 1) + ((S.lost ?? 1) === 2 ? 0.02 : 0)) * pf + 0.03 * (S.tempo - 1)) * M.mod.drain;
+  // Each player tires by the sprinting he actually did last minute (pressing, runs, getting back), not by the
+  // instruction alone: about 41 m a minute is normal.
+  const P = M.sim && M.sim.P[S.idx];
+  const rate = (tune('fatigue') + 0.03 * (S.tempo - 1)) * M.mod.drain;
   S.on.forEach((id, i) => {
     if (!id) return;
-    const p = G.players[id];
-    S.cond[id] = Math.max(15, S.cond[id] - rate * (1.5 - p.at[A.sta] / 20) * fatigueMul(p) * (1 + beh(S, i, 'pr') * 0.12 + beh(S, i, 'fw') * 0.06) * (i === 0 ? 0.3 : 1));
+    const p = G.players[id], q = P && P[i] && P[i].id === id ? P[i] : null;
+    const spr = q ? clamp(((q.spr || 0) - 41) * 0.0053, -0.04, 0.2) * pf * M.mod.drain : (0.06 * (S.press - 1) + ((S.lost ?? 1) === 2 ? 0.02 : 0)) * pf * M.mod.drain;
+    if (q) q.spr = 0;
+    S.cond[id] = Math.max(15, S.cond[id] - (rate + spr) * (1.5 - p.at[A.sta] / 20) * fatigueMul(p) * (i === 0 ? 0.3 : 1));
   });
 }
 
