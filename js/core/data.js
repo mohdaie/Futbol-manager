@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.21.13';
+const GAME_VERSION = '2026.10.21.14';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -243,6 +243,6 @@ const TUNE_DEFAULTS = {
 };
 const tune = k => (G && G.tune && G.tune[k] != null ? G.tune[k] : TUNE_DEFAULTS[k].v);
 
-const STAFF_ROLES = { Assistant: 1, Coach: 3, Scout: 3, Physio: 2, Analyst: 1, Director: 1 };
-const STAFF_TITLE = { Director: 'Director of Football' };
-const STAFF_DESC = { Assistant: 'Team talk advice and match prep', Coach: 'Player development in training', Scout: 'One scouting assignment each', Physio: 'Injury prevention and recovery', Analyst: 'Opposition reports before matches', Director: 'Reviews fully scouted players and runs transfer deals with you' };
+const STAFF_ROLES = { Assistant: 1, Coach: 3, Scout: 3, Physio: 2, Analyst: 1, Director: 1, Press: 1 };
+const STAFF_TITLE = { Director: 'Director of Football', Press: 'Press Officer' };
+const STAFF_DESC = { Assistant: 'Team talk advice and match prep', Coach: 'Player development in training', Scout: 'One scouting assignment each', Physio: 'Injury prevention and recovery', Analyst: 'Opposition reports before matches', Director: 'Reviews fully scouted players and runs transfer deals with you', Press: 'Statements to the media; keeps quiet talks quiet' };
