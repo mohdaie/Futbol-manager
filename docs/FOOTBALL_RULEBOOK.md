@@ -146,12 +146,20 @@ switches of play, triangles around the ball, and players staying back as rest de
    **Near his own box the first defender delays rather than dives in:** on his feet, side-on, showing the attacker
    away from goal, until the ball is exposed (the attacker turns away from goal or loses control) or a team-mate
    is covering him. A defender who dives in and misses is out of the game, and the attacker is through.
+   **Jockeying is the normal way to defend the man on the ball** (anywhere on the pitch): goal-side, between him and
+   the goal, matching his movement and showing him one way. The defender commits to a tackle only when it is on
+   (a heavy touch, the ball exposed, the attacker turned away, a team-mate covering). A team makes about 15-20
+   tackles a match and its opponents about 8-10 successful dribbles; only a defender who commits and misses, or is
+   beaten by a take-on, is left behind.
 6. **Cover shadow.** A presser runs on the line that cuts off the pass behind him (usually into the 6).
 7. **Back line moves as one.** It steps up when the ball goes back or the carrier is pressed and can't play forward;
    it drops when the carrier is free and facing forward ("ball pressure / no ball pressure"). This is the offside
    trap.
    A midfielder tracking a runner goes with him up to the back line and passes him on to the defenders; dropping
    behind his own back line plays everyone onside and leaves the line stranded.
+   **The line steps up and drops together, quickly** (sprinting out, not jogging): a defender left a few metres
+   behind the others plays every attacker onside, and that is the moment a ball over the top goes in behind.
+   Organised, the back four stays within a few metres of each other in depth.
 8. **Box defending.** In the low block the box is defended zonally (near post, 6-yard box, penalty spot, far post)
    plus marking of runners; the 6 protects the edge of the box (Zone 14 and cut-backs).
    **In shooting range (about 25 m and closer) the first defender comes at the ball on the goal side**, between the
@@ -164,6 +172,9 @@ switches of play, triangles around the ball, and players staying back as rest de
 9. **Loose and second balls.** A loose ball (a deflection, a miscontrol, a long ball that has landed, a pass that
    has missed its man) is attacked at once by the nearest player of each side; the first there wins it, the next
    ones get close for the second ball. A pass only belongs to its receiver while he can still get to it first.
+   **A long ball is read in the air.** As it is struck the defenders read its flight: the one who can get under it
+   goes to head it or take it before it drops, and the others turn and get goal-side of where it will land. A
+   striker only runs onto a ball over the top unchallenged when it is played into space no defender can reach.
 
 **You should see:** two or three tight lines that slide together, the far side tucked in, the centre closed,
 one man pressing the ball with another covering, the line stepping up when the ball goes back.
@@ -315,7 +326,11 @@ inverting by role.
 
 ### 7.3 Shooting rules
 - Inside the box, unmarked, central or half-space: **shoot** (or square to a better-placed team-mate).
-- One-on-one with the keeper: run at goal, shoot early (low, across) or round him if he comes out fast.
+- One-on-one with the keeper: run at goal and **shoot**: early, low and across, or placed past him as he comes
+  (the reading of 7.5 decides the moment). **Rounding the keeper is the exception**, only when he rushes right at
+  the striker's feet. Even when it works it takes the striker wide, the angle narrows and defenders get back;
+  when it fails the keeper smothers it or the ball runs away towards the byline. A good keeper rounded is rare: a
+  team rounds the keeper a few times a season, not a few times a match.
 - Outside the box: only when nothing better is on, the shooter is good from range, or the clock demands it.
 
 **You should see:** most chances from cut-backs, through balls and cut-ins; three or more players in the box when
@@ -451,6 +466,15 @@ The plan says **what** to do; attributes say **how well**:
 
 Rule: **every attribute must change something you can see**, and the attribute test (Admin) must show each one
 helping (none useless, none deciding everything).
+
+**A better player wins more of his duels, not all of them.** Even a clear gap (a top player against an average one)
+wins about two duels in three; the best teams in a league win only just over half of all their duels. A strong side
+dominates through its structure and many small edges, so it wins most games and sometimes by three or four, but
+a league does not produce 10-0 scorelines: the weakest team in a division still defends its box, blocks shots and
+scores now and then.
+**The chance makes the goal more than the finisher.** A great finisher converts perhaps a tenth or a fifth more of
+the same chances than an average one, and a poor one about that much fewer; Composure helps in one-on-ones. Who
+creates the better chances matters far more than who strikes the ball.
 
 ---
 

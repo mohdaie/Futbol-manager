@@ -361,3 +361,13 @@ chance values, frames), `scripts/analysis-render.cjs` (average positions, freeze
   on target 7.8-8.9, draws 22-36%.
 - Measuring: compare engines on the same seeded worlds (a browser run with a fixed `Math.random` seed); one
   unseeded world can differ by a goal a match, and 30 two-club matches carry about +/-0.5 goals of noise.
+
+## Round 3: scorelines (2026-10-22, not released)
+
+Report: `docs/analysis/2026-10-22-round-3/REPORT.md`. Rule 7.3 rounding the keeper is the exception; 4.5 jockeying,
+tackles only when on; 4.9 long balls read in the air (`readFlight`); 4.7 the line steps up together at full speed;
+rule 11: duel edges halved (`duel` k=6), finishing worth about +/-12%, `ENG.qual` 0.55 compresses every effective
+attribute towards 11 (`av()`). Calibration: `ENG.fin` 1.25, `ENG.tackleFoul` 0.13. `ac()` now returns the stored
+float32 value on every read. Wins by 5+ 3.3-5.8% (was 13-17%), most goals by one team 7-11 (was 17-22).
+Measure with a paired design (each fixture twice, each side boosted once) and a no-change control: run-to-run
+noise is about +/-0.5 goals a match on 40 fixtures.
