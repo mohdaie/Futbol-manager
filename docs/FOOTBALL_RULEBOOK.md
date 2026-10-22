@@ -183,6 +183,11 @@ switches of play, triangles around the ball, and players staying back as rest de
    **The line steps up and drops together, quickly** (sprinting out, not jogging): a defender left a few metres
    behind the others plays every attacker onside, and that is the moment a ball over the top goes in behind.
    Organised, the back four stays within a few metres of each other in depth.
+   **The line, not the man.** A back-line defender goes with a runner only when the ball carrier is free and
+   facing forward (an open ball, and then the whole line drops); otherwise the line holds or steps up and the runner
+   is left offside. Forwards play on the shoulder of the last defender; a runner who goes too early, or a pass a
+   fraction late, is flagged (about four offsides a match). A passer sees a clear offside, but a tight one is easy to
+   misjudge.
 8. **Box defending.** In the low block the box is defended zonally (near post, 6-yard box, penalty spot, far post)
    plus marking of runners; the 6 protects the edge of the box (Zone 14 and cut-backs).
    **In shooting range (about 25 m and closer) the first defender comes at the ball on the goal side**, between the
@@ -244,6 +249,24 @@ everyone sprints back into shape.
 Each position has a job per phase. Roles (our role names) change the job within the position.
 "IP" = in possession, "OOP" = out of possession.
 
+### 6.0 Zones and the living shape
+- **A position is an area, not a point.** Each player looks after a zone (his lane and his line) and moves freely
+  inside it, with and without the ball; at its edge he hands over to the team-mate next to him.
+- **The shape is alive.** The team moves up and down with the ball, but not as one rod: the back line follows the
+  ball up to the halfway line, the midfield stays close behind the ball, the forwards hold the last line. Without
+  the ball the side of the ball squeezes and the far side tucks in.
+- **The space decides the job.** When a player leaves his zone (an overlap, a run into the box), the nearest
+  team-mate covers it; when a wide forward goes inside, the full-back takes the touchline.
+- **Roles defend differently** (how far they come back is part of the role):
+
+| Role | Without the ball |
+|---|---|
+| Wide Midfielder | Tracks the full-back all the way; forms a flat midfield line with the centre midfielders |
+| Winger / Inverted Winger | Comes back to the midfield line, presses the full-back from the inside |
+| Inside Forward | Stays higher, in the half-space between the opposition full-back and centre-back: the outlet for the counter |
+| Full-Back / Wing-Back | Holds the back line; the Wing-Back steps out early to the winger |
+
+
 ### 6.1 Goalkeeper (1)
 - Build-up: an extra passer behind the centre-backs; long when pressed (Sweeper/Ball-playing keeper: more involved).
 - OOP: positioned on the line between ball and goal centre (at a tight angle that puts him at the near post), and he
@@ -291,7 +314,11 @@ Each position has a job per phase. Roles (our role names) change the job within 
 - Inside Forward: starts wide, **cuts inside onto his stronger foot into the half-space** to shoot or slide a pass;
   runs in behind the full-back.
 - Inverted Winger: comes inside into the half-space to create (curled crosses, through balls).
-- Wide Midfielder: balanced; tracks the full-back.
+- Wide Midfielder: balanced; a little deeper and narrower than a Winger with the ball (supporting the full-back);
+  tracks the full-back without it.
+- Runs in behind: the Winger runs straight down the line; the Inside Forward runs diagonally inside, between the
+  full-back and the centre-back; a wide midfielder rarely runs beyond.
+- When the wide forward goes inside, the full-back on his side takes the touchline (the overlap).
 - Wide Playmaker: drifts into the half-space to create.
 - OOP: presses their full-back from inside out (cutting the pass inside); tracks his full-back in a low block;
   tucks in when the ball is far side.

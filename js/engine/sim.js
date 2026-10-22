@@ -397,11 +397,11 @@ function carrierDecide(M, s, i, o = {}) {
     const val = threat(s, tx, ty) * (1 - rpress * 0.45) * esc * (cutback ? 1.5 : 1);
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
-    if (offsideNow(M, s, j) && R() > (20 - vis) / 160) return; // he sees the flag coming (poor Vision misses it now and then)
+    if (offsideNow(M, s, j) && R() > ((q.y - offsideY(M, s)) * fwdY(s) < 1.2 ? 0.15 + (12 - vis) * 0.02 : (20 - vis) / 160)) return; // 4.7: a clear offside he sees; a tight one is easy to misjudge (Vision). He sees the flag coming (poor Vision misses it now and then)
     opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk, rpress, esc });
     // Through ball into the space in behind for a player making a run.
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
-    if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03))) {
+    if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03 - (0.25 + Math.max(0, 14 - vis) * 0.1) * R()))) { // 4.7: timing read by Vision; a fraction late is flagged
       const ahead = 9 + ac(S, j, 'pac') * 0.3, sx = clamp(q.x + q.vx * 1.2, 4, PW - 4), sy = clamp(q.y + fwdY(s) * ahead, 2, PL - 2);
       const tl = hyp(sx - p.x, sy - p.y), r2 = clamp(passRisk(M, s, p.x, p.y, sx, sy, false) + 0.12 + (20 - vis) * 0.012 + tl * 0.004 - b('thr') * 0.05 + press * clamp(0.32 - (vis + ac(S, i, 'cmp') - 24) * 0.012, 0.08, 0.4) + Math.max(0, faceOff(p, sx, sy) - 1.75) * 0.1, 0.05, 0.95); // 7.1: a through ball needs time to see the run
       opts.push({ k: 'thru', j, tx: sx, ty: sy, v: ((1 - r2) * threat(s, sx, sy) * 1.15 - r2 * lossCost) * (1 + b('thr') * 0.4 + b('rk') * 0.2) * [0.85, 1, 1.15][pass], risk: r2, rpress: recvPressure(M, s, sx, sy)[1] });
@@ -1088,7 +1088,12 @@ function targets(M, all) {
         // 7.2: on a wide attack his box spot comes first, and getting there is a run (a sprint), not a jog.
         const boxTo = box && box.get(i);
         if (boxTo) { X = boxTo[0]; Y = boxTo[1]; if (hyp(p.x - X, p.y - Y) > 3) p.boxRun = sim.t + 1.5; }
-        else if (p.run > sim.t) { X = clamp(p.x + (PW / 2 - p.x) * 0.15, 3, PW - 3); Y = line + fw * (6 + ac(S, i, 'pac') * 0.3); }
+        else if (p.run > sim.t) { // 6.7: the Winger runs down the line, the Inside Forward diagonally inside, the 9 into the channel
+          const rn = roleName(S, i), sd = p.x < PW / 2 ? -1 : 1;
+          X = /Winger$|Wide Midfielder|Wing-Back|Full-Back/.test(rn) && rn !== 'Inverted Winger' ? clamp(p.x, 3, PW - 3)
+            : /Inside Forward|Inverted Winger|Shadow Striker/.test(rn) ? PW / 2 + sd * 7
+            : LINE[ip[i][0]] === 5 ? PW / 2 + Math.sign(B.x - PW / 2 || sd) * 8 : clamp(p.x + (PW / 2 - p.x) * 0.15, 3, PW - 3);
+          Y = line + fw * (6 + ac(S, i, 'pac') * 0.3); }
         else {
           if (role >= 3 && beyond(s, Y, line)) Y = line - fw * 1.2; // stay onside
           // Support: midfielders offer a pass.
@@ -1315,8 +1320,16 @@ function trackRuns(M, s, o, OP, gx, gy) {
     let m = -1, md = 14;
     for (let j = 1; j < OP.length; j++) { const q = OP[j]; if (!q || q.eng === sim.t) continue; const d = hyp(q.x - r.x, q.y - r.y); if (d < md) { md = d; m = j; } }
     if (m < 0) continue;
+    // 4.7: the line, not the man. A back-line defender follows only on an open ball (carrier free, facing forward);
+    // otherwise he holds and the runner is left offside. Near goal (inside about 22 m) he goes with him.
+    const own = owner(M), open = own && sim.B.os === s && pressureOn(M, s, sim.B.oi)[0] < 0.35 && backness(s, own) < 0.4;
+    if (backLine(O, m) && !open && dGoal(s, r.x, r.y) > 22) continue;
     const q = OP[m], px = r.x + r.vx * 0.8, py = r.y + r.vy * 0.8, L2 = hyp(gx - px, gy - py) || 1, lead = 1.4;
     q.tx = px + (gx - px) / L2 * lead; q.ty = py + (gy - py) / L2 * lead; q.eng = sim.t;
+    if (!backLine(O, m)) { // a midfielder hands him on at the back line
+      const ys = OP.map((z, k) => z && k && backLine(O, k) ? z.y : null).filter(v => v != null);
+      if (ys.length) { const bl = ys.reduce((a, b) => a + b, 0) / ys.length, fwo = fwdY(o); if ((bl - q.ty) * fwo > 1) q.ty = bl - fwo; }
+    }
   }
 }
 
@@ -1329,8 +1342,10 @@ function keepOnside(M) {
   for (let i = 1; i < P.length; i++) {
     const p = P[i];
     if (!p || p.run > sim.t || (B.os === s && B.oi === i) || (B.fl && B.fl.s === s && B.fl.j === i)) continue;
-    const slack = 0.6 + (ac(S, i, 'otb') + ac(S, i, 'ant') - 20) * 0.05;
-    if (beyond(s, p.ty, line - fwdY(s) * slack)) p.ty = line - fwdY(s) * (1 + Math.max(0, slack));
+    // 4.7: on the shoulder of the last defender; Off the Ball and Anticipation keep him onside, a lapse now and then
+    if (R() < Math.max(0, 14 - ac(S, i, 'otb')) * 0.0025) continue;
+    const slack = 0.3 + clamp((ac(S, i, 'otb') + ac(S, i, 'ant') - 20) * 0.03, 0, 0.5);
+    if (beyond(s, p.ty, line - fwdY(s) * slack)) p.ty = line - fwdY(s) * (0.4 + slack);
   }
 }
 // A ball nobody controls (or a pass nobody is near): the nearest player on each side runs to where he can meet it.

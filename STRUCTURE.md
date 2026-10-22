@@ -667,3 +667,17 @@ From analysis rounds 3 and 4 (`docs/analysis/2026-10-22-round-3/`, `-round-4/`);
 - **2D view**: the ball rises to its target (a chip arcs), the keeper dives towards it, the net flashes on a goal,
   a label names the shot and then the result (Saved!, Wide, Over the bar); goals show a net. Commentary names the
   kind of shot and where it went. Card marks say whether a card is red.
+
+## Zones, role profiles and the line (2026.10.22.31)
+Rulebook 6.0 (zones and the living shape), 6.7 (wide roles), 4.7 (the line, not the man).
+- **Roles defend differently** (`blockPlan` in shape.js): a Wide Midfielder makes a flat midfield line, Wingers sit
+  just above it, an Inside Forward stays high in the half-space as the counter outlet (lower in a low block).
+- **Roles with the ball** (`positionJobs`): the Wide Midfielder sits deeper and narrower than a Winger, supporting
+  behind the ball; only the Winger attacks the far post; when the wide forward on his side plays inside, the
+  full-back takes the touchline.
+- **Runs by role**: Winger down the line, Inside Forward diagonally inside between full-back and centre-back,
+  striker into the channel on the ball side.
+- **The line, not the man** (`trackRuns`): back-line defenders follow a runner only on an open ball (carrier free,
+  facing forward) or inside about 22 m; otherwise the line holds and the runner is offside. Midfielders hand
+  runners on at the back line. Forwards play on the shoulder (`keepOnside`), with an occasional lapse (Off the
+  Ball); passers misjudge tight offsides and through-ball timing (Vision). Offsides about 4-5 a match (was 2.6).
