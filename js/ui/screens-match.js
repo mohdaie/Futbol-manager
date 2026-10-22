@@ -309,10 +309,12 @@ ACT.liveTok = ds => {
   }
   reopenLive('tactics');
 };
-ACT.liveRole = ds => {
-  const L = LIVE, S = liveSide(), i = +ds.i;
-  S.roles[i] = +ds.k; L.M.dirty = true;
-  pushFeed(L, 'tac', `${pname(G.players[S.on[i]])} takes a new role: ${ROLES[FORMATIONS[S.ip][i][0]][+ds.k].n}.`, L.bottom);
+// A role change takes effect at once: the shape and behaviour caches are cleared, so the new role drives the next moves.
+CHG.liveRole = (v, ds) => {
+  const L = LIVE, S = liveSide(), i = +ds.i, k = +v, pl = FORMATIONS[S.ip][i][0];
+  if (S.roles[i] === k) return;
+  S.roles[i] = k; S._shape = null; S._bh = null; S._attC = null; L.M.dirty = true;
+  pushFeed(L, 'tac', `${pname(G.players[S.on[i]])} takes a new role: ${ROLES[pl][k].n}.`, L.bottom);
   reopenLive('tactics');
 };
 // A man down: one of the side moves into the gap; the spot he leaves is the new gap, so the sheet stays open.

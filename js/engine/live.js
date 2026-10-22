@@ -398,9 +398,9 @@ function draw(L) {
     }
   }
   // The ball, lifted by its height, with its shadow on the grass.
-  // A carrier on the move has the ball just ahead of his feet, in the way he faces (a touch, not a stop).
-  const own = L.own && L.own[0] >= 0 && L.dots[L.own[0]] ? L.dots[L.own[0]][L.own[1]] : null, dribble = !!own && own.v > 1.5 && own.fa != null && zOver == null && !(L.ball.z > 0.3);
-  const [bx, by] = dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.9, Y(ovy) + Math.sin(fa) * s * 0.9]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
+  // The carrier has the ball just ahead of his feet, in the way he faces (0.6 m, as the simulation keeps it).
+  const own = L.own && L.own[0] >= 0 && L.dots[L.own[0]] ? L.dots[L.own[0]][L.own[1]] : null, dribble = !!own && own.fa != null && zOver == null && !(L.ball.z > 0.3);
+  const [bx, by] = dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.6, Y(ovy) + Math.sin(fa) * s * 0.6]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
   const z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
@@ -604,17 +604,22 @@ function livePitch(L, S) {
   const toks = S.on.map((id, i) => {
     if (!id) return '';
     const p = G.players[id], q = pos[i] || [0.5, 0.5], pl = FORMATIONS[S.ip][i][0], role = ROLES[pl][S.roles[i]] || ROLES[pl][0];
-    return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" data-a="liveTok" data-i="${i}"><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
+    const act = L.swapMode ? `data-a="liveTok" data-i="${i}"` : `data-a="livePl" data-id="${id}"`;
+    return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" ${act}><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
   }).join('');
-  const roles = L.roleSlot != null && S.on[L.roleSlot] ? (() => {
-    const i = L.roleSlot, pl = FORMATIONS[S.ip][i][0];
-    return `<h4 class="lbl">Role for ${POS_NAME[pl]}</h4><div class="chips">${ROLES[pl].map((r, k) => `<button class="chip ${S.roles[i] === k ? 'on' : ''}" data-a="liveRole" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>`;
-  })() : '';
+  // Every player's role, in his slot's own list: a role belongs to the slot, so a role from another slot needs a swap.
+  const roles = S.on.map((id, i) => {
+    if (!id) return '';
+    const pl = FORMATIONS[S.ip][i][0];
+    return `<div class="field"><label>${POS_NAME[pl]} · ${esc(pname(G.players[id]))}</label>${selectHtml('lrole-' + i, ROLES[pl].map((r, k) => [k, r.n]), S.roles[i], 'liveRole', `data-i="${i}"`)}</div>`;
+  }).join('');
   const label = L.swapMode ? (L.swapFrom != null ? 'Now tap the player to swap with' : 'Tap a player to swap') : 'Swap positions';
   return `<div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
     <div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>
-    <p class="muted">${L.swapMode ? 'Tap two players to swap places. Keepers swap only with keepers.' : 'Tap a player to change his role.'}</p>${roles}`;
+    <p class="muted">${L.swapMode ? 'Tap two players to swap places. Keepers swap only with keepers.' : 'Tap a player for his card. A role belongs to his position; to play in another position, swap him into it.'}</p>
+    <h4 class="lbl">Roles</h4><div class="card">${roles}</div>`;
 }
+
 function openLiveSheet(kind) {
   const L = LIVE, M = L.M, S = M.sides[L.bottom], O = M.sides[1 - L.bottom];
   const opts = { key: 'live:' + kind, restore: () => openLiveSheet(kind), valid: () => LIVE === L && !L.done };

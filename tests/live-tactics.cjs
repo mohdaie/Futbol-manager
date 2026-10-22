@@ -40,9 +40,12 @@ const assert = require('node:assert/strict');
     check('two players swap places on the pitch', [after[0], after[5]], [before[5], before[0]]);
 
     await act('liveSwapMode');
-    await act('liveTok', { i: 3 });
-    await act('liveRole', { i: 3, k: 0 });
-    check('a role can be set during the match', await page.evaluate(() => LIVE.M.sides[LIVE.bottom].roles[3]), 0);
+    // A role is picked from the list under the pitch and takes effect at once (the shape cache is cleared).
+    await page.waitForSelector('#lrole-3', { timeout: 10000 });
+    const roleBefore = await page.evaluate(() => { const S = LIVE.M.sides[LIVE.bottom]; return { k: S.roles[3], shape: S._shape }; });
+    await page.selectOption('#lrole-3', String(roleBefore.k === 0 ? 1 : 0));
+    check('a role changed in the list is applied during the match', await page.evaluate(() => LIVE.M.sides[LIVE.bottom].roles[3]), roleBefore.k === 0 ? 1 : 0);
+    check('the role change clears the cached shape', await page.evaluate(() => LIVE.M.sides[LIVE.bottom]._shape), null);
 
     // A dismissal leaves a gap; the manager moves a team-mate into it.
     await act('closeSheet');
