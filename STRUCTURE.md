@@ -740,3 +740,15 @@ instead of about 50%, but goals per match rose from 2.5 to 3.0. (3) Skill-based 
 Decisions, Composure; receiver's Off the Ball, First Touch): forward passes rose from 36% to 40%, passes per minute
 fell from 7.3 to 7.2, but goals rose from about 2.7 to about 3.1 on 120-match seeds 1-3. Steps 2 and 3 together gave
 goals 3.2-3.6 and wins by 5+ at 7-12%. Next attempt: the defence has to respond to forward movement, not only attack.
+
+## 2026.10.22.34 — live match: red-card gap, tactics page, penalty run-up, dribble (owner-requested release)
+
+A man down: a sent-off player is not replaced. The manager is asked to move one of his players into the gap, and the
+spot that player leaves becomes the new gap. The player keeps his place on the pitch; he is not a new arrival.
+In-match tactics: the tactics sheet shows the pitch with every player. Two players can swap places (keepers only with
+keepers), and a player's role can be set. Roles and instructions belong to the slot, so a swap keeps them in place.
+Presentation only: a penalty taker runs in from six metres behind the spot before the kick; a carrier on the move has the
+ball just ahead of his feet and bobs with his stride. No change to match outcomes from these three items.
+Verified: 25 test suites, the strict audit, the 12-match contract, and browser checks for the tactics page, the gap and
+the penalty and dribble views. The penalty run-up was not checked by eye; the dribble frame was.
+The match-balance limits in 2026.10.22.33 are unchanged and still open.
