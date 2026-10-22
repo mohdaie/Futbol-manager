@@ -716,3 +716,8 @@ Body space (`separateBodies`): every player is a soft circle, 0.2-0.36 m, sized 
 share ground: frames with two players closer than 0.4 m went from 5-6% to 0% on five recorded halves. Seeds 1-3,
 120 matches: goals 3.0-3.3, wins by 5+ 5-7%, fouls 26.5-27.7, tackles 33-34, successful dribbles 16.8-17.4.
 Duels and fouls are unchanged dice rolls; circles on screen are unchanged.
+Tackles (rulebook 4.5): a tackle is a committed duel, won or lost, counted only when a defender commits (a take-on,
+the ball exposed, the attacker turned, or a team-mate covering). Jockeying is no duel and counts nothing. Circles
+on the live pitch and in analysis frames are the body radius at pitch scale (`bodyRadius`, 0.3-0.46 m), so the
+on-screen contacts match the physics. Seeds 1-3, 120 matches: goals 2.6-2.9, fouls 25.5-25.9, tackles 31-32 (still
+above the 15-20 target), dribbles 17-18 (target 8-10), wins by 5+ 4-9%, home wins 43-48%.

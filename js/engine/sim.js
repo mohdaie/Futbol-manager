@@ -989,10 +989,10 @@ function challenges(M) {
     else if (front && takeOn) return;
     // 4.5: near his own box he delays, and only commits when the ball is exposed (the attacker facing away from
     // goal) or a team-mate covers him; elsewhere he presses to win it.
-    const deep = toOwn(s, own.x, own.y)[1] < 0.4;
-    const exposed = backness(s, own) > 0.6, covered = deep && sim.P[o].some((c, k) => c && k && k !== j && hyp(c.x - own.x, c.y - own.y) < 7 && (c.y - own.y) * fwdY(s) > (q.y - own.y) * fwdY(s));
-    // 4.5: otherwise he jockeys; a committed tackle is the exception (per half second, not the norm).
-    const go = front && takeOn ? 1 : (exposed || covered ? 0.09 : deep ? 0.03 : 0.05) * (1 + bh(O, j, 'tk') * 0.4) * (1 + ((O.press ?? 1) - 1) * 0.15) * (own.carry ? 1.3 : 1);
+    const exposed = backness(s, own) > 0.6, covered = sim.P[o].some((c, k) => c && k && k !== j && hyp(c.x - own.x, c.y - own.y) < 7 && (c.y - own.y) * fwdY(s) > (q.y - own.y) * fwdY(s));
+    // 4.5: a tackle is a committed duel. A take-on is one; otherwise he commits only when the ball is exposed or a
+    // team-mate covers him, and otherwise he jockeys (no duel, nothing counted).
+    const go = front && takeOn ? 1 : exposed || covered ? 0.09 * (1 + bh(O, j, 'tk') * 0.4) * (1 + ((O.press ?? 1) - 1) * 0.15) * (own.carry ? 1.3 : 1) : 0;
     if (go < 1 && R() > go * TICK * 2) return;
     // Foul? Rash challenges, poor tacklers, temperament, the weather; fewer in the box.
     const pl = G.players[O.on[j]], inBox = toOwn(s, own.x, own.y)[1] < 0.157 && Math.abs(own.x - PW / 2) < 20;
@@ -1267,23 +1267,28 @@ function movePlayers(M) {
   }
   separateBodies(M);
 }
-// Body space: every player is a soft circle sized by height and build (about 0.2-0.36 m). Two players cannot share
-// the same ground, so a presser stands beside a carrier rather than inside him. Duels are still dice rolls.
+// Body space: every player is a soft circle sized by height and build (about 0.3-0.45 m: shoulders and arms). Two
+// players cannot share the same ground, so a presser stands beside a carrier rather than inside him. The on-screen
+// circle is this radius at pitch scale. Duels are still dice rolls.
 function bodyRadius(S, i) {
   const p = G.players[S.on[i]];
-  if (!p || !p.ht) return 0.27;
-  return clamp(0.24 + (p.ht - 182) * 0.0015 + (bmiOf(p) - 23) * 0.008, 0.2, 0.36);
+  if (!p || !p.ht) return 0.36;
+  return clamp(0.34 + (p.ht - 182) * 0.0015 + (bmiOf(p) - 23) * 0.01, 0.3, 0.46);
 }
 function separateBodies(M) {
   const sim = M.sim, bodies = [];
   for (let s = 0; s < 2; s++) sim.P[s].forEach((q, i) => { if (q) bodies.push({ q, r: bodyRadius(M.sides[s], i) }); });
   for (let pass = 0; pass < 2; pass++) for (let a = 0; a < bodies.length; a++) for (let b = a + 1; b < bodies.length; b++) {
     const A = bodies[a].q, C = bodies[b].q, min = bodies[a].r + bodies[b].r;
-    let dx = C.x - A.x, dy = C.y - A.y, d = Math.sqrt(dx * dx + dy * dy);
+    let dx = C.x - A.x, dy = C.y - A.y;
+    // Against a goal line or touchline they slide apart along it: a push into the line would be clamped back.
+    if (Math.min(A.y, PL - A.y, C.y, PL - C.y) < 1.5) dy = 0;
+    let d = Math.sqrt(dx * dx + dy * dy);
     if (d >= min) continue;
     if (d < 1e-3) { dx = 1; dy = 0; d = 1; } // exactly on top of each other: part sideways
     const push = (min - d) / 2 / d;
     A.x -= dx * push; A.y -= dy * push; C.x += dx * push; C.y += dy * push;
+    A.x = clamp(A.x, 0.5, PW - 0.5); A.y = clamp(A.y, 0.5, PL - 0.5); C.x = clamp(C.x, 0.5, PW - 0.5); C.y = clamp(C.y, 0.5, PL - 0.5);
   }
   bodies.forEach(({ q }) => { q.x = clamp(q.x, 0.5, PW - 0.5); q.y = clamp(q.y, 0.5, PL - 0.5); });
 }
