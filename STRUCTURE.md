@@ -629,3 +629,18 @@ From the analysis loop (reports in `docs/analysis/`; rulebook first, every chang
 - **Calibration** (league averages only, three seeded worlds of 100 matches): `ENG.xg` 1, `ENG.fin` 0.85; goals
   2.5-3.0, shots 25-28, on target 7.8-8.9, draws 22-36%.
 - Analysis tools: `scripts/match-analysis.cjs`, `scripts/analysis-render.cjs`, `scripts/analysis-summary.cjs`.
+
+## Realistic scorelines and body orientation (2026.10.22.28)
+From analysis rounds 3 and 4 (`docs/analysis/2026-10-22-round-3/`, `-round-4/`); rulebook first.
+- **Body shape** (1c): every player faces somewhere (`p.fa`); turning takes time (Agility), slower sideways and
+  backwards; defenders watch the ball and backpedal; team-mates open up on the half-turn; receiving with the back
+  to goal needs a touch to turn (a tight marker stops it); passes, carries and shots behind where he faces cost
+  time or quality; a defender facing the wrong way cannot tackle. Frames carry the 22 facings (width 73); the 2D
+  view draws a pointer on each player.
+- **Fair movement**: both sides read a start-of-tick snapshot of the other (the side moved first used to have an
+  accidental edge of about 15 points).
+- **Scorelines**: rounding the keeper is the exception (7.3); defenders jockey and tackle only when it is on (4.5);
+  long balls are read in the air (4.9); the back line moves together at full speed (4.7); quality shows in
+  proportion (rule 11: duel edges halved, finishing +/-12%, `ENG.qual` 0.55).
+- **Calibration**: `ENG.fin` 1.12, `ENG.tackleFoul` 0.13. Three seeded worlds: goals 2.5-3.0, shots about 25,
+  home/draw about 48%/25%, wins by 5+ 5-6% (was 13-17%), most goals by one team 8-10 (was 17-22).
