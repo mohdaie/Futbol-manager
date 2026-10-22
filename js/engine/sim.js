@@ -429,8 +429,8 @@ function carrierDecide(M, s, i, o = {}) {
     sim.P[1 - s].forEach((q, j) => {
       if (!q) return;
       const d = segD(q.x, q.y, p.x, p.y, cx, cy), u = SD.u, tq = Math.max(0, d - 1.2) / OS[j * 2] - (ac(O, j, 'ant') - 10) * 0.03, late = tq - u * tC;
-      if (late >= 0) return;
-      inPath++; // 4.5: a defender who can cut off this path in time makes the carry a take-on
+      if (late >= 0 || (q.y - p.y) * fwdY(s) < 0.5) return; // 4.5: a take-on is against a man in front; one level with him is not
+      inPath++; // 4.5: a defender in front who can cut off this path in time makes the carry a take-on
       const f = sigm((tk - (j === 0 ? ac(O, 0, 'one') : avg2(O, j, [['tck', 0.6], ['ant', 0.2], ['pos', 0.2]]))) / 3 + ENG.carryRisk + late * 1.2);
       if (f < f1) { f2 = f1; f1 = f; } else if (f < f2) f2 = f;
     });

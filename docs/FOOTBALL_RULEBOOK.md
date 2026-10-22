@@ -176,7 +176,9 @@ switches of play, triangles around the ball, and players staying back as rest de
    when it is on wins the ball about three times in five.
    **Carrying past a defender is not a take-on.** A carrier who moves away from a defender that cannot reach his
    path in time is carrying into space: the defender jockeys and does not commit, and no duel is counted. A take-on
-   is a carry whose path a defender can cut off in time, so the carrier has chosen to run at a man. Only that duel
+   is a carrier engaging a man in front of him, whose path that defender can cut off in time, so the carrier has
+   chosen to run at him. A defender level with the carrier, side by side, is not a take-on: he is pressing from the
+   side, and the carrier who gets clear of him has carried, not beaten him. Only that duel
    is an attempt at a dribble, and only a beaten defender in it is a successful dribble. A carrier runs at a man only
    when he judges he can beat him more often than not (Dribbling, Agility, Flair against the defender's
    Tackling and Anticipation); a blocked carrier who cannot shields, reassesses or passes, and does not face a

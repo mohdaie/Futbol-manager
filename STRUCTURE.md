@@ -709,3 +709,6 @@ Seed 3, 120 matches, before → after: fouls 32.3 → 28.1, tackles 38.6 → 30.
 ground duels 73.1 → 57.5, most goals by one team 12 → 7. Passes rose 640 → 678 (fewer carries), so the realism
 gate has not passed. Dribbles remain above the rulebook's 8-10 per team; take-ons are still about two thirds of
 contests. Strict audit 3,555 assertions and all 23 suites pass.
+A defender level with the carrier is no longer a take-on (4.5); he jockeys. Seeds 1-3, 120 matches: fouls 26.6-27.5,
+tackles 32-33, successful dribbles 16.5-16.9, ground duels 61. Goals rise to 2.9-3.2 and wins by 5+ to 7-8%, so the
+side defence now needs work before any release.
