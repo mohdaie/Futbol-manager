@@ -10,8 +10,9 @@ css/game.css               all styling (design tokens are at the top)
 js/core/util.js            random numbers, maths, money/date formatting
 js/core/data.js            STATIC DATA: clubs, nations, names, attributes, formations,
                            roles, instructions, training, press questions, talks, shouts
-js/core/rosters.js         ROSTERS: the 20 real-based squads (level, name, position, age,
-                           nation, foot, contract, value). Ratings come from market value.
+js/core/rosters.js         ROSTERS: the real-based squads (level, name, position, age,
+                           nation, foot, contract, legacy value, inspirational figure)
+js/core/profiles.js        original fixed first-team attributes, physique, potential and positions
 js/core/players.js         player generation, ratings, position fit, value, wages
 js/core/bio.js             personal details (height, weight, character, ambition, favourite
                            person and manager), club managers, and how they affect the game
@@ -681,3 +682,17 @@ Rulebook 6.0 (zones and the living shape), 6.7 (wide roles), 4.7 (the line, not 
   facing forward) or inside about 22 m; otherwise the line holds and the runner is offside. Midfielders hand
   runners on at the back line. Forwards play on the shoulder (`keepOnside`), with an occasional lapse (Off the
   Ball); passers misjudge tight offsides and through-ball timing (Vision). Offsides about 4-5 a match (was 2.6).
+
+## 2026.10.22.32 — individual player profiles (owner-authorised release)
+
+Rulebook 11a. All 887 named first-team players now have original, stable football profiles independent of
+market value. Specialists keep distinct strengths/weaknesses, physique and authored familiar positions;
+prospects/free agents use varied football types. Missing valuations no longer define named senior ability.
+Profile baselines are stored separately; untouched saves migrate once, developed careers retain their
+training and get a Settings note. Fixed a neutral-personality transfer memo with no harmony assessment.
+
+23 suites exercised/passed after the targeted transfer-memo rerun; new 16-check player-profile suite,
+3,555 strict audit assertions and 12 finite full-match contracts pass. Three seeds × 120 matches on each
+version reveal higher challenge/foul rates and 11-/12-goal extremes. After disclosure, the owner explicitly
+requested release and will reset the career; these match-balance limitations remain open.
+See `docs/player-profiles/README.md` for the complete comparison, provisional-data limits and next work.

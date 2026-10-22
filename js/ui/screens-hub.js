@@ -293,6 +293,7 @@ SCREENS.settings = {
   render() {
     const exp = UI.tab.export;
     return `<h1 class="h1">Settings</h1>
+      ${G.flags.legacyRosterProfiles ? '<div class="card"><h3>Updated player database</h3><p class="muted">New careers use the revised individual player profiles. This existing career keeps its trained attributes and development. Export your save before starting a new career if you want to keep it.</p></div>' : ''}
       <div class="card"><button class="btn pri wide" data-a="returnTitle">Save &amp; return to title</button></div>
       <div class="card"><h3>Manager portrait</h3>${avatarPicker(G.avatar || 1, 'setAvatar')}</div>
       <div class="card"><h3>Default match speed</h3><div class="seg">${[1, 2, 4].map(s => `<button class="${G.settings.speed === s ? 'on' : ''}" data-a="speed" data-v="${s}">${s}x</button>`).join('')}</div></div>

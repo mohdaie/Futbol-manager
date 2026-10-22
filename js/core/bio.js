@@ -28,9 +28,9 @@ function genManagerName() {
 // Body and ambition: set when a player is created.
 function genBio(p) {
   const youth = p.age < 18 ? (18 - p.age) * 2.5 : 0;
-  p.ht = Math.round(clamp((HT_BASE[p.pos] || 180) + gauss() * 5.5 - youth, 160, 204));
+  p.ht = p.originProfile ? p.originProfile.ht : Math.round(clamp((HT_BASE[p.pos] || 180) + gauss() * 5.5 - youth, 160, 204));
   const bmi = 22.6 + gauss() * 0.9 + (p.at[A.str] - 10) * 0.07 + (p.pos === 'GK' ? 0.5 : 0) - (p.age < 19 ? 0.8 : 0);
-  p.wt = Math.round(clamp(bmi, 19.5, 27.5) * Math.pow(p.ht / 100, 2));
+  p.wt = p.originProfile ? p.originProfile.wt : Math.round(clamp(bmi, 19.5, 27.5) * Math.pow(p.ht / 100, 2));
   const r = { Ambitious: [15, 20], Determined: [12, 18], Professional: [10, 17], 'Laid Back': [2, 8], Loyal: [5, 12] }[p.pers] || [6, 15];
   p.amb = ri(r[0], r[1]);
 }
@@ -64,10 +64,16 @@ function ensureWorld() {
   // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.
   if (!G.flags.insp && typeof ROSTERS !== 'undefined') {
     const by = {};
-    Object.values(ROSTERS).forEach(rows => rows.forEach(r => { if (r[8]) by[r[1]] = by[r[1]] === undefined ? r[8] : null; }));
-    Object.values(G.players).forEach(p => { const n = p.fn ? p.fn + ' ' + p.ln : p.ln; if (!p.insp && by[n]) p.insp = by[n]; });
+    const sets = [...Object.values(ROSTERS), ...(typeof FOREIGN_ROSTERS !== 'undefined' ? Object.values(FOREIGN_ROSTERS) : [])];
+    sets.forEach(rows => rows.forEach(r => { if (r[8]) by[r[1]] = by[r[1]] === undefined ? r : null; }));
+    Object.values(G.players).forEach(p => {
+      const row = by[fullName(p)], elapsed = G.season - START_SEASON;
+      // 11a: a generated reserve sharing an invented surname is not the inspirational player.
+      if (!p.insp && row && lvlOf(p) === row[0] && p.pos === row[2] && p.nat === row[4] && p.age === row[3] + elapsed) p.insp = row[8];
+    });
     G.flags.insp = 1;
   }
+  if (typeof migrateRosterProfiles === 'function') migrateRosterProfiles();
 }
 
 /* ---------- effects ---------- */
