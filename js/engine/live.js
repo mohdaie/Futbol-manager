@@ -94,8 +94,9 @@ function bindLive() {
   if (!L) return;
   const cv = document.getElementById('pitch');
   if (!cv || UI.s !== 'match') return;
+  updateBoard(L); // populate clock, possession and fitness before measuring pitch space
   const wrap = cv.parentElement, dpr = window.devicePixelRatio || 1;
-  const W = wrap.clientWidth, H = Math.max(200, wrap.clientHeight);
+  const W = wrap.clientWidth, H = Math.max(168, wrap.clientHeight);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   cv.onclick = e => {
@@ -107,7 +108,6 @@ function bindLive() {
   L.cv = cv; L.ctx = cv.getContext('2d'); L.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); L.W = W; L.H = H;
   if (!L.dots[0].length) placeFromSim(L);
   moveCam(L, 0, true);
-  updateBoard(L);
   renderFeed(L);
   if (!L.raf) { L.last = 0; L.raf = requestAnimationFrame(liveFrame); }
 }
@@ -116,7 +116,7 @@ function placeFromSim(L) {
   const sim = L.M.sim;
   if (!sim) { if (typeof simInit === 'function') simInit(L.M); }
   const P = L.M.sim.P;
-  L.dots = [0, 1].map(s => P[s].map(p => (p ? { x: p.x, y: p.y } : null)));
+  L.dots = [0, 1].map(s => P[s].map(p => (p ? { x: p.x, y: p.y, fa: p.fa, vx: p.vx || 0, vy: p.vy || 0, v: Math.hypot(p.vx || 0, p.vy || 0), stride: 0 } : null)));
   Object.assign(L.ball, { x: L.M.sim.B.x, y: L.M.sim.B.y, z: 0 });
 }
 
@@ -483,6 +483,45 @@ function updateBoard(L) {
   const hl = el('btnHl'); if (hl) hl.textContent = HL[G.settings.hl || 'ext'];
   const cm = el('btnCam'); if (cm) cm.textContent = (G.settings.cam || 'follow') === 'full' ? 'Full pitch' : 'Follow';
   const ft = el('ftBar'); if (ft) ft.hidden = !L.done;
+  updateLiveFitness(L);
+}
+
+// Match condition is the source of truth for fatigue; injury is a separate
+// health flag. Never read the career condition in place of a live match value.
+function liveFitness(S, id) {
+  const p = G.players[id], condition = clamp(Math.round(S.cond[id] ?? p.cond), 0, 100);
+  const fatigue = condition >= 85 ? 'Fresh' : condition >= 70 ? 'Tiring' : 'Tired';
+  const injured = !!p.inj || S.injuries.some(x => x[0] === id);
+  return { condition, fatigue, injured, color: condClass(condition) };
+}
+function liveFitnessHtml(S, id) {
+  const f = liveFitness(S, id);
+  return `<span class="live-health ${f.color}" data-health-id="${id}" aria-label="${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><b>${f.condition}%</b><span class="live-fatigue">${f.injured ? '<strong class="bad">INJ</strong> · ' : ''}${f.fatigue}</span><span class="live-condition-bar" aria-hidden="true"><i style="width:${f.condition}%"></i></span></span>`;
+}
+function liveWatchHtml(S) {
+  return S.on.map((id, i) => {
+    if (!id || !G.players[id]) return '';
+    const p = G.players[id], f = liveFitness(S, id);
+    return `<button class="live-watch-player" data-a="livePl" data-id="${id}" aria-label="${esc(fullName(p))} · ${FORMATIONS[S.ip][i][0]} · ${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><span class="live-watch-name"><b>${FORMATIONS[S.ip][i][0]}</b> ${esc(p.ln)}</span>${liveFitnessHtml(S, id)}</button>`;
+  }).join('');
+}
+function updateLiveFitness(L) {
+  const S = L.M.sides[L.bottom], watch = document.getElementById('liveWatchPlayers');
+  // Rebuild only when the team changes; condition updates keep controls and focus.
+  const roster = S.ip + ':' + S.on.join(',');
+  if (watch && watch.dataset.roster !== roster) { watch.innerHTML = liveWatchHtml(S); watch.dataset.roster = roster; }
+  document.querySelectorAll('[data-health-id]').forEach(el => {
+    const id = +el.dataset.healthId;
+    if (!S.on.includes(id) || !G.players[id]) return;
+    const f = liveFitness(S, id), label = `${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}`;
+    if (el.getAttribute('aria-label') === label) return;
+    el.className = 'live-health ' + f.color; el.setAttribute('aria-label', label);
+    const button = el.closest('.live-watch-player');
+    if (button) button.setAttribute('aria-label', `${fullName(G.players[id])} · ${FORMATIONS[S.ip][S.on.indexOf(id)][0]} · ${label}`);
+    el.querySelector('b').textContent = f.condition + '%';
+    el.querySelector('.live-fatigue').innerHTML = (f.injured ? '<strong class="bad">INJ</strong> · ' : '') + f.fatigue;
+    el.querySelector('i').style.width = f.condition + '%';
+  });
 }
 
 // Commentary: the newest line is a full-width bar in the colour of the team it is about; a goal flashes.
@@ -633,14 +672,20 @@ function livePitch(L, S) {
     const p = G.players[id], q = pos[i] || [0.5, 0.5], pl = FORMATIONS[S.ip][i][0], role = ROLES[pl][S.roles[i]] || ROLES[pl][0];
     return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" data-a="liveTok" data-i="${i}"><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
   }).join('');
-  const roles = L.roleSlot != null && S.on[L.roleSlot] ? (() => {
+  return `<div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>`;
+}
+function liveRoleChoices(L, S) {
+  return L.roleSlot != null && S.on[L.roleSlot] ? (() => {
     const i = L.roleSlot, pl = FORMATIONS[S.ip][i][0];
     return `<h4 class="lbl">Role for ${POS_NAME[pl]}</h4><div class="chips">${ROLES[pl].map((r, k) => `<button class="chip ${S.roles[i] === k ? 'on' : ''}" data-a="liveRole" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>`;
   })() : '';
-  const label = L.swapMode ? (L.swapFrom != null ? 'Now tap the player to swap with' : 'Tap a player to swap') : 'Swap positions';
-  return `<div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
-    <div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>
-    <p class="muted">${L.swapMode ? 'Tap two players to swap places. Keepers swap only with keepers.' : 'Tap a player to change his role.'}</p>${roles}`;
+}
+function liveXiHtml(L, S) {
+  return S.on.map((id, i) => {
+    const pos = FORMATIONS[S.ip][i][0], p = G.players[id];
+    if (!id || !p) return `<div class="row live-xi-gap"><span class="pos">${pos}</span><span class="grow muted">Empty position</span></div>`;
+    return `<button class="row act live-xi-player ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" data-a="liveTok" data-i="${i}" data-player-id="${id}"><span class="pos">${pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${esc(roleName(S, i))}${S.cap === id ? ' · Captain' : ''}</small></span>${liveFitnessHtml(S, id)}</button>`;
+  }).join('');
 }
 function openLiveSheet(kind) {
   const L = LIVE, M = L.M, S = M.sides[L.bottom], O = M.sides[1 - L.bottom];
@@ -661,8 +706,14 @@ function openLiveSheet(kind) {
     return;
   }
   if (kind === 'tactics') {
+    const xi = L.tacticsView !== 'pitch', label = L.swapMode ? (L.swapFrom != null ? 'Now choose the player to swap with' : 'Choose a player to swap') : 'Swap positions';
+    updateLiveFitness(L);
     sheet(`<h3 class="sh-t">In-match tactics</h3>
-      ${livePitch(L, S)}
+      <div class="seg" role="tablist" aria-label="Line-up view"><button id="liveXiTab" role="tab" class="${xi ? 'on' : ''}" aria-selected="${xi}" aria-controls="liveXiPanel" data-a="liveTacticsView" data-v="xi">First XI</button><button id="livePitchTab" role="tab" class="${xi ? '' : 'on'}" aria-selected="${!xi}" aria-controls="livePitchPanel" data-a="liveTacticsView" data-v="pitch">Formation</button></div>
+      <div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
+      <section id="liveXiPanel" role="tabpanel" aria-labelledby="liveXiTab" ${xi ? '' : 'hidden'}><h4 class="lbl">First XI <small>· ${S.on.filter(Boolean).length} on pitch · Condition & fatigue</small></h4><div class="list live-xi">${liveXiHtml(L, S)}</div></section>
+      <section id="livePitchPanel" role="tabpanel" aria-labelledby="livePitchTab" ${xi ? 'hidden' : ''}>${livePitch(L, S)}</section>
+      <p class="muted">${L.swapMode ? 'Choose two players to swap places. Keepers swap only with keepers.' : 'Choose a player to change his role.'}</p>${liveRoleChoices(L, S)}
       <div class="field"><label>In possession</label>${selectHtml('lt-ip', Object.keys(FORMATIONS), S.ip, 'liveShape')}</div>
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       <div class="field"><label>Tactical style</label><div class="chips">${Object.entries(STYLES).map(([k, s]) => `<button class="chip ${styleOf(S) === k ? 'on' : ''}" data-a="liveStyle" data-v="${k}">${s.n}</button>`).join('')}</div></div>

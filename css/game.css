@@ -344,6 +344,40 @@ textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; wor
 .mctl button { padding: 8.5px 0; border-radius: 7.5px; background: var(--stand); border: 1px solid var(--line); font-size: 9.5px; font-weight: 700; text-align: center; letter-spacing: .02em; }
 .mctl button:first-child { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
 .ftbar { flex: none; }
+.live-watch { flex: none; min-width: 0; }
+.live-watch-heading { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; font-size: 9px; margin-bottom: 3px; }
+.live-watch-heading span { color: var(--mute); }
+.live-watch-heading em { margin-left: 5px; font-style: normal; }
+.live-watch-players { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+.live-watch-player { min-width: 0; padding: 4px; border: 1px solid var(--line); border-radius: 5px; background: var(--stand); }
+.live-watch-player:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.live-watch-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
+.live-watch-name > b { font-size: 8px; color: var(--mute); }
+.live-health { display: grid; gap: 2px; min-width: 51px; text-align: right; font-variant-numeric: tabular-nums; }
+.live-health > b { font-size: 11px; line-height: 1.1; }
+.live-fatigue { font-size: 9px; line-height: 1.1; white-space: nowrap; }
+.live-condition-bar { display: block; height: 3px; background: var(--line); overflow: hidden; border-radius: 2px; }
+.live-condition-bar i { display: block; height: 100%; background: currentColor; }
+.live-watch-player .live-health { min-width: 0; text-align: left; margin-top: 3px; }
+.live-watch-player .live-health > b { font-size: 10px; }
+.live-watch-player .live-fatigue { font-size: 8px; }
+.live-xi-player { width: 100%; min-height: 44px; gap: 8px; }
+.live-xi-player .grow { min-width: 0; }
+.live-xi-player .grow > b { display: block; overflow-wrap: anywhere; }
+.live-xi-player .grow > small { display: block; color: var(--mute); font-size: 10px; }
+.live-xi-player.swap-picked { box-shadow: inset 0 0 0 2px var(--amber); }
+.live-xi-gap { min-height: 44px; }
+@media (max-width: 350px) {
+  .live-watch-players { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-height: 700px) {
+  .mscr { gap: 4px; }
+  .mscr .feed { height: 58px; }
+  .live-watch-players { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .live-watch-player { padding: 3px 2px; }
+  .live-watch-heading { font-size: 8px; }
+  .mctl button { padding: 7px 0; }
+}
 .cmp { display: grid; grid-template-columns: 54px 1fr 54px; align-items: center; text-align: center; padding: 4px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .cmp span { color: var(--mute); font-size: 11px; }
 .cmp.head b { font-family: var(--f-disp); text-transform: uppercase; font-size: 11px; }
