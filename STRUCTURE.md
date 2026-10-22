@@ -644,3 +644,14 @@ From analysis rounds 3 and 4 (`docs/analysis/2026-10-22-round-3/`, `-round-4/`);
   proportion (rule 11: duel edges halved, finishing +/-12%, `ENG.qual` 0.55).
 - **Calibration**: `ENG.fin` 1.12, `ENG.tackleFoul` 0.13. Three seeded worlds: goals 2.5-3.0, shots about 25,
   home/draw about 48%/25%, wins by 5+ 5-6% (was 13-17%), most goals by one team 8-10 (was 17-22).
+
+## 2D view: readable and alive (2026.10.22.29)
+`js/engine/live.js` only (the engine is unchanged).
+- **Kits**: a kit must stand out from both colours of the other team's and from the grass; otherwise the second
+  colour, otherwise the clearest alternative (`KIT_ALT`). Bigger markers (about 11 px on a phone).
+- **Restarts**: the dead time of a throw-in, goal kick, corner, free kick or kick-off plays six times faster with
+  a label (penalties at normal speed).
+- **Movement**: players curve through the engine's half-second positions (Catmull-Rom); the ball too when it is
+  carried; jumps (restarts, substitutions) stay straight.
+- **Action cues**: the ball's trail while it travels (gold for a shot), a ring where possession is won, a ring at
+  the keeper on a save, a quick fade between highlights.
