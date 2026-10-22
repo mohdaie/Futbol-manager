@@ -1,5 +1,6 @@
 'use strict';
 let ACTION_BUSY = false; // in-flight work is runtime state, never view-history state
+const CAREER_ACTIONS = new Set(['instant', 'instant2', 'admWeeks', 'admSimMine', 'newGame', 'newGame2', 'returnTitle', 'importDo', 'startGame', 'continue', 'dayRunGo', 'kickoff']);
 /* ===== ui.js =====
    Tiny UI framework: router, app shell, bottom sheets, toasts, click/change
    dispatch through data-a / data-c attributes, and shared components. */
@@ -238,7 +239,8 @@ function playerRow(p, extra = '', opts = {}) {
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]');
   if (!el || el.disabled) return;
-  if (ACTION_BUSY && !['pause', 'dayRunStop'].includes(el.dataset.a)) return;
+  // A pending save/result must never swallow navigation, backups or sheet controls.
+  if (ACTION_BUSY && CAREER_ACTIONS.has(el.dataset.a)) return toast('Finishing the previous operation. You can still browse or export a backup.');
   const f = ACT[el.dataset.a];
   if (f) {
     e.preventDefault();
@@ -257,7 +259,8 @@ document.addEventListener('change', e => {
   const f = CHG[el.dataset.c];
   // deferred so a re-render never happens while the field is still blurring
   if (f) { const v = el.type === 'checkbox' ? el.checked : el.value, ds = { ...el.dataset }; setTimeout(() => {
-    if (!el.isConnected || ACTION_BUSY) return;
+    if (!el.isConnected) return;
+    if (ACTION_BUSY && el.dataset.c === 'importFile') return toast('Finish the current operation before importing a career.');
     const result = viewAction(() => f(v, ds, el));
     if (result && typeof result.catch === 'function') { ACTION_BUSY = true; result.catch(() => toast('The change could not finish.')).finally(() => { ACTION_BUSY = false; syncViewHistory(); }); }
   }, 0); }

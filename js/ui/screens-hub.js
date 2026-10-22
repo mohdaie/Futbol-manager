@@ -323,10 +323,12 @@ ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
 ACT.saveNow = async () => toast(await saveGameAsync() ? 'Game saved on this device.' : 'Saving failed. Export a backup before leaving.');
 ACT.returnTitle = async () => {
+  const game = G, screen = UI.s;
   DAYRUN.on = false; clearTimeout(DAYRUN.timer); DAYRUN.timer = 0;
   closeDayRun();
   stopLive();
   if (!await saveGameAsync()) return toast('Saving failed. Stay here and export your save before leaving.');
+  if (G !== game || UI.s !== screen) return;
   try { sessionStorage.removeItem(LAST_VIEW_KEY); } catch (e) { /* storage blocked */ }
   UI.tab = {};
   go('title');

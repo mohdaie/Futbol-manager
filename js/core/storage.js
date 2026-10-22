@@ -4,6 +4,12 @@
 const SaveStorage = {
   worker: null, next: 0, jobs: new Map(), cached: null, current: null,
   dirty: 0, written: 0, epoch: 0, timer: 0, flight: null, error: null, file: null,
+  timeoutMs: 12000,
+  failWorker(error) {
+    this.error = error; this.blocked = true;
+    for (const job of this.jobs.values()) { clearTimeout(job.timer); job.reject(error); }
+    this.jobs.clear(); this.worker?.terminate(); this.worker = null;
+  },
   request(type, data) {
     return new Promise((resolve, reject) => {
       if (!this.worker) {
@@ -15,8 +21,10 @@ const SaveStorage = {
         } catch (error) { return reject(error); }
         return reject(new Error('Browser save storage is unavailable. Export a backup.'));
       }
-      const id = ++this.next; this.jobs.set(id, { resolve, reject });
-      try { this.worker.postMessage({ id, type, data }); } catch (error) { this.jobs.delete(id); reject(error); }
+      const id = ++this.next;
+      const timer = setTimeout(() => this.failWorker(new Error('Device storage stopped responding. Export a backup before reloading.')), this.timeoutMs);
+      this.jobs.set(id, { resolve, reject, timer });
+      try { this.worker.postMessage({ id, type, data }); } catch (error) { clearTimeout(timer); this.jobs.delete(id); reject(error); }
     });
   },
   snapshot(game = G) {
@@ -68,6 +76,30 @@ const SaveStorage = {
   },
 };
 function cleanMatch(M) { return M ? { ...M, frames: null, onAsync: undefined } : null; }
+// Recovery reads only: a worker that cannot start must not hide a newer career
+// already in IndexedDB behind the untouched, older localStorage migration copy.
+function readCareerForRecovery() {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Recovery read timed out.')), 2000);
+    const request = indexedDB.open('futbol-manager');
+    request.onupgradeneeded = () => request.transaction.abort(); // never create a replacement database
+    request.onerror = request.onblocked = () => { clearTimeout(timer); reject(request.error || new Error('Recovery storage is blocked.')); };
+    request.onsuccess = () => {
+      const db = request.result;
+      try {
+        const tx = db.transaction(['world', 'players', 'clubs'], 'readonly'), records = { players: {}, clubs: {} };
+        let world;
+        const meta = tx.objectStore('world').get('career'); meta.onsuccess = () => { world = meta.result; };
+        for (const name of ['players', 'clubs']) {
+          const cursor = tx.objectStore(name).openCursor();
+          cursor.onsuccess = () => { const c = cursor.result; if (c) { records[name][c.key] = c.value; c.continue(); } };
+        }
+        tx.oncomplete = () => { clearTimeout(timer); db.close(); resolve(world ? { ...world, ...records } : null); };
+        tx.onabort = tx.onerror = () => { clearTimeout(timer); db.close(); reject(tx.error || new Error('Recovery read failed.')); };
+      } catch (error) { clearTimeout(timer); db.close(); reject(error); }
+    };
+  });
+}
 function captureLiveCheckpoint() {
   if (typeof LIVE !== 'undefined' && LIVE && LIVE.G === G && !LIVE.done && JSON.stringify(cleanMatch(LIVE.M)) !== JSON.stringify(G.live?.M)) liveKeep(LIVE);
 }
@@ -77,11 +109,10 @@ SaveStorage.ready = (async () => {
     SaveStorage.worker = new Worker(url);
     SaveStorage.worker.onmessage = ({ data }) => {
       const job = SaveStorage.jobs.get(data.id); if (!job) return;
-      SaveStorage.jobs.delete(data.id); data.error ? job.reject(new Error(data.error)) : job.resolve(data.result);
+      SaveStorage.jobs.delete(data.id); clearTimeout(job.timer); data.error ? job.reject(new Error(data.error)) : job.resolve(data.result);
     };
     SaveStorage.worker.onerror = event => {
-      const error = new Error(event.message || 'Save worker failed.'); SaveStorage.error = error;
-      for (const job of SaveStorage.jobs.values()) job.reject(error); SaveStorage.jobs.clear(); SaveStorage.worker.terminate(); SaveStorage.worker = null;
+      SaveStorage.failWorker(new Error(event.message || 'Save worker failed.'));
     };
     SaveStorage.cached = await SaveStorage.request('load');
     SaveStorage.brain = await SaveStorage.request('loadBrain');
@@ -104,7 +135,8 @@ SaveStorage.ready = (async () => {
   } catch (error) {
     SaveStorage.error = error; SaveStorage.blocked = true;
     // Storage failure must not hide an existing career or prevent exporting it.
-    try { const old = localStorage.getItem(SAVE_KEY); if (old) SaveStorage.cached = JSON.parse(old); } catch { /* malformed legacy backup is untouched */ }
+    try { SaveStorage.cached = await readCareerForRecovery() || SaveStorage.cached; } catch { /* original database stays untouched */ }
+    if (!SaveStorage.cached) try { const old = localStorage.getItem(SAVE_KEY); if (old) SaveStorage.cached = JSON.parse(old); } catch { /* malformed legacy backup is untouched */ }
   }
 })();
 window.addEventListener('beforeunload', event => {

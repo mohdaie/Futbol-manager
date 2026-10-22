@@ -28,6 +28,7 @@ Set `CHROMIUM_PATH=/usr/bin/chromium` in this environment. Playwright resolves t
 
 ```sh
 node tests/storage.cjs
+node tests/input-recovery.cjs
 node tests/background.cjs
 node tests/live-animation.cjs
 node tests/live.cjs
@@ -66,3 +67,9 @@ Across 360 paired fixtures (120 each in seeded worlds 1, 2 and 3), the models pr
 | Final on-pitch condition | 77.5% | 76.9% |
 
 For reproducing worlds 2 and 3, change both SEED and MATCH_COMPARE_SEED in the command above. These are measured comparisons against the shipped positional model, not a claim that all statistics match real-world football. User fixtures keep the detailed model in both watched and instant play.
+
+## Release 2026.10.22.41 input recovery
+
+A stalled asynchronous save previously left the global input lock active indefinitely, silently swallowing navigation and backup buttons. Navigation and backup actions now remain available while career-changing operations finish; conflicting career operations report that they are waiting. Storage requests have a 12-second deadline. If the storage worker cannot start, a bounded read-only recovery path loads the latest IndexedDB career before considering the legacy migration backup. Failed storage remains blocked against new writes, and portable backup export remains available. Static scripts and CSS are versioned together to avoid reusing incompatible cached files.
+
+The input-recovery suite injects an unresponsive worker, checks menu actions during a pending save, verifies timeout cleanup and backup download, and checks recovery from IndexedDB with a deliberately older localStorage copy. Storage, navigation and update suites also pass. This verifies the reproduced input-lock failure; it does not establish that every source of lag on a physical phone is resolved.
