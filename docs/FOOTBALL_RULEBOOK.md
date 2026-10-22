@@ -326,6 +326,17 @@ inverting by role.
 5. **Cross** from the wide lane (whipped, early, or from deep): lower quality, many attempts.
 6. **Long shots** from outside the box: low quality; taken when the block is deep and set, by good long shooters.
 
+### 7.6 Kinds of shot, and where they go
+The shooter picks the shot the moment allows, and aims where the keeper is not:
+- **Placed** (side-foot, finesse) into the far corner, low: composed finishers with time in the box.
+- **Low drive** into a bottom corner: the usual shot under pressure or from the edge of the box.
+- **Power** from close range: high and hard, through or over the keeper.
+- **From distance** (beyond about 20 m): driven or curled (Flair) towards a corner, often over or wide.
+- **Chip** over a keeper who has come off his line in a one-on-one (Composure, Flair).
+- **Header** aimed down and towards a post; **free kick** over the wall towards a top corner.
+The keeper dives towards where it is going: he holds it, parries it (often for a corner) or is beaten; a miss
+goes wide of a post or over the bar. Where the ball goes always matches what happened.
+
 ### 7.2 Filling the box on a wide attack (minimum three)
 - **Near post:** the 9 (or the first runner) attacks the front of the 6-yard box.
 - **Far post:** the far-side winger / inside forward, arriving late.

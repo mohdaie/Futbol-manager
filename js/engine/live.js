@@ -10,10 +10,6 @@
 const SPEED_RATE = { 1: 2, 2: 4, 4: 8 };
 // Highlight levels: what is shown of each minute (the rest is skipped, the clock runs on).
 const HL = { key: 'Key', ext: 'Extended', full: 'Full' };
-const HL_MARKS = {
-  key: { goal: [12, 4], shot: [10, 3], pen: [6, 14], card: [6, 4], offside: [6, 3] },
-  ext: { goal: [14, 4], shot: [12, 3], pen: [6, 14], card: [6, 4], offside: [6, 3], corner: [2, 12], fk: [2, 10], attack: [5, 9], chance: [7, 4] },
-};
 let LIVE = null;
 
 function newLive(M, fid) {
@@ -149,38 +145,51 @@ function liveStep(L) {
   const prev = L.mq, evs = stepMatch(L.M, false), M = L.M, cur = M.frames || [];
   const t0 = cur.length ? cur[0][0] - TICK : 0;
   // A highlight early in the minute keeps its build-up from the end of the last minute (if that wasn't shown).
-  const lo = prev && prev.fr.length && !prev.segs.some(s => s[1] >= 59.5) ? -15 : 0;
+  const lo = prev && prev.fr.length && !prev.segs.some(s => s[1] >= 59.5) ? -25 : 0;
   const fr = lo ? prev.fr.filter(f => f[0] > t0 + lo - TICK && f[0] <= t0).concat(cur) : cur;
   const timed = evs.filter(e => e.tt != null).sort((a, b) => a.tt - b.tt), now = evs.filter(e => e.tt == null && e.t !== 'poss');
-  const segs = segments(M.marks || [], t0, lo, M);
+  const segs = segments(M.marks || [], t0, lo, M, fr);
   L.mq = { min: M.min, fr, t0, p: Math.min(0, segs.length ? segs[0][0] : 0), ev: timed, ei: 0, segs, skip: 0, main: evs[0], marks: (M.marks || []).slice(), mi: 0 };
   now.forEach(e => pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'sub' ? 'info' : 'tac', commLine(L, e), e.side));
   updateBoard(L);
   if (UI.popup && UI.popup.key === 'live:pl') { const b = document.querySelector('#layer .sh-body'), h = plCardHtml(L); if (b && h) b.innerHTML = h; }
 }
-// Parts of the minute to show, by highlight level: [from, to] in seconds of the minute (from lo: the build-up
-// can start in the last minute). Dynamic, as FM26: a close game and the last 15 minutes show more, a one-sided
-// one (three goals or more) shows less.
-function segments(marks, t0, lo = 0, M = null) {
+// Parts of the minute to show, by highlight level: [from, to] in seconds of the minute (from lo: the build-up can
+// start in the last minute). A highlight is a story: from the moment the team won the ball (or the set piece it came
+// from, at most 25 s before) to the finish - a goal, a shot, a penalty, a red card. Passing with no end is not a
+// highlight. Dynamic, as FM26: a close game and the last 15 minutes show more, a one-sided one shows less.
+const HL_END = { goal: 4, shot: 2.5, pen: 2, red: 2.5, card: 1.5, offside: 1.5, chance: 3 };
+function storyStart(fr, t0, lo, tm, side) {
+  const floor = Math.max(lo, tm - 25);
+  for (let k = fr.length - 1; k >= 0; k--) {
+    const f = fr[k], p = f[0] - t0;
+    if (p > tm) continue;
+    if (p < floor) return floor;
+    if (f[6]) return Math.max(floor, Math.min(tm - 4, p - 1)); // a set piece: from just before it is taken
+    if (f[4] === 1 - side) return Math.max(floor, Math.min(tm - 4, p - 1.5)); // where they won it: the tackle or interception
+  }
+  return floor;
+}
+function segments(marks, t0, lo = 0, M = null, fr = []) {
   const hl = G.settings.hl || 'ext';
   if (hl === 'full') return [[0, 60]];
   const gd = M ? Math.abs(M.sides[0].st.g - M.sides[1].st.g) : 0, late = M && M.min >= 75;
   const drama = (gd <= 1 ? 1 : gd >= 3 ? -1 : 0) + (late ? 1 : 0); // -1 dull ... 2 tense
-  const W = HL_MARKS[hl], X = drama >= 2 && hl === 'key' ? HL_MARKS.ext : null, out = [];
+  const out = [];
   marks.forEach(m => {
-    let w = W[m.k];
-    if (!w && X && (m.k === 'chance' || m.k === 'corner')) w = X[m.k]; // tense: the near things too
-    if (!w) return;
-    if (m.k === 'shot' && (m.xg || 0) < (hl === 'key' ? (drama < 0 ? 0.15 : 0.05) : drama < 0 ? 0.05 : 0)) return;
-    if (drama < 0 && (m.k === 'attack' || m.k === 'offside' || (m.k === 'corner' && hl === 'ext'))) return;
-    out.push([Math.max(lo, m.t - t0 - w[0] * (drama >= 2 ? 1.3 : 1)), Math.min(60, m.t - t0 + w[1])]);
+    let k = m.k === 'card' ? (m.red ? 'red' : 'card') : m.k;
+    const keyLevel = k === 'goal' || k === 'pen' || k === 'red' || (k === 'shot' && (m.xg || 0) >= (drama < 0 ? 0.15 : 0.05)) || (k === 'chance' && drama >= 2);
+    const extLevel = keyLevel || k === 'shot' || (drama >= 0 && (k === 'card' || k === 'offside' || k === 'chance'));
+    if (!(hl === 'key' ? keyLevel : extLevel)) return;
+    const tm = m.t - t0, side = k === 'card' || k === 'red' ? 1 - m.s : m.s;
+    const from = k === 'card' || k === 'offside' ? Math.max(lo, tm - 6) : storyStart(fr, t0, lo, tm, side);
+    out.push([Math.max(lo, from), Math.min(60, tm + HL_END[k])]);
   });
   out.sort((a, b) => a[0] - b[0]);
   const merged = [];
   out.forEach(s => { const l = merged[merged.length - 1]; if (l && s[0] <= l[1] + 1) l[1] = Math.max(l[1], s[1]); else merged.push(s.slice()); });
   return merged;
 }
-// Play the minute: inside a highlight the frames run at the chosen speed; between highlights the clock jumps on.
 function playMinuteView(L, dt) {
   const q = L.mq, inSeg = q.segs.find(s => q.p >= s[0] && q.p < s[1]);
   // Dead time at a restart (the ball is out, players walk into position) runs six times faster, as TV cuts it.
@@ -293,6 +302,9 @@ function draw(L) {
     g.beginPath(); g.arc(X(PW / 2), Y(y0 + d * 11), 9.15 * s, end ? Math.PI * 1.2 : Math.PI * 0.2, end ? Math.PI * 1.8 : Math.PI * 0.8); g.stroke();
     g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(X(PW / 2 - 3.66), Y(y0), 7.32 * s, -d * 2 * s);
     g.strokeRect(X(PW / 2 - 3.66), Y(y0), 7.32 * s, -d * 2 * s);
+    g.save(); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; // the net
+    for (let k = 1; k < 8; k++) { g.beginPath(); g.moveTo(X(PW / 2 - 3.66 + k * 0.915), Y(y0)); g.lineTo(X(PW / 2 - 3.66 + k * 0.915), Y(y0 - d * 2)); g.stroke(); }
+    g.beginPath(); g.moveTo(X(PW / 2 - 3.66), Y(y0 - d)); g.lineTo(X(PW / 2 + 3.66), Y(y0 - d)); g.stroke(); g.restore();
   });
   if (L.line && L.t < L.line.until) { // offside line
     const [, vy] = view(L, 0, L.line.y);
@@ -345,8 +357,35 @@ function draw(L) {
       }
     });
   });
+  // 7.6: a shot in flight - the ball rises to where it is aimed (a chip arcs over), the keeper dives, the net flashes.
+  const sf = L.mq && L.gt != null ? L.mq.marks.filter(m => m.k === 'sfx' && L.gt >= m.t && L.gt <= m.t + (m.flight || 0.8) + 1.6).pop() : null;
+  let zOver = null;
+  if (sf) {
+    const fl = Math.max(0.3, sf.flight || 0.8), u = clamp((L.gt - sf.t) / fl, 0, 1);
+    if (L.gt <= sf.t + fl) zOver = sf.kind === 'chip' ? sf.az * u + 2.2 * u * (1 - u) * 4 : sf.az * Math.min(1, u * 1.15);
+    const dside = 1 - sf.s, gk = L.dots[dside] && L.dots[dside][0];
+    if (gk && (sf.res === 'save' || sf.res === 'goal') && L.gt >= sf.t + fl * 0.25 && L.gt <= sf.t + fl + 0.9) {
+      const [kvx, kvy] = view(L, gk.x, gk.y), [tvx, tvy] = view(L, PW / 2 + sf.ax, gk.y), dir = Math.sign(tvx - kvx) || 1, k = clamp((L.gt - sf.t - fl * 0.25) / (fl * 0.75), 0, 1);
+      const col = L.colors[dside === L.bottom ? 0 : 1].gk, len = r * (1 + 1.6 * k) * (sf.res === 'goal' ? 0.85 : 1);
+      g.save(); g.fillStyle = col; g.globalAlpha = 0.85; g.beginPath(); g.ellipse(X(kvx) + dir * len * 0.5, Y(kvy), len * 0.75, r * 0.55, 0, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 1; g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(X(kvx) + dir * len * 1.15, Y(kvy) - r * 0.2, r * 0.38, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    if (sf.res === 'goal' && L.gt >= sf.t + fl && L.gt <= sf.t + fl + 1.2) { // the net bulges
+      const [nvx, nvy] = view(L, PW / 2, goalY(sf.s)), [, nby] = view(L, PW / 2, goalY(sf.s) - fwdY(sf.s) * -2), a = 1 - (L.gt - sf.t - fl) / 1.2;
+      g.save(); g.fillStyle = `rgba(255,255,255,${0.55 * a})`; g.fillRect(X(PW / 2 - 3.66), Math.min(Y(nvy), Y(nby)), 7.32 * s, Math.abs(Y(nby) - Y(nvy))); g.restore();
+    }
+    // What kind of shot, then what happened.
+    const after = L.gt > sf.t + fl, outcome = { save: 'Saved!', miss: sf.az > 2.44 ? 'Over the bar' : 'Wide' }[sf.res];
+    const txt = after && outcome ? outcome : (SHOT_NAME[sf.kind] || 'Shot') + (sf.aim && sf.aim !== 'central' && !['chip', 'power', 'open goal', 'penalty'].includes(sf.kind) ? ' \u00B7 ' + sf.aim : '');
+    if (!(after && sf.res === 'goal') && !L.overlay) {
+      g.font = '700 13px "Plus Jakarta Sans", system-ui, sans-serif'; g.textAlign = 'center';
+      const w = g.measureText(txt).width + 20; g.fillStyle = after ? 'rgba(242,193,78,.92)' : 'rgba(34,8,47,.78)';
+      g.beginPath(); g.roundRect ? g.roundRect(W / 2 - w / 2, H - 38, w, 24, 12) : g.rect(W / 2 - w / 2, H - 38, w, 24); g.fill();
+      g.fillStyle = after ? '#1B1B1B' : '#EAF2EE'; g.fillText(txt, W / 2, H - 25.5);
+    }
+  }
   // The ball, lifted by its height, with its shadow on the grass.
-  const [bvx, bvy] = view(L, L.ball.x, L.ball.y), bx = X(bvx), by = Y(bvy), z = L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
+  const [bvx, bvy] = view(L, L.ball.x, L.ball.y), bx = X(bvx), by = Y(bvy), z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
   g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
@@ -427,18 +466,21 @@ function renderFeed(L) {
   }).join('');
   linkEntities(el);
 }
+const SHOT_WITH = { placed: 'with a placed finish', driven: 'with a low drive', power: 'with a powerful strike', long: 'from distance', curler: 'with a curler from distance', chip: 'with a chip over the keeper', header: 'with a header', 'free kick': 'with a direct free kick', 'open goal': 'into an empty net' };
+const SHOT_NOUN = { placed: 'placed shot', driven: 'low drive', power: 'powerful strike', long: 'shot from distance', curler: 'curler', chip: 'chip', 'free kick': 'free kick' };
+const SHOT_NAME = { placed: 'Placed shot', driven: 'Low drive', power: 'Power shot', long: 'Long shot', curler: 'Curler', chip: 'Chip', header: 'Header', 'free kick': 'Free kick', penalty: 'Penalty', 'open goal': 'Open goal' };
 function commLine(L, ev) {
   const M = L.M, S = M.sides[ev.side], O = M.sides[1 - ev.side], n = id => pname(G.players[id]);
   const tn = 'the ' + clubName(S.cid);
   const fk = ev.fk ? 'Free kick. ' : ev.ck ? 'Corner. ' : '';
   switch (ev.t) {
-    case 'goal': return ev.pen ? `Penalty to ${tn}. ${n(ev.pid)} sends the keeper the wrong way. ${L.disp.join('-')}.` : `${fk}${n(ev.pid)} scores for ${tn}${ev.aid ? ', set up by ' + n(ev.aid) : ''}. ${L.disp.join('-')}.`;
+    case 'goal': return ev.pen ? `Penalty to ${tn}. ${n(ev.pid)} sends the keeper the wrong way. ${L.disp.join('-')}.` : `${fk}${n(ev.pid)} scores for ${tn}${SHOT_WITH[ev.kind] ? ' ' + SHOT_WITH[ev.kind] + (ev.aim && ev.aim !== 'central' && !['chip', 'power', 'open goal'].includes(ev.kind) ? ' into the ' + ev.aim : '') : ''}${ev.aid ? ', set up by ' + n(ev.aid) : ''}. ${L.disp.join('-')}.`;
     case 'shot': return `${n(ev.pid)} ${ev.sp ? 'rises to head it' : 'lets fly'}...`;
-    case 'save': return `${fk}${n(ev.pid)} forces a save from ${O.on[0] ? n(O.on[0]) : 'the keeper'}.${ev.corner ? ' Corner.' : ''}`;
+    case 'save': return `${fk}${n(ev.pid)}${SHOT_NOUN[ev.kind] ? "'s " + SHOT_NOUN[ev.kind] : ''} ${SHOT_NOUN[ev.kind] ? 'is saved by' : 'forces a save from'} ${O.on[0] ? n(O.on[0]) : 'the keeper'}${ev.aim && ev.aim !== 'central' ? ' at the ' + ev.aim : ''}.${ev.corner ? ' Corner.' : ''}`;
     case 'miss':
       if (ev.block) return `${fk}${n(ev.pid)} ${pick(['has a shot blocked', 'sees his shot charged down', 'shoots straight into a defender'])}.${ev.corner ? ' Corner.' : ''}`;
       if (ev.corner) return `${fk}${n(ev.pid)}${ev.sp ? "'s header" : "'s shot"} ${pick(['takes a deflection and goes behind', 'is turned behind by a defender'])}. Corner.`;
-      return ev.sp ? `${fk}${n(ev.pid)} ${pick(['heads over', 'heads wide', 'cannot keep his header down'])}.` : `${fk}${n(ev.pid)} ${pick(['drags a shot wide', 'fires over the bar', 'curls it just past the post', 'blazes over'])}.`;
+      return ev.sp ? `${fk}${n(ev.pid)} ${ev.over ? 'heads over' : 'heads wide'}.` : `${fk}${n(ev.pid)}${SHOT_NOUN[ev.kind] ? "'s " + SHOT_NOUN[ev.kind] : ''} ${ev.over ? pick(['goes over the bar', 'flies over']) : pick(['goes just wide', 'drifts past the post', 'is wide'])}.`;
     case 'yellow': return `Yellow card for ${n(ev.pid)} (${clubName(M.sides[ev.fside].cid)}).`;
     case 'red': return ev.second ? `Second yellow for ${n(ev.pid)}. Off he goes.` : `Straight red card for ${n(ev.pid)}.`;
     case 'foul': return `Foul by ${n(ev.pid)}. Free kick to ${tn}.`;
