@@ -84,10 +84,10 @@ SCREENS.home = {
       next = `<section class="dcard">
         <div class="dcard-h"><h2>Next match</h2><span class="pill">${days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days'}</span></div>
         <div class="nm"><div class="nm-team">${badge(fx.h, 32)}<span>${esc(clubName(fx.h))}</span></div>
-          <div class="nm-mid"><b>vs</b>${fxWhen(fx)}<br>${home ? 'Home' : 'Away'} · League${fx.tv ? ' · TV' : ''}</div>
+          <div class="nm-mid"><b>vs</b>${fxWhen(fx)}<br>${home ? 'Home' : 'Away'} · ${fx.fr ? 'Friendly' : 'League'}${fx.tv ? ' · TV' : ''}</div>
           <div class="nm-team r">${badge(fx.a, 32)}<span>${esc(clubName(fx.a))}</span></div></div>
         <div class="nm-cond"><span>${wxLabel(fx.wx)}</span><span>${rest == null ? 'First match' : rest + " days' rest"}</span>${rest != null && rest <= 3 ? '<span class="warnc">Tight turnaround</span>' : ''}</div>
-        <div class="nm-form"><span>Opponent form</span>${orow.form.length ? formChips(orow.form) : '<span>No matches yet</span>'}</div><div class="btns">${clubLink(opp, 'Opposition dashboard', 'btn sm')}<button class="btn sm" data-a="fixturePage" data-id="${fx.id}">Match preview</button>${fx.w === G.week ? '<button class="btn sm" data-a="continue">Continue to matchday</button>' : ''}</div>
+        <div class="nm-form"><span>Opponent form</span>${orow?.form.length ? formChips(orow.form) : '<span>No recorded league form</span>'}</div><div class="btns">${clubLink(opp, 'Opposition dashboard', 'btn sm')}<button class="btn sm" data-a="fixturePage" data-id="${fx.id}">Match preview</button>${fx.w === G.week ? '<button class="btn sm" data-a="continue">Continue to matchday</button>' : ''}</div>
       </section>`;
     } else next = `<section class="dcard"><div class="dcard-h"><h2>Next match</h2></div><p class="muted">No fixtures left this season.</p></section>`;
 

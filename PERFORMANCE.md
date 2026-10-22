@@ -29,6 +29,7 @@ Set `CHROMIUM_PATH=/usr/bin/chromium` in this environment. Playwright resolves t
 ```sh
 node tests/storage.cjs
 node tests/input-recovery.cjs
+node tests/dashboard-friendlies.cjs
 node tests/background.cjs
 node tests/live-animation.cjs
 node tests/live.cjs
@@ -73,3 +74,7 @@ For reproducing worlds 2 and 3, change both SEED and MATCH_COMPARE_SEED in the c
 A stalled asynchronous save previously left the global input lock active indefinitely, silently swallowing navigation and backup buttons. Navigation and backup actions now remain available while career-changing operations finish; conflicting career operations report that they are waiting. Storage requests have a 12-second deadline. If the storage worker cannot start, a bounded read-only recovery path loads the latest IndexedDB career before considering the legacy migration backup. Failed storage remains blocked against new writes, and portable backup export remains available. Static scripts and CSS are versioned together to avoid reusing incompatible cached files.
 
 The input-recovery suite injects an unresponsive worker, checks menu actions during a pending save, verifies timeout cleanup and backup download, and checks recovery from IndexedDB with a deliberately older localStorage copy. Storage, navigation and update suites also pass. This verifies the reproduced input-lock failure; it does not establish that every source of lag on a physical phone is resolved.
+
+## Release 2026.10.22.42 dashboard rendering
+
+An upcoming overseas friendly has no opponent row in the domestic league table. Dashboard and match preparation both dereferenced that missing row, throwing before the new screen could replace the old one. Both screens now handle absent domestic league data; the dashboard labels friendly fixtures correctly. The mobile regression suite arranges an overseas friendly, taps Dashboard and its squad/board/finance links, reloads the saved career, opens match preparation, starts live play, and returns to Dashboard. All 11 checks pass, along with briefing, navigation, input recovery and update checks.

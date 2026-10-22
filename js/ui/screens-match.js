@@ -164,7 +164,7 @@ SCREENS.prematch = {
         <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div></section>
       ${conditionsCard(fx)}
       <div class="card"><h3>Opposition report <small>Analyst ${analyst.toFixed(0)}/20</small></h3>
-        <div class="kv"><div><small>League position</small><b>${orow.p ? ordinal(tbl.indexOf(orow) + 1) : '-'}</b></div><div><small>Form</small><b>${orow.form.length ? formChips(orow.form) : '-'}</b></div>
+        <div class="kv"><div><small>League position</small><b>${orow ? orow.p ? ordinal(tbl.indexOf(orow) + 1) : '-' : 'Not in this league'}</b></div><div><small>Form</small><b>${orow?.form.length ? formChips(orow.form) : '-'}</b></div>
         <div><small>Likely shape</small><b>${analyst >= 8 ? opp.tac.ip + ' / ' + opp.tac.oop : 'Unknown'}</b></div><div><small>Pressing</small><b>${analyst >= 11 ? INSTRUCTIONS[4].o[opp.tac.press] : 'Unknown'}</b></div></div>
         ${(() => { const l = oppReport(opp.id); return l.length ? `<ul class="notes">${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''; })()}
         <h4 class="lbl">Players to watch</h4><div class="list">${theirs.map(p => playerRow(p, '', { sub: POS_NAME[p.pos] })).join('')}</div></div>
