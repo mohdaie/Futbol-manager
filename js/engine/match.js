@@ -193,6 +193,21 @@ function swapInMatch(M, S, i, j) {
   M.dirty = true;
   return true;
 }
+// The computer side closes a man-down gap itself. Ten men still leave one slot empty, so the question is which one:
+// the team-mate who fits the gap best moves in, and the gap is left in an attacking slot where possible, not in defence.
+function fillGapAI(M, S) {
+  const gap = S.on.indexOf(null);
+  if (gap < 0) return;
+  const pos = FORMATIONS[S.ip][gap][0];
+  let best = -1, bs = -Infinity;
+  S.on.forEach((id, j) => {
+    if (!id || j === gap || (j === 0 && gap !== 0)) return; // the keeper stays in goal unless he is the one gone
+    const p = G.players[id]; if (!p) return;
+    const sc = ovrAt(p, pos) + LINE[FORMATIONS[S.ip][j][0]] * 1.5;
+    if (sc > bs) { bs = sc; best = j; }
+  });
+  if (best >= 0) moveIntoGap(M, S, S.on[best], gap);
+}
 // A sent-off player is not replaced: his side plays a man down. The manager may move one of his players into the gap.
 // The player keeps his place on the pitch (no new arrival); the slot he leaves becomes the new gap.
 function moveIntoGap(M, S, fromId, gap) {
