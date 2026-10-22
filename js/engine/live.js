@@ -83,8 +83,9 @@ function moveCam(L, dt, snap) {
   const s = camScale(L), full = (G.settings.cam || 'follow') === 'full';
   const [bx, by] = view(L, L.ball.x, L.ball.y), hw = L.W / 2 / s, hh = L.H / 2 / s;
   let tx = full ? PW / 2 : clamp(bx, Math.min(PW / 2, hw - 3), Math.max(PW / 2, PW + 3 - hw)), ty = full ? PL / 2 : clamp(by, Math.min(PL / 2, hh - 4), Math.max(PL / 2, PL + 4 - hh));
-  const k = snap ? 1 : Math.min(1, dt / 320);
-  L.cam.x += (tx - L.cam.x) * k; L.cam.y += (ty - L.cam.y) * k; L.cam.s += (s - L.cam.s) * (snap || !L.cam.s ? 1 : Math.min(1, dt / 200));
+  // Exponential damping gives the same camera response at 30, 60 and 120 Hz.
+  const k = snap ? 1 : -Math.expm1(-dt / 320);
+  L.cam.x += (tx - L.cam.x) * k; L.cam.y += (ty - L.cam.y) * k; L.cam.s += (s - L.cam.s) * (snap || !L.cam.s ? 1 : -Math.expm1(-dt / 200));
   if (!full) { const mx = hw * 0.8, my = hh * 0.8; L.cam.x = clamp(L.cam.x, bx - mx, bx + mx); L.cam.y = clamp(L.cam.y, by - my, by + my); } // fast balls never leave the screen
 }
 
@@ -142,11 +143,13 @@ function liveFrame(ts) {
 // The next minute: the engine plays it, then the screen shows it (or the highlights of it).
 function liveStep(L) {
   liveKeep(L); // everything up to this minute has been shown
-  const prev = L.mq, evs = stepMatch(L.M, false), M = L.M, cur = M.frames || [];
-  const t0 = cur.length ? cur[0][0] - TICK : 0;
+  const prev = L.previousMinute, evs = stepMatch(L.M, false), M = L.M, cur = M.frames || [];
+  const t0 = cur.length ? cur[0][0] : 0;
   // A highlight early in the minute keeps its build-up from the end of the last minute (if that wasn't shown).
   const lo = prev && prev.fr.length && !prev.segs.some(s => s[1] >= 59.5) ? -25 : 0;
-  const fr = lo ? prev.fr.filter(f => f[0] > t0 + lo - TICK && f[0] <= t0).concat(cur) : cur;
+  // Two preceding samples keep velocity continuous across a minute boundary.
+  const fr = prev ? prev.fr.filter(f => f[0] >= t0 + (lo || -TICK * 2) && f[0] < t0).concat(cur) : cur;
+  L.previousMinute = null;
   const timed = evs.filter(e => e.tt != null).sort((a, b) => a.tt - b.tt), now = evs.filter(e => e.tt == null && e.t !== 'poss');
   const segs = segments(M.marks || [], t0, lo, M, fr);
   L.mq = { min: M.min, fr, t0, p: Math.min(0, segs.length ? segs[0][0] : 0), ev: timed, ei: 0, segs, skip: 0, main: evs[0], marks: (M.marks || []).slice(), mi: 0 };
@@ -209,6 +212,16 @@ function playMinuteView(L, dt) {
   while (q.mi < q.marks.length && q.marks[q.mi].t - q.t0 <= q.p) liveMark(L, q.marks[q.mi++]);
   if (q.p >= 60) endMinute(L);
 }
+// A shape-preserving cubic: shared tangents make velocity continuous, but never
+// overshoot a stop or reverse a stationary player (ordinary Catmull-Rom can).
+function liveCurve(p0, p1, p2, p3, u, derivative = false) {
+  const d = p2 - p1, before = p1 - p0, after = p3 - p2;
+  const m1 = before * d > 0 ? 2 * before * d / (before + d) : 0;
+  const m2 = d * after > 0 ? 2 * d * after / (d + after) : 0;
+  const a = m1 + m2 - 2 * d, b = 3 * d - 2 * m1 - m2;
+  return derivative ? (3 * a * u + 2 * b) * u + m1 : ((a * u + b) * u + m1) * u + p1;
+}
+
 // Positions at second p of the minute, between the two nearest frames.
 function setFrame(L, p, snap) {
   const q = L.mq, fr = q.fr;
@@ -219,12 +232,11 @@ function setFrame(L, p, snap) {
   const a = fr[k], b = fr[Math.min(fr.length - 1, k + 1)], u = b[0] > a[0] ? clamp((t - a[0]) / (b[0] - a[0]), 0, 1) : 0;
   const z = fr[Math.max(0, k - 1)], c = fr[Math.min(fr.length - 1, k + 2)];
   const lerp = (i) => (a[i] == null ? null : b[i] == null ? a[i] : a[i] + (b[i] - a[i]) * u);
-  // Players curve through their half-second positions (Catmull-Rom) instead of sliding in straight lines and
-  // turning sharply; a jump (a restart, a substitution) stays straight.
-  const smooth = (i) => {
+  // Do not curve through a restart, missing player or implausible jump.
+  const smooth = (i, derivative = false) => {
     const p0 = z[i], p1 = a[i], p2 = b[i], p3 = c[i];
-    if (p1 == null || p2 == null || p0 == null || p3 == null || Math.abs(p2 - p1) > 6 || Math.abs(p1 - p0) > 6 || Math.abs(p3 - p2) > 6) return lerp(i);
-    return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (3 * p1 - p0 - 3 * p2 + p3) * u * u * u);
+    if (p1 == null || p2 == null || p0 == null || p3 == null || a[6] !== b[6] || Math.abs(p2 - p1) > 6 || Math.abs(p1 - p0) > 6 || Math.abs(p3 - p2) > 6) return derivative ? (p1 == null || p2 == null ? 0 : p2 - p1) : lerp(i);
+    return liveCurve(p0, p1, p2, p3, u, derivative);
   };
   const carried = a[4] >= 0 && b[4] === a[4] && b[5] === a[5];
   L.ball.x = carried ? smooth(1) : lerp(1); L.ball.y = carried ? smooth(2) : lerp(2); L.ball.z = lerp(3); L.rs = a[6]; L.gt = t;
@@ -235,10 +247,14 @@ function setFrame(L, p, snap) {
     const x = smooth(7 + (s * 11 + i) * 2), y = smooth(8 + (s * 11 + i) * 2), fi = 51 + s * 11 + i;
     // Where he faces (rulebook 1c), turned the short way round between the two frames.
     const fa = a[fi] == null ? null : b[fi] == null ? a[fi] : a[fi] + Math.atan2(Math.sin(b[fi] - a[fi]), Math.cos(b[fi] - a[fi])) * u;
-    // Speed from the two frames (0.5 s apart): a carrier who is moving dribbles, with the ball ahead of his feet.
-    const ax = a[7 + (s * 11 + i) * 2], ay = a[8 + (s * 11 + i) * 2], bx = b[7 + (s * 11 + i) * 2], by = b[8 + (s * 11 + i) * 2];
-    const v = ax == null || bx == null ? 0 : Math.hypot(bx - ax, by - ay) / 0.5;
-    L.dots[s][i] = x == null ? null : { x, y, fa, v };
+    // Derive speed from the displayed curve, rather than changing it every tick.
+    const seconds = b[0] - a[0] || TICK, vx = smooth(7 + (s * 11 + i) * 2, true) / seconds, vy = smooth(8 + (s * 11 + i) * 2, true) / seconds;
+    const v = Math.hypot(vx, vy);
+    const old = L.dots[s][i], distance = old && x != null ? Math.hypot(x - old.x, y - old.y) : 0;
+    // Footfalls follow distance travelled, so pausing and changing playback speed
+    // cannot make stationary players jog or restart everybody's stride together.
+    const stride = (old && !snap ? old.stride || 0 : (s * 11 + i) * 2.4) + (distance < 6 && !snap ? distance * Math.PI / 1.5 : 0);
+    L.dots[s][i] = x == null ? null : { x, y, fa, v, vx, vy, stride };
   }
   if (snap) moveCam(L, 0, true);
 }
@@ -280,6 +296,7 @@ function liveMark(L, m) {
 // The minute is over: half time, an injury to one of yours, or full time.
 function endMinute(L) {
   const q = L.mq, M = L.M, main = q.main;
+  L.previousMinute = q;
   L.mq = null;
   if (q.ev.length === 0 && R() < 0.05) pushFeed(L, 'info', fillerLine(L, { side: M.sim ? M.sim.poss : 0 }));
   const inj = q.ev.concat(main ? [main] : []).find(e => e.t === 'inj' && M.sides[e.side].user);
@@ -345,14 +362,23 @@ function draw(L) {
     S.on.forEach((id, i) => {
       const d = L.dots[si][i]; if (!id || !d) return;
       const pr = penRun && penRun.s === si && penRun.who === i ? penAt(penRun) : [d.x, d.y];
-      // A carrier on the move bobs with his stride (the ball is drawn ahead of his feet, below).
-      const carrying = L.own && L.own[0] === si && L.own[1] === i && d.v > 1.5, bob = carrying ? Math.sin(L.gt * 12) * s * 0.2 : 0;
-      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), y = Y(vy) + bob, gk = i === 0;
+      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), y = Y(vy), gk = i === 0;
       // The circle is his body (sim.js bodyRadius) at pitch scale, so contacts on screen match the physics.
       const br = Math.max(3, bodyRadius(S, i) * s);
       if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
       g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + br * 0.7, br * 0.9, br * 0.35, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = 2;
+      // Small alternating boots give runners weight without moving the body away
+      // from its real pitch position. Their shadows stay planted on the grass.
+      if (d.v > 0.15 && d.fa != null) {
+        const fa = d.fa + (L.bottom === 0 ? 0 : Math.PI), cx = Math.cos(fa), cy = Math.sin(fa);
+        const step = Math.sin(d.stride || 0) * Math.min(1, d.v / 4) * br * 1.25;
+        g.strokeStyle = '#16251E'; g.lineWidth = Math.max(1.2, br * 0.4); g.lineCap = 'round';
+        for (const side of [-1, 1]) {
+          const fx = x - cy * br * 0.65 * side, fy = y + cx * br * 0.65 * side;
+          g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + cx * step * side, fy + cy * step * side); g.stroke();
+        }
+      }
+      g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = Math.max(1, br * 0.3);
       g.beginPath(); g.arc(x, y, br, 0, Math.PI * 2); g.fill(); g.stroke();
       if (d.fa != null) { // where he faces: a small pointer on the edge of the circle
         const fa = L.bottom === 0 ? d.fa : d.fa + Math.PI, cx = Math.cos(fa), cy = Math.sin(fa);
@@ -362,7 +388,7 @@ function draw(L) {
       if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, br + 3, 0, Math.PI * 2); g.stroke(); }
       if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, br + 5, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
-      g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      g.font = `700 ${Math.max(6, Math.round(br * 1.6))}px "Plus Jakarta Sans", system-ui, sans-serif`;
       g.fillText(String(G.players[id] ? G.players[id].no : ''), x, y + 0.5);
       if (s > 7) { // names when zoomed in
         g.font = `600 ${Math.round(r * 0.72)}px "Plus Jakarta Sans", system-ui, sans-serif`; g.fillStyle = 'rgba(255,255,255,.88)';
@@ -398,11 +424,12 @@ function draw(L) {
     }
   }
   // The ball, lifted by its height, with its shadow on the grass.
-  // A carrier on the move has the ball just ahead of his feet, in the way he faces (a touch, not a stop).
-  const own = L.own && L.own[0] >= 0 && L.dots[L.own[0]] ? L.dots[L.own[0]][L.own[1]] : null, dribble = !!own && own.v > 1.5 && own.fa != null && zOver == null && !(L.ball.z > 0.3);
-  const [bx, by] = dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.9, Y(ovy) + Math.sin(fa) * s * 0.9]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
+  // The engine already puts a dribble ahead of the runner's feet. Draw that same
+  // path throughout a touch, pass and reception; a second carrier offset snaps
+  // the ball whenever possession changes and can hide the start of a shot.
+  const [ballX, ballY] = view(L, L.ball.x, L.ball.y), bx = X(ballX), by = Y(ballY);
   const z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = `rgba(0,0,0,${0.35 / (1 + z * 0.25)})`; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br * (1 + z * 0.08), br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
   g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
   if ((G.settings.cam || 'follow') === 'follow') miniMap(L);
