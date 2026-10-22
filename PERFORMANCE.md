@@ -47,7 +47,7 @@ SEED=1 node scripts/realism/league.cjs "globalThis.MATCH_COMPARE_SEED=1;$(cat sc
 
 The background suite reports a 32-fixture batch time and verifies that rendering continues during a detailed instant match. Benchmark without other CPU-heavy suites running when recording release performance. Physical-device and long-career testing remain separate validation.
 
-## Release 2026.10.22.39 measurements
+## Release 2026.10.22.40 measurements
 
 Headless Chromium on the development machine processed 32 background fixtures in approximately 0.5–1.1 seconds across the recorded runs. The earlier detailed background engine took roughly 0.9–1.5 seconds for each fixture. A 16-second live sample at 4x playback rendered 961 frames, with a 95th-percentile interval of 16.8 ms and no observed main-thread long tasks over 50 ms. These measurements are not promises for all phones.
 
