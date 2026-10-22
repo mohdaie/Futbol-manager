@@ -172,12 +172,38 @@ function simMinute(M) {
 }
 
 function sendOff(M, S, id, ev) {
+  ev.off = S.idx; ev.slot = S.on.indexOf(id); // the side that lost the man, and the gap he leaves
   S.on = S.on.map(x => (x === id ? null : x));
   S.reds.push(id); S.st.rc++;
   ev.t = 'red';
   moodSwing(S, 'all', -3); moodSwing(M.sides[1 - S.idx], 'all', 2);
   bumpRating(S, id, -1.5);
   M.dirty = true;
+}
+// Two players on the pitch change places (the tactics page): each keeps his place in the shape of his new slot.
+// Keepers swap only with keepers. Roles and instructions belong to the slot, so they stay where they are.
+function swapInMatch(M, S, i, j) {
+  if (i === j || i < 0 || j < 0 || i >= S.on.length || j >= S.on.length || !S.on[i] || !S.on[j]) return false;
+  if ((FORMATIONS[S.ip][i][0] === 'GK') !== (FORMATIONS[S.ip][j][0] === 'GK')) return false;
+  [S.on[i], S.on[j]] = [S.on[j], S.on[i]];
+  const P = M.sim.P[S.idx]; [P[i], P[j]] = [P[j], P[i]];
+  const B = M.sim.B;
+  if (B.os === S.idx) { if (B.oi === i) B.oi = j; else if (B.oi === j) B.oi = i; }
+  S._shape = null; S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null;
+  M.dirty = true;
+  return true;
+}
+// A sent-off player is not replaced: his side plays a man down. The manager may move one of his players into the gap.
+// The player keeps his place on the pitch (no new arrival); the slot he leaves becomes the new gap.
+function moveIntoGap(M, S, fromId, gap) {
+  const from = S.on.indexOf(fromId);
+  if (from < 0 || gap < 0 || gap === from || S.on[gap]) return false;
+  S.on[gap] = fromId; S.on[from] = null;
+  const P = M.sim.P[S.idx], q = P[from]; P[gap] = q; P[from] = null;
+  if (M.sim.B.os === S.idx && M.sim.B.oi === from) M.sim.B.oi = gap;
+  S._shape = null; S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null;
+  M.dirty = true;
+  return true;
 }
 
 function injury(M, S) {

@@ -296,6 +296,32 @@ ACT.subIn = ds => {
   L.subSel = null;
   reopenLive('subs');
 };
+// The tactics page: swap two players on the pitch, or set a player's role.
+ACT.liveSwapMode = () => { const L = LIVE; L.swapMode = !L.swapMode; L.swapFrom = null; L.roleSlot = null; reopenLive('tactics'); };
+ACT.liveTok = ds => {
+  const L = LIVE, S = liveSide(), i = +ds.i;
+  if (!L.swapMode) { L.roleSlot = L.roleSlot === i ? null : i; return reopenLive('tactics'); }
+  if (L.swapFrom == null) L.swapFrom = i;
+  else {
+    if (swapInMatch(L.M, S, L.swapFrom, i)) pushFeed(L, 'tac', `${pname(G.players[S.on[L.swapFrom]])} and ${pname(G.players[S.on[i]])} change places.`, L.bottom);
+    else toast('Keepers swap only with keepers.');
+    L.swapFrom = null;
+  }
+  reopenLive('tactics');
+};
+ACT.liveRole = ds => {
+  const L = LIVE, S = liveSide(), i = +ds.i;
+  S.roles[i] = +ds.k; L.M.dirty = true;
+  pushFeed(L, 'tac', `${pname(G.players[S.on[i]])} takes a new role: ${ROLES[FORMATIONS[S.ip][i][0]][+ds.k].n}.`, L.bottom);
+  reopenLive('tactics');
+};
+// A man down: one of the side moves into the gap; the spot he leaves is the new gap, so the sheet stays open.
+ACT.gapMove = ds => {
+  const L = LIVE, S = liveSide(), gap = S.on.indexOf(null);
+  if (gap < 0 || !moveIntoGap(L.M, S, +ds.id, gap)) { toast('Choose a player to move into the gap.'); return; }
+  pushFeed(L, 'tac', `${pname(G.players[+ds.id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom);
+  reopenLive('gap');
+};
 ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`, LIVE.bottom); reopenLive('tactics'); };
 ACT.liveSubFor = ds => { const L = LIVE; L.subSel = +ds.id; const wasPaused = L.paused; L.paused = true; updateBoard(L); openLiveSheet('subs'); UI.sheetOpts = { onClose: () => { L.subSel = null; if (!wasPaused && !(L.overlay && L.overlay.stay)) L.paused = false; updateBoard(L); } }; };
 ACT.livePl = ds => { LIVE.selId = +ds.id; const si = LIVE.M.sides.findIndex(X => X.on.includes(+ds.id)); LIVE.sel = si >= 0 ? [si, LIVE.M.sides[si].on.indexOf(+ds.id)] : null; reopenLive('pl'); };

@@ -235,7 +235,10 @@ function setFrame(L, p, snap) {
     const x = smooth(7 + (s * 11 + i) * 2), y = smooth(8 + (s * 11 + i) * 2), fi = 51 + s * 11 + i;
     // Where he faces (rulebook 1c), turned the short way round between the two frames.
     const fa = a[fi] == null ? null : b[fi] == null ? a[fi] : a[fi] + Math.atan2(Math.sin(b[fi] - a[fi]), Math.cos(b[fi] - a[fi])) * u;
-    L.dots[s][i] = x == null ? null : { x, y, fa };
+    // Speed from the two frames (0.5 s apart): a carrier who is moving dribbles, with the ball ahead of his feet.
+    const ax = a[7 + (s * 11 + i) * 2], ay = a[8 + (s * 11 + i) * 2], bx = b[7 + (s * 11 + i) * 2], by = b[8 + (s * 11 + i) * 2];
+    const v = ax == null || bx == null ? 0 : Math.hypot(bx - ax, by - ay) / 0.5;
+    L.dots[s][i] = x == null ? null : { x, y, fa, v };
   }
   if (snap) moveCam(L, 0, true);
 }
@@ -281,6 +284,8 @@ function endMinute(L) {
   if (q.ev.length === 0 && R() < 0.05) pushFeed(L, 'info', fillerLine(L, { side: M.sim ? M.sim.poss : 0 }));
   const inj = q.ev.concat(main ? [main] : []).find(e => e.t === 'inj' && M.sides[e.side].user);
   if (inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[inj.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
+  const red = q.ev.concat(main ? [main] : []).find(e => e.t === 'red' && M.sides[e.off].user);
+  if (red && !inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[red.pid])} is sent off. Move a player into the gap.`); openLiveSheet('gap'); }
   if (main && main.ht) { L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
 }
 // Injury events from the engine have no time in the minute: shown at once.
@@ -331,12 +336,18 @@ function draw(L) {
     }
   } else L.trail = [];
   const r = Math.max(7, s * 1.3);
+  // A penalty: the taker runs in from six metres behind the spot to strike (the shot itself is drawn below).
+  const penRun = L.mq && L.gt != null ? L.mq.marks.filter(m => m.k === 'sfx' && m.kind === 'penalty' && L.gt >= m.t - 1.6 && L.gt < m.t).pop() : null;
+  const penAt = m => { const k = clamp((L.gt - (m.t - 1.6)) / 1.4, 0, 1), e = k * k * (3 - 2 * k), bx = m.x0, by = m.y0 - fwdY(m.s) * 6; return [bx + (m.x0 - bx) * e, by + (m.y0 - by) * e]; };
   g.textAlign = 'center'; g.textBaseline = 'middle';
   [1 - L.bottom, L.bottom].forEach(si => {
     const S = L.M.sides[si], col = L.colors[si === L.bottom ? 0 : 1];
     S.on.forEach((id, i) => {
       const d = L.dots[si][i]; if (!id || !d) return;
-      const [vx, vy] = view(L, d.x, d.y), x = X(vx), y = Y(vy), gk = i === 0;
+      const pr = penRun && penRun.s === si && penRun.who === i ? penAt(penRun) : [d.x, d.y];
+      // A carrier on the move bobs with his stride (the ball is drawn ahead of his feet, below).
+      const carrying = L.own && L.own[0] === si && L.own[1] === i && d.v > 1.5, bob = carrying ? Math.sin(L.gt * 12) * s * 0.2 : 0;
+      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), y = Y(vy) + bob, gk = i === 0;
       // The circle is his body (sim.js bodyRadius) at pitch scale, so contacts on screen match the physics.
       const br = Math.max(3, bodyRadius(S, i) * s);
       if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
@@ -387,7 +398,10 @@ function draw(L) {
     }
   }
   // The ball, lifted by its height, with its shadow on the grass.
-  const [bvx, bvy] = view(L, L.ball.x, L.ball.y), bx = X(bvx), by = Y(bvy), z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
+  // A carrier on the move has the ball just ahead of his feet, in the way he faces (a touch, not a stop).
+  const own = L.own && L.own[0] >= 0 && L.dots[L.own[0]] ? L.dots[L.own[0]][L.own[1]] : null, dribble = !!own && own.v > 1.5 && own.fa != null && zOver == null && !(L.ball.z > 0.3);
+  const [bx, by] = dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.9, Y(ovy) + Math.sin(fa) * s * 0.9]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
+  const z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
   g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
@@ -584,6 +598,23 @@ function plCardHtml(L) {
     ${mine && i >= 0 ? `<div class="btns"><button class="btn" data-a="livePi" data-i="${i}">Player instructions</button><button class="btn" data-a="liveSubFor" data-id="${id}">Substitute</button></div>` : ''}`;
 }
 
+// The tactics page during a match: the pitch with every player (the same tokens as the tactics page), swaps and roles.
+function livePitch(L, S) {
+  const pos = positions({ ...S, fam: 100 }, true, 0.5, 0.45);
+  const toks = S.on.map((id, i) => {
+    if (!id) return '';
+    const p = G.players[id], q = pos[i] || [0.5, 0.5], pl = FORMATIONS[S.ip][i][0], role = ROLES[pl][S.roles[i]] || ROLES[pl][0];
+    return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" data-a="liveTok" data-i="${i}"><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
+  }).join('');
+  const roles = L.roleSlot != null && S.on[L.roleSlot] ? (() => {
+    const i = L.roleSlot, pl = FORMATIONS[S.ip][i][0];
+    return `<h4 class="lbl">Role for ${POS_NAME[pl]}</h4><div class="chips">${ROLES[pl].map((r, k) => `<button class="chip ${S.roles[i] === k ? 'on' : ''}" data-a="liveRole" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>`;
+  })() : '';
+  const label = L.swapMode ? (L.swapFrom != null ? 'Now tap the player to swap with' : 'Tap a player to swap') : 'Swap positions';
+  return `<div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
+    <div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>
+    <p class="muted">${L.swapMode ? 'Tap two players to swap places. Keepers swap only with keepers.' : 'Tap a player to change his role.'}</p>${roles}`;
+}
 function openLiveSheet(kind) {
   const L = LIVE, M = L.M, S = M.sides[L.bottom], O = M.sides[1 - L.bottom];
   const opts = { key: 'live:' + kind, restore: () => openLiveSheet(kind), valid: () => LIVE === L && !L.done };
@@ -604,6 +635,7 @@ function openLiveSheet(kind) {
   }
   if (kind === 'tactics') {
     sheet(`<h3 class="sh-t">In-match tactics</h3>
+      ${livePitch(L, S)}
       <div class="field"><label>In possession</label>${selectHtml('lt-ip', Object.keys(FORMATIONS), S.ip, 'liveShape')}</div>
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       <div class="field"><label>Tactical style</label><div class="chips">${Object.entries(STYLES).map(([k, s]) => `<button class="chip ${styleOf(S) === k ? 'on' : ''}" data-a="liveStyle" data-v="${k}">${s.n}</button>`).join('')}</div></div>
@@ -627,6 +659,14 @@ function openLiveSheet(kind) {
       ${list.map(x => `<div class="field"><label>${x.n}</label><div class="seg">${x.o.map((o, v) => `<button class="${(cur[x.k] ?? 1) === v ? 'on' : ''}" data-a="livePiSet" data-k="${x.k}" data-v="${v}">${o}</button>`).join('')}</div></div>`).join('')}
       <p class="muted">Takes effect straight away, for this match only.</p>`, opts);
     return;
+  }
+  if (kind === 'gap') { // a man down: move one of the side into the gap, or keep it
+    const gap = S.on.indexOf(null), ip = FORMATIONS[S.ip];
+    const list = S.on.map((id, i) => (id ? `<button class="row act" data-a="gapMove" data-id="${id}"><span class="pos">${ip[i][0]}</span><span class="grow">${esc(pname(G.players[id]))}<small>${esc(roleName(S, i))}</small></span></button>` : '')).join('');
+    sheet(`<h3 class="sh-t">A man down</h3>
+      <p class="muted">${gap >= 0 ? `The gap is at ${ip[gap][0]}. Move one of your players into it: the spot he leaves becomes the new gap.` : 'Your team is complete again.'}</p>
+      <div class="list">${list}</div>
+      <button class="row act" data-a="closeSheet"><span class="grow">Keep the gap</span></button>`, opts);
   }
   if (kind === 'subs') {
     const ip = FORMATIONS[S.ip];
