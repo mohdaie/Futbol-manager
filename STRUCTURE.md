@@ -696,3 +696,16 @@ training and get a Settings note. Fixed a neutral-personality transfer memo with
 version reveal higher challenge/foul rates and 11-/12-goal extremes. After disclosure, the owner explicitly
 requested release and will reset the career; these match-balance limitations remain open.
 See `docs/player-profiles/README.md` for the complete comparison, provisional-data limits and next work.
+
+## Unreleased — take-on episodes (rulebook 4.5)
+
+Not released: no version bump, PR or deployment. Rule 4.5 now separates running at a man from carrying past
+him. A carry is a take-on only when a defender can cut off its path in time, and a carrier takes a man on only
+when he judges he can beat him more often than not (`carrierDecide`, `takeOn`). Blocked carriers who cannot
+pass, shield or carry away. Only a take-on creates a forced contest (`challenges`), the take-on odds, and a
+counted successful dribble; ground duels still count every contest.
+
+Seed 3, 120 matches, before → after: fouls 32.3 → 28.1, tackles 38.6 → 30.4, successful dribbles 33.8 → 18.0,
+ground duels 73.1 → 57.5, most goals by one team 12 → 7. Passes rose 640 → 678 (fewer carries), so the realism
+gate has not passed. Dribbles remain above the rulebook's 8-10 per team; take-ons are still about two thirds of
+contests. Strict audit 3,555 assertions and all 23 suites pass.

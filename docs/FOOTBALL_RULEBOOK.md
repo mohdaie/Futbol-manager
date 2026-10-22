@@ -174,6 +174,13 @@ switches of play, triangles around the ball, and players staying back as rest de
    tackles a match and its opponents about 8-10 successful dribbles; only a defender who commits and misses, or is
    beaten by a take-on, is left behind. A take-on beats the defender a bit under half the time; a tackle committed
    when it is on wins the ball about three times in five.
+   **Carrying past a defender is not a take-on.** A carrier who moves away from a defender that cannot reach his
+   path in time is carrying into space: the defender jockeys and does not commit, and no duel is counted. A take-on
+   is a carry whose path a defender can cut off in time, so the carrier has chosen to run at a man. Only that duel
+   is an attempt at a dribble, and only a beaten defender in it is a successful dribble. A carrier runs at a man only
+   when he judges he can beat him more often than not (Dribbling, Agility, Flair against the defender's
+   Tackling and Anticipation); a blocked carrier who cannot shields, reassesses or passes, and does not face a
+   forced tackle every second.
 6. **Cover shadow.** A presser runs on the line that cuts off the pass behind him (usually into the 6).
 7. **Back line moves as one.** It steps up when the ball goes back or the carrier is pressed and can't play forward;
    it drops when the carrier is free and facing forward ("ball pressure / no ball pressure"). This is the offside
