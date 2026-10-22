@@ -731,3 +731,11 @@ value loses to backward passes because the receivers are marked (median 4.7 m fr
 for team-mates behind the ball) and the passes are riskier (risk 0.39 against 0.15). The fix is attacking support
 movement into free space between the lines, not the pass weights alone. Keeping the best forward pass in the cut
 changed backward share from 64% to 61%, so it was not kept.
+Attacking movement tests (handover item 5), all reverted: six matches each, balanced against balanced, full time.
+(1) Wider free-space search for attackers (5x5 zone, forward bonus): forward receivers moved only from 4.6 m to 4.9 m
+from the nearest opponent, and goals fell from 2.7 to 1.7 per match. Marking defenders follow runners, so the space
+does not open. (2) Back players not on rest-defence duty look for free space: back line still for 34-36% of the time
+instead of about 50%, but goals per match rose from 2.5 to 3.0. (3) Skill-based pass risk (passer's Vision, Passing,
+Decisions, Composure; receiver's Off the Ball, First Touch): forward passes rose from 36% to 40%, passes per minute
+fell from 7.3 to 7.2, but goals rose from about 2.7 to about 3.1 on 120-match seeds 1-3. Steps 2 and 3 together gave
+goals 3.2-3.6 and wins by 5+ at 7-12%. Next attempt: the defence has to respond to forward movement, not only attack.
