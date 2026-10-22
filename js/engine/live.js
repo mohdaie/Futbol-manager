@@ -83,8 +83,9 @@ function moveCam(L, dt, snap) {
   const s = camScale(L), full = (G.settings.cam || 'follow') === 'full';
   const [bx, by] = view(L, L.ball.x, L.ball.y), hw = L.W / 2 / s, hh = L.H / 2 / s;
   let tx = full ? PW / 2 : clamp(bx, Math.min(PW / 2, hw - 3), Math.max(PW / 2, PW + 3 - hw)), ty = full ? PL / 2 : clamp(by, Math.min(PL / 2, hh - 4), Math.max(PL / 2, PL + 4 - hh));
-  const k = snap ? 1 : Math.min(1, dt / 320);
-  L.cam.x += (tx - L.cam.x) * k; L.cam.y += (ty - L.cam.y) * k; L.cam.s += (s - L.cam.s) * (snap || !L.cam.s ? 1 : Math.min(1, dt / 200));
+  // Exponential damping gives the same camera response at 30, 60 and 120 Hz.
+  const k = snap ? 1 : -Math.expm1(-dt / 320);
+  L.cam.x += (tx - L.cam.x) * k; L.cam.y += (ty - L.cam.y) * k; L.cam.s += (s - L.cam.s) * (snap || !L.cam.s ? 1 : -Math.expm1(-dt / 200));
   if (!full) { const mx = hw * 0.8, my = hh * 0.8; L.cam.x = clamp(L.cam.x, bx - mx, bx + mx); L.cam.y = clamp(L.cam.y, by - my, by + my); } // fast balls never leave the screen
 }
 
@@ -93,8 +94,9 @@ function bindLive() {
   if (!L) return;
   const cv = document.getElementById('pitch');
   if (!cv || UI.s !== 'match') return;
+  updateBoard(L); // populate clock, possession and fitness before measuring pitch space
   const wrap = cv.parentElement, dpr = window.devicePixelRatio || 1;
-  const W = wrap.clientWidth, H = Math.max(200, wrap.clientHeight);
+  const W = wrap.clientWidth, H = Math.max(168, wrap.clientHeight);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   cv.onclick = e => {
@@ -106,7 +108,6 @@ function bindLive() {
   L.cv = cv; L.ctx = cv.getContext('2d'); L.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); L.W = W; L.H = H;
   if (!L.dots[0].length) placeFromSim(L);
   moveCam(L, 0, true);
-  updateBoard(L);
   renderFeed(L);
   if (!L.raf) { L.last = 0; L.raf = requestAnimationFrame(liveFrame); }
 }
@@ -115,7 +116,7 @@ function placeFromSim(L) {
   const sim = L.M.sim;
   if (!sim) { if (typeof simInit === 'function') simInit(L.M); }
   const P = L.M.sim.P;
-  L.dots = [0, 1].map(s => P[s].map(p => (p ? { x: p.x, y: p.y } : null)));
+  L.dots = [0, 1].map(s => P[s].map(p => (p ? { x: p.x, y: p.y, fa: p.fa, vx: p.vx || 0, vy: p.vy || 0, v: Math.hypot(p.vx || 0, p.vy || 0), stride: 0 } : null)));
   Object.assign(L.ball, { x: L.M.sim.B.x, y: L.M.sim.B.y, z: 0 });
 }
 
@@ -142,11 +143,13 @@ function liveFrame(ts) {
 // The next minute: the engine plays it, then the screen shows it (or the highlights of it).
 function liveStep(L) {
   liveKeep(L); // everything up to this minute has been shown
-  const prev = L.mq, evs = stepMatch(L.M, false), M = L.M, cur = M.frames || [];
-  const t0 = cur.length ? cur[0][0] - TICK : 0;
+  const prev = L.previousMinute, evs = stepMatch(L.M, false), M = L.M, cur = M.frames || [];
+  const t0 = cur.length ? cur[0][0] : 0;
   // A highlight early in the minute keeps its build-up from the end of the last minute (if that wasn't shown).
   const lo = prev && prev.fr.length && !prev.segs.some(s => s[1] >= 59.5) ? -25 : 0;
-  const fr = lo ? prev.fr.filter(f => f[0] > t0 + lo - TICK && f[0] <= t0).concat(cur) : cur;
+  // Two preceding samples keep velocity continuous across a minute boundary.
+  const fr = prev ? prev.fr.filter(f => f[0] >= t0 + (lo || -TICK * 2) && f[0] < t0).concat(cur) : cur;
+  L.previousMinute = null;
   const timed = evs.filter(e => e.tt != null).sort((a, b) => a.tt - b.tt), now = evs.filter(e => e.tt == null && e.t !== 'poss');
   const segs = segments(M.marks || [], t0, lo, M, fr);
   L.mq = { min: M.min, fr, t0, p: Math.min(0, segs.length ? segs[0][0] : 0), ev: timed, ei: 0, segs, skip: 0, main: evs[0], marks: (M.marks || []).slice(), mi: 0 };
@@ -209,6 +212,16 @@ function playMinuteView(L, dt) {
   while (q.mi < q.marks.length && q.marks[q.mi].t - q.t0 <= q.p) liveMark(L, q.marks[q.mi++]);
   if (q.p >= 60) endMinute(L);
 }
+// A shape-preserving cubic: shared tangents make velocity continuous, but never
+// overshoot a stop or reverse a stationary player (ordinary Catmull-Rom can).
+function liveCurve(p0, p1, p2, p3, u, derivative = false) {
+  const d = p2 - p1, before = p1 - p0, after = p3 - p2;
+  const m1 = before * d > 0 ? 2 * before * d / (before + d) : 0;
+  const m2 = d * after > 0 ? 2 * d * after / (d + after) : 0;
+  const a = m1 + m2 - 2 * d, b = 3 * d - 2 * m1 - m2;
+  return derivative ? (3 * a * u + 2 * b) * u + m1 : ((a * u + b) * u + m1) * u + p1;
+}
+
 // Positions at second p of the minute, between the two nearest frames.
 function setFrame(L, p, snap) {
   const q = L.mq, fr = q.fr;
@@ -219,12 +232,11 @@ function setFrame(L, p, snap) {
   const a = fr[k], b = fr[Math.min(fr.length - 1, k + 1)], u = b[0] > a[0] ? clamp((t - a[0]) / (b[0] - a[0]), 0, 1) : 0;
   const z = fr[Math.max(0, k - 1)], c = fr[Math.min(fr.length - 1, k + 2)];
   const lerp = (i) => (a[i] == null ? null : b[i] == null ? a[i] : a[i] + (b[i] - a[i]) * u);
-  // Players curve through their half-second positions (Catmull-Rom) instead of sliding in straight lines and
-  // turning sharply; a jump (a restart, a substitution) stays straight.
-  const smooth = (i) => {
+  // Do not curve through a restart, missing player or implausible jump.
+  const smooth = (i, derivative = false) => {
     const p0 = z[i], p1 = a[i], p2 = b[i], p3 = c[i];
-    if (p1 == null || p2 == null || p0 == null || p3 == null || Math.abs(p2 - p1) > 6 || Math.abs(p1 - p0) > 6 || Math.abs(p3 - p2) > 6) return lerp(i);
-    return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (3 * p1 - p0 - 3 * p2 + p3) * u * u * u);
+    if (p1 == null || p2 == null || p0 == null || p3 == null || a[6] !== b[6] || Math.abs(p2 - p1) > 6 || Math.abs(p1 - p0) > 6 || Math.abs(p3 - p2) > 6) return derivative ? (p1 == null || p2 == null ? 0 : p2 - p1) : lerp(i);
+    return liveCurve(p0, p1, p2, p3, u, derivative);
   };
   const carried = a[4] >= 0 && b[4] === a[4] && b[5] === a[5];
   L.ball.x = carried ? smooth(1) : lerp(1); L.ball.y = carried ? smooth(2) : lerp(2); L.ball.z = lerp(3); L.rs = a[6]; L.gt = t;
@@ -235,10 +247,14 @@ function setFrame(L, p, snap) {
     const x = smooth(7 + (s * 11 + i) * 2), y = smooth(8 + (s * 11 + i) * 2), fi = 51 + s * 11 + i;
     // Where he faces (rulebook 1c), turned the short way round between the two frames.
     const fa = a[fi] == null ? null : b[fi] == null ? a[fi] : a[fi] + Math.atan2(Math.sin(b[fi] - a[fi]), Math.cos(b[fi] - a[fi])) * u;
-    // Speed from the two frames (0.5 s apart): a carrier who is moving dribbles, with the ball ahead of his feet.
-    const ax = a[7 + (s * 11 + i) * 2], ay = a[8 + (s * 11 + i) * 2], bx = b[7 + (s * 11 + i) * 2], by = b[8 + (s * 11 + i) * 2];
-    const v = ax == null || bx == null ? 0 : Math.hypot(bx - ax, by - ay) / 0.5;
-    L.dots[s][i] = x == null ? null : { x, y, fa, v };
+    // Derive speed from the displayed curve, rather than changing it every tick.
+    const seconds = b[0] - a[0] || TICK, vx = smooth(7 + (s * 11 + i) * 2, true) / seconds, vy = smooth(8 + (s * 11 + i) * 2, true) / seconds;
+    const v = Math.hypot(vx, vy);
+    const old = L.dots[s][i], distance = old && x != null ? Math.hypot(x - old.x, y - old.y) : 0;
+    // Footfalls follow distance travelled, so pausing and changing playback speed
+    // cannot make stationary players jog or restart everybody's stride together.
+    const stride = (old && !snap ? old.stride || 0 : (s * 11 + i) * 2.4) + (distance < 6 && !snap ? distance * Math.PI / 1.5 : 0);
+    L.dots[s][i] = x == null ? null : { x, y, fa, v, vx, vy, stride };
   }
   if (snap) moveCam(L, 0, true);
 }
@@ -280,6 +296,7 @@ function liveMark(L, m) {
 // The minute is over: half time, an injury to one of yours, or full time.
 function endMinute(L) {
   const q = L.mq, M = L.M, main = q.main;
+  L.previousMinute = q;
   L.mq = null;
   if (q.ev.length === 0 && R() < 0.05) pushFeed(L, 'info', fillerLine(L, { side: M.sim ? M.sim.poss : 0 }));
   const inj = q.ev.concat(main ? [main] : []).find(e => e.t === 'inj' && M.sides[e.side].user);
@@ -354,14 +371,23 @@ function draw(L) {
     S.on.forEach((id, i) => {
       const d = L.dots[si][i]; if (!id || !d) return;
       const pr = penRun && penRun.s === si && penRun.who === i ? penAt(penRun) : [d.x, d.y];
-      // A carrier on the move bobs with his stride (the ball is drawn ahead of his feet, below).
-      const carrying = L.own && L.own[0] === si && L.own[1] === i && d.v > 1.5, bob = carrying ? Math.sin(L.gt * 12) * s * 0.2 : 0;
-      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), y = Y(vy) + bob, gk = i === 0;
+      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), y = Y(vy), gk = i === 0;
       // The circle is his body (sim.js bodyRadius) at pitch scale, so contacts on screen match the physics.
       const br = Math.max(3, bodyRadius(S, i) * s);
       if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
       g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + br * 0.7, br * 0.9, br * 0.35, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = 2;
+      // Small alternating boots give runners weight without moving the body away
+      // from its real pitch position. Their shadows stay planted on the grass.
+      if (d.v > 0.15 && d.fa != null) {
+        const fa = d.fa + (L.bottom === 0 ? 0 : Math.PI), cx = Math.cos(fa), cy = Math.sin(fa);
+        const step = Math.sin(d.stride || 0) * Math.min(1, d.v / 4) * br * 1.25;
+        g.strokeStyle = '#16251E'; g.lineWidth = Math.max(1.2, br * 0.4); g.lineCap = 'round';
+        for (const side of [-1, 1]) {
+          const fx = x - cy * br * 0.65 * side, fy = y + cx * br * 0.65 * side;
+          g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + cx * step * side, fy + cy * step * side); g.stroke();
+        }
+      }
+      g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = Math.max(1, br * 0.3);
       g.beginPath(); g.arc(x, y, br, 0, Math.PI * 2); g.fill(); g.stroke();
       if (d.fa != null) { // where he faces: a small pointer on the edge of the circle
         const fa = L.bottom === 0 ? d.fa : d.fa + Math.PI, cx = Math.cos(fa), cy = Math.sin(fa);
@@ -371,7 +397,7 @@ function draw(L) {
       if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, br + 3, 0, Math.PI * 2); g.stroke(); }
       if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, br + 5, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
-      g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      g.font = `700 ${Math.max(6, Math.round(br * 1.6))}px "Plus Jakarta Sans", system-ui, sans-serif`;
       g.fillText(String(G.players[id] ? G.players[id].no : ''), x, y + 0.5);
       if (s > 7) { // names when zoomed in
         g.font = `600 ${Math.round(r * 0.72)}px "Plus Jakarta Sans", system-ui, sans-serif`; g.fillStyle = 'rgba(255,255,255,.88)';
@@ -407,12 +433,12 @@ function draw(L) {
     }
   }
   // The ball, lifted by its height, with its shadow on the grass.
-  // The carrier has the ball just ahead of his feet, in the way he faces (0.6 m, as the simulation keeps it).
-  const own = L.own && L.own[0] >= 0 && L.dots[L.own[0]] ? L.dots[L.own[0]][L.own[1]] : null, dribble = !!own && own.fa != null && zOver == null && !(L.ball.z > 0.3);
+  // The engine already puts a dribble ahead of the runner's feet. Draw that same path throughout a touch, pass and
+  // reception. A shot in flight is drawn along its real path (the frames are too far apart for a 0.4 s shot).
   const shotP = sf ? shotPathPoint(L, sf) : null;
-  const [bx, by] = shotP ? (() => { const [vx, vy] = view(L, shotP[0], shotP[1]); return [X(vx), Y(vy)]; })() : dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.6, Y(ovy) + Math.sin(fa) * s * 0.6]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
+  const [ballX, ballY] = shotP ? view(L, shotP[0], shotP[1]) : view(L, L.ball.x, L.ball.y), bx = X(ballX), by = Y(ballY);
   const z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = `rgba(0,0,0,${0.35 / (1 + z * 0.25)})`; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br * (1 + z * 0.08), br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
   g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
   if ((G.settings.cam || 'follow') === 'follow') miniMap(L);
@@ -466,6 +492,45 @@ function updateBoard(L) {
   const hl = el('btnHl'); if (hl) hl.textContent = HL[G.settings.hl || 'ext'];
   const cm = el('btnCam'); if (cm) cm.textContent = (G.settings.cam || 'follow') === 'full' ? 'Full pitch' : 'Follow';
   const ft = el('ftBar'); if (ft) ft.hidden = !L.done;
+  updateLiveFitness(L);
+}
+
+// Match condition is the source of truth for fatigue; injury is a separate
+// health flag. Never read the career condition in place of a live match value.
+function liveFitness(S, id) {
+  const p = G.players[id], condition = clamp(Math.round(S.cond[id] ?? p.cond), 0, 100);
+  const fatigue = condition >= 85 ? 'Fresh' : condition >= 70 ? 'Tiring' : 'Tired';
+  const injured = !!p.inj || S.injuries.some(x => x[0] === id);
+  return { condition, fatigue, injured, color: condClass(condition) };
+}
+function liveFitnessHtml(S, id) {
+  const f = liveFitness(S, id);
+  return `<span class="live-health ${f.color}" data-health-id="${id}" aria-label="${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><b>${f.condition}%</b><span class="live-fatigue">${f.injured ? '<strong class="bad">INJ</strong> · ' : ''}${f.fatigue}</span><span class="live-condition-bar" aria-hidden="true"><i style="width:${f.condition}%"></i></span></span>`;
+}
+function liveWatchHtml(S) {
+  return S.on.map((id, i) => {
+    if (!id || !G.players[id]) return '';
+    const p = G.players[id], f = liveFitness(S, id);
+    return `<button class="live-watch-player" data-a="livePl" data-id="${id}" aria-label="${esc(fullName(p))} · ${FORMATIONS[S.ip][i][0]} · ${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><span class="live-watch-name"><b>${FORMATIONS[S.ip][i][0]}</b> ${esc(p.ln)}</span>${liveFitnessHtml(S, id)}</button>`;
+  }).join('');
+}
+function updateLiveFitness(L) {
+  const S = L.M.sides[L.bottom], watch = document.getElementById('liveWatchPlayers');
+  // Rebuild only when the team changes; condition updates keep controls and focus.
+  const roster = S.ip + ':' + S.on.join(',');
+  if (watch && watch.dataset.roster !== roster) { watch.innerHTML = liveWatchHtml(S); watch.dataset.roster = roster; }
+  document.querySelectorAll('[data-health-id]').forEach(el => {
+    const id = +el.dataset.healthId;
+    if (!S.on.includes(id) || !G.players[id]) return;
+    const f = liveFitness(S, id), label = `${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}`;
+    if (el.getAttribute('aria-label') === label) return;
+    el.className = 'live-health ' + f.color; el.setAttribute('aria-label', label);
+    const button = el.closest('.live-watch-player');
+    if (button) button.setAttribute('aria-label', `${fullName(G.players[id])} · ${FORMATIONS[S.ip][S.on.indexOf(id)][0]} · ${label}`);
+    el.querySelector('b').textContent = f.condition + '%';
+    el.querySelector('.live-fatigue').innerHTML = (f.injured ? '<strong class="bad">INJ</strong> · ' : '') + f.fatigue;
+    el.querySelector('i').style.width = f.condition + '%';
+  });
 }
 
 // Commentary: the newest line is a full-width bar in the colour of the team it is about; a goal flashes.
@@ -614,20 +679,22 @@ function livePitch(L, S) {
   const toks = S.on.map((id, i) => {
     if (!id) return '';
     const p = G.players[id], q = pos[i] || [0.5, 0.5], pl = FORMATIONS[S.ip][i][0], role = ROLES[pl][S.roles[i]] || ROLES[pl][0];
-    const act = L.swapMode ? `data-a="liveTok" data-i="${i}"` : `data-a="livePl" data-id="${id}"`;
-    return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" ${act}><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
+    return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" data-a="liveTok" data-i="${i}"><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
   }).join('');
-  // Every player's role, in his slot's own list: a role belongs to the slot, so a role from another slot needs a swap.
-  const roles = S.on.map((id, i) => {
-    if (!id) return '';
-    const pl = FORMATIONS[S.ip][i][0];
-    return `<div class="field"><label>${POS_NAME[pl]} · ${esc(pname(G.players[id]))}</label>${selectHtml('lrole-' + i, ROLES[pl].map((r, k) => [k, r.n]), S.roles[i], 'liveRole', `data-i="${i}"`)}</div>`;
+  return `<div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>`;
+}
+function liveRoleChoices(L, S) {
+  return L.roleSlot != null && S.on[L.roleSlot] ? (() => {
+    const i = L.roleSlot, pl = FORMATIONS[S.ip][i][0];
+    return `<h4 class="lbl">Role for ${POS_NAME[pl]}</h4><div class="chips">${ROLES[pl].map((r, k) => `<button class="chip ${S.roles[i] === k ? 'on' : ''}" data-a="liveRole" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>`;
+  })() : '';
+}
+function liveXiHtml(L, S) {
+  return S.on.map((id, i) => {
+    const pos = FORMATIONS[S.ip][i][0], p = G.players[id];
+    if (!id || !p) return `<div class="row live-xi-gap"><span class="pos">${pos}</span><span class="grow muted">Empty position</span></div>`;
+    return `<button class="row act live-xi-player ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" data-a="liveTok" data-i="${i}" data-player-id="${id}"><span class="pos">${pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${esc(roleName(S, i))}${S.cap === id ? ' · Captain' : ''}</small></span>${liveFitnessHtml(S, id)}</button>`;
   }).join('');
-  const label = L.swapMode ? (L.swapFrom != null ? 'Now tap the player to swap with' : 'Tap a player to swap') : 'Swap positions';
-  return `<div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
-    <div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>
-    <p class="muted">${L.swapMode ? 'Tap two players to swap places. Keepers swap only with keepers.' : 'Tap a player for his card. A role belongs to his position; to play in another position, swap him into it.'}</p>
-    <h4 class="lbl">Roles</h4><div class="card">${roles}</div>`;
 }
 
 function openLiveSheet(kind) {
@@ -649,8 +716,14 @@ function openLiveSheet(kind) {
     return;
   }
   if (kind === 'tactics') {
+    const xi = L.tacticsView !== 'pitch', label = L.swapMode ? (L.swapFrom != null ? 'Now choose the player to swap with' : 'Choose a player to swap') : 'Swap positions';
+    updateLiveFitness(L);
     sheet(`<h3 class="sh-t">In-match tactics</h3>
-      ${livePitch(L, S)}
+      <div class="seg" role="tablist" aria-label="Line-up view"><button id="liveXiTab" role="tab" class="${xi ? 'on' : ''}" aria-selected="${xi}" aria-controls="liveXiPanel" data-a="liveTacticsView" data-v="xi">First XI</button><button id="livePitchTab" role="tab" class="${xi ? '' : 'on'}" aria-selected="${!xi}" aria-controls="livePitchPanel" data-a="liveTacticsView" data-v="pitch">Formation</button></div>
+      <div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
+      <section id="liveXiPanel" role="tabpanel" aria-labelledby="liveXiTab" ${xi ? '' : 'hidden'}><h4 class="lbl">First XI <small>· ${S.on.filter(Boolean).length} on pitch · Condition & fatigue</small></h4><div class="list live-xi">${liveXiHtml(L, S)}</div></section>
+      <section id="livePitchPanel" role="tabpanel" aria-labelledby="livePitchTab" ${xi ? 'hidden' : ''}>${livePitch(L, S)}</section>
+      <p class="muted">${L.swapMode ? 'Choose two players to swap places. Keepers swap only with keepers.' : 'Choose a player to change his role.'}</p>${liveRoleChoices(L, S)}
       <div class="field"><label>In possession</label>${selectHtml('lt-ip', Object.keys(FORMATIONS), S.ip, 'liveShape')}</div>
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       <div class="field"><label>Tactical style</label><div class="chips">${Object.entries(STYLES).map(([k, s]) => `<button class="chip ${styleOf(S) === k ? 'on' : ''}" data-a="liveStyle" data-v="${k}">${s.n}</button>`).join('')}</div></div>

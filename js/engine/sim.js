@@ -1460,6 +1460,7 @@ function playMinute(M) {
   M.sides.forEach((S, s) => syncSide(M, s));
   M.mev = []; M.marks = []; M.frames = M.live ? [] : null;
   if (M.min === 46 && M.sim.half === 1) { M.sim.half = 2; kickOff(M, 1); }
+  recordFrame(M); // include second zero: playback must not freeze for the first half-second
   const end = M.sim.t + 60;
   const pos0 = M.sides.map(S => S.st.pos);
   // A few fouls off the ball (holding, blocking runs) that the tackles do not cover.

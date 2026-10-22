@@ -28,7 +28,27 @@ const assert = require('node:assert/strict');
     await act('kickoff');
     await page.waitForFunction(() => LIVE && LIVE.M.min >= 1, null, { timeout: 30000 });
 
+    check('condition and fatigue are visible for all eleven players without opening Subs', await page.locator('#liveWatchPlayers .live-watch-player').count(), 11);
+    await page.evaluate(() => { LIVE.paused = true; const S = liveSide(); S.cond[S.on[1]] = 64; S.cond[S.on[2]] = 78; S.injuries.push([S.on[1], 'Test injury', 1]); updateBoard(LIVE); });
+    const tiredId = await page.evaluate(() => liveSide().on[1]);
+    const tiringId = await page.evaluate(() => liveSide().on[2]);
+    check('the live panel shows current match condition and injury separately', await page.locator(`#liveWatchPlayers [data-health-id="${tiredId}"]`).getAttribute('aria-label'), 'Injured · Condition 64% · Tired');
+    check('moderate fatigue has a distinct label', await page.locator(`#liveWatchPlayers [data-health-id="${tiringId}"] .live-fatigue`).innerText(), 'Tiring');
+    await page.locator(`#liveWatchPlayers [data-id="${tiredId}"]`).click();
+    check('the live panel opens the player card directly', await page.evaluate(() => UI.popup.key), 'live:pl');
+    await act('closeSheet');
+
     await act('liveSheet', { k: 'tactics' });
+    check('First XI is the default tactics view', await page.locator('#liveXiPanel').isVisible(), true);
+    check('First XI lists every current player', await page.locator('.live-xi-player').count(), 11);
+    check('tactics shows the same condition and injury as the live panel', await page.locator(`#liveXiPanel [data-health-id="${tiredId}"]`).getAttribute('aria-label'), 'Injured · Condition 64% · Tired');
+    // Condition changes update the open tactics list without replacing focused controls.
+    await page.locator('.live-xi-player').first().focus();
+    await page.evaluate(() => { const S = liveSide(); S.cond[S.on[1]] = 60; updateBoard(LIVE); });
+    check('condition refresh keeps focus in the tactics list', await page.evaluate(() => document.activeElement.classList.contains('live-xi-player')), true);
+    check('open tactics displays refreshed condition', await page.locator(`#liveXiPanel [data-health-id="${tiredId}"] > b`).innerText(), '60%');
+    await page.getByRole('tab', { name: 'Formation', exact: true }).click();
+    check('Formation still provides the pitch view', await page.locator('#livePitchPanel').isVisible(), true);
     const toks = await page.locator('.tpitch .tok').count();
     check('the tactics page shows every player on the pitch', toks, await page.evaluate(() => LIVE.M.sides[LIVE.bottom].on.filter(Boolean).length));
 
@@ -40,12 +60,28 @@ const assert = require('node:assert/strict');
     check('two players swap places on the pitch', [after[0], after[5]], [before[5], before[0]]);
 
     await act('liveSwapMode');
-    // A role is picked from the list under the pitch and takes effect at once (the shape cache is cleared).
-    await page.waitForSelector('#lrole-3', { timeout: 10000 });
-    const roleBefore = await page.evaluate(() => { const S = LIVE.M.sides[LIVE.bottom]; return { k: S.roles[3], shape: S._shape }; });
-    await page.selectOption('#lrole-3', String(roleBefore.k === 0 ? 1 : 0));
-    check('a role changed in the list is applied during the match', await page.evaluate(() => LIVE.M.sides[LIVE.bottom].roles[3]), roleBefore.k === 0 ? 1 : 0);
-    check('the role change clears the cached shape', await page.evaluate(() => LIVE.M.sides[LIVE.bottom]._shape), null);
+    // A player's role is picked from the chips under the pitch, and it takes effect at once (the shape cache is cleared).
+    await act('liveTok', { i: 3 });
+    check('the chosen player shows every role for his slot', await page.locator('.chip[data-a="liveRole"][data-i="3"]').count(), await page.evaluate(() => ROLES[FORMATIONS[liveSide().ip][3][0]].length));
+    const roleTo = await page.evaluate(() => { liveSide()._shape = { cached: true }; return liveSide().roles[3] === 0 ? 1 : 0; });
+    await act('liveRole', { i: 3, k: roleTo });
+    check('a role can be set during the match', await page.evaluate(() => liveSide().roles[3]), roleTo);
+    check('the role change clears the cached shape', await page.evaluate(() => liveSide()._shape), null);
+
+    await page.getByRole('tab', { name: 'First XI', exact: true }).click();
+    await page.locator('.live-xi-player[data-i="3"]').click();
+    check('First XI rows use the same role selection as the pitch', await page.evaluate(() => LIVE.roleSlot), null);
+
+    // A substitution immediately replaces the outgoing player in the live panel.
+    await act('closeSheet');
+    const substitution = await page.evaluate(() => {
+      const S = liveSide(), out = S.on[1], incoming = S.bench.find(id => G.players[id].pos !== 'GK');
+      S.injuries = S.injuries.filter(x => x[0] !== out);
+      LIVE.subSel = out; ACT.subIn({ id: incoming });
+      return { out, incoming };
+    });
+    check('substituted players leave the live condition panel', await page.locator(`#liveWatchPlayers [data-id="${substitution.out}"]`).count(), 0);
+    check('replacement players appear in the live condition panel', await page.locator(`#liveWatchPlayers [data-id="${substitution.incoming}"]`).count(), 1);
 
     // A dismissal leaves a gap; the manager moves a team-mate into it.
     await act('closeSheet');
@@ -53,6 +89,7 @@ const assert = require('node:assert/strict');
     check('the gap is shown after a dismissal', await page.locator('.sh-t', { hasText: 'A man down' }).count() > 0, true);
     const mover = await page.evaluate(() => liveSide().on[7]);
     await act('gapMove', { id: mover });
+    check('a dismissal removes the player from the condition panel', await page.locator('#liveWatchPlayers .live-watch-player').count(), 10);
     check('a team-mate moves into the gap and leaves a new one', await page.evaluate(() => { const S = liveSide(); return S.on[5] === null || S.on[5] === undefined ? false : S.on.indexOf(null) === 7; }), true);
     check('every player on the pitch carries a speed for the dribble view', await page.evaluate(() => LIVE.dots.every(team => team.every(d => !d || typeof d.v === 'number'))), true);
     // Set pieces and captain: the chosen penalty taker is stored for this match.
@@ -70,10 +107,14 @@ const assert = require('node:assert/strict');
       return Math.abs(start[0] - 30) < 1e-6 && Math.abs(start[1] - 20) < 1e-6 && Math.abs(end[0] - 34) < 1e-6 && Math.abs(end[1]) < 1e-6 && worst <= 26 * 0.05 + 1e-6;
     }), true);
     // A penalty: the taker runs in from six metres behind the spot before he strikes; the view must draw it cleanly.
-    await page.waitForFunction(() => LIVE.mq && LIVE.mq.marks, null, { timeout: 30000 });
-    await page.evaluate(() => { LIVE.mq.marks.push({ t: LIVE.gt + 1, k: 'sfx', s: 0, kind: 'penalty', who: 9, x0: 34, y0: 92, ax: 0, az: 0, res: 'goal', flight: 0.8 }); });
+    await page.waitForFunction(() => { if (!LIVE.mq || !LIVE.mq.marks) { LIVE.paused = false; return false; } LIVE.paused = true; return true; }, null, { timeout: 30000 });
+    await page.evaluate(() => { LIVE.mq.marks.push({ t: LIVE.gt + 1, k: 'sfx', s: 0, kind: 'penalty', who: 9, x0: 34, y0: 92, ax: 0, az: 0, res: 'goal', flight: 0.8 }); LIVE.paused = false; });
     await page.waitForTimeout(700);
     check('the match carries on after a penalty run-up is drawn', await page.evaluate(() => !!LIVE && !LIVE.done), true);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.waitForFunction(() => Math.abs(LIVE.H - LIVE.cv.parentElement.clientHeight) < 2);
+    check('small phones keep match controls visible beside the condition panel', await page.evaluate(() => document.querySelector('.mctl').getBoundingClientRect().bottom <= innerHeight && document.documentElement.scrollWidth <= innerWidth), true);
+    check('the canvas uses the actual pitch space left by the condition panel', await page.evaluate(() => Math.abs(LIVE.cv.getBoundingClientRect().height - LIVE.cv.parentElement.getBoundingClientRect().height) < 2), true);
   } finally {
     await browser.close(); server.close();
   }

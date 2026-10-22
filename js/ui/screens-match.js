@@ -250,6 +250,7 @@ SCREENS.match = {
       <div class="poss"><span class="pbar"><i id="sbPoss" style="width:50%"></i></span><small id="sbPossTxt"></small></div>
       ${(() => { const f = G.fixtures.find(x => x.id === LIVE.fid); return f && f.wx ? `<div class="mcond">${fxWhen(f)} · ${wxLabel(f.wx)}${f.tv ? ' · TV' : ''}</div>` : ''; })()}
       <div class="pitchwrap"><canvas id="pitch" aria-label="Live match view"></canvas></div>
+      <section class="live-watch" aria-label="Your players' condition and fatigue"><div class="live-watch-heading"><b>On pitch</b><span>Condition · fatigue <em class="bad">INJ = injured</em></span></div><div id="liveWatchPlayers" class="live-watch-players"></div></section>
       <ol id="feed" class="feed" aria-live="polite"></ol>
       <div id="ftBar" class="ftbar" hidden><button class="btn pri wide" data-a="toPost">Match report</button></div>
       <div class="mctl">
@@ -287,16 +288,18 @@ ACT.liveSheet = ds => {
     UI.sheetOpts = { onClose: () => { L.subSel = null; if (!wasPaused && !(L.overlay && L.overlay.stay)) L.paused = false; updateBoard(L); } };
   } else openLiveSheet(ds.k);
 };
-function reopenLive(kind) { const o = UI.sheetOpts; openLiveSheet(kind); UI.sheetOpts = o; }
+function reopenLive(kind) { const o = UI.sheetOpts; updateLiveFitness(LIVE); openLiveSheet(kind); UI.sheetOpts = o; }
 ACT.subOut = ds => { LIVE.subSel = +ds.id; reopenLive('subs'); };
 ACT.subIn = ds => {
   const L = LIVE, S = liveSide();
   const e = makeSub(L.M, S, L.subSel, +ds.id);
   if (e) pushFeed(L, 'info', commLine(L, e), L.bottom); else toast('No substitutions left.');
   L.subSel = null;
+  updateBoard(L);
   reopenLive('subs');
 };
 // The tactics page: swap two players on the pitch, or set a player's role.
+ACT.liveTacticsView = ds => { if (!['xi', 'pitch'].includes(ds.v)) return; LIVE.tacticsView = ds.v; reopenLive('tactics'); };
 ACT.liveSwapMode = () => { const L = LIVE; L.swapMode = !L.swapMode; L.swapFrom = null; L.roleSlot = null; reopenLive('tactics'); };
 ACT.liveTok = ds => {
   const L = LIVE, S = liveSide(), i = +ds.i;
@@ -310,8 +313,8 @@ ACT.liveTok = ds => {
   reopenLive('tactics');
 };
 // A role change takes effect at once: the shape and behaviour caches are cleared, so the new role drives the next moves.
-CHG.liveRole = (v, ds) => {
-  const L = LIVE, S = liveSide(), i = +ds.i, k = +v, pl = FORMATIONS[S.ip][i][0];
+ACT.liveRole = ds => {
+  const L = LIVE, S = liveSide(), i = +ds.i, k = +ds.k, pl = FORMATIONS[S.ip][i][0];
   if (S.roles[i] === k) return;
   S.roles[i] = k; S._shape = null; S._bh = null; S._attC = null; L.M.dirty = true;
   pushFeed(L, 'tac', `${pname(G.players[S.on[i]])} takes a new role: ${ROLES[pl][k].n}.`, L.bottom);
