@@ -148,7 +148,7 @@ function simUpTo(fx, inclusive) {
 function leagueTable() {
   const T = {};
   plClubs().forEach(id => { T[id] = { id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, form: [] }; });
-  G.fixtures.filter(played).sort(fxSort).forEach(f => {
+  G.fixtures.filter(f => played(f) && !f.fr).sort(fxSort).forEach(f => { // friendlies (fr) are not league matches
     const h = T[f.h], a = T[f.a];
     h.p++; a.p++; h.gf += f.hg; h.ga += f.ag; a.gf += f.ag; a.ga += f.hg;
     if (f.hg > f.ag) { h.w++; a.l++; h.pts += 3; h.form.push('W'); a.form.push('L'); }
