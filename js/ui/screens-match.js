@@ -296,6 +296,13 @@ ACT.subIn = ds => {
   L.subSel = null;
   reopenLive('subs');
 };
+// A man down: one of the side moves into the gap; the spot he leaves is the new gap, so the sheet stays open.
+ACT.gapMove = ds => {
+  const L = LIVE, S = liveSide(), gap = S.on.indexOf(null);
+  if (gap < 0 || !moveIntoGap(L.M, S, +ds.id, gap)) { toast('Choose a player to move into the gap.'); return; }
+  pushFeed(L, 'tac', `${pname(G.players[+ds.id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom);
+  reopenLive('gap');
+};
 ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`, LIVE.bottom); reopenLive('tactics'); };
 ACT.liveSubFor = ds => { const L = LIVE; L.subSel = +ds.id; const wasPaused = L.paused; L.paused = true; updateBoard(L); openLiveSheet('subs'); UI.sheetOpts = { onClose: () => { L.subSel = null; if (!wasPaused && !(L.overlay && L.overlay.stay)) L.paused = false; updateBoard(L); } }; };
 ACT.livePl = ds => { LIVE.selId = +ds.id; const si = LIVE.M.sides.findIndex(X => X.on.includes(+ds.id)); LIVE.sel = si >= 0 ? [si, LIVE.M.sides[si].on.indexOf(+ds.id)] : null; reopenLive('pl'); };

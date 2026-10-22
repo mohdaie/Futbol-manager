@@ -281,6 +281,8 @@ function endMinute(L) {
   if (q.ev.length === 0 && R() < 0.05) pushFeed(L, 'info', fillerLine(L, { side: M.sim ? M.sim.poss : 0 }));
   const inj = q.ev.concat(main ? [main] : []).find(e => e.t === 'inj' && M.sides[e.side].user);
   if (inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[inj.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
+  const red = q.ev.concat(main ? [main] : []).find(e => e.t === 'red' && M.sides[e.off].user);
+  if (red && !inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[red.pid])} is sent off. Move a player into the gap.`); openLiveSheet('gap'); }
   if (main && main.ht) { L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
 }
 // Injury events from the engine have no time in the minute: shown at once.
@@ -627,6 +629,14 @@ function openLiveSheet(kind) {
       ${list.map(x => `<div class="field"><label>${x.n}</label><div class="seg">${x.o.map((o, v) => `<button class="${(cur[x.k] ?? 1) === v ? 'on' : ''}" data-a="livePiSet" data-k="${x.k}" data-v="${v}">${o}</button>`).join('')}</div></div>`).join('')}
       <p class="muted">Takes effect straight away, for this match only.</p>`, opts);
     return;
+  }
+  if (kind === 'gap') { // a man down: move one of the side into the gap, or keep it
+    const gap = S.on.indexOf(null), ip = FORMATIONS[S.ip];
+    const list = S.on.map((id, i) => (id ? `<button class="row act" data-a="gapMove" data-id="${id}"><span class="pos">${ip[i][0]}</span><span class="grow">${esc(pname(G.players[id]))}<small>${esc(roleName(S, i))}</small></span></button>` : '')).join('');
+    sheet(`<h3 class="sh-t">A man down</h3>
+      <p class="muted">${gap >= 0 ? `The gap is at ${ip[gap][0]}. Move one of your players into it: the spot he leaves becomes the new gap.` : 'Your team is complete again.'}</p>
+      <div class="list">${list}</div>
+      <button class="row act" data-a="closeSheet"><span class="grow">Keep the gap</span></button>`, opts);
   }
   if (kind === 'subs') {
     const ip = FORMATIONS[S.ip];
