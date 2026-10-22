@@ -712,3 +712,7 @@ contests. Strict audit 3,555 assertions and all 23 suites pass.
 A defender level with the carrier is no longer a take-on (4.5); he jockeys. Seeds 1-3, 120 matches: fouls 26.6-27.5,
 tackles 32-33, successful dribbles 16.5-16.9, ground duels 61. Goals rise to 2.9-3.2 and wins by 5+ to 7-8%, so the
 side defence now needs work before any release.
+Body space (`separateBodies`): every player is a soft circle, 0.2-0.36 m, sized by height and build. Players cannot
+share ground: frames with two players closer than 0.4 m went from 5-6% to 0% on five recorded halves. Seeds 1-3,
+120 matches: goals 3.0-3.3, wins by 5+ 5-7%, fouls 26.5-27.7, tackles 33-34, successful dribbles 16.8-17.4.
+Duels and fouls are unchanged dice rolls; circles on screen are unchanged.

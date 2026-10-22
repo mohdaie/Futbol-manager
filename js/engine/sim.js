@@ -1265,6 +1265,27 @@ function movePlayers(M) {
       if (p.y < m) p.y = m; else if (p.y > PL - m) p.y = PL - m;
     }
   }
+  separateBodies(M);
+}
+// Body space: every player is a soft circle sized by height and build (about 0.2-0.36 m). Two players cannot share
+// the same ground, so a presser stands beside a carrier rather than inside him. Duels are still dice rolls.
+function bodyRadius(S, i) {
+  const p = G.players[S.on[i]];
+  if (!p || !p.ht) return 0.27;
+  return clamp(0.24 + (p.ht - 182) * 0.0015 + (bmiOf(p) - 23) * 0.008, 0.2, 0.36);
+}
+function separateBodies(M) {
+  const sim = M.sim, bodies = [];
+  for (let s = 0; s < 2; s++) sim.P[s].forEach((q, i) => { if (q) bodies.push({ q, r: bodyRadius(M.sides[s], i) }); });
+  for (let pass = 0; pass < 2; pass++) for (let a = 0; a < bodies.length; a++) for (let b = a + 1; b < bodies.length; b++) {
+    const A = bodies[a].q, C = bodies[b].q, min = bodies[a].r + bodies[b].r;
+    let dx = C.x - A.x, dy = C.y - A.y, d = Math.sqrt(dx * dx + dy * dy);
+    if (d >= min) continue;
+    if (d < 1e-3) { dx = 1; dy = 0; d = 1; } // exactly on top of each other: part sideways
+    const push = (min - d) / 2 / d;
+    A.x -= dx * push; A.y -= dy * push; C.x += dx * push; C.y += dy * push;
+  }
+  bodies.forEach(({ q }) => { q.x = clamp(q.x, 0.5, PW - 0.5); q.y = clamp(q.y, 0.5, PL - 0.5); });
 }
 // Top speed (Pace) and acceleration (Agility) per slot, both lower when tired: worked out once a minute.
 function speeds(S) {
