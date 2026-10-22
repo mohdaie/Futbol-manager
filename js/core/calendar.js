@@ -25,7 +25,7 @@ const SCHEDULE = (() => {
   }
   return out;
 })();
-const SEASON_WEEKS = SCHEDULE[37].w + 3;
+const SEASON_WEEKS = typeof ENGLAND_FIXTURES_2026 !== 'undefined' ? Math.max(...Object.values(ENGLAND_FIXTURES_2026).flat().map(f => f[1])) + 3 : SCHEDULE[37].w + 3;
 const roundWeek = r => SCHEDULE[r].w;
 
 function seasonStart(season) {
@@ -49,11 +49,12 @@ function matchDate(w) { const d = weekDate(w); d.setDate(d.getDate() + 5); retur
 
 function phaseLabel(w = G.week) {
   if (w < PRESEASON_WEEKS) return 'Pre-season';
-  if (w > SCHEDULE[37].w) return 'Off-season';
-  const fx = G.fixtures.filter(f => f.w === w).sort(fxSort);
+  const fx = G.fixtures.filter(f => f.w === w && (f.fr ? isUserFx(f) : (f.comp || leagueOf(f.h)) === leagueOf(G.club))).sort(fxSort);
+  if (fx.some(f => f.playoff)) return 'Promotion playoffs';
+  if (w > competitionLastWeek()) return 'Off-season';
   if (!fx.length) return CUP_WEEKS.includes(w) ? 'Cup weekend' : 'International break';
   const next = fx.find(f => !played(f)) || fx[fx.length - 1];
-  return 'Matchweek ' + (next.r + 1);
+  return next.fr ? 'Pre-season friendly' : 'Matchweek ' + (next.r + 1);
 }
 
 // Transfer windows by date. Summer: eight weeks from the start of the season (early July) to deadline day,
@@ -92,7 +93,12 @@ const wxLabel = wx => (wx ? `${WEATHER[wx.k].n} · ${wx.temp}°C` : 'Unknown');
 
 // Double round robin by the circle method, second half mirrored.
 // Each round gets real slots: the biggest games take the televised kick-offs.
-function genFixtures(ids) {
+function genFixtures(ids, competition = leagueOf(ids[0])) {
+  const template = typeof ENGLAND_FIXTURES_2026 !== 'undefined' && ENGLAND_FIXTURES_2026[competition];
+  const exact = G.season === START_SEASON && template && template.every(f => ids.includes(f[4]) && ids.includes(f[5]));
+  if (exact) return template.map(([r, w, d, t, h, a]) => {
+    const f = { id: G.nextId++, r, w, d, t, comp: competition, tv: t !== '15:00', h, a, hg: null, ag: null }; f.wx = genWeather(fxDate(f), t); return f;
+  });
   const n = ids.length, arr = shuffle(ids.slice()), rounds = [];
   for (let r = 0; r < n - 1; r++) {
     const m = [];
@@ -107,15 +113,17 @@ function genFixtures(ids) {
   const all = rounds.concat(rounds.map(m => m.map(([h, a]) => [a, h])));
   const out = [];
   all.forEach((m, r) => {
-    const sch = SCHEDULE[r];
-    let slots = (sch.mid ? MIDWEEK_SLOTS : WEEKEND_SLOTS).map(s => s.slice());
+    const scheduled = template?.filter(f => f[0] === r), first = scheduled?.[0];
+    const sch = first ? { w: first[1], mid: first[2] < 4 } : SCHEDULE[r];
+    if (!sch) throw new Error('No calendar slots for league round ' + (r + 1));
+    let slots = scheduled ? scheduled.map(f => [f[2], f[3], +(f[3] !== '15:00')]) : (sch.mid ? MIDWEEK_SLOTS : WEEKEND_SLOTS).map(s => s.slice());
     // no Friday night straight after a midweek round
     if (!sch.mid && MIDWEEK_WEEKS.includes(sch.w)) slots = slots.map(s => (s[0] === 4 ? [5, '15:00', 0] : s));
     const tvSlots = shuffle(slots.filter(s => s[2])), otherSlots = shuffle(slots.filter(s => !s[2]));
     const byPull = m.slice().sort((x, y) => (G.clubs[y[0]].rep + G.clubs[y[1]].rep + rf(0, 12)) - (G.clubs[x[0]].rep + G.clubs[x[1]].rep + rf(0, 12)));
     byPull.forEach(([h, a], i) => {
       const [d, t, tv] = i < tvSlots.length ? tvSlots[i] : otherSlots[i - tvSlots.length];
-      const f = { id: G.nextId++, r, w: sch.w, d, t, tv: !!tv, h, a, hg: null, ag: null };
+      const f = { id: G.nextId++, r, w: sch.w, d, t, comp: competition, tv: !!tv, h, a, hg: null, ag: null };
       f.wx = genWeather(fxDate(f), t);
       out.push(f);
     });
@@ -145,16 +153,28 @@ function simUpTo(fx, inclusive) {
   });
 }
 
-function leagueTable() {
+function leagueTable(competition = leagueOf(G.club)) {
   const T = {};
-  plClubs().forEach(id => { T[id] = { id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, form: [] }; });
-  G.fixtures.filter(f => played(f) && !f.fr).sort(fxSort).forEach(f => { // friendlies (fr) are not league matches
-    const h = T[f.h], a = T[f.a];
+  leagueClubs(competition).forEach(id => { T[id] = { id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, form: [] }; });
+  const fixtures = G.fixtures.filter(f => played(f) && leagueFixture(f, competition)).sort(fxSort);
+  fixtures.forEach(f => {
+    const h = T[f.h], a = T[f.a]; if (!h || !a) return;
     h.p++; a.p++; h.gf += f.hg; h.ga += f.ag; a.gf += f.ag; a.ga += f.hg;
     if (f.hg > f.ag) { h.w++; a.l++; h.pts += 3; h.form.push('W'); a.form.push('L'); }
     else if (f.hg < f.ag) { a.w++; h.l++; a.pts += 3; h.form.push('L'); a.form.push('W'); }
     else { h.d++; a.d++; h.pts++; a.pts++; h.form.push('D'); a.form.push('D'); }
   });
-  return Object.values(T).sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || G.clubs[y.id].rep - G.clubs[x.id].rep);
+  const base = (x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || (competition === 'ECH' ? y.w - x.w : 0);
+  const rows = Object.values(T).sort(base), groups = [];
+  rows.forEach(row => { const group = groups[groups.length - 1]; if (group && !base(group[0], row)) group.push(row); else groups.push([row]); });
+  return groups.flatMap(group => {
+    const ids = new Set(group.map(r => r.id)), h2h = Object.fromEntries(group.map(r => [r.id, { pts: 0, away: 0 }]));
+    fixtures.filter(f => ids.has(f.h) && ids.has(f.a)).forEach(f => {
+      h2h[f.h].pts += f.hg > f.ag ? 3 : f.hg === f.ag ? 1 : 0;
+      h2h[f.a].pts += f.ag > f.hg ? 3 : f.hg === f.ag ? 1 : 0; h2h[f.a].away += f.ag;
+    });
+    group.forEach(r => { r.tieKey = [r.pts, r.gf - r.ga, r.gf, ...(competition === 'ECH' ? [r.w] : []), h2h[r.id].pts, ...(competition === 'EPL' ? [h2h[r.id].away] : [])].join(':'); });
+    return group.sort((a, b) => h2h[b.id].pts - h2h[a.id].pts || (competition === 'EPL' ? h2h[b.id].away - h2h[a.id].away : 0) || a.id.localeCompare(b.id));
+  });
 }
-const tablePos = cid => leagueTable().findIndex(r => r.id === cid) + 1;
+const tablePos = cid => leagueTable(leagueOf(cid)).findIndex(r => r.id === cid) + 1;

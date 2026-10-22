@@ -48,7 +48,7 @@ function refreshForm(M, S) {
   S.form = S.on.map((id, i) => {
     if (!id) return 0;
     const p = G.players[id];
-    return pForm(S, p) * fam(p, FORMATIONS[S.ip][i][0]) * (S.capF || 1) * (S.idx === 0 ? 1.015 : 1) * (losingLate && p.pers === 'Determined' ? 1.05 : 1);
+    return pForm(S, p) * fam(p, FORMATIONS[S.ip][i][0]) * (S.capF || 1) * (S.idx === 0 && !S.neutral ? 1.015 : 1) * (losingLate && p.pers === 'Determined' ? 1.05 : 1);
   });
   S.fam = S.user ? G.training.fam : 85;
   S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null; S._shape = null;

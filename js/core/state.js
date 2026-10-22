@@ -13,7 +13,7 @@ const SHIRT = { GK: [1, 13, 31], DR: [2, 22, 32], DL: [3, 23, 33], DC: [4, 5, 15
 const club = id => G.clubs[id];
 const userClub = () => G.clubs[G.club];
 const clubName = id => (G.clubs[id] ? G.clubs[id].name : 'Free agent');
-const plClubs = () => CLUBS.map(c => c.id);
+const plClubs = () => leagueClubs('EPL');
 const squadOf = id => G.clubs[id].squad.map(pid => G.players[pid]).filter(Boolean);
 const seniorSquad = id => squadOf(id).filter(p => lvlOf(p) === 'A');
 const levelSquad = (id, l) => squadOf(id).filter(p => lvlOf(p) === l);
@@ -27,6 +27,8 @@ function assignNumber(c, p) {
 }
 
 function addToClub(p, c) {
+  if (!squadSpace(c, p)) throw new Error(squadLimitMessage(c));
+  if (c.league === 'ECH' && lvlOf(p) === 'Y') { p.lvl = 'R'; p.youth = false; }
   G.players[p.id] = p;
   p.club = c.id;
   assignNumber(c, p);
@@ -68,10 +70,11 @@ function genFreeAgent() {
 }
 
 function genYouth(c, quality) {
+  if (!squadSpace(c)) return null;
   const pos = pick(SQUAD_TEMPLATE);
   const age = ri(15, 17);
   const pa = clamp(quality + gauss() * 9 + (R() < 0.06 ? 12 : 0), 45, 95);
-  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, lvl: 'Y' });
+  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, lvl: c.league === 'ECH' ? 'R' : 'Y' });
   addToClub(p, c);
   p.wage = roundWage(rf(300, 900));
   p.con = G.season + 3;
@@ -86,7 +89,8 @@ function fillLevel(c, l, target) {
   const have = levelSquad(c.id, l);
   const need = LEVEL_TEMPLATE.slice();
   have.forEach(p => { const i = need.indexOf(p.pos); if (i >= 0) need.splice(i, 1); });
-  for (let n = have.length; n < target; n++) {
+  if (!Object.hasOwn(clubLevels(c), l)) return;
+  for (let n = have.length; n < target && squadSpace(c); n++) {
     const pos = need.length ? need.shift() : pick(LEVEL_TEMPLATE);
     const age = l === 'Y' ? wpick([15, 16, 17], a => (a === 15 ? 2 : 4)) : wpick([18, 19, 20, 21], a => (a === 21 ? 2 : 4));
     const nat = R() < 0.72 ? 'ENG' : pickNat(PL_NATS);
@@ -113,8 +117,9 @@ const staffOf = role => G.staff.filter(s => s.role === role);
 const staffAvg = (role, dflt = 8) => { const s = staffOf(role); return s.length ? avg(s, x => x.rating) : dflt; };
 
 function expectationFor(cid) {
-  const order = plClubs().slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
+  const order = leagueClubs(leagueOf(cid)).slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
   const r = order.indexOf(cid);
+  if (leagueOf(cid) === 'ECH') return r < 3 ? { pos: 2, text: 'Win automatic promotion' } : r < 8 ? { pos: 6, text: 'Reach the promotion playoffs' } : r < 16 ? { pos: 12, text: 'Finish in the top half' } : { pos: 21, text: 'Avoid relegation' };
   if (r < 2) return { pos: 1, text: 'Win the league' };
   if (r < 5) return { pos: 4, text: 'Qualify for the Champions Cup (top 4)' };
   if (r < 8) return { pos: 7, text: 'Qualify for Europe (top 7)' };
@@ -134,7 +139,7 @@ function aiTactic(rep = 70) {
 function newGame(clubId, manager, avatar) {
   G = {
     createdAt: Date.now(),
-    v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,
+    leagues: ['EPL', 'ECH'], competitionVersion: 2, v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,
     players: {}, clubs: {}, fixtures: [], news: [], know: {}, shortlist: [],
     scout: { assign: [], reports: [], jobs: [] }, pitches: [], offers: [], tHist: [],
     fin: null, board: null, staff: [], staffPool: [], tactics: null,
@@ -142,21 +147,23 @@ function newGame(clubId, manager, avatar) {
     ledger: null, ledgerPrev: null, balHist: [], history: [], trophies: [],
     settings: { speed: 2 }, seasonReview: null, gameOver: false, flags: {}, lastMatch: null, press: {},
   };
-  CLUBS.forEach(c => {
-    const cl = { ...c, squad: [], bal: Math.round(30e6 + Math.pow(Math.max(0, c.rep - 60), 2) * 0.25e6), tac: aiTactic(c.rep), pl: true };
+  CLUBS.concat(CHAMPIONSHIP_CLUBS).forEach(c => {
+    const league = ENGLAND_MEMBERSHIP_2026.ECH.includes(c.id) ? 'ECH' : 'EPL';
+    const cl = { ...c, squad: [], bal: Math.round(30e6 + Math.pow(Math.max(0, c.rep - 60), 2) * 0.25e6), tac: aiTactic(c.rep), pl: true, league };
     G.clubs[c.id] = cl;
-    // Real-inspired squads where available, generated otherwise; reserves and U18s topped up to 20 each.
-    if (typeof ROSTERS !== 'undefined' && ROSTERS[c.id]) ROSTERS[c.id].forEach(row => addToClub(playerFromRoster(row, c.id), cl));
-    else genSquad(cl);
-    fillLevel(cl, 'R', 20);
-    fillLevel(cl, 'Y', 20);
+    fillEnglandFirstTeam(cl, league === 'ECH' ? 24 : 25);
+    fillLevel(cl, 'R', league === 'ECH' ? 12 : 20);
+    if (league === 'EPL') fillLevel(cl, 'Y', 20);
   });
   FOREIGN.forEach((f, i) => {
     const id = 'F' + i;
     const cl = { ...f, id, city: NATIONS[f.nat].n, ground: '', cap: 0, squad: [], bal: 50e6, tac: aiTactic(), foreign: true, code: f.name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() };
     G.clubs[id] = cl;
     // Real-based first team when there is one (with the real player each is inspired by), otherwise generated.
-    if (typeof FOREIGN_ROSTERS !== 'undefined' && FOREIGN_ROSTERS[f.ros]) FOREIGN_ROSTERS[f.ros].forEach(row => addToClub(playerFromRoster(row, id), cl));
+    if (typeof FOREIGN_ROSTERS !== 'undefined' && FOREIGN_ROSTERS[f.ros]) {
+      const domesticIdentities = new Set(Object.values(G.players).filter(p => p.insp).map(p => p.insp));
+      FOREIGN_ROSTERS[f.ros].filter(row => !row[8] || !domesticIdentities.has(row[8])).forEach(row => addToClub(playerFromRoster(row, id), cl));
+    }
     else genSquad(cl, 18);
   });
   G.clubs.FA = { id: 'FA', name: 'Free agents', city: '', rep: 50, c1: '#55646B', c2: '#D8E0E2', squad: [], foreign: true, fa: true, code: 'FA', bal: 0 };
@@ -168,7 +175,7 @@ function newGame(clubId, manager, avatar) {
   });
 
   ensureWorld();
-  G.fixtures = genFixtures(plClubs());
+  G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
   setupUserClub();
   addNews('club', 'Welcome to the ' + clubName(clubId), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${G.board.target.text.toLowerCase()}. The transfer budget is ${money(G.fin.tb)}.`, null);
   addNews('club', 'Pre-season begins', 'Set your training focus, review the squad and check the tactics screen before the opening match in mid-August. The summer transfer window is open until 1 September.');
@@ -206,7 +213,7 @@ function rankSquadStatus(c) {
   if (gk && !['Key player', 'First team'].includes(gk.status)) gk.status = 'First team';
 }
 
-const available = p => p && !p.inj && !(p.ban > 0);
+const available = p => p && !p.inj && (!(p.ban > 0) || !!G?.flags?.friendlySelection);
 
 // Greedy best XI for a formation, scarce positions first, plus a 9-man bench with a keeper.
 function autoPick(cid, formation, keep) {

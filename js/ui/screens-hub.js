@@ -70,7 +70,7 @@ SCREENS.home = {
 
     const clubCard = `<section class="clubcard">
       <div class="cc-top"><div class="cc-badge">${badge(c.id, 40)}</div>
-        <div class="cc-name"><b>${esc(c.name)}</b><small>${LEAGUE_NAME} · ${seasonLabel()}</small></div>
+        <div class="cc-name"><b>${esc(c.name)}</b><small>${leagueName()} · ${seasonLabel()}</small></div>
         <button class="cc-link" data-a="go" data-s="club">Club overview <span aria-hidden="true">→</span></button></div>
       <div class="cc-stats"><div><small>Position</small><b>${row.p ? ordinal(pos) : '-'}</b></div><div><small>Points</small><b>${row.pts}</b></div><div><small>Played</small><b>${row.p}</b></div></div>
       <div class="cc-form"><span>Recent form</span>${row.form.length ? formChips(row.form) : '<span>No matches yet</span>'}</div>
@@ -216,7 +216,7 @@ SCREENS.gamestatus = {
         ['Goals for / against', `${row.gf} / ${row.ga}`], ['Remaining club fixtures', G.fixtures.filter(f => (f.h === G.club || f.a === G.club) && !played(f)).length],
       ])}</div>
       <div class="card"><h3>Club snapshot</h3>${kv([
-        ['First team / reserves / U18s', ['A', 'R', 'Y'].map(l => squad.filter(p => lvlOf(p) === l).length).join(' / ')],
+        [Object.values(clubLevels(c)).join(' / '), Object.keys(clubLevels(c)).map(l => squad.filter(p => lvlOf(p) === l).length).join(' / ')],
         ['Injured players', squad.filter(p => p.inj).length], ['Staff', G.staff.length], ['Club balance', money(c.bal)],
         ['Transfer budget', money(G.fin.tb)], ['Weekly wage budget', money(G.fin.wb)], ['Board confidence', Math.round(G.board.conf) + '%'], ['Fan confidence', Math.round(G.board.fans) + '%'],
         ['Training / youth facilities', `Level ${G.board.facTrain} / ${G.board.facYouth}`], ['Transfer history entries', G.tHist.length],
@@ -249,12 +249,13 @@ SCREENS.fixtures = {
     const t = UI.tab.fx || 'ours';
     let body = '';
     if (t === 'ours') {
-      const list = G.fixtures.filter(f => f.h === G.club || f.a === G.club).sort((a, b) => a.w - b.w);
+      const list = G.fixtures.filter(f => f.h === G.club || f.a === G.club).sort(fxSort);
       body = `${friendlyCard()}<div class="list">${list.map(f => fixtureLinks(f, G.club)).join('')}</div>`;
     } else {
-      const cur = G.fixtures.filter(f => f.w >= G.week)[0], r = UI.tab.round ?? (cur ? cur.r : 37);
-      const list = G.fixtures.filter(f => f.r === +r).sort(fxSort);
-      body = `<div class="field"><label for="rsel">Round</label>${selectHtml('rsel', Array.from({ length: 38 }, (_, i) => [i, 'Matchweek ' + (i + 1) + (SCHEDULE[i].mid ? ' (midweek)' : '') + ' · ' + fmtDate(weekDate(roundWeek(i)), false)]), r, 'round')}</div>
+      const all = G.fixtures.filter(f => leagueFixture(f)), rounds = [...new Set(all.map(f => f.r))].sort((a, b) => a - b);
+      const cur = all.filter(f => f.w >= G.week).sort(fxSort)[0], r = UI.tab.round ?? (cur ? cur.r : rounds[rounds.length - 1]);
+      const list = all.filter(f => f.r === +r).sort(fxSort);
+      body = `<div class="field"><label for="rsel">Round</label>${selectHtml('rsel', rounds.map(i => { const f = all.find(f => f.r === i); return [i, 'Matchweek ' + (i + 1) + ' · ' + fmtDate(fxDate(f), false)]; }), r, 'round')}</div>
         <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="fxt">${fxWhen(f).replace(/ \d+ \w+ ·/, '')}${f.tv ? '<em>TV</em>' : ''}</span><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<button class="res" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '-' + f.ag : 'v'}</button>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('')}</div>`;
     }
     return `<h1 class="h1">Fixtures</h1>${tabs('fx', [['ours', 'Our fixtures'], ['all', 'All rounds']], t)}${body}`;
@@ -264,19 +265,22 @@ CHG.round = v => { UI.tab.round = +v; render(); };
 
 SCREENS.table = {
   render() {
-    const tbl = leagueTable();
-    return `<h1 class="h1">${LEAGUE_NAME}</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p><button class="btn sm" data-a="go" data-s="clubs">Browse all clubs</button>
+    const competition = LEAGUES[UI.tab.comp] && G.leagues.includes(UI.tab.comp) ? UI.tab.comp : leagueOf(G.club);
+    const tbl = leagueTable(competition);
+    return `<h1 class="h1">${leagueName(competition)}</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p>${G.leagues.length > 1 ? `<div class="seg">${G.leagues.map(id => `<button class="${competition === id ? 'on' : ''}" data-a="leagueView" data-id="${id}">${leagueName(id)}</button>`).join('')}</div>` : ''}<button class="btn sm" data-a="go" data-s="clubs">Browse all clubs</button>
       <div class="tablewrap"><table class="tbl"><thead><tr><th>#</th><th class="l">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th><th class="hide-s">Form</th></tr></thead><tbody>
-      ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${i < 4 ? 'z1' : i < 6 ? 'z2' : i === 6 ? 'z3' : i >= 17 ? 'z4' : ''}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td><td class="hide-s">${formChips(r.form)}</td></tr>`).join('')}
-      </tbody></table></div>
-      <div class="legend"><span class="lz z1">Champions Cup</span><span class="lz z2">Europa Trophy</span><span class="lz z3">Conference Shield</span><span class="lz z4">Bottom three</span></div>`;
+      ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${competition === 'ECH' ? (i < 2 ? 'z1' : i < 6 ? 'z2' : i >= 21 ? 'z4' : '') : (i < 4 ? 'z1' : i < 6 ? 'z2' : i === 6 ? 'z3' : i >= 17 ? 'z4' : '')}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td><td class="hide-s">${formChips(r.form)}</td></tr>`).join('')}
+      </tbody></table>${leagueRulesHtml(competition)}</div>
+      <div class="legend">${competition === 'ECH' ? '<span class="lz z1">Automatic promotion</span><span class="lz z2">Promotion playoffs</span>' : '<span class="lz z1">Top four</span>'}<span class="lz z4">Bottom three</span></div>`;
   },
 };
+
+ACT.leagueView = ds => { UI.tab.comp = ds.id; render(); };
 
 SCREENS.stats = {
   render() {
     const t = UI.tab.stats || 'g';
-    const pl = Object.values(G.players).filter(p => G.clubs[p.club] && G.clubs[p.club].pl && p.st.a > 0);
+    const pl = Object.values(G.players).filter(p => G.clubs[p.club]?.pl && leagueOf(p.club) === leagueOf(G.club) && p.st.a > 0);
     const per = (p, k) => (p.st[k] || 0);
     const cfg = { g: ['Goals', p => p.st.g, p => p.st.g], as: ['Assists', p => p.st.as, p => p.st.as], rt: ['Avg rating', p => (p.st.a >= 3 ? avgRating(p) : 0), p => avgRating(p).toFixed(2)], cs: ['Clean sheets', p => (p.pos === 'GK' ? p.st.cs : 0), p => p.st.cs],
       kp: ['Key passes', p => per(p, 'kp'), p => per(p, 'kp')], pc: ['Pass accuracy', p => (per(p, 'pa') >= 60 ? per(p, 'pc') / per(p, 'pa') : 0), p => Math.round(per(p, 'pc') / (per(p, 'pa') || 1) * 100) + '%'],
@@ -308,6 +312,7 @@ SCREENS.settings = {
   render() {
     const exp = UI.tab.export;
     return `<h1 class="h1">Settings</h1>
+      ${G.flags.legacyLeagueSetup ? '<div class="card"><h3>2026/27 competitions available</h3><p class="muted">This career keeps its original clubs, calendar and progress. Start a new career for the updated Premier League and Championship. Export a backup first to keep this career.</p></div>' : ''}
       ${G.flags.legacyRosterProfiles ? '<div class="card"><h3>Updated player database</h3><p class="muted">New careers use the revised individual player profiles. This existing career keeps its trained attributes and development. Export your save before starting a new career if you want to keep it.</p></div>' : ''}
       <div class="card"><button class="btn pri wide" data-a="returnTitle">Save &amp; return to title</button></div>
       <div class="card"><h3>Manager portrait</h3>${avatarPicker(G.avatar || 1, 'setAvatar')}</div>

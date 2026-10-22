@@ -42,7 +42,7 @@ const ADMIN_TABS = {
 
   club() {
     const id = ADM.club || G.club, c = G.clubs[id], mine = id === G.club, B = G.board;
-    return `${fld('Club', selectHtml('adClub', plClubs().map(x => [x, G.clubs[x].name + (x === G.club ? ' (you)' : '')]), id, 'admClub'))}
+    return `${fld('Club', selectHtml('adClub', domesticClubs().map(x => [x, G.clubs[x].name + (x === G.club ? ' (you)' : '')]), id, 'admClub'))}
       <div class="card"><h3>Identity</h3><div class="two">
         ${fld('Nickname', `<input id="adName" type="text" value="${esc(c.name)}">`)}${fld('City', `<input id="adCity" type="text" value="${esc(c.city)}">`)}
         ${fld('Stadium', `<input id="adGround" type="text" value="${esc(c.ground)}">`)}${fld('Capacity', num('adCap', c.cap, 100))}
@@ -81,7 +81,7 @@ const ADMIN_TABS = {
       <div class="card"><h3>Engine tuning</h3><p class="muted">Applies to every match from now on, including the live 2D view.</p>
         ${Object.entries(TUNE_DEFAULTS).map(([k, d]) => `<div class="field"><label for="tn-${k}">${d.n}: <b id="tv-${k}">${tune(k)}</b>${tune(k) !== d.v ? ` <small>(default ${d.v})</small>` : ''}</label><input id="tn-${k}" type="range" min="${d.min}" max="${d.max}" step="${d.step}" value="${tune(k)}" data-c="admTune" data-k="${k}"></div>`).join('')}
         <div class="btns"><button class="btn" data-a="admTuneReset">Reset to defaults</button></div></div>
-      <div class="card"><h3>Test season</h3><p class="muted">Plays all 380 matches on a copy of the save with the current tuning. Your real save does not change. Every measure is compared with Premier League-like averages, and each style and level of tactic fit is shown against the strength of the teams using it.</p>
+      <div class="card"><h3>Test season</h3><p class="muted">Plays all ${leagueRules().teams * leagueRules().matches / 2} ${leagueName()} matches on a copy of the save with the current tuning. Your real save does not change. Every measure is compared with Premier League-like averages, and each style and level of tactic fit is shown against the strength of the teams using it.</p>
         <button class="btn pri" data-a="admTest">Run test season</button>
         ${T ? labReportHtml(T) : ''}</div>
       <div class="card"><h3>Attribute test</h3><p class="muted">For each of the 26 attributes, 40 matches with one side's players all at 8 and the other's at 16 for that attribute only (on a copy of the save). Points per match of the side at 16: every attribute should help; none should decide everything. Takes a few minutes.</p>
@@ -266,7 +266,7 @@ ACT.admBulk = ds => {
     fresh: () => { mine.forEach(p => { p.cond = 100; }); return 'Everyone at full condition.'; },
     happy: () => { mine.forEach(p => { p.mor = 85; }); return 'Squad morale set to 85.'; },
     sharp: () => { mine.forEach(p => { p.shp = 100; }); return 'Everyone fully sharp.'; },
-    youth: () => { for (let i = 0; i < 3; i++) genYouth(userClub(), 60 + G.board.facYouth * 1.6); return '3 U18 players added.'; },
+    youth: () => { let n = 0; for (let i = 0; i < 3; i++) if (genYouth(userClub(), 60 + G.board.facYouth * 1.6)) n++; return `${n} ${userClub().league === 'ECH' ? 'reserve' : 'U18'} players added${n < 3 ? ': squad limit reached' : ''}.`; },
     reveal: () => { Object.keys(G.players).forEach(id => { G.know[id] = 100; }); return 'Every player fully scouted.'; },
     fa: () => { for (let i = 0; i < 10; i++) { const p = genFreeAgent(); G.know[p.id] = 20; } return '10 free agents added.'; },
     healAll: () => { Object.values(G.players).forEach(p => { p.inj = null; }); return 'All injuries healed.'; },

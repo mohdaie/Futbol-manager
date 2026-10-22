@@ -8,12 +8,12 @@ const pitchPosLabel = pos => ({ AMR: 'RW', AML: 'LW', MR: 'RM', ML: 'LM', MC: 'C
 
 SCREENS.squad = {
   render() {
-    const f = UI.f.squad, s = UI.f.sort, l = UI.f.lvl || 'A';
+    const f = UI.f.squad, s = UI.f.sort, levels = clubLevels(userClub()), l = Object.hasOwn(levels, UI.f.lvl) ? UI.f.lvl : 'A';
     const list = levelSquad(G.club, l).filter(p => f === 'ALL' || POS_GROUP[p.pos] === f).sort(SORTS[s]);
     const xi = new Set(G.tactics.slots);
-    const note = { A: 'Picked for league matches. Reserves fill in only when fewer than 16 are fit.', R: 'Under-21 squad. Move a player up when he is ready for minutes.', Y: 'Academy players aged 15 to 18. At 19 they move up to the reserves.' }[l];
-    return `<h1 class="h1">Squad <small>${squadOf(G.club).length} players</small></h1>
-      <div class="seg wide">${Object.entries(LEVELS).map(([k, n]) => `<button class="${l === k ? 'on' : ''}" data-a="sqL" data-v="${k}">${n} <small>${levelSquad(G.club, k).length}</small></button>`).join('')}</div>
+    const note = { A: 'Picked for league matches. Reserves fill in only when fewer than 16 are fit.', R: userClub().league === 'ECH' ? 'Reserve squad within the combined 36-player limit. Move a player up when he is ready for minutes.' : 'Under-21 squad. Move a player up when he is ready for minutes.', Y: 'Academy players aged 15 to 18. At 19 they move up to the reserves.' }[l];
+    return `<h1 class="h1">Squad <small>${squadOf(G.club).length}${Number.isFinite(clubSquadMax(userClub())) ? ' / ' + clubSquadMax(userClub()) : ''} players</small></h1>
+      <div class="seg wide">${Object.entries(levels).map(([k, n]) => `<button class="${l === k ? 'on' : ''}" data-a="sqL" data-v="${k}">${n} <small>${levelSquad(G.club, k).length}</small></button>`).join('')}</div>
       <p class="muted">${note}</p>
       <div class="chips">${[['ALL', 'All'], ['GK', 'Keepers'], ['DEF', 'Defence'], ['MID', 'Midfield'], ['ATT', 'Attack']].map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="sqF" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="sortbar"><span class="muted">Sort</span>${[['pos', 'Position'], ['ovr', 'Rating'], ['age', 'Age'], ['cond', 'Condition'], ['mor', 'Morale'], ['val', 'Value']].map(([k, n]) => `<button class="${s === k ? 'on' : ''}" data-a="sqS" data-v="${k}">${n}</button>`).join('')}</div>
@@ -88,7 +88,7 @@ const PLAYER_ACTIONS = [
     items: p => TALKS.map(([k, n, d]) => ({ n, d, off: p.talked === G.week ? 'You already spoke to him this week' : '', run: () => ACT.talk1({ id: p.id, k }) })) },
   { k: 'squad', n: 'Squad', d: 'Squad level and squad status', mine: true,
     items: p => [
-      ...Object.keys(LEVELS).filter(k => k !== lvlOf(p)).map(k => ({ n: k === 'A' ? 'Promote to first team' : 'Move to ' + (k === 'Y' ? 'U18s' : 'reserves'), d: k === 'Y' && p.age > 18 ? '' : k === 'A' ? 'He can be picked for league matches' : 'He will not be picked for league matches', off: k === 'Y' && p.age > 18 ? 'Only players aged 18 or under' : '', run: () => ACT.setLvl({ id: p.id, v: k }) })),
+      ...Object.keys(clubLevels(userClub())).filter(k => k !== lvlOf(p)).map(k => ({ n: k === 'A' ? 'Promote to first team' : 'Move to ' + (k === 'Y' ? 'U18s' : 'reserves'), d: k === 'Y' && p.age > 18 ? '' : k === 'A' ? 'He can be picked for league matches' : 'He will not be picked for league matches', off: k === 'Y' && p.age > 18 ? 'Only players aged 18 or under' : '', run: () => ACT.setLvl({ id: p.id, v: k }) })),
       ...SQUAD_STATUSES.map(s => ({ n: 'Status: ' + s, d: 'Sets how much playing time he expects', on: p.status === s, run: () => { CHG.pStatus(s, { id: p.id }); actionsSheet(p.id, 'squad'); } })),
     ] },
   { k: 'training', n: 'Training', d: 'Individual training focus', mine: true,
@@ -106,7 +106,7 @@ const PLAYER_ACTIONS = [
     ] },
   { k: 'scouting', n: 'Scouting', d: 'Learn more about him', mine: false,
     items: p => {
-      const job = G.scout.jobs.find(j => j.pid === p.id), k = knowOf(p), wk = regionOf(p) === 'Premier Division' ? '£6k' : '£12k';
+      const job = G.scout.jobs.find(j => j.pid === p.id), k = knowOf(p), wk = ['Premier Division', 'Premier League', 'Championship'].includes(regionOf(p)) ? '£6k' : '£12k';
       return [
         { n: 'Scouting file', d: `${k}% · ${knowStage(k)[1]}`, run: () => ACT.scoutFile({ id: p.id }) },
         { n: 'Send a scout to watch him', d: `Three weeks, ${wk} a week. Every match he watches adds to the file`, off: job ? 'A scout is already on him' : k >= 100 ? 'His file is complete' : '', run: () => ACT.scoutOne({ id: p.id }) },
@@ -144,6 +144,7 @@ ACT.scoutOne = ds => { const p = G.players[+ds.id], r = scoutPlayer(p, ds.mode |
 ACT.listToggle = ds => { const p = G.players[+ds.id]; p.listed = !p.listed; if (p.listed) p.mor = clamp(p.mor - 6, 0, 100); toast(p.listed ? 'Transfer listed. Clubs will be told he is available.' : 'Removed from the transfer list.'); playerSheet(p.id); };
 ACT.setLvl = ds => {
   const p = G.players[+ds.id], to = ds.v, from = lvlOf(p);
+  if (!Object.hasOwn(clubLevels(userClub()), to)) return toast('This club has first team and reserves only.');
   if (to === 'A' && levelSquad(G.club, 'A').length >= 30) return toast('The first team already has 30 players. Move someone down first.');
   p.lvl = to; p.youth = false;
   if (to === 'A') { p.status = 'Prospect'; p.wage = Math.max(p.wage, 1500); addNews('club', `${fullName(p)} promoted`, `${fullName(p)} moves up from the ${LEVELS[from].toLowerCase()} to the first-team squad.`); }
@@ -352,6 +353,7 @@ SCREENS.medical = {
 
 SCREENS.youth = {
   render() {
+    if (userClub().league === 'ECH') return `<h1 class="h1">Reserve development</h1><p class="muted">Championship clubs have first team and reserves only, with a combined maximum of 36 players. New prospects join the reserves when there is space.</p><div class="list">${levelSquad(G.club, 'R').map(p => playerRow(p)).join('')}</div>`;
     const y = levelSquad(G.club, 'Y').sort((a, b) => b.pa - a.pa);
     const d = new Date(G.season + 1, 2, 15);
     return `<h1 class="h1">Youth academy</h1>

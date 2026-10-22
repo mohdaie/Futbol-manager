@@ -92,31 +92,34 @@ ACT.titleSpeed = ds => {
 };
 
 /* ---------- start ---------- */
-const START = { club: 'GUN', name: '', avatar: 1 };
+const START = { club: 'GUN', league: 'EPL', name: '', avatar: 1 };
 function startBadge(c, size) {
   return clubBadge(c, size);
 }
 SCREENS.start = {
   full: true,
   render() {
-    const order = CLUBS.slice().sort((a, b) => b.rep - a.rep);
+    const catalog = START.league === 'ECH' ? CHAMPIONSHIP_CLUBS : CLUBS;
+    const order = catalog.slice().sort((a, b) => b.rep - a.rep);
     const exp = i => (i < 2 ? 'Title favourites' : i < 5 ? 'Top four' : i < 8 ? 'Push for Europe' : i < 12 ? 'Top half' : i < 16 ? 'Mid-table' : 'Survival');
     const diff = i => (i < 5 ? 1 : i < 10 ? 2 : i < 15 ? 3 : 4);
-    const sel = CLUBS.find(c => c.id === START.club);
+    const sel = catalog.find(c => c.id === START.club) || order[0];
     return `<div class="start">
       <button class="link back" data-a="back">‹ Back</button>
-      <header class="st-hero"><div class="eyebrow">${seasonLabelRaw(START_SEASON)} · ${LEAGUE_NAME}</div><h1 class="logo">Futbol<br>Manager</h1><p>Pick a club, build a squad, win the league.</p></header>
+      <header class="st-hero"><div class="eyebrow">${seasonLabelRaw(START_SEASON)} · ${leagueName(START.league)}</div><h1 class="logo">Futbol<br>Manager</h1><p>Pick a club, build a squad, win the league.</p></header>
       ${hasSave() ? '<button class="btn pri wide" data-a="resume">Continue your career</button>' : ''}
       <div class="field"><label for="mgr">Manager name</label><input id="mgr" type="text" maxlength="28" placeholder="Your name" value="${esc(START.name)}" data-c="mgr"></div>
       <h2 class="lbl">Choose your manager</h2>
       ${avatarPicker(START.avatar, 'pickAvatar')}
+      <h2 class="lbl">Choose your league</h2><div class="seg">${Object.values(LEAGUES).map(r => `<button class="${START.league === r.id ? 'on' : ''}" data-a="pickLeague" data-id="${r.id}">${r.name}</button>`).join('')}</div><p class="muted">${START.league === 'ECH' ? '24 clubs · 46 league games · First team and reserves · 36 players maximum' : '20 clubs · 38 league games · First team, reserves and U18s'}</p>
       <h2 class="lbl">Choose your club</h2>
-      <div class="clubs">${order.map((c, i) => `<button class="club ${START.club === c.id ? 'on' : ''}" data-a="pickClub" data-id="${c.id}" style="--k1:${c.c1}">${startBadge(c, 28)}<span class="grow"><b>${c.name}</b><small>${c.city} · ${exp(i)}</small></span><span class="diff d${diff(i)}" title="Difficulty">${['', 'Easy', 'Normal', 'Hard', 'Very hard'][diff(i)]}</span></button>`).join('')}</div>
-      <div class="st-go"><button class="btn pri wide big" data-a="startGame">Take charge of the ${sel.name}</button></div>
+      <div class="clubs">${order.map((c, i) => `<button class="club ${START.club === c.id ? 'on' : ''}" data-a="pickClub" data-id="${c.id}" style="--k1:${c.c1}">${startBadge(c, 28)}<span class="grow"><b>${c.name}</b><small>${esc(c.realName || c.city)} · ${START.league === 'ECH' ? (i < 4 ? 'Promotion contenders' : i < 10 ? 'Playoff contenders' : i < 18 ? 'Mid-table' : 'Survival') : exp(i)}</small></span><span class="diff d${diff(i)}" title="Difficulty">${['', 'Easy', 'Normal', 'Hard', 'Very hard'][diff(i)]}</span></button>`).join('')}</div>
+      <div class="st-go"><p class="muted">${START.league === 'EPL' ? 'First-team identities: October 2026 roster snapshot.' : ['CLA','HAM','OLD'].includes(sel.id) ? 'Existing real-player-inspired first team.' : 'First-team identities: September 2025 roster fallback; missing players generated.'} Fictional names; original game ratings. Reserve prospects are generated.</p><button class="btn pri wide big" data-a="startGame">Take charge of the ${sel.name}</button></div>
     </div>`;
   },
 };
 const seasonLabelRaw = s => s + '/' + String(s + 1).slice(2);
+ACT.pickLeague = ds => { if (!LEAGUES[ds.id]) return; START.league = ds.id; START.club = (ds.id === 'ECH' ? CHAMPIONSHIP_CLUBS : CLUBS)[0].id; render(); };
 ACT.pickClub = ds => { START.club = ds.id; render(); };
 ACT.pickAvatar = ds => { START.avatar = +ds.v; render(); };
 CHG.mgr = v => { START.name = v.trim(); };
@@ -140,7 +143,7 @@ function conditionsCard(fx) {
   const notes = [W.d];
   if ((fx.t || '15:00') < '13:00') notes.push(KICKOFF_NOTES.early);
   if ((fx.t || '15:00') >= '19:00') notes.push(KICKOFF_NOTES.evening);
-  if (fx.tv) notes.push('Televised: both clubs earn ' + money(TV_FEE) + ' extra.');
+  if (fx.tv && !fx.fr) notes.push('Televised: both clubs earn ' + money((fx.comp || leagueOf(fx.h)) === 'ECH' ? 50000 : TV_FEE) + ' extra.');
   return `<div class="card"><h3>Conditions</h3>
     <div class="kv"><div><small>Kick-off</small><b>${fxWhen(fx)}</b></div><div><small>Weather</small><b>${wxLabel(fx.wx)}</b></div>
       <div><small>Your rest</small><b class="${us != null && us <= 3 ? 'warn' : ''}">${restTxt(us)}</b></div><div><small>Their rest</small><b class="${them != null && them <= 3 ? 'warn' : ''}">${restTxt(them)}</b></div></div>
@@ -386,10 +389,10 @@ SCREENS.post = {
       const pst = id => { const r = PS && PS.get(id); return r ? `<small>${r[2] ? Math.round(r[1] / r[2] * 100) + '% of ' + r[2] + ' passes' : 'no passes'}${r[3] ? ' · ' + r[3] + ' key' : ''}${r[4] ? ' · ' + r[4] + ' dribbles' : ''}${r[5] + r[6] ? ' · ' + (r[5] + r[6]) + ' tackles/int' : ''}${r[7] ? ' · ' + r[7] + ' aerials' : ''}${r[8] ? ' · ' + r[9] + '/' + r[8] + ' shots on target' : ''}</small>` : ''; };
       rats = `<div class="sec-h"><h2>Player ratings</h2></div><div class="seg">${[fx.h, fx.a].map((cid, i) => `<button class="${us === i ? 'on' : ''}" data-a="reportSide" data-fid="${fx.id}" data-side="${i}">${esc(clubName(cid))}</button>`).join('')}</div><div class="list">${fx.ratings[us].filter(([id]) => G.players[id]).sort((x, y) => y[1] - x[1]).map(([id, r]) => `<button class="row act" data-a="player" data-id="${id}"><span class="pos">${G.players[id].pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}${fx.motm === id ? ' <em class="tag good">Player of the match</em>' : ''}</b>${pst(id)}</span><span class="rt ${r >= 7.5 ? 'good' : r < 6 ? 'bad' : ''}">${r.toFixed(1)}</span></button>`).join('')}</div>`;
     }
-    const others = G.fixtures.filter(f => f.r === fx.r && f.id !== fx.id).sort(fxSort);
+    const others = G.fixtures.filter(f => f.r === fx.r && f.id !== fx.id && leagueFixture(f, fx.comp || leagueOf(fx.h))).sort(fxSort);
     return `<section class="hero rep" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
         <div class="eyebrow">Full time · ${fxWhen(fx)}${fx.wx ? ' · ' + wxLabel(fx.wx) : ''}${fx.att ? ' · Att ' + fx.att.toLocaleString('en-GB') : ''}</div>
-        <div class="vs">${badge(fx.h, 42)}<div class="vs-mid score"><b>${fx.hg} - ${fx.ag}</b></div>${badge(fx.a, 42)}</div>
+        <div class="vs">${badge(fx.h, 42)}<div class="vs-mid score"><b>${fx.hg} - ${fx.ag}</b>${fx.penalties ? `<small>${fx.penalties[0]}–${fx.penalties[1]} on penalties</small>` : fx.extra ? '<small>After extra time</small>' : ''}</div>${badge(fx.a, 42)}</div>
         <div class="vs-names"><span>${esc(clubName(fx.h))}</span><span>${esc(clubName(fx.a))}</span></div>
         <div class="scorers"><span>${sc(0)}</span><span>${sc(1)}</span></div></section>
       ${stats}${(() => { const a = (G.analysis || []).find(x => x.fid === fx.id); return a ? `<div class="card"><h3>Analyst's view <small>${a.r}/20</small></h3><ul class="notes">${a.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>${a.patterns.length ? `<p class="note">Keeps happening: ${a.patterns.map(x => { const [t, n] = x.split(':'); return `${PATTERN_TEXT[t] || t} (${n} recent matches)`; }).join('; ')}.</p>` : ''}${a.suggest ? `<p class="muted">Suggestion: ${esc(a.suggest.text)}</p>` : ''}</div>` : ''; })()}${rats}
@@ -409,7 +412,7 @@ SCREENS.review = {
     if (!r) return '<button class="btn" data-a="go" data-s="home">Continue</button>';
     const aw = (t, a, unit) => (a ? `<div class="row"><span class="grow"><b>${t}</b><small>${esc(a.name)} · ${esc(clubName(a.club))}</small></span><span class="stat"><b>${unit === 'g' ? a.v : a.r}</b><small>${unit === 'g' ? 'goals' : 'avg'}</small></span></div>` : '');
     return `<div class="start review">
-      <header class="st-hero">${avatarImg(G.avatar, 'av-hero')}<div class="eyebrow">Season review · ${r.season}</div><h1 class="logo">${ordinal(r.pos)}<br><small>${r.pts} points</small></h1><p>${esc(r.verdict)}</p></header>
+      <header class="st-hero">${avatarImg(G.avatar, 'av-hero')}<div class="eyebrow">Season review · ${r.season}</div><h1 class="logo">${ordinal(r.pos)}<br><small>${r.pts} points</small></h1><p>${esc(r.verdict)}</p>${r.divisionChanges ? `<p>${r.divisionChanges.promoted.includes(G.club) ? 'Promoted to the Premier League.' : r.divisionChanges.relegated.includes(G.club) ? 'Relegated to the Championship: first team and reserves are limited to 36 players.' : ''}</p>${r.divisionChanges.released.length ? `<p>Released to meet the 36-player limit: ${esc(r.divisionChanges.released.join(', '))}.</p>` : ''}` : ''}</header>
       <div class="card"><div class="kvrow"><span>Champions</span><b>${esc(clubName(r.champ))}</b></div><div class="kvrow"><span>Objective</span><b>${esc(r.target)}</b></div><div class="kvrow"><span>Prize money</span><b>${money(r.ledger.prize)}</b></div></div>
       <div class="list">${aw('Golden Boot', r.boot, 'g')}${aw('Player of the Season', r.best, 'r')}${aw('Young Player of the Season', r.young, 'r')}</div>
       <p class="muted">Contracts that ran out have ended, older players may have retired, and every player is a year older.</p>

@@ -39,6 +39,7 @@ function wageDemand(p, renew) {
 }
 
 function makeBid(pid, fee) {
+  if (!squadSpace(userClub())) return { r: 'reject', msg: squadLimitMessage(userClub()) };
   const p = G.players[pid];
   const c = G.clubs[p.club];
   if (!c.fa && !inWindow()) return { r: 'reject', msg: 'The transfer window is closed. You can still sign free agents.' };
@@ -54,6 +55,7 @@ function makeBid(pid, fee) {
 
 // Personal terms. Returns {ok, msg}. mode: 'buy' | 'renew'
 function offerContract(pid, wage, years, status, fee, mode) {
+  if (mode !== 'renew' && !squadSpace(userClub())) return { ok: false, msg: squadLimitMessage(userClub()) };
   const p = G.players[pid];
   const demand = wageDemand(p, mode === 'renew');
   const bill = clubWageBill(userClub()) - (mode === 'renew' ? p.wage : 0) + wage;
@@ -77,15 +79,18 @@ function offerContract(pid, wage, years, status, fee, mode) {
 
 // Signed players join the first team unless they are still U18 age.
 function moveClub(p, toId) {
+  const destination = G.clubs[toId];
+  if (!squadSpace(destination, p)) throw new Error(squadLimitMessage(destination));
   const from = p.club;
   delete p.unset; p.treq = null; p.listed = false;
   removeFromClub(p);
   favPersonMoved(p, from, toId);
-  p.lvl = p.age <= 17 ? 'Y' : 'A';
+  p.lvl = p.age <= 17 ? (destination.league === 'ECH' ? 'R' : 'Y') : 'A';
   addToClub(p, G.clubs[toId]);
 }
 
 function completeSigning(p, fee, wage, years, status) {
+  if (!squadSpace(userClub(), p)) throw new Error(squadLimitMessage(userClub()));
   const me = userClub(), from = G.clubs[p.club];
   const fromName = from.fa ? 'free agency' : 'the ' + from.name;
   if (!from.fa) from.bal += fee;
@@ -100,6 +105,7 @@ function completeSigning(p, fee, wage, years, status) {
 }
 
 function sellPlayer(p, toId, fee) {
+  if (!squadSpace(G.clubs[toId], p)) return false;
   const me = userClub(), to = G.clubs[toId];
   me.bal += fee; G.fin.tb += roundMoney(fee * 0.5); G.ledger.sales += fee;
   to.bal -= fee;
@@ -123,6 +129,7 @@ function respondBid(n, choice) {
   const a = n.action, p = G.players[a.pid];
   n.done = true;
   if (!p || p.club !== G.club) return 'The player is no longer at the club.';
+  if (choice !== 'reject' && !squadSpace(G.clubs[a.from])) return squadLimitMessage(G.clubs[a.from]);
   if (choice === 'accept') { sellPlayer(p, a.from, a.fee); return `${fullName(p)} sold for ${money(a.fee)}.`; }
   if (choice === 'counter') {
     const want = roundMoney(a.fee * 1.2);
@@ -140,13 +147,14 @@ function weeklyTransfers() {
     agentPitch();
   }
   // keep computer squads at a playable size
-  plClubs().forEach(id => {
+  domesticClubs().forEach(id => {
     if (id === G.club) return;
     const c = G.clubs[id];
     while (seniorSquad(id).length < 22) {
       const res = levelSquad(id, 'R').sort((a, b) => b.ca - a.ca)[0];
       if (res && res.ca >= 58) { res.lvl = 'A'; res.wage = Math.max(res.wage, wageFor(res, c.rep) * 0.7); continue; }
       const fa = squadOf('FA').filter(p => p.ca >= 55).sort((a, b) => b.ca - a.ca)[0];
+      if (!squadSpace(c)) break;
       if (fa) { moveClub(fa, id); fa.wage = wageFor(fa, c.rep); fa.con = G.season + ri(1, 3); }
       else { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (c.rep - 50) * 0.6 - 6, age: ri(20, 29), nat: pickNat(PL_NATS), club: id }); addToClub(p, c); G.know[p.id] = 40; }
     }
@@ -155,7 +163,7 @@ function weeklyTransfers() {
 }
 
 function aiMarket() {
-  const buyers = plClubs().filter(id => id !== G.club);
+  const buyers = domesticClubs().filter(id => id !== G.club && squadSpace(G.clubs[id]));
   const n = ri(0, 2);
   for (let k = 0; k < n; k++) {
     const c = G.clubs[pick(buyers)];
@@ -182,7 +190,7 @@ function aiBidsForUser() {
     if (R() > chance) return;
     if (activeDeal(p.id, 'out')) return;
     const val = pValue(p);
-    const buyers = Object.values(G.clubs).filter(c => c.id !== G.club && !c.fa && c.rep >= p.ca - 12 && c.bal > val * 0.8);
+    const buyers = Object.values(G.clubs).filter(c => c.id !== G.club && !c.fa && squadSpace(c) && c.rep >= p.ca - 12 && c.bal > val * 0.8);
     if (!buyers.length) return;
     const b = pick(buyers);
     const fee = roundMoney(val * (p.listed ? rf(0.7, 1.05) : rf(0.95, 1.3)));

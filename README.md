@@ -17,7 +17,7 @@ Unwatched computer fixtures use an event-based engine. Your watched matches and 
 
 ## What's in it
 
-- The 20 top-flight clubs under their nicknames (Gunners, Reds, Citizens and so on). Every club has a first team, reserves and U18s (about 1,300 players). First teams, and some youth squads, are based on the real 2026/27 squads, renamed with different names that sound similar (same age, nationality and position). The rest of the youth squads are generated.
+- The 2026/27 Premier League (20 clubs) and Championship (24), selectable for new careers. Championship clubs have first team and reserves only, with a combined 36-player limit. Premier League clubs retain reserves and U18s. First-team names are fictional, with real inspirational figures where sourced; prospects and roster gaps are generated. The Championship identity fallback is dated September 2025. See [COMPETITIONS.md](COMPETITIONS.md) for source dates, promotion/playoffs, squad policy and pending official regulations.
 - Squad, tactics with separate in-possession and out-of-possession shapes, roles and instructions.
 - Transfers with scouting fog of war, player search, agent pitches, bids and contract talks.
 - Training, medical centre, youth academy, finances, staff, board and fans, news and inbox.

@@ -59,7 +59,7 @@ const server = require('node:http').createServer((req, res) => {
     await page.waitForFunction(() => !!G);
     check('Refresh restores opposition club and squad level', await page.evaluate(() => [UI.s, UI.p.cid, UI.p.level]), ['clubview', info.cid, 'Y']);
     await act('go', { s: 'clubs' });
-    check('Directory includes all 33 clubs and free agents', await page.locator('.main .row[data-a="clubPage"]').count(), 34);
+    check('Directory includes every world club and free agents', await page.locator('.main .row[data-a="clubPage"]').count(), await page.evaluate(() => Object.keys(G.clubs).length));
     await act('clubPage', { id: 'F0' });
     check('Overseas dashboard explains unsimulated results', await page.getByText(/Overseas league results are not simulated/).count(), 1);
     await act('clubPage', { id: 'F0', section: 'squad' });

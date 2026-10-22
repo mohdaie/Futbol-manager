@@ -12,7 +12,7 @@
      notes and a history, kept in folders. */
 
 const knowOf = p => (p.club === G.club ? 100 : G.know[p.id] ?? 10);
-const regionOf = p => { const c = G.clubs[p.club]; if (!c) return 'Free agents'; if (c.pl) return 'Premier Division'; if (c.fa) return 'Free agents'; return NATIONS[c.nat].r; };
+const regionOf = p => { const c = G.clubs[p.club]; if (!c) return 'Free agents'; if (c.pl) return G.flags.legacyLeagueSetup && leagueOf(c.id) === 'EPL' ? 'Premier Division' : leagueName(leagueOf(c.id)); if (c.fa) return 'Free agents'; return NATIONS[c.nat].r; };
 const KNOW_STAGES = [[0, 'Heard of'], [25, 'Watched'], [50, 'Scouted'], [75, 'Detailed'], [90, 'Full file']];
 const knowStage = k => KNOW_STAGES.filter(s => k >= s[0]).pop();
 const nextStage = k => KNOW_STAGES.find(s => s[0] > k);
@@ -87,7 +87,7 @@ function pickScout(p) {
   return free.sort((a, b) => (b.rating + (scoutRegion(b) === regionOf(p) ? 4 : 0)) - (a.rating + (scoutRegion(a) === regionOf(p) ? 4 : 0)))[0] || null;
 }
 const scoutById = id => G.staff.find(s => s.id === id) || null;
-const jobWeekly = j => (j.mode === 'video' ? 0 : regionOf(G.players[j.pid] || {}) === 'Premier Division' ? 6000 : 12000);
+const jobWeekly = j => (j.mode === 'video' ? 0 : ['Premier Division', 'Premier League', 'Championship'].includes(regionOf(G.players[j.pid] || {})) ? 6000 : 12000);
 const scoutCost = () => G.scout.assign.length * 15000 + G.scout.jobs.reduce((t, j) => t + jobWeekly(j), 0);
 
 /* ---------- files ---------- */
@@ -117,7 +117,7 @@ function trimReports() {
 }
 // Knowledge from one match watched: the scout's rating, his region, and whether the player played.
 function watchGain(s, p, played) {
-  const reg = scoutRegion(s) === regionOf(p) ? 1.25 : regionOf(p) === 'Premier Division' || regionOf(p) === 'Free agents' ? 1 : 0.85;
+  const reg = scoutRegion(s) === regionOf(p) ? 1.25 : ['Premier Division', 'Premier League', 'Championship'].includes(regionOf(p)) || regionOf(p) === 'Free agents' ? 1 : 0.85;
   return (12 + (s ? s.rating : 8) * 0.9) * reg * (played ? 1 : 0.35);
 }
 function logWatch(j, p, entry) {

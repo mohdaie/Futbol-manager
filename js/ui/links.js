@@ -121,8 +121,8 @@ function clubFixtures(cid) {
 }
 function fixtureLinks(f, cid) {
   const home = f.h === cid, opp = home ? f.a : f.h;
-  const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg, result = played(f) ? 'r' + (us > them ? 'W' : us < them ? 'L' : 'D') : '';
-  return `<div class="row"><span class="rd">${f.r + 1}</span><span class="grow"><b>${clubLink(opp, badge(opp, 20) + ' ' + esc(clubName(opp)))}</b><small>${home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}</small></span><button class="res ${result}" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '–' + f.ag : 'Preview'}</button></div>`;
+  const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg, result = played(f) ? 'r' + (f.winner ? f.winner === cid ? 'W' : 'L' : us > them ? 'W' : us < them ? 'L' : 'D') : '';
+  return `<div class="row"><span class="rd">${f.playoff ? 'PO' : f.fr ? 'FR' : f.r + 1}</span><span class="grow"><b>${clubLink(opp, badge(opp, 20) + ' ' + esc(clubName(opp)))}</b><small>${f.neutral ? 'Neutral' : home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}${f.penalties ? ' · Pens ' + f.penalties.join('–') : ''}</small></span><button class="res ${result}" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '–' + f.ag : 'Preview'}</button></div>`;
 }
 ACT.fixturePage = ds => {
   const f = G.fixtures.find(f => f.id === +ds.id); if (!f) return toast('Fixture unavailable.');
@@ -132,7 +132,7 @@ ACT.fixturePage = ds => {
 
 SCREENS.clubs = {
   render() {
-    return `<h1 class="h1">Club directory</h1><p class="muted">Browse league clubs, overseas teams and free agents.</p><div class="list">${Object.values(G.clubs).map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.fa ? 'Unattached players' : c.pl ? LEAGUE_NAME : natName(c.nat)} · ${c.squad.length} players</small></span><span class="chev">›</span></button>`).join('')}</div>`;
+    return `<h1 class="h1">Club directory</h1><p class="muted">Browse league clubs, overseas teams and free agents.</p><div class="list">${Object.values(G.clubs).map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.fa ? 'Unattached players' : c.pl ? leagueName(leagueOf(c.id)) : natName(c.nat)} · ${c.squad.length} players</small></span><span class="chev">›</span></button>`).join('')}</div>`;
   },
 };
 SCREENS.clubview = {
@@ -143,7 +143,7 @@ SCREENS.clubview = {
     const tab = (s, label) => `<button class="chip ${section === s ? 'on' : ''}" data-a="clubPage" data-id="${c.id}" data-section="${s}">${label}</button>`;
     const heading = `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 50)}<div><h1 class="h1" data-no-links>${esc(c.name)}</h1><p class="muted">${c.fa ? 'Unattached players' : esc(c.city || natName(c.nat)) + ' · Manager ' + esc(c.mgr || 'Not recorded')}</p></div></section><div class="chips">${tab('overview', 'Dashboard')}${tab('squad', 'Squad')}${tab('fixtures', 'Fixtures')}${tab('transfers', 'Transfers')}</div>`;
     if (section === 'squad') {
-      const levels = c.fa || c.foreign ? '' : `<div class="seg">${Object.entries(LEVELS).map(([l, n]) => `<button class="${level === l ? 'on' : ''}" data-a="clubLevel" data-id="${c.id}" data-level="${l}">${n}</button>`).join('')}</div>`;
+      const levels = c.fa || c.foreign ? '' : `<div class="seg">${Object.entries(clubLevels(c)).map(([l, n]) => `<button class="${level === l ? 'on' : ''}" data-a="clubLevel" data-id="${c.id}" data-level="${l}">${n}</button>`).join('')}</div>`;
       const players = squadOf(c.id).filter(x => c.fa || c.foreign || lvlOf(x) === level).sort(SORTS.pos);
       return heading + levels + `<p class="muted">${players.length} players · tap a player to view his profile</p><div class="list">${players.map(x => playerRow(x)).join('') || empty('No players', 'There are no players in this squad.')}</div>`;
     }
@@ -152,7 +152,7 @@ SCREENS.clubview = {
       const deals = G.tHist.filter(t => t.to === c.id || t.from === c.id);
       return heading + `<h2 class="h2">Transfer activity</h2><div class="list">${deals.map(t => `<div class="row"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><b>${t.fee ? money(t.fee) : 'Free'}</b></div>`).join('') || empty('No transfers yet', 'Completed deals involving this club appear here.')}</div>`;
     }
-    const tbl = leagueTable(), row = tbl.find(r => r.id === c.id), T = c.id === G.club ? G.tactics : c.tac;
+    const tbl = leagueTable(leagueOf(c.id)), row = tbl.find(r => r.id === c.id), T = c.id === G.club ? G.tactics : c.tac;
     const recent = G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && played(f)).sort(fxSort).slice(-5).reverse();
     const upcoming = G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && !played(f)).sort(fxSort).slice(0, 3);
     const leaders = seniorSquad(c.id).filter(x => x.st.a).sort((a, b) => b.st.g - a.st.g || avgRating(b) - avgRating(a)).slice(0, 3);

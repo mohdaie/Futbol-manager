@@ -323,7 +323,7 @@ function endMinute(L) {
   if (inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[inj.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
   const red = q.ev.concat(main ? [main] : []).find(e => e.t === 'red' && M.sides[e.off].user);
   if (red && !inj) { L.paused = true; L.gapSlot = red.slot; updateBoard(L); toast(`${pname(G.players[red.pid])} is sent off. Move a player into the gap.`); openLiveSheet('gap'); }
-  if (main && main.ht) { L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
+  if (main && (main.ht || main.etBreak)) { L.overlay = { big: main.etBreak ? 'EXTRA TIME' : 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
 }
 // Injury events from the engine have no time in the minute: shown at once.
 
@@ -503,7 +503,7 @@ function updateBoard(L) {
   const M = L.M, [H, W] = M.sides;
   el('sbScore').textContent = L.disp[0] + ' - ' + L.disp[1];
   const mn = L.mq ? L.mq.min : M.min;
-  el('sbClock').textContent = L.done ? 'FT' : (mn > 90 ? '90+' + (mn - 90) : String(mn)) + "'";
+  el('sbClock').textContent = L.done ? 'FT' : (L.M.extra && mn > 90 ? String(mn) + ' ET' : mn > 90 ? '90+' + (mn - 90) : String(mn)) + "'";
   const tot = H.st.pos + W.st.pos || 1;
   el('sbPoss').style.width = Math.round((H.st.pos / tot) * 100) + '%';
   el('sbPossTxt').textContent = Math.round((H.st.pos / tot) * 100) + '% possession ' + Math.round((W.st.pos / tot) * 100) + '%';
@@ -625,9 +625,9 @@ function openTeamTalk(L) {
   const acc = staffAvg('Assistant', 8);
   const scored = TEAM_TALKS.map(t => [t.k, talkEffect(t.k === 'hair' ? 'enc' : t.k, diff) + (R() * 20 > acc ? ri(-3, 3) : 0)]);
   const tip = scored.sort((a, b) => b[1] - a[1])[0][0];
-  sheet(`<h3 class="sh-t">Half-time team talk</h3>
+  sheet(`<h3 class="sh-t">${L.M.extra ? 'Extra-time interval' : 'Half-time team talk'}</h3>
     <p class="muted">${clubName(S.cid)} ${S.st.g} - ${O.st.g} ${clubName(O.cid)}. Assistant suggests: <b>${TEAM_TALKS.find(t => t.k === tip).n}</b>.</p>
-    <div class="list">${TEAM_TALKS.map(t => `<button class="row act" data-a="talk" data-k="${t.k}"><span class="grow"><b>${t.n}</b><small>${t.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`, { key: 'live:halftime', restore: () => openTeamTalk(L), valid: () => LIVE === L && !L.done && L.M.min === 45 && !!L.overlay?.stay, onClose: () => { if (LIVE && LIVE.overlay && LIVE.overlay.stay) { LIVE.overlay = null; LIVE.paused = false; updateBoard(LIVE); } } });
+    <div class="list">${TEAM_TALKS.map(t => `<button class="row act" data-a="talk" data-k="${t.k}"><span class="grow"><b>${t.n}</b><small>${t.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`, { key: 'live:halftime', restore: () => openTeamTalk(L), valid: () => LIVE === L && !L.done && subInterval(L.M) && !!L.overlay?.stay, onClose: () => { if (LIVE && LIVE.overlay && LIVE.overlay.stay) { LIVE.overlay = null; LIVE.paused = false; updateBoard(LIVE); } } });
 }
 
 function applyTalk(k) {
@@ -801,7 +801,7 @@ function openLiveSheet(kind) {
     const ip = FORMATIONS[S.ip];
     const on = S.on.map((id, i) => (id ? `<button class="row act ${L.subSel === id ? 'sel' : ''}" data-a="subOut" data-id="${id}"><span class="pos">${ip[i][0]}</span><span class="grow">${esc(pname(G.players[id]))}${S.injuries.some(x => x[0] === id) ? ' <em class="tag bad">INJ</em>' : ''}<small>Rating ${S.rat[id].toFixed(1)}</small></span>${condBar(S.cond[id])}</button>` : '')).join('');
     const bench = S.bench.map(id => { const p = G.players[id]; return `<button class="row act" data-a="subIn" data-id="${id}" ${L.subSel && canSub(M, S) ? '' : 'disabled'}><span class="pos">${p.pos}</span><span class="grow">${esc(pname(p))}<small>OVR ${p.ca}</small></span>${condBar(S.cond[id] ?? p.cond)}</button>`; }).join('');
-    sheet(`<h3 class="sh-t">Substitutions <small>${5 - S.subs} left · ${Math.max(0, 3 - S.wins)} windows</small></h3>
+    sheet(`<h3 class="sh-t">Substitutions <small>${(M.extra ? 6 : 5) - S.subs} left · ${Math.max(0, (M.extra ? 4 : 3) - S.wins)} windows</small></h3>
       ${liveGapAccess(S)}
       <p class="muted">${L.subSel ? 'Now pick a replacement from the bench.' : 'Pick a player to take off.'}</p>
       <h4 class="lbl">On the pitch</h4><div class="list">${on}</div>

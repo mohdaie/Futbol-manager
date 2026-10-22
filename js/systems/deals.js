@@ -265,6 +265,7 @@ const DEAL_STEP = {
     terms(d, p) {
       if (hash01(d.id + 'b') < 0.1) return closeDeal(d, false, 'The player turned the move down.', false);
       const c = G.clubs[d.to], from = G.clubs[p.club], fee = from.fa ? 0 : d.fee;
+      if (!squadSpace(c, p)) return closeDeal(d, false, squadLimitMessage(c), false);
       if (!from.fa) from.bal += fee;
       c.bal -= fee;
       moveClub(p, c.id);
@@ -320,6 +321,7 @@ function dealWalk(d) {
 }
 
 function completeIn(d) {
+  if (!squadSpace(userClub())) return squadLimitMessage(userClub());
   const p = G.players[d.pid], me = userClub(), cost = (d.fee || 0) + (d.agentFee || 0) + (d.bonus || 0);
   if (cost > G.fin.tb + 1 && d.fee) return 'Your transfer budget no longer covers the deal. Free funds in Finance or pull out.';
   if (clubWageBill(me) + d.wage > G.fin.wb) return 'The wage budget no longer covers his wage. Raise it in Finance or pull out.';
@@ -342,6 +344,7 @@ function completeIn(d) {
   return `${fullName(p)} signs for the ${me.name}.`;
 }
 function completeOut(d) {
+  if (!squadSpace(G.clubs[d.to])) return squadLimitMessage(G.clubs[d.to]);
   const p = G.players[d.pid];
   saleMood(p, d.to);
   sellPlayer(p, d.to, d.fee);
@@ -384,7 +387,7 @@ function payInstalments() {
 /* ---------- computer clubs and bids for your players ---------- */
 // A computer club starts a deal instead of signing at once.
 function aiDeal(c, p, fee) {
-  if (activeDeal(p.id, 'ai')) return;
+  if (!squadSpace(c, p) || activeDeal(p.id, 'ai')) return;
   const d = { id: G.nextId++, dir: 'ai', pid: p.id, from: p.club, to: c.id, stage: 'talks', next: wait(2, 6), fee, log: [], created: today().getTime(), round: 0, opened: true };
   G.deals.unshift(d);
   dealLog(d, `The ${c.name} open talks for ${fullName(p)}.`, 'club');

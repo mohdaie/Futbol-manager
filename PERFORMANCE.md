@@ -86,3 +86,27 @@ An upcoming overseas friendly has no opponent row in the domestic league table. 
 After closing the automatic dismissal popup, managers can reopen Reorganize positions from both in-match Tactics and Substitutions. Empty positions are selectable in First XI and Formation; swap mode can move a remaining player into an empty position in either selection order. With multiple dismissals, the manager can choose which gap to cover. Moving a player leaves another gap and consumes no substitution or window. A substitute must replace an on-pitch player and cannot directly fill the dismissed player's vacant slot.
 
 The red-card browser regression suite dismisses the initial popup, uses the normal controls to reorganize, covers multiple dismissals and an emergency keeper, makes a normal substitution, and reloads the saved match. Engine checks verify player-count conservation, ball ownership, exhausted substitution limits, invalid target rejection and rejection of direct replacements for sent-off players.
+
+
+## Release 2026.10.22.44: two English divisions
+
+The new world has 2,556 players and 932 regular-season fixtures. Championship squads stay at a combined maximum of 36 across first team and reserves, without U18 squads. The new identity data is static; match workers still receive only the two participating squads. World initialization shares nationality/club indexes for favourite-person links instead of rebuilding a full player list for each player.
+
+A single paired headless Chromium run at 390 × 844, with **6× CPU throttling**, produced these measurements. They are development-machine observations, not physical-phone guarantees or statistically controlled performance improvements:
+
+| Measurement | Release 43 world | Two-league world |
+| --- | ---: | ---: |
+| Players | 1,738 | 2,556 |
+| Serialized save after 32 fixtures | 1.24 MB | 1.99 MB |
+| New-career click to dashboard | 2.27 s | 1.87 s |
+| Median squad render, 3 samples | 69 ms | 74 ms |
+| Median tactics render, 3 samples | 140 ms | 100 ms |
+| Median fixtures render, 3 samples | 91 ms | 108 ms |
+| Median league-table render, 3 samples | 84 ms | 93 ms |
+| Median dashboard render, 3 samples | 87 ms | 90 ms |
+| Explicit save snapshot clone | 90 ms | 157 ms |
+| 32 background fixtures | 1.84 s | 1.95 s |
+
+Both runs completed without browser errors. The larger career increases main-thread snapshot copying cost; IndexedDB does not remove structured-clone cost. An unthrottled background-suite run processed 32 fixtures in 533 ms and confirmed continued rendering during a detailed instant match. Save coalescing, bounded storage failures and navigation during pending saves retain their existing checks.
+
+The release also passed the dedicated Championship UI suite (17 checks), identity checks (8), competition rules checks (15), discipline checks (14), player profiles (16), storage (19), input recovery (8), navigation (47), links (51), briefing (33), lineup (23), Dashboard/friendlies (11), red-card reorganization (16), live tactics (28), and updates (13). The strict engine audit passed 1,109 scenarios / 3,555 assertions. Legacy release-43 migration retained all 1,738 player records and fixture records byte-for-byte in the tested career. Long-career and physical-device testing remain separate.

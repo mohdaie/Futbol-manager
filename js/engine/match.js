@@ -25,17 +25,17 @@ function shapeMap(ipN, oopN) {
   return map;
 }
 
-function buildSide(cid, idx) {
+function buildSide(cid, idx, fx = {}) {
   const c = G.clubs[cid], user = cid === G.club;
   let tac, xi, bench, roles;
   if (user) { ensureUserLineup(); tac = G.tactics; xi = tac.slots.slice(); bench = tac.bench.slice(); roles = tac.roles.slice(); }
   else { tac = c.tac; const pk = autoPick(cid, tac.ip); xi = pk.xi; bench = pk.bench; roles = (tac.roles || Array(11).fill(0)).slice(); }
   const S = {
-    cid, idx, user, ip: tac.ip, oop: tac.oop, roles, ment: tac.ment, tempo: tac.tempo, width: tac.width, press: tac.press, line: tac.line, pass: tac.pass, lost: tac.lost ?? 1, won: tac.won ?? 1,
+    cid, idx, user, neutral: !!fx.neutral, ip: tac.ip, oop: tac.oop, roles, ment: tac.ment, tempo: tac.tempo, width: tac.width, press: tac.press, line: tac.line, pass: tac.pass, lost: tac.lost ?? 1, won: tac.won ?? 1,
     pi: user ? JSON.parse(JSON.stringify(tac.pi || {})) : {}, ps: {}, form: [], pos: [],
     pk: user ? tac.pk : null, cap: user ? tac.cap : null, fk: user ? tac.fk : null, ck: user ? tac.ck : null, on: xi, bench, off: [], subs: 0, wins: 0, lastSubMin: -1, cond: {}, rat: {}, yc: {}, reds: [], injuries: [],
     played: xi.filter(Boolean), st: { g: 0, sh: 0, sot: 0, xg: 0, pos: 0, fo: 0, yc: 0, rc: 0, co: 0, pa: 0, pc: 0, off: 0, cr: 0, pk: 0, pkg: 0, lp: 0 }, goals: [],
-    banned: c.squad.filter(id => G.players[id] && G.players[id].ban > 0), u: null, map: shapeMap(tac.ip, tac.oop), boost: 0, guard: 0, calm: 0,
+    banned: fx.fr ? [] : c.squad.filter(id => G.players[id] && G.players[id].ban > 0), u: null, map: shapeMap(tac.ip, tac.oop), boost: 0, guard: 0, calm: 0,
   };
   xi.concat(bench).forEach(id => { if (id) { S.cond[id] = G.players[id].cond; S.rat[id] = 6.5; } });
   S.startCond = avg(xi.filter(Boolean), id => G.players[id].cond);
@@ -45,7 +45,7 @@ function buildSide(cid, idx) {
 // Conditions for one match: weather plus kick-off time.
 function matchMods(fx) {
   const w = (fx.wx && WEATHER[fx.wx.k]) || {}, t = fx.t || '15:00';
-  return { drain: w.drain || 1, xg: w.xg || 1, shot: (w.shot || 1) * (t < '13:00' ? 0.98 : 1), foul: w.foul || 1, inj: w.inj || 1, wind: w.wind || 1, home: t >= '19:00' ? 1.03 : 1 };
+  return { drain: w.drain || 1, xg: w.xg || 1, shot: (w.shot || 1) * (t < '13:00' ? 0.98 : 1), foul: w.foul || 1, inj: w.inj || 1, wind: w.wind || 1, home: !fx.neutral && t >= '19:00' ? 1.03 : 1 };
 }
 
 function createMatch(fx) {
@@ -53,7 +53,7 @@ function createMatch(fx) {
   // and training games need independent trials rather than the same result n times.
   const seed = fx.id < 0 ? Math.floor(R() * 4294967295) : Math.floor(hash01(`${G.simSeed ?? G.createdAt ?? G.season}:${fx.id}:${fx.h}:${fx.a}`) * 4294967295);
   const random = { rng: seed };
-  return matchRandom(random, () => { const M = createMatchState(fx); M.rng = random.rng; return M; });
+  return matchRandom(random, () => { const old = G.flags.friendlySelection; G.flags.friendlySelection = !!fx.fr; try { const M = createMatchState(fx); M.rng = random.rng; return M; } finally { if (old === undefined) delete G.flags.friendlySelection; else G.flags.friendlySelection = old; } });
 }
 function createMatchState(fx) {
   // Real fixtures: players recover for the days since their last match before teams are picked.
@@ -61,7 +61,11 @@ function createMatchState(fx) {
   if (fx.id > 0 && (fx.h === G.club || fx.a === G.club) && typeof adviceAtKickoff === 'function') adviceAtKickoff(fx);
   // Computer clubs set up for this match with the tactic their available players suit best.
   [[fx.h, fx.a], [fx.a, fx.h]].forEach(([c, o]) => { if (c !== G.club && G.clubs[c] && G.clubs[c].pl && !(G.flags && G.flags.fixedTac)) G.clubs[c].tac = aiChooseTactic(c, o); });
-  const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0), buildSide(fx.a, 1)], log: [], shout: null, duels: fx.id > 0 ? {} : null };
+  const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0, fx), buildSide(fx.a, 1, fx)], log: [], shout: null, duels: fx.id > 0 ? {} : null };
+  if (fx.playoff && (fx.leg === 2 || fx.neutral)) {
+    const first = fx.firstLeg && G.fixtures.find(f => f.id === fx.firstLeg);
+    M.knockout = { home: first ? first.ag : 0, away: first ? first.hg : 0 };
+  }
   M.sides.forEach(S => calcUnits(S));
   return M;
 }
@@ -136,7 +140,7 @@ function possShare(H, W) {
   // Short passing, patience and pressing only help keep the ball if the players suit them (tactic fit).
   const fp = S => (S.fit ? S.fit.poss : 0) * 0.9 + 0.3, fr = S => (S.fit ? S.fit.press : 0) + 0.5;
   const f = S => Math.pow(S.u.mid, 1.2) * (1 + 0.03 * (S.press - 1) * fr(S) + (S.pass === 0 ? 0.2 * fp(S) : -0.08 * (S.pass - 1)) + (S.tempo === 0 ? 0.14 * fp(S) : -0.06 * (S.tempo - 1))) * (S.u.n / 11);
-  const a = f(H) * tune('homePoss'), b = f(W);
+  const a = f(H) * (H.neutral ? 1 : tune('homePoss')), b = f(W);
   return a / (a + b);
 }
 
@@ -173,9 +177,33 @@ function simMinute(M) {
   });
   if (M.min % 15 === 0) M.sides.forEach(X => X.on.forEach(id => bumpRating(X, id, gauss() * 0.03)));
   if (M.min === 45) ev.ht = true;
-  if (M.min >= 90 + M.added) { M.ended = true; ev.ft = true; }
+  if (M.extra && M.min === M.extraStart + 15) ev.etBreak = true;
+  if (M.min >= (M.finishAt ?? 90 + M.added)) { const extra = M.extra; decideMatchEnd(M); if (M.ended) ev.ft = true; else if (!extra && M.extra) ev.etBreak = true; }
   evs.forEach(e => { if (e.t !== 'poss') M.log.push(e); });
   return evs;
+}
+
+// A deciding playoff leg uses aggregate goals; away goals never break a tie.
+function decideMatchEnd(M) {
+  const [H, Away] = M.sides, k = M.knockout;
+  if (!k) { M.ended = true; return; }
+  const h = H.st.g + k.home, a = Away.st.g + k.away;
+  if (h === a && !M.extra) { M.extra = true; M.extraStart = M.min; M.finishAt = M.min + 30; M.ended = false; return; }
+  if (h === a) {
+    const score = [0, 0], attempts = [0, 0], order = M.sides.map(S => onPitch(S).filter(x => x.pos !== 'GK').sort((a, b) => TAKER_SCORE.pk(b.p) - TAKER_SCORE.pk(a.p)));
+    const kick = side => {
+      const p = order[side][attempts[side] % (order[side].length || 1)]?.p, keeper = G.players[M.sides[1 - side].on[0]];
+      return R() < clamp(.75 + ((p?.at[A.fin] ?? 10) - 10) * .012 - ((keeper?.at[A.one] ?? 10) - 10) * .008, .5, .92);
+    };
+    shootout: for (let n = 0; n < 5; n++) for (const side of [0, 1]) {
+      score[side] += +kick(side); attempts[side]++;
+      if (score[0] > score[1] + 5 - attempts[1] || score[1] > score[0] + 5 - attempts[0]) break shootout;
+    }
+    for (let n = 0; score[0] === score[1] && n < 100; n++) for (const side of [0, 1]) { score[side] += +kick(side); attempts[side]++; }
+    if (score[0] === score[1]) score[R() < .5 ? 0 : 1]++; // bounded sudden death
+    M.penalties = score; M.winner = score[0] > score[1] ? H.cid : Away.cid;
+  } else M.winner = h > a ? H.cid : Away.cid;
+  M.ended = true;
 }
 
 function sendOff(M, S, id, ev) {
@@ -240,11 +268,12 @@ function injury(M, S) {
   return { min: M.min, side: S.idx, t: 'inj', pid: x.p.id, inj: inj[0], wk };
 }
 
-function canSub(M, S) { return S.subs < 5 && (S.wins < 3 || S.lastSubMin === M.min || M.min === 45); }
+function subInterval(M) { return M.min === 45 || !!M.extra && [M.extraStart, M.extraStart + 15].includes(M.min); }
+function canSub(M, S) { return S.subs < (M.extra ? 6 : 5) && (S.wins < (M.extra ? 4 : 3) || S.lastSubMin === M.min || subInterval(M)); }
 function makeSub(M, S, outId, inId) {
   const idx = S.on.indexOf(outId);
   if (!outId || idx < 0 || !S.bench.includes(inId) || !canSub(M, S)) return null;
-  if (S.lastSubMin !== M.min && M.min !== 45) S.wins++;
+  if (S.lastSubMin !== M.min && !subInterval(M)) S.wins++;
   S.lastSubMin = M.min;
   S.on[idx] = inId;
   S.bench = S.bench.filter(id => id !== inId);
@@ -307,6 +336,9 @@ function finishMatch(M) {
   const [H, W] = M.sides;
   fx.hg = H.st.g; fx.ag = W.st.g;
   fx.model = M.model || 'positional-v3';
+  if (M.extra) fx.extra = true;
+  if (M.penalties) fx.penalties = M.penalties;
+  if (M.winner) fx.winner = M.winner;
   fx.goals = [].concat(...M.sides.map((S, si) => S.goals.map(g => [si, g.min, g.pid, g.pen ? 1 : 0]))).sort((a, b) => a[1] - b[1]);
   // Compact stats for every league match (analyst reports): [possession %, shots, on target, xG, passes, completed, crosses, corners, set-piece goals], and each side's style.
   const totPos = M.sides[0].st.pos + M.sides[1].st.pos || 1;
@@ -337,14 +369,25 @@ function finishMatch(M) {
       if (p) { p.st.g++; p.car.g++; }
       if (g.aid && G.players[g.aid]) G.players[g.aid].st.as++;
     });
-    S.banned.forEach(id => { const p = G.players[id]; if (p && p.ban > 0) p.ban--; });
-    Object.keys(S.yc).forEach(id => {
-      const p = G.players[id];
-      if (!p || S.reds.includes(+id)) return;
-      p.st.yc++;
-      if (p.st.yc % 5 === 0) { p.ban += 1; if (S.user) addNews('club', pname(p) + ' suspended', `${fullName(p)} has collected ${p.st.yc} yellow cards and misses the next match.`); }
-    });
-    S.reds.forEach(id => { const p = G.players[id]; if (p) { p.ban += 1; p.st.rc++; } });
+    if (!fx.fr) {
+      S.banned.forEach(id => { const p = G.players[id]; if (p && p.ban > 0) p.ban--; });
+      const comp = fx.comp || leagueOf(S.cid), games = G.fixtures.filter(f => played(f) && leagueFixture(f, comp) && (f.h === S.cid || f.a === S.cid)).length;
+      Object.keys(S.yc).forEach(id => {
+        const p = G.players[id]; if (!p || S.reds.includes(+id)) return;
+        p.st.yc++;
+        if (fx.playoff) return;
+        if (!p.discipline || p.discipline.season !== G.season) {
+          // An older career has only its total cautions; retain those instead of
+          // discarding a suspension threshold halfway through its first season.
+          const legacy = !p.discipline ? Math.max(0, p.st.yc - 1) : 0;
+          p.discipline = { season: G.season, cards: { [comp]: legacy } };
+        }
+        const count = p.discipline.cards[comp] = (p.discipline.cards[comp] || 0) + 1;
+        const ban = count === 5 && games <= (comp === 'ECH' ? 23 : 19) ? 1 : count === 10 && games <= (comp === 'ECH' ? 37 : 32) ? 2 : count === 15 ? 3 : 0;
+        if (ban) { p.ban += ban; if (S.user) addNews('club', pname(p) + ' suspended', `${fullName(p)} has collected ${count} league yellow cards and misses ${ban} match${ban === 1 ? '' : 'es'}.`); }
+      });
+      S.reds.forEach(id => { const p = G.players[id]; if (p) { const e = M.log.find(e => e.t === 'red' && e.pid === id); p.ban += e?.second ? 1 : 3; p.st.rc++; } });
+    }
     S.injuries.forEach(([id, wk, n]) => {
       const p = G.players[id];
       if (!p) return;
@@ -359,22 +402,22 @@ function finishMatch(M) {
 
   // money: TV for both, gate for the home side
   const hc = G.clubs[fx.h], ac = G.clubs[fx.a];
-  const tv = 0.9e6 + (fx.tv ? TV_FEE : 0);
+  const tv = fx.fr ? 0 : (fx.comp || leagueOf(fx.h)) === 'ECH' ? 60000 + (fx.tv ? 50000 : 0) : 0.9e6 + (fx.tv ? TV_FEE : 0);
   const fans = fx.h === G.club ? G.board.fans : 60;
-  const att = Math.round(hc.cap * clamp(0.82 + fans / 600 + ac.rep / 1000, 0.6, 1));
+  const att = Math.round((fx.neutral ? 88000 : hc.cap) * clamp(0.82 + fans / 600 + ac.rep / 1000, 0.6, 1));
   const gate = Math.round(att * (25 + hc.rep * 0.35));
   fx.att = att;
   [hc, ac].forEach(c => { c.bal += tv; });
-  hc.bal += gate;
+  if (fx.neutral) { hc.bal += Math.round(gate / 2); ac.bal += Math.round(gate / 2); } else hc.bal += gate;
   if (fx.h === G.club || fx.a === G.club) {
     G.ledger.tv += tv;
-    if (fx.h === G.club) G.ledger.gate += gate;
+    if (fx.neutral) G.ledger.gate += Math.round(gate / 2); else if (fx.h === G.club) G.ledger.gate += gate;
     const us = fx.h === G.club ? 0 : 1, S = M.sides[us], O = M.sides[1 - us];
     fx.stats = M.sides.map(X => ({ ...X.st, xg: Math.round(X.st.xg * 100) / 100 }));
     fx.ratings = M.sides.map(X => X.played.map(id => [id, X.rat[id]]));
     // Player action stats for the match report: [id, passes completed, attempted, key passes, dribbles won, tackles, interceptions, aerials, shots, on target]
     fx.pstats = M.sides.map(X => X.played.map(id => { const s = X.ps[id] || {}; return [id, s.pc || 0, s.pa || 0, s.kp || 0, s.dw || 0, s.tk || 0, s.int || 0, s.aer || 0, s.sh || 0, s.sot || 0]; }));
-    boardAfterMatch(S.st.g, O.st.g, G.clubs[O.cid].rep, us === 0);
+    boardAfterMatch(S.st.g, O.st.g, G.clubs[O.cid].rep, us === 0 && !fx.neutral);
     if (typeof adviceResult === 'function') adviceResult(fx, S.st.g, O.st.g, S.st.xg, O.st.xg);
     if (typeof postMatchAnalysis === 'function') postMatchAnalysis(M, fx);
     const opp = clubName(O.cid), sg = S.st.g, og = O.st.g;
@@ -383,6 +426,7 @@ function finishMatch(M) {
     addNews('match', head, (scorers ? 'Scorers: ' + scorers + '. ' : '') + (motm ? 'Player of the match: ' + fullName(G.players[motm]) + '.' : ''));
     G.lastMatch = fx.id;
   }
+  if (typeof updateCompetitionSeason === 'function') updateCompetitionSeason();
 }
 
 function boardAfterMatch(gf, ga, oppRep, home) {

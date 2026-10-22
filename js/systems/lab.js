@@ -1,6 +1,6 @@
 'use strict';
 /* ===== lab.js =====
-   Admin "Run test season": plays all 380 league matches on a copy of the save and reports league
+   Admin "Run test season": plays the managed division on a copy of the save and reports league
    averages against the real-world targets, plus how each style and each level of tactic fit did.
    Style and fit results are also shown "against strength": points per match above or below what the
    strength gap between the two elevens predicts, so a style isn't flattered by the clubs that use it. */
@@ -14,6 +14,8 @@ function runTestSeason(opts = {}) {
   LAB_RUN = true;
   try {
     G = JSON.parse(JSON.stringify(real));
+    G.fixtures = G.fixtures.filter(f => leagueFixture(f));
+    G.playoffs = null;
     G.fixtures.forEach(f => { f.hg = f.ag = null; });
     Object.values(G.players).forEach(p => { p.st = newStats(); });
     G.fixtures.forEach(f => {

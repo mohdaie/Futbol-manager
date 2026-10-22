@@ -1,0 +1,322 @@
+{
+  "counts": {
+    "FPL2026": 500,
+    "TM2025": 493,
+    "EXISTING": 72
+  },
+  "firstTeamTarget": {
+    "EPL": 25,
+    "ECH": 24
+  },
+  "clubs": {
+    "GUN": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "VIL": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "CHR": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "BEE": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "GUL": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "BLU": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "SKY": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "EAG": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "TOF": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "COT": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "TIG": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "TRA": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "PEA": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "RED": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "CIT": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "DEV": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "MAG": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "TRE": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "SPU": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "CAT": {
+      "sourced": 25,
+      "generated": 0,
+      "sources": {
+        "FPL2026": 25
+      }
+    },
+    "BIR": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "BLA": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "BOL": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "BRI": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "CLA": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "EXISTING": 24
+      }
+    },
+    "CAR": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "CHA": {
+      "sourced": 19,
+      "generated": 5,
+      "sources": {
+        "TM2025": 19
+      }
+    },
+    "DER": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "LIN": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "MID": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "MIL": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "NOR": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "POM": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "PRE": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "QPR": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "SHU": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "SOU": {
+      "sourced": 22,
+      "generated": 2,
+      "sources": {
+        "TM2025": 22
+      }
+    },
+    "STO": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "SWA": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "WAT": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    },
+    "WBA": {
+      "sourced": 20,
+      "generated": 4,
+      "sources": {
+        "TM2025": 20
+      }
+    },
+    "HAM": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "EXISTING": 24
+      }
+    },
+    "OLD": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "EXISTING": 24
+      }
+    },
+    "WRE": {
+      "sourced": 24,
+      "generated": 0,
+      "sources": {
+        "TM2025": 24
+      }
+    }
+  },
+  "note": "Generated reserves: Championship 12, Premier League 20 plus U18s 20. Club rosters describe source snapshots, not verified transfer-window completeness."
+}

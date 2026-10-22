@@ -36,13 +36,14 @@ function genBio(p) {
 }
 
 // Favourite person and manager: picked from the game world, so they are linked once the world exists.
-function linkBio(p) {
-  const all = Object.values(G.players).filter(x => x.id !== p.id && x.club !== 'FA');
-  const idols = all.filter(x => x.nat === p.nat && x.age >= p.age + 3 && x.ca >= 76);
-  const mates = all.filter(x => x.club === p.club && x.age >= p.age);
-  const stars = all.filter(x => x.ca >= 84);
+function linkBio(p, pool) {
+  const all = pool ? pool.all : Object.values(G.players).filter(x => x.id !== p.id && x.club !== 'FA');
+  const idols = (pool?.byNat[p.nat] || all).filter(x => x.nat === p.nat && x.age >= p.age + 3 && x.ca >= 76);
+  const mates = (pool?.byClub[p.club] || all).filter(x => x.id !== p.id && x.club === p.club && x.age >= p.age);
+  const stars = (pool?.stars || all).filter(x => x.id !== p.id && x.ca >= 84);
   const r = R();
-  const fp = r < 0.45 && idols.length ? pick(idols) : r < 0.8 && mates.length ? pick(mates) : stars.length ? pick(stars) : pick(all);
+  let fp = r < 0.45 && idols.length ? pick(idols) : r < 0.8 && mates.length ? pick(mates) : stars.length ? pick(stars) : pick(all);
+  if (fp?.id === p.id) fp = all.find(x => x.id !== p.id);
   if (fp) { p.fp = fp.id; p.fpn = fullName(fp); } else { p.fp = 0; p.fpn = 'His family'; }
   const own = G.clubs[p.club];
   const pl = plClubs().map(id => G.clubs[id]).filter(c => c.mgr);
@@ -52,6 +53,7 @@ function linkBio(p) {
 
 // Makes sure every club has a manager and every player has personal details (new games and older saves).
 function ensureWorld() {
+  ensureCompetitions();
   Object.values(G.clubs).forEach(c => { if (!c.fa && !c.mgr) c.mgr = genManagerName(); if (c.tac && !c.tac.style && !c.fa) c.tac = aiTactic(c.rep); });
   if (G.tactics) { G.tactics.lost ??= 1; G.tactics.won ??= 1; G.tactics.pi ??= {}; }
   if (G.club && G.clubs[G.club]) G.clubs[G.club].mgr = G.manager;
@@ -60,7 +62,9 @@ function ensureWorld() {
   if (typeof ensureDeals === 'function') ensureDeals();
   if (typeof ensureSocial === 'function') ensureSocial();
   Object.values(G.players).forEach(p => { migrateAttrs(p); if (p.ht == null) genBio(p); });
-  Object.values(G.players).forEach(p => { if (p.fpn == null) linkBio(p); });
+  const pool = { all: Object.values(G.players).filter(p => p.club !== 'FA'), byNat: {}, byClub: {}, stars: [] };
+  pool.all.forEach(p => { (pool.byNat[p.nat] ||= []).push(p); (pool.byClub[p.club] ||= []).push(p); if (p.ca >= 84) pool.stars.push(p); });
+  Object.values(G.players).forEach(p => { if (p.fpn == null) linkBio(p, pool); });
   // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.
   if (!G.flags.insp && typeof ROSTERS !== 'undefined') {
     const by = {};

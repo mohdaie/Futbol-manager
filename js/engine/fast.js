@@ -55,14 +55,14 @@ function fastMinute(M) {
     const fit = S.fit ? S.fit.chance || S.fit.poss || 0 : 0;
     const strength = clamp((S.u.att + S.u.mid * 0.25) / Math.max(15, O.u.def + O.u.mid * 0.25), 0.45, 1.9);
     const risk = 1 + (S.ment - 2) * 0.06 + (O.ment - 2) * 0.035;
-    const chance = 0.23 * (tune('shotBase') / 0.285) * share * strength * risk * (1 + fit * 0.06) * (S.idx === 0 ? tune('homeShot') * M.mod.home : 1);
+    const chance = 0.23 * (tune('shotBase') / 0.285) * share * strength * risk * (1 + fit * 0.06) * (S.idx === 0 && !S.neutral ? tune('homeShot') * M.mod.home : 1);
     if (R() < chance && S.u.n > 1) {
       const shooter = fastPlayer(S, POS_SHOT), id = shooter.p.id;
       const penalty = R() < 0.015;
       const xg = penalty ? 0.76 : clamp(rf(0.04, 0.20) * strength * tune('xgScale') / 0.85 * M.mod.xg, 0.015, 0.65);
       const targetChance = penalty ? 0.88 : clamp(0.29 + (shooter.p.at[A.fin] - 12) * 0.008, 0.2, 0.44);
       const target = R() < targetChance;
-      const probability = clamp(xg * ENG.fin * (S.idx === 0 ? 1.04 : 1) * (1 + (shooter.p.at[A.fin] - 12) * 0.018) * (1 + (65 - O.u.gk) * 0.008), 0.005, penalty ? 0.95 : 0.6);
+      const probability = clamp(xg * ENG.fin * (S.idx === 0 && !S.neutral ? 1.04 : 1) * (1 + (shooter.p.at[A.fin] - 12) * 0.018) * (1 + (65 - O.u.gk) * 0.008), 0.005, penalty ? 0.95 : 0.6);
       const goal = target && R() < clamp(probability / targetChance, 0.01, 0.95);
       S.st.sh++; S.st.xg += xg; fastStat(S, id, 'sh');
       if (penalty) S.st.pk++;
@@ -94,7 +94,7 @@ function fastMinute(M) {
   }
   evs.forEach(e => M.log.push(e));
   M.sides.forEach(S => { evs.push(...injurySubs(M, S)); if (CHECKPOINTS.includes(M.min)) evs.push(...brainDecide(M, S)); });
-  if (M.min >= 90 + M.added) M.ended = true;
+  if (M.min >= (M.finishAt ?? 90 + M.added)) decideMatchEnd(M);
   return evs;
 }
 function runFastMatch(M) {

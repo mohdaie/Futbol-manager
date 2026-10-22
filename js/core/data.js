@@ -5,15 +5,15 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.22.43';
+const GAME_VERSION = '2026.10.22.44';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
 const START_SEASON = 2026;
-const LEAGUE_NAME = 'Premier Division';
+const LEAGUE_NAME = 'Premier League';
 
 // The 20 top-flight clubs, by nickname. rep (1-100) drives squad quality, money and expectations.
-const CLUBS = [
+const LEGACY_CLUBS = [
   { id: 'GUN', name: 'Gunners', city: 'North London', c1: '#D7192D', c2: '#FFFFFF', rep: 91, ground: 'Armoury Park', cap: 60700 },
   { id: 'VIL', name: 'Villans', city: 'Birmingham', c1: '#7A1E43', c2: '#9CC7EA', rep: 82, ground: 'Holte Park', cap: 42600 },
   { id: 'CHR', name: 'Cherries', city: 'Bournemouth', c1: '#D52B1E', c2: '#141414', rep: 76, ground: 'Seaside Court', cap: 11300 },
@@ -35,6 +35,15 @@ const CLUBS = [
   { id: 'HAM', name: 'Hammers', city: 'East London', c1: '#7A263A', c2: '#1BB1E7', rep: 76, ground: 'Bow Stadium', cap: 62500 },
   { id: 'OLD', name: 'Old Gold', city: 'Wolverhampton', c1: '#FDB913', c2: '#231F20', rep: 73, ground: 'Waterloo Road', cap: 31700 },
 ];
+
+
+// 2026/27 domestic membership: OpenFootball snapshot, recorded in data/england/sources.json.
+const REAL_CLUB_NAMES = {"GUN": "Arsenal FC", "VIL": "Aston Villa FC", "CHR": "AFC Bournemouth", "BEE": "Brentford FC", "GUL": "Brighton & Hove Albion FC", "CLA": "Burnley FC", "BLU": "Chelsea FC", "EAG": "Crystal Palace FC", "TOF": "Everton FC", "COT": "Fulham FC", "PEA": "Leeds United FC", "RED": "Liverpool FC", "CIT": "Manchester City FC", "DEV": "Manchester United FC", "MAG": "Newcastle United FC", "TRE": "Nottingham Forest FC", "CAT": "Sunderland AFC", "SPU": "Tottenham Hotspur FC", "HAM": "West Ham United FC", "OLD": "Wolverhampton Wanderers FC"};
+const ADDED_ENGLISH_CLUBS = [{"id":"SKY","name":"Sky Blues","city":"Coventry","realName":"Coventry City FC","c1":"#64A4D9","c2":"#FFFFFF","rep":71,"ground":"Highfield Arena","cap":32600},{"id":"TIG","name":"Tigers","city":"Hull","realName":"Hull City AFC","c1":"#F5A623","c2":"#111111","rep":69,"ground":"Humber Park","cap":25400},{"id":"TRA","name":"Tractor Boys","city":"Ipswich","realName":"Ipswich Town FC","c1":"#005AAA","c2":"#FFFFFF","rep":71,"ground":"Portman Ground","cap":30300},{"id":"BIR","name":"Brummies","city":"Birmingham","realName":"Birmingham City FC","c1":"#0000AA","c2":"#FFFFFF","rep":68,"ground":"Small Heath Park","cap":29400},{"id":"BLA","name":"Rovers","city":"Blackburn","realName":"Blackburn Rovers FC","c1":"#0066CC","c2":"#FFFFFF","rep":65,"ground":"Ewood Ground","cap":31300},{"id":"BOL","name":"Trotters","city":"Bolton","realName":"Bolton Wanderers FC","c1":"#FFFFFF","c2":"#002060","rep":62,"ground":"Horwich Stadium","cap":28700},{"id":"BRI","name":"Robins","city":"Bristol","realName":"Bristol City FC","c1":"#E21A23","c2":"#FFFFFF","rep":66,"ground":"Ashton Park","cap":27000},{"id":"CAR","name":"Bluebirds","city":"Cardiff","realName":"Cardiff City FC","c1":"#0070B5","c2":"#FFFFFF","rep":63,"ground":"Leckwith Ground","cap":33300},{"id":"CHA","name":"Addicks","city":"Charlton","realName":"Charlton Athletic FC","c1":"#D71920","c2":"#FFFFFF","rep":62,"ground":"Valley Ground","cap":27100},{"id":"DER","name":"Rams","city":"Derby","realName":"Derby County FC","c1":"#FFFFFF","c2":"#111111","rep":65,"ground":"Pride Ground","cap":33500},{"id":"LIN","name":"Imps","city":"Lincoln","realName":"Lincoln City FC","c1":"#D71920","c2":"#FFFFFF","rep":60,"ground":"Sincil Ground","cap":10700},{"id":"MID","name":"Boro","city":"Middlesbrough","realName":"Middlesbrough FC","c1":"#E21A23","c2":"#FFFFFF","rep":69,"ground":"Teeside Ground","cap":34700},{"id":"MIL","name":"Lions","city":"Millwall","realName":"Millwall FC","c1":"#001B54","c2":"#FFFFFF","rep":65,"ground":"Bermondsey Den","cap":20100},{"id":"NOR","name":"Canaries","city":"Norwich","realName":"Norwich City FC","c1":"#FFF200","c2":"#00A650","rep":68,"ground":"Carrow Ground","cap":27200},{"id":"POM","name":"Pompey","city":"Portsmouth","realName":"Portsmouth FC","c1":"#001489","c2":"#FFFFFF","rep":62,"ground":"Fratton Ground","cap":20800},{"id":"PRE","name":"Lilywhites","city":"Preston","realName":"Preston North End FC","c1":"#FFFFFF","c2":"#002060","rep":64,"ground":"Deepdale Park","cap":23400},{"id":"QPR","name":"Hoops","city":"West London","realName":"Queens Park Rangers FC","c1":"#005CA9","c2":"#FFFFFF","rep":64,"ground":"Shepherds Ground","cap":18400},{"id":"SHU","name":"Blades","city":"Sheffield","realName":"Sheffield United FC","c1":"#EE2737","c2":"#FFFFFF","rep":69,"ground":"Bramall Ground","cap":32700},{"id":"SOU","name":"Saints","city":"Southampton","realName":"Southampton FC","c1":"#D71920","c2":"#FFFFFF","rep":71,"ground":"St Marys Park","cap":32300},{"id":"STO","name":"Potters","city":"Stoke","realName":"Stoke City FC","c1":"#E03A3E","c2":"#FFFFFF","rep":65,"ground":"Trentham Stadium","cap":30000},{"id":"SWA","name":"Swans","city":"Swansea","realName":"Swansea City AFC","c1":"#FFFFFF","c2":"#111111","rep":64,"ground":"Tawe Stadium","cap":21100},{"id":"WAT","name":"Hornets","city":"Watford","realName":"Watford FC","c1":"#FBEE23","c2":"#111111","rep":67,"ground":"Vicarage Ground","cap":22200},{"id":"WBA","name":"Baggies","city":"West Bromwich","realName":"West Bromwich Albion FC","c1":"#122F67","c2":"#FFFFFF","rep":67,"ground":"Hawthorns Park","cap":26800},{"id":"WRE","name":"Red Dragons","city":"Wrexham","realName":"Wrexham AFC","c1":"#E41B23","c2":"#FFFFFF","rep":64,"ground":"Racecourse Park","cap":13300}];
+const ENGLISH_CLUBS = LEGACY_CLUBS.map(c => ({ ...c, realName: REAL_CLUB_NAMES[c.id] })).concat(ADDED_ENGLISH_CLUBS);
+const ENGLAND_MEMBERSHIP_2026 = {"EPL":["CHR","GUN","VIL","BEE","GUL","BLU","SKY","EAG","TOF","COT","TIG","TRA","PEA","RED","CIT","DEV","MAG","TRE","CAT","SPU"],"ECH":["BIR","BLA","BOL","BRI","CLA","CAR","CHA","DER","LIN","MID","MIL","NOR","POM","PRE","QPR","SHU","SOU","STO","SWA","WAT","WBA","HAM","OLD","WRE"]};
+const CLUBS = ENGLAND_MEMBERSHIP_2026.EPL.map(id => ENGLISH_CLUBS.find(c => c.id === id));
+const CHAMPIONSHIP_CLUBS = ENGLAND_MEMBERSHIP_2026.ECH.map(id => ENGLISH_CLUBS.find(c => c.id === id));
 
 // Clubs abroad. They play no fixtures; they hold players you can scout and buy. ros: their real-based squad in FOREIGN_ROSTERS (rosters.js).
 const FOREIGN = [
@@ -81,11 +90,11 @@ const NATIONS = {
 const COUNTRY = (() => {
   const g = {
     'Britain & Ireland': 'ENG England|SCO Scotland|WAL Wales|NIR Northern Ireland|IRL Ireland|GIB Gibraltar',
-    Europe: 'FRA France|ESP Spain|POR Portugal|GER Germany|NED Netherlands|BEL Belgium|ITA Italy|NOR Norway|SWE Sweden|DEN Denmark|ISL Iceland|AUT Austria|SUI Switzerland|CRO Croatia|SRB Serbia|BIH Bosnia-Herzegovina|ALB Albania|GRE Greece|TUR Türkiye|UKR Ukraine|POL Poland|CZE Czech Republic|SVK Slovakia|HUN Hungary|GEO Georgia|KAZ Kazakhstan|CYP Cyprus|LTU Lithuania|SVN Slovenia|BUL Bulgaria|FIN Finland|KOS Kosovo|MDA Moldova|RUS Russia|ISR Israel',
+    Europe: 'FRA France|ESP Spain|POR Portugal|GER Germany|NED Netherlands|BEL Belgium|ITA Italy|NOR Norway|SWE Sweden|DEN Denmark|ISL Iceland|AUT Austria|SUI Switzerland|CRO Croatia|SRB Serbia|BIH Bosnia-Herzegovina|ALB Albania|GRE Greece|TUR Türkiye|UKR Ukraine|POL Poland|CZE Czech Republic|SVK Slovakia|HUN Hungary|GEO Georgia|KAZ Kazakhstan|CYP Cyprus|LTU Lithuania|SVN Slovenia|BUL Bulgaria|FIN Finland|KOS Kosovo|MDA Moldova|RUS Russia|ISR Israel|MNE Montenegro',
     'South America': 'BRA Brazil|ARG Argentina|URU Uruguay|PAR Paraguay|COL Colombia|ECU Ecuador|CHI Chile|VEN Venezuela|SUR Suriname',
-    'North America': 'USA United States|CAN Canada|MEX Mexico|JAM Jamaica|CUW Curaçao|HAI Haiti|BER Bermuda',
-    Africa: "NGA Nigeria|GHA Ghana|SEN Senegal|CIV Ivory Coast|CMR Cameroon|MLI Mali|BFA Burkina Faso|GAM The Gambia|GUI Guinea|ALG Algeria|MAR Morocco|TUN Tunisia|EGY Egypt|COD DR Congo|ANG Angola|BEN Benin|ZIM Zimbabwe|MOZ Mozambique|MTN Mauritania|COM Comoros|LBR Liberia",
-    Asia: 'JPN Japan|KOR South Korea|CHN China|AUS Australia|NZL New Zealand|PHI Philippines|UZB Uzbekistan|MAS Malaysia|IDN Indonesia|SGP Singapore',
+    'North America': 'USA United States|CAN Canada|MEX Mexico|JAM Jamaica|CUW Curaçao|HAI Haiti|BER Bermuda|TRI Trinidad and Tobago|LCA Saint Lucia|BAR Barbados|PAN Panama|MTQ Martinique',
+    Africa: "NGA Nigeria|GHA Ghana|SEN Senegal|CIV Ivory Coast|CMR Cameroon|MLI Mali|BFA Burkina Faso|GAM The Gambia|GUI Guinea|ALG Algeria|MAR Morocco|TUN Tunisia|EGY Egypt|COD DR Congo|ANG Angola|BEN Benin|ZIM Zimbabwe|MOZ Mozambique|MTN Mauritania|COM Comoros|LBR Liberia|GNB Guinea-Bissau|CPV Cape Verde|SLE Sierra Leone|KEN Kenya|NAM Namibia|RSA South Africa",
+    Asia: 'JPN Japan|KOR South Korea|CHN China|AUS Australia|NZL New Zealand|PHI Philippines|UZB Uzbekistan|MAS Malaysia|IDN Indonesia|SGP Singapore|IRQ Iraq',
   };
   const out = {};
   Object.entries(g).forEach(([r, list]) => list.split('|').forEach(x => { out[x.slice(0, 3)] = [x.slice(4), r]; }));
@@ -95,7 +104,7 @@ const natName = c => (COUNTRY[c] ? COUNTRY[c][0] : NATIONS[c] ? NATIONS[c].n : c
 const natRegion = c => (COUNTRY[c] ? COUNTRY[c][1] : NATIONS[c] ? NATIONS[c].r : 'Europe');
 const LEVELS = { A: 'First team', R: 'Reserves', Y: 'U18s' };
 
-const REGIONS = ['Everywhere', 'Premier Division', 'Britain & Ireland', 'Europe', 'South America', 'Africa', 'Asia', 'North America', 'Free agents'];
+const REGIONS = ['Everywhere', 'Premier League', 'Championship', 'Britain & Ireland', 'Europe', 'South America', 'Africa', 'Asia', 'North America', 'Free agents'];
 
 // Nationality mix for generated top-flight squads (weights).
 const PL_NATS = { ENG: 38, SCO: 4, IRL: 2, ESP: 6, FRA: 7, GER: 4, POR: 5, ITA: 2, NED: 4, BEL: 3, NOR: 2, DEN: 3, BRA: 6, ARG: 3, NGA: 3, GHA: 3, SEN: 3, CIV: 2, JPN: 2, MAS: 1, USA: 2 };
