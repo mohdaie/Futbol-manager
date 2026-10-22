@@ -308,10 +308,18 @@ ACT.liveTacticsView = ds => { if (!['xi', 'pitch'].includes(ds.v)) return; LIVE.
 ACT.liveSwapMode = () => { const L = LIVE; L.swapMode = !L.swapMode; L.swapFrom = null; L.roleSlot = null; reopenLive('tactics'); };
 ACT.liveTok = ds => {
   const L = LIVE, S = liveSide(), i = +ds.i;
+  if (!Number.isInteger(i) || i < 0 || i >= S.on.length) return;
+  if (!S.on[i] && !L.swapMode) return ACT.liveGap({ i });
   if (!L.swapMode) { L.roleSlot = L.roleSlot === i ? null : i; return reopenLive('tactics'); }
   if (L.swapFrom == null) L.swapFrom = i;
   else {
-    if (swapInMatch(L.M, S, L.swapFrom, i)) pushFeed(L, 'tac', `${pname(G.players[S.on[L.swapFrom]])} and ${pname(G.players[S.on[i]])} change places.`, L.bottom);
+    const from = L.swapFrom;
+    if (!S.on[from] || !S.on[i]) {
+      const gap = S.on[from] ? i : from, id = S.on[from] || S.on[i];
+      if (id && moveIntoGap(L.M, S, id, gap)) pushFeed(L, 'tac', `${pname(G.players[id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom);
+      else toast('Choose a player and an empty position.');
+    }
+    else if (swapInMatch(L.M, S, from, i)) pushFeed(L, 'tac', `${pname(G.players[S.on[from]])} and ${pname(G.players[S.on[i]])} change places.`, L.bottom);
     else toast('Keepers swap only with keepers.');
     L.swapFrom = null;
   }
@@ -326,11 +334,17 @@ ACT.liveRole = ds => {
   reopenLive('tactics');
 };
 // A man down: one of the side moves into the gap; the spot he leaves is the new gap, so the sheet stays open.
+ACT.liveGap = ds => {
+  const L = LIVE, S = liveSide(), i = ds.i == null ? S.on.indexOf(null) : +ds.i;
+  if (!Number.isInteger(i) || i < 0 || i >= S.on.length || S.on[i]) return toast('Choose an empty position.');
+  L.gapSlot = i; L.swapFrom = null; L.roleSlot = null;
+  reopenLive('gap');
+};
 ACT.gapMove = ds => {
-  const L = LIVE, S = liveSide(), gap = S.on.indexOf(null);
+  const L = LIVE, S = liveSide(), gap = ds.i == null ? (L.gapSlot ?? S.on.indexOf(null)) : +ds.i;
   if (gap < 0 || !moveIntoGap(L.M, S, +ds.id, gap)) { toast('Choose a player to move into the gap.'); return; }
   pushFeed(L, 'tac', `${pname(G.players[+ds.id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom);
-  reopenLive('gap');
+  L.gapSlot = S.on.indexOf(null); reopenLive('gap');
 };
 ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`, LIVE.bottom); reopenLive('tactics'); };
 ACT.liveSubFor = ds => { const L = LIVE; L.subSel = +ds.id; const wasPaused = L.paused; L.paused = true; updateBoard(L); openLiveSheet('subs'); UI.sheetOpts = { onClose: () => { L.subSel = null; if (!wasPaused && !(L.overlay && L.overlay.stay)) L.paused = false; updateBoard(L); } }; };

@@ -30,6 +30,8 @@ Set `CHROMIUM_PATH=/usr/bin/chromium` in this environment. Playwright resolves t
 node tests/storage.cjs
 node tests/input-recovery.cjs
 node tests/dashboard-friendlies.cjs
+node tests/live-red-card.cjs
+node tests/gap.cjs
 node tests/background.cjs
 node tests/live-animation.cjs
 node tests/live.cjs
@@ -78,3 +80,9 @@ The input-recovery suite injects an unresponsive worker, checks menu actions dur
 ## Release 2026.10.22.42 dashboard rendering
 
 An upcoming overseas friendly has no opponent row in the domestic league table. Dashboard and match preparation both dereferenced that missing row, throwing before the new screen could replace the old one. Both screens now handle absent domestic league data; the dashboard labels friendly fixtures correctly. The mobile regression suite arranges an overseas friendly, taps Dashboard and its squad/board/finance links, reloads the saved career, opens match preparation, starts live play, and returns to Dashboard. All 11 checks pass, along with briefing, navigation, input recovery and update checks.
+
+## Release 2026.10.22.43 dismissal reorganization
+
+After closing the automatic dismissal popup, managers can reopen Reorganize positions from both in-match Tactics and Substitutions. Empty positions are selectable in First XI and Formation; swap mode can move a remaining player into an empty position in either selection order. With multiple dismissals, the manager can choose which gap to cover. Moving a player leaves another gap and consumes no substitution or window. A substitute must replace an on-pitch player and cannot directly fill the dismissed player's vacant slot.
+
+The red-card browser regression suite dismisses the initial popup, uses the normal controls to reorganize, covers multiple dismissals and an emergency keeper, makes a normal substitution, and reloads the saved match. Engine checks verify player-count conservation, ball ownership, exhausted substitution limits, invalid target rejection and rejection of direct replacements for sent-off players.

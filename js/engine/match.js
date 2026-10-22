@@ -219,7 +219,7 @@ function fillGapAI(M, S) {
 // The player keeps his place on the pitch (no new arrival); the slot he leaves becomes the new gap.
 function moveIntoGap(M, S, fromId, gap) {
   const from = S.on.indexOf(fromId);
-  if (from < 0 || gap < 0 || gap === from || S.on[gap]) return false;
+  if (from < 0 || !Number.isInteger(gap) || gap < 0 || gap >= S.on.length || gap === from || S.on[gap]) return false;
   S.on[gap] = fromId; S.on[from] = null;
   const P = M.sim.P[S.idx], q = P[from]; P[gap] = q; P[from] = null;
   if (M.sim.B.os === S.idx && M.sim.B.oi === from) M.sim.B.oi = gap;
@@ -243,7 +243,7 @@ function injury(M, S) {
 function canSub(M, S) { return S.subs < 5 && (S.wins < 3 || S.lastSubMin === M.min || M.min === 45); }
 function makeSub(M, S, outId, inId) {
   const idx = S.on.indexOf(outId);
-  if (idx < 0 || !S.bench.includes(inId) || !canSub(M, S)) return null;
+  if (!outId || idx < 0 || !S.bench.includes(inId) || !canSub(M, S)) return null;
   if (S.lastSubMin !== M.min && M.min !== 45) S.wins++;
   S.lastSubMin = M.min;
   S.on[idx] = inId;

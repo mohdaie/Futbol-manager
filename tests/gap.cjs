@@ -29,4 +29,14 @@ check('two outfield players swap places and the ball follows the carrier', `(() 
 check('a keeper does not swap with an outfield player', `(() => { const { M, S } = setupGap(); return swapInMatch(M, S, 0, 3) === false; })()`);
 check('the computer side closes its gap with ten men, keeper in goal', `(() => { const { M, S } = setupGap(); const keeper = S.on[0];
   fillGapAI(M, S); const on = S.on.filter(Boolean); return on.length === 10 && S.on[0] === keeper && S.on.indexOf(null) >= 0 && new Set(on).size === 10; })()`);
+check('a substitute cannot fill an empty position without an outgoing player', `(() => { const { M, S } = setupGap();
+  const before = JSON.stringify(S); return makeSub(M, S, null, S.bench[0]) === null && JSON.stringify(S) === before; })()`);
+check('a sent-off player cannot be substituted back into the side', `(() => { const { M, S } = setupGap(), id = S.on[2];
+  sendOff(M, S, id, {}); return makeSub(M, S, id, S.bench[0]) === null && moveIntoGap(M, S, id, 4) === false; })()`);
+check('invalid target slots cannot increase the lineup size', `(() => { const { M, S } = setupGap(), before = JSON.stringify(S.on);
+  return [11, 99, NaN, 4.5].every(gap => moveIntoGap(M, S, S.on[7], gap) === false) && JSON.stringify(S.on) === before; })()`);
+check('reorganizing uses no substitution or window even when both limits are exhausted', `(() => { const { M, S } = setupGap();
+  S.subs = 5; S.wins = 3; return moveIntoGap(M, S, S.on[7], 4) && S.subs === 5 && S.wins === 3 && S.on.filter(Boolean).length === 10; })()`);
+check('a selected second gap can be filled while retaining two empty positions', `(() => { const { M, S } = setupGap();
+  sendOff(M, S, S.on[2], {}); const id = S.on[7]; return moveIntoGap(M, S, id, 2) && S.on[2] === id && S.on[4] === null && S.on[7] === null && S.on.filter(Boolean).length === 9; })()`);
 console.log(`gap checks passed: ${checks.length}`);

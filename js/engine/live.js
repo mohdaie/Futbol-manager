@@ -322,7 +322,7 @@ function endMinute(L) {
   const inj = q.ev.concat(main ? [main] : []).find(e => e.t === 'inj' && M.sides[e.side].user);
   if (inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[inj.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
   const red = q.ev.concat(main ? [main] : []).find(e => e.t === 'red' && M.sides[e.off].user);
-  if (red && !inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[red.pid])} is sent off. Move a player into the gap.`); openLiveSheet('gap'); }
+  if (red && !inj) { L.paused = true; L.gapSlot = red.slot; updateBoard(L); toast(`${pname(G.players[red.pid])} is sent off. Move a player into the gap.`); openLiveSheet('gap'); }
   if (main && main.ht) { L.overlay = { big: 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
 }
 // Injury events from the engine have no time in the minute: shown at once.
@@ -707,8 +707,9 @@ function plCardHtml(L) {
 function livePitch(L, S) {
   const pos = positions({ ...S, fam: 100 }, true, 0.5, 0.45);
   const toks = S.on.map((id, i) => {
-    if (!id) return '';
-    const p = G.players[id], q = pos[i] || [0.5, 0.5], pl = FORMATIONS[S.ip][i][0], role = ROLES[pl][S.roles[i]] || ROLES[pl][0];
+    const slot = FORMATIONS[S.ip][i], q = pos[i] || [slot[1], slot[2]], pl = slot[0];
+    if (!id) return `<button class="tok live-gap-token ${L.swapFrom === i ? 'swap-picked' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" data-a="liveTok" data-i="${i}" aria-label="${pl} empty position: move a player here"><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">Empty</span><span class="tk-r">Move player here</span></button>`;
+    const p = G.players[id], role = ROLES[pl][S.roles[i]] || ROLES[pl][0];
     return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" data-a="liveTok" data-i="${i}"><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
   }).join('');
   return `<div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>`;
@@ -722,9 +723,13 @@ function liveRoleChoices(L, S) {
 function liveXiHtml(L, S) {
   return S.on.map((id, i) => {
     const pos = FORMATIONS[S.ip][i][0], p = G.players[id];
-    if (!id || !p) return `<div class="row live-xi-gap"><span class="pos">${pos}</span><span class="grow muted">Empty position</span></div>`;
+    if (!id || !p) return `<button class="row act live-xi-gap ${L.swapFrom === i ? 'swap-picked' : ''}" data-a="liveTok" data-i="${i}" aria-label="${pos} empty position: move a player here"><span class="pos">${pos}</span><span class="grow"><b>Empty position</b><small>Move an on-pitch player here</small></span><span class="chev">›</span></button>`;
     return `<button class="row act live-xi-player ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" data-a="liveTok" data-i="${i}" data-player-id="${id}"><span class="pos">${pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${esc(roleName(S, i))}${S.cap === id ? ' · Captain' : ''}</small></span>${liveFitnessHtml(S, id)}</button>`;
   }).join('');
+}
+
+function liveGapAccess(S) {
+  return S.on.some(id => !id) ? `<div class="card"><p class="muted">${S.on.filter(Boolean).length} players on pitch. Move a team-mate into an empty position; his old position becomes empty.</p><button class="btn wide" data-a="liveGap">Reorganize positions</button></div>` : '';
 }
 
 function openLiveSheet(kind) {
@@ -749,11 +754,12 @@ function openLiveSheet(kind) {
     const xi = L.tacticsView !== 'pitch', label = L.swapMode ? (L.swapFrom != null ? 'Now choose the player to swap with' : 'Choose a player to swap') : 'Swap positions';
     updateLiveFitness(L);
     sheet(`<h3 class="sh-t">In-match tactics</h3>
+      ${liveGapAccess(S)}
       <div class="seg" role="tablist" aria-label="Line-up view"><button id="liveXiTab" role="tab" class="${xi ? 'on' : ''}" aria-selected="${xi}" aria-controls="liveXiPanel" data-a="liveTacticsView" data-v="xi">First XI</button><button id="livePitchTab" role="tab" class="${xi ? '' : 'on'}" aria-selected="${!xi}" aria-controls="livePitchPanel" data-a="liveTacticsView" data-v="pitch">Formation</button></div>
       <div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
       <section id="liveXiPanel" role="tabpanel" aria-labelledby="liveXiTab" ${xi ? '' : 'hidden'}><h4 class="lbl">First XI <small>· ${S.on.filter(Boolean).length} on pitch · Condition & fatigue</small></h4><div class="list live-xi">${liveXiHtml(L, S)}</div></section>
       <section id="livePitchPanel" role="tabpanel" aria-labelledby="livePitchTab" ${xi ? 'hidden' : ''}>${livePitch(L, S)}</section>
-      <p class="muted">${L.swapMode ? 'Choose two players to swap places. Keepers swap only with keepers.' : 'Choose a player to change his role.'}</p>${liveRoleChoices(L, S)}
+      <p class="muted">${L.swapMode ? 'Choose two players to swap places, or a player and an empty position to move him. Keepers swap only with keepers.' : 'Choose a player to change his role, or an empty position to move a team-mate there.'}</p>${liveRoleChoices(L, S)}
       <div class="field"><label>In possession</label>${selectHtml('lt-ip', Object.keys(FORMATIONS), S.ip, 'liveShape')}</div>
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       <div class="field"><label>Tactical style</label><div class="chips">${Object.entries(STYLES).map(([k, s]) => `<button class="chip ${styleOf(S) === k ? 'on' : ''}" data-a="liveStyle" data-v="${k}">${s.n}</button>`).join('')}</div></div>
@@ -781,11 +787,14 @@ function openLiveSheet(kind) {
     return;
   }
   if (kind === 'gap') { // a man down: move one of the side into the gap, or keep it
-    const gap = S.on.indexOf(null), ip = FORMATIONS[S.ip];
-    const list = S.on.map((id, i) => (id ? `<button class="row act" data-a="gapMove" data-id="${id}"><span class="pos">${ip[i][0]}</span><span class="grow">${esc(pname(G.players[id]))}<small>${esc(roleName(S, i))}</small></span></button>` : '')).join('');
+    const gaps = S.on.map((id, i) => id ? -1 : i).filter(i => i >= 0), ip = FORMATIONS[S.ip];
+    const gap = gaps.includes(L.gapSlot) ? L.gapSlot : gaps[0]; L.gapSlot = gap;
+    const list = gap != null ? S.on.map((id, i) => (id ? `<button class="row act" data-a="gapMove" data-id="${id}" data-i="${gap}"><span class="pos">${ip[i][0]}</span><span class="grow">${esc(pname(G.players[id]))}<small>${esc(roleName(S, i))}</small></span></button>` : '')).join('') : '';
     sheet(`<h3 class="sh-t">A man down</h3>
-      <p class="muted">${gap >= 0 ? `The gap is at ${ip[gap][0]}. Move one of your players into it: the spot he leaves becomes the new gap.` : 'Your team is complete again.'}</p>
+      <p class="muted">${gap != null ? `The gap is at ${ip[gap][0]}. Move an on-pitch player into it: the spot he leaves becomes the new gap. This uses no substitution.` : 'There are no empty positions.'}</p>
+      ${gaps.length > 1 ? `<div class="chips" aria-label="Empty positions">${gaps.map(i => `<button class="chip ${gap === i ? 'on' : ''}" data-a="liveGap" data-i="${i}">${ip[i][0]} · position ${i + 1}</button>`).join('')}</div>` : ''}
       <div class="list">${list}</div>
+      <button class="btn wide" data-a="liveSheet" data-k="tactics">In-match tactics</button>
       <button class="row act" data-a="closeSheet"><span class="grow">Keep the gap</span></button>`, opts);
   }
   if (kind === 'subs') {
@@ -793,6 +802,7 @@ function openLiveSheet(kind) {
     const on = S.on.map((id, i) => (id ? `<button class="row act ${L.subSel === id ? 'sel' : ''}" data-a="subOut" data-id="${id}"><span class="pos">${ip[i][0]}</span><span class="grow">${esc(pname(G.players[id]))}${S.injuries.some(x => x[0] === id) ? ' <em class="tag bad">INJ</em>' : ''}<small>Rating ${S.rat[id].toFixed(1)}</small></span>${condBar(S.cond[id])}</button>` : '')).join('');
     const bench = S.bench.map(id => { const p = G.players[id]; return `<button class="row act" data-a="subIn" data-id="${id}" ${L.subSel && canSub(M, S) ? '' : 'disabled'}><span class="pos">${p.pos}</span><span class="grow">${esc(pname(p))}<small>OVR ${p.ca}</small></span>${condBar(S.cond[id] ?? p.cond)}</button>`; }).join('');
     sheet(`<h3 class="sh-t">Substitutions <small>${5 - S.subs} left · ${Math.max(0, 3 - S.wins)} windows</small></h3>
+      ${liveGapAccess(S)}
       <p class="muted">${L.subSel ? 'Now pick a replacement from the bench.' : 'Pick a player to take off.'}</p>
       <h4 class="lbl">On the pitch</h4><div class="list">${on}</div>
       <h4 class="lbl">Bench</h4><div class="list">${bench || '<p class="muted">No substitutes left.</p>'}</div>`, opts);
