@@ -586,6 +586,23 @@ function plCardHtml(L) {
     ${mine && i >= 0 ? `<div class="btns"><button class="btn" data-a="livePi" data-i="${i}">Player instructions</button><button class="btn" data-a="liveSubFor" data-id="${id}">Substitute</button></div>` : ''}`;
 }
 
+// The tactics page during a match: the pitch with every player (the same tokens as the tactics page), swaps and roles.
+function livePitch(L, S) {
+  const pos = positions({ ...S, fam: 100 }, true, 0.5, 0.45);
+  const toks = S.on.map((id, i) => {
+    if (!id) return '';
+    const p = G.players[id], q = pos[i] || [0.5, 0.5], pl = FORMATIONS[S.ip][i][0], role = ROLES[pl][S.roles[i]] || ROLES[pl][0];
+    return `<button class="tok ${L.swapFrom === i ? 'swap-picked' : ''} ${L.roleSlot === i ? 'sel' : ''}" style="left:${q[0] * 100}%;top:${q[1] * 100}%" data-a="liveTok" data-i="${i}"><span class="tk-pos">${pitchPosLabel(pl)}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${esc(role.n)}</span></button>`;
+  }).join('');
+  const roles = L.roleSlot != null && S.on[L.roleSlot] ? (() => {
+    const i = L.roleSlot, pl = FORMATIONS[S.ip][i][0];
+    return `<h4 class="lbl">Role for ${POS_NAME[pl]}</h4><div class="chips">${ROLES[pl].map((r, k) => `<button class="chip ${S.roles[i] === k ? 'on' : ''}" data-a="liveRole" data-i="${i}" data-k="${k}">${r.n}</button>`).join('')}</div>`;
+  })() : '';
+  const label = L.swapMode ? (L.swapFrom != null ? 'Now tap the player to swap with' : 'Tap a player to swap') : 'Swap positions';
+  return `<div class="btns"><button class="btn sm ${L.swapMode ? 'pri' : ''}" data-a="liveSwapMode">${label}</button></div>
+    <div class="tpitch ip"><div class="tp-lines"></div>${toks}</div>
+    <p class="muted">${L.swapMode ? 'Tap two players to swap places. Keepers swap only with keepers.' : 'Tap a player to change his role.'}</p>${roles}`;
+}
 function openLiveSheet(kind) {
   const L = LIVE, M = L.M, S = M.sides[L.bottom], O = M.sides[1 - L.bottom];
   const opts = { key: 'live:' + kind, restore: () => openLiveSheet(kind), valid: () => LIVE === L && !L.done };
@@ -606,6 +623,7 @@ function openLiveSheet(kind) {
   }
   if (kind === 'tactics') {
     sheet(`<h3 class="sh-t">In-match tactics</h3>
+      ${livePitch(L, S)}
       <div class="field"><label>In possession</label>${selectHtml('lt-ip', Object.keys(FORMATIONS), S.ip, 'liveShape')}</div>
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       <div class="field"><label>Tactical style</label><div class="chips">${Object.entries(STYLES).map(([k, s]) => `<button class="chip ${styleOf(S) === k ? 'on' : ''}" data-a="liveStyle" data-v="${k}">${s.n}</button>`).join('')}</div></div>

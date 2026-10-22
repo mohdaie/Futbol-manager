@@ -180,6 +180,19 @@ function sendOff(M, S, id, ev) {
   bumpRating(S, id, -1.5);
   M.dirty = true;
 }
+// Two players on the pitch change places (the tactics page): each keeps his place in the shape of his new slot.
+// Keepers swap only with keepers. Roles and instructions belong to the slot, so they stay where they are.
+function swapInMatch(M, S, i, j) {
+  if (i === j || i < 0 || j < 0 || i >= S.on.length || j >= S.on.length || !S.on[i] || !S.on[j]) return false;
+  if ((FORMATIONS[S.ip][i][0] === 'GK') !== (FORMATIONS[S.ip][j][0] === 'GK')) return false;
+  [S.on[i], S.on[j]] = [S.on[j], S.on[i]];
+  const P = M.sim.P[S.idx]; [P[i], P[j]] = [P[j], P[i]];
+  const B = M.sim.B;
+  if (B.os === S.idx) { if (B.oi === i) B.oi = j; else if (B.oi === j) B.oi = i; }
+  S._shape = null; S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null;
+  M.dirty = true;
+  return true;
+}
 // A sent-off player is not replaced: his side plays a man down. The manager may move one of his players into the gap.
 // The player keeps his place on the pitch (no new arrival); the slot he leaves becomes the new gap.
 function moveIntoGap(M, S, fromId, gap) {

@@ -24,4 +24,7 @@ check('a move into an occupied slot is refused', `(() => { const { M, S } = setu
 check('a player who is not on the pitch cannot be moved', `(() => { const { M, S } = setupGap(); return moveIntoGap(M, S, -1, 4) === false; })()`);
 check('a dismissal records the side and the slot it leaves', `(() => { const { M, S } = setupGap(); const id = S.on[2]; const ev = { min: 1, side: 1, t: 'foul', pid: id };
   sendOff(M, S, id, ev); return ev.t === 'red' && ev.off === 0 && ev.slot === 2 && S.on[2] === null; })()`);
+check('two outfield players swap places and the ball follows the carrier', `(() => { const { M, S, P } = setupGap(); const a = S.on[2], b = S.on[7], pa = P[2], pb = P[7];
+  const ok = swapInMatch(M, S, 2, 7); return ok && S.on[2] === b && S.on[7] === a && P[2] === pb && P[7] === pa && M.sim.B.oi === 2; })()`);
+check('a keeper does not swap with an outfield player', `(() => { const { M, S } = setupGap(); return swapInMatch(M, S, 0, 3) === false; })()`);
 console.log(`gap checks passed: ${checks.length}`);

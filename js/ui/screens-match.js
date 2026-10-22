@@ -296,6 +296,25 @@ ACT.subIn = ds => {
   L.subSel = null;
   reopenLive('subs');
 };
+// The tactics page: swap two players on the pitch, or set a player's role.
+ACT.liveSwapMode = () => { const L = LIVE; L.swapMode = !L.swapMode; L.swapFrom = null; L.roleSlot = null; reopenLive('tactics'); };
+ACT.liveTok = ds => {
+  const L = LIVE, S = liveSide(), i = +ds.i;
+  if (!L.swapMode) { L.roleSlot = L.roleSlot === i ? null : i; return reopenLive('tactics'); }
+  if (L.swapFrom == null) L.swapFrom = i;
+  else {
+    if (swapInMatch(L.M, S, L.swapFrom, i)) pushFeed(L, 'tac', `${pname(G.players[S.on[L.swapFrom]])} and ${pname(G.players[S.on[i]])} change places.`, L.bottom);
+    else toast('Keepers swap only with keepers.');
+    L.swapFrom = null;
+  }
+  reopenLive('tactics');
+};
+ACT.liveRole = ds => {
+  const L = LIVE, S = liveSide(), i = +ds.i;
+  S.roles[i] = +ds.k; L.M.dirty = true;
+  pushFeed(L, 'tac', `${pname(G.players[S.on[i]])} takes a new role: ${ROLES[FORMATIONS[S.ip][i][0]][+ds.k].n}.`, L.bottom);
+  reopenLive('tactics');
+};
 // A man down: one of the side moves into the gap; the spot he leaves is the new gap, so the sheet stays open.
 ACT.gapMove = ds => {
   const L = LIVE, S = liveSide(), gap = S.on.indexOf(null);
