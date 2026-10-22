@@ -51,6 +51,11 @@ const assert = require('node:assert/strict');
     const mover = await page.evaluate(() => liveSide().on[7]);
     await act('gapMove', { id: mover });
     check('a team-mate moves into the gap and leaves a new one', await page.evaluate(() => { const S = liveSide(); return S.on[5] === null || S.on[5] === undefined ? false : S.on.indexOf(null) === 7; }), true);
+    check('every player on the pitch carries a speed for the dribble view', await page.evaluate(() => LIVE.dots.every(team => team.every(d => !d || typeof d.v === 'number'))), true);
+    // A penalty: the taker runs in from six metres behind the spot before he strikes; the view must draw it cleanly.
+    await page.evaluate(() => { LIVE.mq.marks.push({ t: LIVE.gt + 1, k: 'sfx', s: 0, kind: 'penalty', who: 9, x0: 34, y0: 92, ax: 0, az: 0, res: 'goal', flight: 0.8 }); });
+    await page.waitForTimeout(700);
+    check('the match carries on after a penalty run-up is drawn', await page.evaluate(() => !!LIVE && !LIVE.done), true);
   } finally {
     await browser.close(); server.close();
   }

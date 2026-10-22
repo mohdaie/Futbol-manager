@@ -729,7 +729,7 @@ function shoot(M, s, i, o = {}) {
   ev.aim = Math.abs(ax) < 1.2 ? 'central' : ((ax > 0) === (p.x > PW / 2) ? 'near post' : 'far post');
   kick(M, s, i, 'shot', PW / 2 + ax, gy - fwdY(s) * (res === 'save' ? 0.8 : -1.5), -1, {});
   Object.assign(M.sim.B.fl, { res, ev, xg, aid, ax, az, kind: shot.kind });
-  mark(M, 'sfx', s, { kind: shot.kind, ax, az, res, x0: p.x, y0: p.y, flight: M.sim.B.fl.arr - M.sim.t, aim: ev.aim });
+  mark(M, 'sfx', s, { kind: shot.kind, ax, az, res, x0: p.x, y0: p.y, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: ev.aim });
   if (o.head) M.sim.B.vz = 2;
 }
 // The shot arrives: goal, save (held, parried or turned behind), or wide (goal kick, sometimes a deflection for a corner).

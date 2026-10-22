@@ -235,7 +235,10 @@ function setFrame(L, p, snap) {
     const x = smooth(7 + (s * 11 + i) * 2), y = smooth(8 + (s * 11 + i) * 2), fi = 51 + s * 11 + i;
     // Where he faces (rulebook 1c), turned the short way round between the two frames.
     const fa = a[fi] == null ? null : b[fi] == null ? a[fi] : a[fi] + Math.atan2(Math.sin(b[fi] - a[fi]), Math.cos(b[fi] - a[fi])) * u;
-    L.dots[s][i] = x == null ? null : { x, y, fa };
+    // Speed from the two frames (0.5 s apart): a carrier who is moving dribbles, with the ball ahead of his feet.
+    const ax = a[7 + (s * 11 + i) * 2], ay = a[8 + (s * 11 + i) * 2], bx = b[7 + (s * 11 + i) * 2], by = b[8 + (s * 11 + i) * 2];
+    const v = ax == null || bx == null ? 0 : Math.hypot(bx - ax, by - ay) / 0.5;
+    L.dots[s][i] = x == null ? null : { x, y, fa, v };
   }
   if (snap) moveCam(L, 0, true);
 }
@@ -333,12 +336,18 @@ function draw(L) {
     }
   } else L.trail = [];
   const r = Math.max(7, s * 1.3);
+  // A penalty: the taker runs in from six metres behind the spot to strike (the shot itself is drawn below).
+  const penRun = L.mq && L.gt != null ? L.mq.marks.filter(m => m.k === 'sfx' && m.kind === 'penalty' && L.gt >= m.t - 1.6 && L.gt < m.t).pop() : null;
+  const penAt = m => { const k = clamp((L.gt - (m.t - 1.6)) / 1.4, 0, 1), e = k * k * (3 - 2 * k), bx = m.x0, by = m.y0 - fwdY(m.s) * 6; return [bx + (m.x0 - bx) * e, by + (m.y0 - by) * e]; };
   g.textAlign = 'center'; g.textBaseline = 'middle';
   [1 - L.bottom, L.bottom].forEach(si => {
     const S = L.M.sides[si], col = L.colors[si === L.bottom ? 0 : 1];
     S.on.forEach((id, i) => {
       const d = L.dots[si][i]; if (!id || !d) return;
-      const [vx, vy] = view(L, d.x, d.y), x = X(vx), y = Y(vy), gk = i === 0;
+      const pr = penRun && penRun.s === si && penRun.who === i ? penAt(penRun) : [d.x, d.y];
+      // A carrier on the move bobs with his stride (the ball is drawn ahead of his feet, below).
+      const carrying = L.own && L.own[0] === si && L.own[1] === i && d.v > 1.5, bob = carrying ? Math.sin(L.gt * 12) * s * 0.2 : 0;
+      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), y = Y(vy) + bob, gk = i === 0;
       // The circle is his body (sim.js bodyRadius) at pitch scale, so contacts on screen match the physics.
       const br = Math.max(3, bodyRadius(S, i) * s);
       if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
@@ -389,7 +398,10 @@ function draw(L) {
     }
   }
   // The ball, lifted by its height, with its shadow on the grass.
-  const [bvx, bvy] = view(L, L.ball.x, L.ball.y), bx = X(bvx), by = Y(bvy), z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
+  // A carrier on the move has the ball just ahead of his feet, in the way he faces (a touch, not a stop).
+  const own = L.own && L.own[0] >= 0 && L.dots[L.own[0]] ? L.dots[L.own[0]][L.own[1]] : null, dribble = !!own && own.v > 1.5 && own.fa != null && zOver == null && !(L.ball.z > 0.3);
+  const [bx, by] = dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.9, Y(ovy) + Math.sin(fa) * s * 0.9]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
+  const z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
   g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
