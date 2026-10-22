@@ -655,3 +655,15 @@ From analysis rounds 3 and 4 (`docs/analysis/2026-10-22-round-3/`, `-round-4/`);
   carried; jumps (restarts, substitutions) stay straight.
 - **Action cues**: the ball's trail while it travels (gold for a shot), a ring where possession is won, a ring at
   the keeper on a save, a quick fade between highlights.
+
+## Story highlights and readable shots (2026.10.22.30)
+- **Highlights** (`segments()` in live.js): a highlight is a story, from where the team won the ball (or the set
+  piece it came from, at most 25 s before) to the finish: a goal, a shot, a penalty or a red card (extended adds
+  low chances, yellow cards, offsides and through balls). Passing that ends in nothing is not a highlight.
+- **Shots** (rulebook 7.6, `shotType()` in sim.js): placed, low drive, power, from distance, curler, chip, header,
+  free kick, penalty; aimed away from the keeper (near or far post, height). Where the ball goes matches the
+  outcome (inside the frame for a goal or save, wide or over for a miss); the keeper ends up where he dived. The
+  chance of a goal is unchanged (the shot model).
+- **2D view**: the ball rises to its target (a chip arcs), the keeper dives towards it, the net flashes on a goal,
+  a label names the shot and then the result (Saved!, Wide, Over the bar); goals show a net. Commentary names the
+  kind of shot and where it went. Card marks say whether a card is red.

@@ -61,8 +61,19 @@ const assert = require('node:assert/strict');
     check('Players move at football speeds', v.fast, 0);
     check('The camera keeps the ball on screen', v.inView >= v.samples * 0.9, true);
     check('The screen draws the engine positions', v.match >= v.samples * 0.85, true);
-    const hl = await page.evaluate(() => { const marks = [{ t: 100, k: 'shot', xg: 0.2 }, { t: 130, k: 'corner' }, { t: 145, k: 'attack' }]; G.settings.hl = 'key'; const k = segments(marks, 90); G.settings.hl = 'ext'; const e = segments(marks, 90); G.settings.hl = 'full'; const f = segments(marks, 90); const len = a => a.reduce((t, s) => t + s[1] - s[0], 0); return [len(k), len(e), len(f)]; });
-    check('Highlights: key < extended < full', hl[0] > 0 && hl[0] < hl[1] && hl[1] < hl[2] && hl[2] === 60, true);
+    // A highlight is a story: from where the team won the ball to the finish. A corner or an attack that ends in
+    // nothing is not a highlight; key < extended < full.
+    const hl = await page.evaluate(() => {
+      const marks = [{ t: 100, k: 'shot', s: 0, xg: 0.2 }, { t: 120, k: 'shot', s: 0, xg: 0.02 }, { t: 135, k: 'card', s: 1 }, { t: 140, k: 'corner', s: 0 }, { t: 145, k: 'attack', s: 0 }];
+      const fr = []; for (let t = 90; t <= 150; t += 0.5) { const f = [t, 30, 50, 0, t < 95 ? 1 : 0, 3, '']; fr.push(f); }
+      const run = lv => { G.settings.hl = lv; return segments(marks, 90, 0, null, fr); };
+      const k = run('key'), e = run('ext'), f = run('full'); G.settings.hl = 'ext';
+      const len = a => a.reduce((t, s) => t + s[1] - s[0], 0), covers = (a, p) => a.some(s => p >= s[0] && p <= s[1]);
+      return { lens: [len(k), len(e), len(f)], storyStart: k[0] && k[0][0], cornerShown: covers(e, 52) || covers(k, 52) };
+    });
+    check('Highlights: key < extended < full', hl.lens[0] > 0 && hl.lens[0] < hl.lens[1] && hl.lens[1] < hl.lens[2] && hl.lens[2] === 60, true);
+    check('A highlight starts where the team won the ball', Math.abs(hl.storyStart - 3.5) < 0.6, true);
+    check('A corner or an attack that ends in nothing is not a highlight', hl.cornerShown, false);
     await page.screenshot({ path: '/tmp/futbol-live-view.png' });
     await page.evaluate(() => { G.settings.hl = 'ext'; });
 

@@ -663,6 +663,22 @@ function secondBallSupport(M, s, i, j, x, y, flight) {
 }
 
 /* ---------- shots ---------- */
+// Rulebook 7.6: the kind of shot and the aim point (ax across the goal from its centre, az height), away from the
+// keeper. Only how it looks and where the ball goes; the chance of a goal is the shot model's.
+function shotType(M, s, i, p, o, oneOnOne, press) {
+  const S = M.sides[s], g = P_(M, 1 - s, 0), d = dGoal(s, p.x, p.y), cmp = ac(S, i, 'cmp'), fla = ac(S, i, 'fla'), fin = ac(S, i, 'fin');
+  const gOff = g ? g.x - PW / 2 : 0, far = p.x < PW / 2 ? 1 : -1, away = Math.abs(gOff) > 0.6 ? -Math.sign(gOff) : far;
+  if (o.pen) return { kind: 'penalty', ax: (R() < 0.5 ? -1 : 1) * rf(1.4, 3.3), az: rf(0, 1.9) };
+  if (o.fk) return { kind: 'free kick', ax: away * rf(2, 3.4), az: rf(1.4, 2.35) };
+  if (o.head) return { kind: 'header', ax: away * rf(0.8, 3.3), az: rf(0.1, 1.6) };
+  if (o.open) return { kind: 'open goal', ax: rf(-1.5, 1.5), az: rf(0, 0.6) };
+  const gkOut = g ? Math.abs(g.y - goalY(s)) : 0;
+  if (oneOnOne && gkOut > 4 && R() < clamp(0.15 + (cmp + fla - 24) * 0.03, 0.05, 0.5)) return { kind: 'chip', ax: rf(-1.2, 1.2), az: rf(1.7, 2.3) };
+  if (d > 20) return fla >= 13 && R() < 0.5 ? { kind: 'curler', ax: away * rf(2.4, 3.4), az: rf(1.2, 2.35) } : { kind: 'long', ax: away * rf(1.5, 3.4), az: rf(0.2, 2.2) };
+  if (d < 8) return { kind: 'power', ax: rf(-2.6, 2.6), az: rf(0.5, 2.3) };
+  if (R() < clamp(0.3 + (cmp - 10) * 0.04 + (fin - 10) * 0.02 - press * 0.3, 0.1, 0.8)) return { kind: 'placed', ax: far * rf(2.3, 3.3), az: rf(0.1, 0.8) };
+  return { kind: 'driven', ax: away * rf(1.4, 3.3), az: rf(0, 0.5) };
+}
 function shoot(M, s, i, o = {}) {
   const S = M.sides[s], O = M.sides[1 - s], sim = M.sim, p = P_(M, s, i), pl = G.players[S.on[i]];
   if (!p || !pl) return looseBall(M);
@@ -686,7 +702,8 @@ function shoot(M, s, i, o = {}) {
   const gk = P_(M, 1 - s, 0), gkp = G.players[O.on[0]];
   let blk = -1;
   if (!o.pen && !o.fk) M.sim.P[1 - s].forEach((q, j) => { if (q && j && blk < 0) { const [d, u] = segDist(q.x, q.y, p.x, p.y, PW / 2, goalY(s)); if (u > 0.05 && u < 0.9 && d < 1.2 && R() < 0.55 * (ac(O, j, 'pos') + ac(O, j, 'ant')) / 24) blk = j; } });
-  const aimX = PW / 2 + rf(-3.4, 3.4), gy = goalY(s);
+  const gy = goalY(s), shot = shotType(M, s, i, p, o, oneOnOne, press);
+  ev.kind = shot.kind;
   if (blk > 0) {
     const q = P_(M, 1 - s, blk);
     ev.t = 'miss'; ev.block = true; pstat(O, blk, 'blk'); bump(O, blk, 0.1);
@@ -702,9 +719,14 @@ function shoot(M, s, i, o = {}) {
   if (R() < pg) res = 'goal';
   else if (R() < clamp(0.25 + xg * 0.6, 0, 0.95)) res = 'save';
   else res = 'miss';
-  const tx = res === 'miss' ? PW / 2 + (R() < 0.5 ? -1 : 1) * rf(4.2, 9) : res === 'save' ? (gk ? gk.x : PW / 2) : aimX;
-  kick(M, s, i, 'shot', tx, gy - fwdY(s) * (res === 'save' ? 0.8 : -1.5), -1, {});
-  Object.assign(M.sim.B.fl, { res, ev, xg, aid });
+  // 7.6: where the ball goes matches what happened: inside the frame for a goal or a save, wide of a post or over the
+  // bar for a miss.
+  let { ax, az } = shot;
+  if (res === 'miss') { if (['power', 'long', 'curler', 'free kick', 'chip'].includes(shot.kind) && R() < 0.5) { az = rf(2.6, 4.5); ev.over = true; } else ax = (Math.sign(ax) || (R() < 0.5 ? -1 : 1)) * rf(3.9, 7.5); }
+  ev.aim = Math.abs(ax) < 1.2 ? 'central' : ((ax > 0) === (p.x > PW / 2) ? 'near post' : 'far post');
+  kick(M, s, i, 'shot', PW / 2 + ax, gy - fwdY(s) * (res === 'save' ? 0.8 : -1.5), -1, {});
+  Object.assign(M.sim.B.fl, { res, ev, xg, aid, ax, az, kind: shot.kind });
+  mark(M, 'sfx', s, { kind: shot.kind, ax, az, res, x0: p.x, y0: p.y, flight: M.sim.B.fl.arr - M.sim.t, aim: ev.aim });
   if (o.head) M.sim.B.vz = 2;
 }
 // The shot arrives: goal, save (held, parried or turned behind), or wide (goal kick, sometimes a deflection for a corner).
@@ -724,6 +746,10 @@ function shotArrives(M, fl) {
     mark(M, 'goal', s);
     M.sim.celebrate = 35; // celebration and the walk back for the kick-off
     return kickOff(M, 1 - s);
+  }
+  if ((fl.res === 'save' || fl.res === 'goal') && fl.ax != null) { // 7.6: the keeper ends up where he dived (beaten: short of it)
+    const g = P_(M, 1 - s, 0);
+    if (g) { g.x = clamp(g.x + (PW / 2 + fl.ax * (fl.res === 'save' ? 0.95 : 0.8) - g.x) * (fl.res === 'save' ? 1 : 0.75), PW / 2 - 4, PW / 2 + 4); g.y = goalY(s) - fwdY(s) * 0.8; g.vx = g.vy = 0; g.cool = 0.8; }
   }
   if (fl.res === 'save') {
     S.st.sot++; pstat(S, i, 'sot'); pstat(O, 0, 'sv');
@@ -987,11 +1013,12 @@ function foul(M, s, i, o, j) {
   const ev = evt(M, { side: s, t: 'foul', pid: fp.id, fside: o });
   const [ox, oy] = toOwn(s, own.x, own.y);
   const ycP = 0.15 * (1 + 0.25 * ((O.press ?? 1) - 1)) * (1 - O.calm) * cardMul(fp) * (1 + bh(O, j, 'tk') * 0.35) * (1 - ((O.capLdr ?? 10) - 10) * 0.008) * (oy < 0.35 ? 1.1 : 1);
-  if (R() < 0.0015 * cardMul(fp) * 1.4) { sendOff(M, O, fp.id, ev); syncSide(M, o); mark(M, 'card', o); }
+  if (R() < 0.0015 * cardMul(fp) * 1.4) { sendOff(M, O, fp.id, ev); syncSide(M, o); mark(M, 'card', o, { red: true }); }
   else if (R() < ycP * (O.yc[fp.id] ? 0.35 : 1)) {
-    if (O.yc[fp.id]) { sendOff(M, O, fp.id, ev); ev.second = true; syncSide(M, o); }
+    const red = !!O.yc[fp.id];
+    if (red) { sendOff(M, O, fp.id, ev); ev.second = true; syncSide(M, o); }
     else { O.yc[fp.id] = 1; O.st.yc++; ev.t = 'yellow'; bumpRating(O, fp.id, -0.3); }
-    mark(M, 'card', o);
+    mark(M, 'card', o, { red });
   }
   const inBox = oy < 0.157 && Math.abs(ox - 0.5) < 0.3;
   if (inBox) { mark(M, 'pen', s); ev.pen = true; return setRestart(M, 'pen', s, PW / 2, goalY(s) - fwdY(s) * 11, ev); }
