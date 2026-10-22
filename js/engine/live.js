@@ -640,6 +640,8 @@ function openLiveSheet(kind) {
       <div class="field"><label>Out of possession</label>${selectHtml('lt-oop', Object.keys(FORMATIONS), S.oop, 'liveShape')}</div>
       <div class="field"><label>Tactical style</label><div class="chips">${Object.entries(STYLES).map(([k, s]) => `<button class="chip ${styleOf(S) === k ? 'on' : ''}" data-a="liveStyle" data-v="${k}">${s.n}</button>`).join('')}</div></div>
       ${INSTRUCTIONS.map(ins => `<div class="field"><label>${ins.n}</label><div class="seg">${ins.o.map((o, i) => `<button class="${S[ins.k] === i ? 'on' : ''}" data-a="liveIns" data-k="${ins.k}" data-v="${i}">${o}</button>`).join('')}</div></div>`).join('')}
+      <h4 class="lbl">Set pieces & captain</h4>
+      <div class="card two">${[['cap', 'Captain'], ['pk', 'Penalties'], ['fk', 'Free kicks'], ['ck', 'Corners']].map(([k, n]) => `<div class="field"><label>${n}</label>${selectHtml('lsp-' + k, [['', 'Automatic']].concat(S.on.filter(Boolean).map(id => [id, pname(G.players[id])])), S[k] ?? '', 'liveSp', `data-k="${k}"`)}</div>`).join('')}</div>
       <h4 class="lbl">Player instructions</h4>
       <div class="list">${S.on.map((id, i) => { if (!id) return ''; const pos = FORMATIONS[S.ip][i][0], set = PLAYER_INS.filter(x => S.pi[i] && S.pi[i][x.k] != null && S.pi[i][x.k] !== 1); return `<button class="row act" data-a="livePi" data-i="${i}"><span class="pos">${pos}</span><span class="grow"><b>${esc(pname(G.players[id]))}</b><small>${esc(roleName(S, i))}${set.length ? ' · ' + set.map(x => x.o[S.pi[i][x.k]]).join(', ') : ''}</small></span><span class="chev">›</span></button>`; }).join('')}</div>
       <p class="muted">Changes apply to this match only. Your saved tactic stays as it is.</p>`, opts);

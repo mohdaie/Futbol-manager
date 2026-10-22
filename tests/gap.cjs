@@ -27,4 +27,6 @@ check('a dismissal records the side and the slot it leaves', `(() => { const { M
 check('two outfield players swap places and the ball follows the carrier', `(() => { const { M, S, P } = setupGap(); const a = S.on[2], b = S.on[7], pa = P[2], pb = P[7];
   const ok = swapInMatch(M, S, 2, 7); return ok && S.on[2] === b && S.on[7] === a && P[2] === pb && P[7] === pa && M.sim.B.oi === 2; })()`);
 check('a keeper does not swap with an outfield player', `(() => { const { M, S } = setupGap(); return swapInMatch(M, S, 0, 3) === false; })()`);
+check('the computer side closes its gap with ten men, keeper in goal', `(() => { const { M, S } = setupGap(); const keeper = S.on[0];
+  fillGapAI(M, S); const on = S.on.filter(Boolean); return on.length === 10 && S.on[0] === keeper && S.on.indexOf(null) >= 0 && new Set(on).size === 10; })()`);
 console.log(`gap checks passed: ${checks.length}`);

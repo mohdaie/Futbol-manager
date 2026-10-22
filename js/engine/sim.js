@@ -1018,10 +1018,10 @@ function foul(M, s, i, o, j) {
   const ev = evt(M, { side: s, t: 'foul', pid: fp.id, fside: o });
   const [ox, oy] = toOwn(s, own.x, own.y);
   const ycP = 0.15 * (1 + 0.25 * ((O.press ?? 1) - 1)) * (1 - O.calm) * cardMul(fp) * (1 + bh(O, j, 'tk') * 0.35) * (1 - ((O.capLdr ?? 10) - 10) * 0.008) * (oy < 0.35 ? 1.1 : 1);
-  if (R() < 0.0015 * cardMul(fp) * 1.4) { sendOff(M, O, fp.id, ev); syncSide(M, o); mark(M, 'card', o, { red: true }); }
+  if (R() < 0.0015 * cardMul(fp) * 1.4) { sendOff(M, O, fp.id, ev); syncSide(M, o); if (!O.user) fillGapAI(M, O); mark(M, 'card', o, { red: true }); }
   else if (R() < ycP * (O.yc[fp.id] ? 0.35 : 1)) {
     const red = !!O.yc[fp.id];
-    if (red) { sendOff(M, O, fp.id, ev); ev.second = true; syncSide(M, o); }
+    if (red) { sendOff(M, O, fp.id, ev); ev.second = true; syncSide(M, o); if (!O.user) fillGapAI(M, O); }
     else { O.yc[fp.id] = 1; O.st.yc++; ev.t = 'yellow'; bumpRating(O, fp.id, -0.3); }
     mark(M, 'card', o, { red });
   }

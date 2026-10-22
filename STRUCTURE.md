@@ -752,3 +752,14 @@ ball just ahead of his feet and bobs with his stride. No change to match outcome
 Verified: 25 test suites, the strict audit, the 12-match contract, and browser checks for the tactics page, the gap and
 the penalty and dribble views. The penalty run-up was not checked by eye; the dribble frame was.
 The match-balance limits in 2026.10.22.33 are unchanged and still open.
+Unreleased (live match): the computer side closes a man-down gap itself (`fillGapAI`): the team-mate who fits the gap best
+moves in, and the gap is left in an attacking slot where possible. Ten men still leave one slot empty. The live tactics
+page now has set pieces and captain (penalties, free kicks, corners, captain), chosen from the players on the pitch.
+
+## 2026.10.22.35 — computer side closes its man-down gap; set pieces and captain in the live tactics page (owner-requested release)
+
+After a red card the computer side moves the team-mate who fits the gap best into it, leaving the gap in an attacking
+slot where possible. Ten men still leave one slot empty. The live tactics page adds set pieces and captain (penalties,
+free kicks, corners, captain), chosen from the players on the pitch and kept for that match only.
+Verified: 25 test suites, the strict audit, browser checks for the tactics page and the set-piece choice, and a gap check.
+The match-balance limits from earlier releases are unchanged and still open.

@@ -335,6 +335,8 @@ ACT.livePiSet = ds => {
   reopenLive('pi');
 };
 ACT.liveIns = ds => { const S = liveSide(); S[ds.k] = +ds.v; LIVE.M.dirty = true; reopenLive('tactics'); };
+// Set pieces and captain for this match: the taker is chosen by player id; '' means the automatic choice.
+CHG.liveSp = (v, ds) => { const S = liveSide(); S[ds.k] = v === '' ? null : +v; LIVE.M.dirty = true; };
 CHG.liveShape = (v, ds, el) => {
   const S = liveSide(), k = el.id === 'lt-ip' ? 'ip' : 'oop';
   S[k] = v;
