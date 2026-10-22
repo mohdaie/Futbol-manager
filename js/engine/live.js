@@ -59,13 +59,21 @@ function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255
 const colDist = (a, b) => { const x = hexRgb(a), y = hexRgb(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
 const isLight = h => { const [r, g, b] = hexRgb(h); return r * 0.299 + g * 0.587 + b * 0.114 > 150; };
 
-// Bottom = user. Avoid kits that look alike.
+// Bottom = user. A kit must stand out from both colours of the other team's and from the grass: otherwise the
+// second colour, otherwise the clearest alternative kit (red-and-white against red-and-white was unreadable).
+const GRASS = '#2A8A56', KIT_ALT = ['#1E3A8A', '#F2C14E', '#111827', '#38BDF8', '#7C3AED', '#F97316', '#F1F1F1'];
+const kitGap = (c, avoid) => Math.min(...avoid.map(a => colDist(c, a)));
 function kitColors(uid, oid) {
   const u = G.clubs[uid], o = G.clubs[oid];
+  let uf = u.c1, us = u.c2;
+  if (colDist(uf, GRASS) < 110) { uf = u.c2; us = u.c1; }
+  const avoid = [uf, us, GRASS];
   let of = o.c1, os = o.c2;
-  if (colDist(u.c1, of) < 120) { of = o.c2; os = o.c1; }
-  if (colDist(u.c1, of) < 120) { of = isLight(u.c1) ? '#1E2A33' : '#F1F1F1'; os = isLight(of) ? '#1E2A33' : '#F1F1F1'; }
-  return [{ f: u.c1, s: u.c2, gk: '#F4D35E' }, { f: of, s: os, gk: '#9AD1D4' }];
+  if (kitGap(of, avoid) < 140) {
+    if (kitGap(o.c2, avoid) >= 140) { of = o.c2; os = o.c1; }
+    else { of = KIT_ALT.reduce((b, c) => (kitGap(c, avoid) > kitGap(b, avoid) ? c : b)); os = isLight(of) ? '#1E2A33' : '#F1F1F1'; }
+  }
+  return [{ f: uf, s: us, gk: '#F4D35E' }, { f: of, s: os, gk: '#9AD1D4' }];
 }
 
 /* ---------- screen and camera ----------
@@ -129,6 +137,7 @@ function liveFrame(ts) {
     else if (!L.done) onFullTime(L);
   }
   if (L.overlay) { L.overlay.t -= dt; if (L.overlay.t <= 0 && !L.overlay.stay) L.overlay = null; }
+  if (L.fade > 0) L.fade = Math.max(0, L.fade - dt / 260);
   moveCam(L, dt);
   draw(L);
   L.raf = requestAnimationFrame(liveFrame);
@@ -174,14 +183,16 @@ function segments(marks, t0, lo = 0, M = null) {
 // Play the minute: inside a highlight the frames run at the chosen speed; between highlights the clock jumps on.
 function playMinuteView(L, dt) {
   const q = L.mq, inSeg = q.segs.find(s => q.p >= s[0] && q.p < s[1]);
-  if (inSeg) q.p = Math.min(inSeg[1], q.p + dt / 1000 * (SPEED_RATE[G.settings.speed] || 4));
+  // Dead time at a restart (the ball is out, players walk into position) runs six times faster, as TV cuts it.
+  const ff = L.rs && L.rs !== 'pen' ? 6 : 1;
+  if (inSeg) q.p = Math.min(inSeg[1], q.p + dt / 1000 * (SPEED_RATE[G.settings.speed] || 4) * ff);
   else {
     q.skip += dt;
     if (q.skip < 90) return;
     q.skip = 0;
     const nx = q.segs.find(s => s[0] > q.p);
     q.p = nx ? nx[0] : 60;
-    if (nx) { setFrame(L, q.p, true); } // cut to the start of the next highlight
+    if (nx) { setFrame(L, q.p, true); L.fade = 1; L.trail = []; } // cut to the start of the next highlight (a quick fade)
   }
   setFrame(L, q.p);
   // Commentary and big moments as their time comes.
@@ -197,10 +208,22 @@ function setFrame(L, p, snap) {
   let k = Math.min(fr.length - 1, Math.max(0, Math.floor((t - fr[0][0]) / TICK)));
   while (k > 0 && fr[k][0] > t) k--;
   const a = fr[k], b = fr[Math.min(fr.length - 1, k + 1)], u = b[0] > a[0] ? clamp((t - a[0]) / (b[0] - a[0]), 0, 1) : 0;
+  const z = fr[Math.max(0, k - 1)], c = fr[Math.min(fr.length - 1, k + 2)];
   const lerp = (i) => (a[i] == null ? null : b[i] == null ? a[i] : a[i] + (b[i] - a[i]) * u);
-  L.ball.x = lerp(1); L.ball.y = lerp(2); L.ball.z = lerp(3); L.own = [a[4], a[5]]; L.rs = a[6];
+  // Players curve through their half-second positions (Catmull-Rom) instead of sliding in straight lines and
+  // turning sharply; a jump (a restart, a substitution) stays straight.
+  const smooth = (i) => {
+    const p0 = z[i], p1 = a[i], p2 = b[i], p3 = c[i];
+    if (p1 == null || p2 == null || p0 == null || p3 == null || Math.abs(p2 - p1) > 6 || Math.abs(p1 - p0) > 6 || Math.abs(p3 - p2) > 6) return lerp(i);
+    return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (3 * p1 - p0 - 3 * p2 + p3) * u * u * u);
+  };
+  const carried = a[4] >= 0 && b[4] === a[4] && b[5] === a[5];
+  L.ball.x = carried ? smooth(1) : lerp(1); L.ball.y = carried ? smooth(2) : lerp(2); L.ball.z = lerp(3); L.rs = a[6]; L.gt = t;
+  // Possession changing hands in open play: a ring where it was won.
+  if (a[4] >= 0 && L.own[0] >= 0 && a[4] !== L.own[0] && !a[6] && !snap) (L.fx || (L.fx = [])).push({ k: 'won', x: L.ball.x, y: L.ball.y, side: a[4], t0: t });
+  L.own = [a[4], a[5]];
   for (let s = 0; s < 2; s++) for (let i = 0; i < 11; i++) {
-    const x = lerp(7 + (s * 11 + i) * 2), y = lerp(8 + (s * 11 + i) * 2), fi = 51 + s * 11 + i;
+    const x = smooth(7 + (s * 11 + i) * 2), y = smooth(8 + (s * 11 + i) * 2), fi = 51 + s * 11 + i;
     // Where he faces (rulebook 1c), turned the short way round between the two frames.
     const fa = a[fi] == null ? null : b[fi] == null ? a[fi] : a[fi] + Math.atan2(Math.sin(b[fi] - a[fi]), Math.cos(b[fi] - a[fi])) * u;
     L.dots[s][i] = x == null ? null : { x, y, fa };
@@ -210,6 +233,7 @@ function setFrame(L, p, snap) {
 function liveEvent(L, e) {
   const M = L.M;
   if (e.t === 'goal') {
+    L.shotT = L.gt;
     L.disp[e.side]++; updateBoard(L);
     pushFeed(L, 'goal', commLine(L, e), e.side);
     L.overlay = { big: e.pen ? 'PENALTY GOAL' : 'GOAL', small: pname(G.players[e.pid]) + ' ' + e.min + "'", t: 2200, side: e.side };
@@ -227,7 +251,11 @@ function liveEvent(L, e) {
     L.line = e.line != null ? { y: e.line, until: L.t + 1600 } : null;
     L.hold = 500; return;
   }
-  if (e.t === 'save' || e.t === 'miss' || e.t === 'shot') { const txt = commLine(L, e); if (txt) pushFeed(L, 'chance', txt, e.side); return; }
+  if (e.t === 'save' || e.t === 'miss' || e.t === 'shot') {
+    L.shotT = L.gt; // the ball's trail turns gold
+    if (e.t === 'save') { const g = L.dots[1 - e.side] && L.dots[1 - e.side][0]; if (g) (L.fx || (L.fx = [])).push({ k: 'save', x: g.x, y: g.y, side: 1 - e.side, t0: L.gt }); }
+    const txt = commLine(L, e); if (txt) pushFeed(L, 'chance', txt, e.side); return;
+  }
   if (e.t === 'foul') { if (e.pen) { pushFeed(L, 'info', `Penalty! ${pname(G.players[e.pid])} brings his man down.`, e.side); L.overlay = { big: 'PENALTY', small: clubName(M.sides[e.side].cid), t: 1400 }; } else if (R() < 0.35) pushFeed(L, 'info', commLine(L, e), e.fside); return; }
   if (e.t === 'inj') { pushFeed(L, 'inj', commLine(L, e), e.side); return; }
   const txt = commLine(L, e); if (txt) pushFeed(L, 'info', txt, e.side);
@@ -270,7 +298,27 @@ function draw(L) {
     const [, vy] = view(L, 0, L.line.y);
     g.save(); g.strokeStyle = '#F2C14E'; g.lineWidth = 2; g.setLineDash([6, 4]); g.beginPath(); g.moveTo(X(0), Y(vy)); g.lineTo(X(PW), Y(vy)); g.stroke(); g.restore();
   }
-  const r = Math.max(6, s * 1.05);
+  // Effects under the players: rings where the ball was won and at the keeper on a save (1.2 s of play).
+  L.fx = (L.fx || []).filter(f => L.gt - f.t0 < 1.2 && L.gt >= f.t0);
+  L.fx.forEach(f => {
+    const [vx, vy] = view(L, f.x, f.y), k = (L.gt - f.t0) / 1.2, col = f.k === 'save' ? '#9AD1D4' : L.colors[f.side === L.bottom ? 0 : 1].f;
+    g.save(); g.globalAlpha = 1 - k; g.strokeStyle = col; g.lineWidth = 3;
+    g.beginPath(); g.arc(X(vx), Y(vy), (f.k === 'save' ? 1.5 : 1) * s * (0.8 + k * 2.2), 0, Math.PI * 2); g.stroke(); g.restore();
+  });
+  // The ball's trail while it travels (the last 0.6 s of play); gold for a shot.
+  if (L.own[0] < 0 && L.gt != null) {
+    const tr = L.trail || (L.trail = []), last = tr[tr.length - 1];
+    if (!last || last.t !== L.gt) tr.push({ x: L.ball.x, y: L.ball.y, z: L.ball.z || 0, t: L.gt });
+    while (tr.length && (L.gt - tr[0].t > 0.6 || tr[0].t > L.gt)) tr.shift();
+    const shot = L.shotT != null && L.gt - L.shotT < 1.6 && L.gt >= L.shotT;
+    for (let n = 1; n < tr.length; n++) {
+      const [ax, ay] = view(L, tr[n - 1].x, tr[n - 1].y), [bx2, by2] = view(L, tr[n].x, tr[n].y);
+      g.strokeStyle = shot ? `rgba(242,193,78,${(n / tr.length) * 0.9})` : `rgba(255,255,255,${(n / tr.length) * 0.55})`;
+      g.lineWidth = Math.max(2, s * 0.3) * (shot ? 1.4 : 1); g.lineCap = 'round';
+      g.beginPath(); g.moveTo(X(ax), Y(ay) - tr[n - 1].z * s * 0.55); g.lineTo(X(bx2), Y(by2) - tr[n].z * s * 0.55); g.stroke();
+    }
+  } else L.trail = [];
+  const r = Math.max(7, s * 1.3);
   g.textAlign = 'center'; g.textBaseline = 'middle';
   [1 - L.bottom, L.bottom].forEach(si => {
     const S = L.M.sides[si], col = L.colors[si === L.bottom ? 0 : 1];
@@ -303,6 +351,15 @@ function draw(L) {
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
   g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
   if ((G.settings.cam || 'follow') === 'follow') miniMap(L);
+  // A restart running fast-forward: what it is.
+  const RS_NAME = { thr: 'Throw-in', gk: 'Goal kick', ck: 'Corner', fk: 'Free kick', ko: 'Kick-off' };
+  if (L.rs && RS_NAME[L.rs] && !L.overlay) {
+    g.font = '700 12px "Plus Jakarta Sans", system-ui, sans-serif'; g.textAlign = 'left';
+    const txt = RS_NAME[L.rs] + '  \u25B8\u25B8', w = g.measureText(txt).width + 16;
+    g.fillStyle = 'rgba(34,8,47,.72)'; g.beginPath(); g.roundRect ? g.roundRect(8, 8, w, 22, 11) : g.rect(8, 8, w, 22); g.fill();
+    g.fillStyle = '#EAF2EE'; g.fillText(txt, 16, 19.5); g.textAlign = 'center';
+  }
+  if (L.fade > 0) { g.fillStyle = `rgba(10,4,18,${L.fade * 0.65})`; g.fillRect(0, 0, W, H); }
   if (L.overlay) {
     const o = L.overlay;
     g.fillStyle = 'rgba(34,8,47,.7)'; g.fillRect(0, H / 2 - 44, W, 88);
