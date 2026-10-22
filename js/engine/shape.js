@@ -78,6 +78,9 @@ function positionJobs(T, raw, bx, by, phase, lines = null) {
       job = final && near ? 'Overlap on the ball side' : 'Support width / cover the far side';
       if (build) { x = .5 + side * .44; y = 1 - 32 / 105; job = 'Give width higher up in build-up'; } // 6.3
       if (final && near) y = clamp(by + .03, .10, .38);
+      // 6.0: when the wide forward on his side plays inside, the touchline is his.
+      const inside = !build && f.some((sl, k) => k !== i && LINE[sl[0]] >= 3 && (sl[1] - .5) * side > .25 && T.on && T.on[k] && ['Inside Forward', 'Inverted Winger', 'Wide Playmaker'].includes(roleName(T, k)));
+      if (inside) { x = .5 + side * .44; y = Math.min(y, clamp(by + (near ? -.02 : .06), .12, .6)); job = 'Take the touchline (the wide forward is inside)'; }
     } else if (slot[0] === 'DM') {
       job = build ? 'Show in front of the centre-backs' : 'Screen behind the ball';
       y = build ? 1 - 27 / 105 : clamp(by + .07, .34, .8); // 6.4: shows between the pressers, in front of the centre-backs
@@ -92,11 +95,14 @@ function positionJobs(T, raw, bx, by, phase, lines = null) {
     } else if (slot[0] === 'AMC' && phase !== 'build') {
       y = final ? 24 / 105 : pocket != null ? pocket : clamp(by - .18, 24 / 105, .42); job = 'Receive between the lines / Zone 14';
       if (role === 'Shadow Striker' && final) { y = 11 / 105; job = 'Run past the nine'; }
-    } else if (['Winger', 'Wide Midfielder'].includes(role)) {
+    } else if (role === 'Winger') {
       job = 'Hold the wide lane';
       if (final && !near && Math.abs(bx - .5) > .25 && by <= 18 / 105) {
         x = .5 + side * .06; y = 7 / 105; job = 'Attack the far post';
       } else { x = .5 + side * .43; }
+    } else if (role === 'Wide Midfielder') { // 6.7: a little deeper and narrower than a Winger, supporting behind the ball
+      job = 'Support the full-back on the wide side'; x = .5 + side * .37;
+      if (!build) y = Math.max(y, by + .03);
     } else if (['Inside Forward', 'Inverted Winger', 'Wide Playmaker'].includes(role) && phase !== 'build') {
       x = half; job = role === 'Inside Forward' ? 'Cut into the half-space to score' : 'Create from the half-space';
       if (final) y = role === 'Inside Forward' ? 15 / 105 : 25 / 105;
@@ -175,8 +181,15 @@ function blockPlan(T, bx, by) {
   const pos = (T.on || []).map((id, i) => {
     if (!id) return null;
     if (i === 0) return [clamp(0.5 + (bx - 0.5) * 0.12, 0.42, 0.58), high ? 0.91 : 0.965];
-    const slot = f[map[i]], row = LINE[slot[0]], band = row === 1 ? 0 : row === 2 ? 0.55 : row === 3 ? 1.15 : row === 4 ? 1.9 : 2.8;
-    let x = 0.5 + (slot[1] - 0.5) * width + shift;
+    const slot = f[map[i]], row = LINE[slot[0]], role = roleName(T, i);
+    let band = row === 1 ? 0 : row === 2 ? 0.55 : row === 3 ? 1.15 : row === 4 ? 1.9 : 2.8;
+    // 6.0: how far a wide role comes back is part of the role. The Wide Midfielder makes a flat midfield line, the
+    // Winger sits just above it, the Inside Forward stays high in the half-space as the outlet for the counter.
+    const wide = Math.abs(slot[1] - 0.5) > 0.25 && row >= 3;
+    if (wide && role === 'Wide Midfielder') band = Math.min(band, 1.1);
+    else if (wide && ['Winger', 'Inverted Winger', 'Wide Playmaker'].includes(role)) band = Math.max(band, 1.35);
+    else if (wide && role === 'Inside Forward') band = Math.max(band, low ? 1.6 : 2.3);
+    let x = 0.5 + (slot[1] - 0.5) * (wide && role === 'Inside Forward' && !low ? 0.5 : width) + shift;
     const far = (slot[1] - 0.5) * (bx - 0.5) < 0;
     if (far) x = lerp(x, 0.5 + shift * 0.5, Math.abs(bx - 0.5) * 0.35);
     return [clamp(x, 0.06, 0.94), clamp(backY - band * gap, 0.06, 0.95)];
