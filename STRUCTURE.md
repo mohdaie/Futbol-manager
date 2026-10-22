@@ -763,3 +763,16 @@ slot where possible. Ten men still leave one slot empty. The live tactics page a
 free kicks, corners, captain), chosen from the players on the pitch and kept for that match only.
 Verified: 25 test suites, the strict audit, browser checks for the tactics page and the set-piece choice, and a gap check.
 The match-balance limits from earlier releases are unchanged and still open.
+
+## 2026.10.22.38 — shot path drawn along its flight; role changes take effect at once (owner-requested release)
+
+A shot in flight is drawn along its real path, from the shooter to the target at shot speed. The frames are 0.5 s apart
+and a shot lasts about 0.4 s, so the ball is no longer interpolated across that gap. Outside a shot the ball is drawn
+where the engine places it, as in 2026.10.22.36.
+A role chosen on the First XI tab takes effect at once: the shape and behaviour caches are cleared, so the new role
+drives the next moves rather than waiting for the cache to refresh.
+This branch is merged with the owner's 2026.10.22.36 (smooth 2D playback, grounded running motion) and 2026.10.22.37
+(matchday First XI and live condition indicators). Their First XI and ball drawing are kept.
+Verified: 24 node suites, the strict audit (0 failures), the live tactics browser test (28 checks, including the shot path,
+the penalty run-up and the role cache reset) and the live animation browser test.
+The match-balance limits from earlier releases are unchanged and still open.
