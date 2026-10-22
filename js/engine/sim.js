@@ -1141,6 +1141,10 @@ function targets(M, all) {
         const anchorY = toWorld(s, pos[i][0], pos[i][1])[1];
         Y = s === 0 ? Math.max(Y, anchorY) : Math.min(Y, anchorY);
       }
+      // A back line does not sit on the six-yard line. While defending, a defender in the back line stays at least 12 m
+      // from his own goal unless the ball is in the six-yard zone, so a striker coming into the box cannot drag the line
+      // down onto the keeper. Midfielders are not limited.
+      if (!has && i && defRole <= 2 && by < 0.94) Y = gy === 0 ? Math.max(Y, 12) : Math.min(Y, PL - 12);
       p.tx = clamp(X, 0.5, PW - 0.5); p.ty = clamp(Y, 0.5, PL - 0.5);
     }
   }
