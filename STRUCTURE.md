@@ -724,3 +724,10 @@ above the 15-20 target), dribbles 17-18 (target 8-10), wins by 5+ 4-9%, home win
 Tested a lower commitment rate (0.04 instead of 0.09 for exposed or covered duels) on seeds 1-3, 120 matches: tackles
 22 per team, ground duels 44, fouls 20-21, goals 2.9-3.4, wins by 5+ 5-10%. Fewer tackles but fewer duels and more
 goals, so it was reverted. Tackle counts are a calibration question still open; goal excess is a defence question.
+Passing diagnosis (handover item 5, not yet changed): 72% of carrier decisions are passes; 42% of passes go more than 3 m
+backward, and in the middle third without pressure 64% do (rule 3.8 says forward first). Forward options exist (90% of
+unpressed middle-third moments have an onside team-mate 4-30 m ahead) but the top-four pass cut removes them, and their
+value loses to backward passes because the receivers are marked (median 4.7 m from the nearest opponent, against 15.8 m
+for team-mates behind the ball) and the passes are riskier (risk 0.39 against 0.15). The fix is attacking support
+movement into free space between the lines, not the pass weights alone. Keeping the best forward pass in the cut
+changed backward share from 64% to 61%, so it was not kept.
