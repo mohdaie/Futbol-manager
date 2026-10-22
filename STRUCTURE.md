@@ -776,3 +776,14 @@ This branch is merged with the owner's 2026.10.22.36 (smooth 2D playback, ground
 Verified: 24 node suites, the strict audit (0 failures), the live tactics browser test (28 checks, including the shot path,
 the penalty run-up and the role cache reset) and the live animation browser test.
 The match-balance limits from earlier releases are unchanged and still open.
+
+## 2026.10.22.39 — assistant coach: pre-season friendlies on the fixtures screen (owner-requested release)
+
+In pre-season the fixtures screen offers an assistant coach. He looks at the overseas clubs already in the game, takes the
+eight closest in strength to us, plays each one two simulated games on the engine (home and away), and ranks them by
+strength gap and by how close those games were. The results are estimates, not a forecast.
+Arranging a club puts a friendly in a free pre-season week (weeks 0–4), with us at home. Friendlies carry a `fr` flag and
+are kept out of the league table. The analysis leaves every career stat and condition unchanged.
+Verified: tests/friendlies.cjs (9 checks), tests/friendlies-ui.cjs (7 checks, browser), all node suites, the strict audit,
+and the live tactics browser test.
+The match-balance limits from earlier releases are unchanged and still open.
