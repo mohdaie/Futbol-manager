@@ -229,13 +229,28 @@ SCREENS.gamestatus = {
   },
 };
 
+// The assistant coach's pre-season friendlies: analysis of the overseas clubs in the game, and one-tap arranging.
+function friendlyCard() {
+  if (!inPreseason()) return '';
+  const A = UI.friendly && UI.friendly.wk === G.week ? UI.friendly : null, head = '<h3>Assistant coach <small>pre-season friendlies</small></h3>';
+  if (A && A.busy) return `<div class="card">${head}<p class="muted">${esc(A.step)}</p></div>`;
+  if (!A || !A.rows) return `<div class="card">${head}<p class="muted">He looks at the overseas clubs already in the game, plays each one a few simulated games, and picks the friendlies that test the squad most.</p><button class="btn pri" data-a="friendlyAnalyse">Find friendlies</button></div>`;
+  const rows = A.rows.map(r => {
+    const done = G.fixtures.some(f => f.fr && (f.h === r.id || f.a === r.id));
+    const rec = `${r.rec.w}-${r.rec.d}-${r.rec.l} (${r.rec.gf}-${r.rec.ga} in ${FRIENDLY_GAMES})`;
+    return `<div class="row"><span class="grow"><b>${esc(r.name)}</b><small>${esc(natName(r.nat))} · rep ${r.rep} (${r.gap >= 0 ? '+' : ''}${r.gap} on us) · simulated ${rec}</small></span>${done ? '<span class="muted">Arranged</span>' : `<button class="btn sm" data-a="friendlyArrange" data-id="${r.id}">Arrange</button>`}</div>`;
+  }).join('');
+  return `<div class="card">${head}<p class="muted">Ranked by strength gap and by how close the simulated games were. These are estimates from the engine, not a forecast.</p><div class="list">${rows || empty('No clubs to test against', 'No overseas clubs are available.')}</div>
+    <button class="btn sm" data-a="friendlyAnalyse">Run the analysis again</button></div>`;
+}
+
 SCREENS.fixtures = {
   render() {
     const t = UI.tab.fx || 'ours';
     let body = '';
     if (t === 'ours') {
       const list = G.fixtures.filter(f => f.h === G.club || f.a === G.club).sort((a, b) => a.w - b.w);
-      body = `<div class="list">${list.map(f => fixtureLinks(f, G.club)).join('')}</div>`;
+      body = `${friendlyCard()}<div class="list">${list.map(f => fixtureLinks(f, G.club)).join('')}</div>`;
     } else {
       const cur = G.fixtures.filter(f => f.w >= G.week)[0], r = UI.tab.round ?? (cur ? cur.r : 37);
       const list = G.fixtures.filter(f => f.r === +r).sort(fxSort);
