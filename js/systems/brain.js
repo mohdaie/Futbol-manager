@@ -44,13 +44,16 @@ function brainDefaults() {
 function brain() {
   if (BRAIN) return BRAIN;
   BRAIN = brainDefaults();
+  if (typeof SaveStorage !== 'undefined' && SaveStorage.brain) { BRAIN = { ...BRAIN, ...SaveStorage.brain }; return BRAIN; }
   try { const s = JSON.parse(localStorage.getItem(BRAIN_KEY) || 'null'); if (s) BRAIN = { ...BRAIN, ...s }; } catch (e) { /* storage blocked */ }
   return BRAIN;
 }
 function brainSave() {
   try {
     const B = brain(); brainCloudCapture(B);
-    localStorage.setItem(BRAIN_KEY, JSON.stringify(B)); brainCloudSchedule(); return true;
+    if (typeof SaveStorage !== 'undefined') SaveStorage.enqueueBrain(B);
+    else localStorage.setItem(BRAIN_KEY, JSON.stringify(B));
+    brainCloudSchedule(); return true;
   } catch (e) { return false; }
 }
 const activeVersion = () => brain().versions.find(v => v.id === brain().active) || null;

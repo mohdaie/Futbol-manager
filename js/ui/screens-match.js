@@ -70,6 +70,7 @@ async function checkForUpdate() {
   if (!versionNewer(v, GAME_VERSION)) { UPDATE.state = 'latest'; updateShow(); return; }
   if (tried === v) { UPDATE.state = 'pending'; updateShow(); return; }
   if (UI.s !== 'title') { UPDATE.state = 'idle'; return; } // never reload under a player who has already gone in
+  if (G && !await saveGameAsync()) { UPDATE.state = 'error'; updateShow(); toast('Export a backup before updating; this device could not save your career.'); return; }
   UPDATE.state = 'found'; updateShow();
   try { sessionStorage.setItem(UPDATE_KEY, v); sessionStorage.removeItem(LAST_VIEW_KEY); } catch { /* reload anyway */ } // reopen on the title
   const own = u => u && new URL(u, location.href).origin === location.origin;
@@ -120,13 +121,15 @@ ACT.pickClub = ds => { START.club = ds.id; render(); };
 ACT.pickAvatar = ds => { START.avatar = +ds.v; render(); };
 CHG.mgr = v => { START.name = v.trim(); };
 ACT.resume = () => { if (loadGame()) go('home'); };
-ACT.startGame = () => {
+ACT.startGame = async () => {
   const n = document.getElementById('mgr');
   START.name = (n && n.value.trim()) || START.name;
   const speed = titleSpeed();
   newGame(START.club, START.name || 'The Boss', START.avatar);
-  G.settings.speed = speed; saveGame();
+  G.settings.speed = speed;
   go('home');
+  const saved = await saveGameAsync();
+  if (!saved) toast('This career could not be saved. Export a backup before leaving.');
 };
 
 /* ---------- pre-match ---------- */
@@ -227,11 +230,11 @@ ACT.pressA = ds => {
 };
 ACT.pressSkip = () => { const fx = userFixture(); G.press[fx.id].done = true; G.press[fx.id].said = 'Your assistant handled the media.'; render(); };
 ACT.kickoff = () => { const fx = userFixture(); if (fx && !played(fx)) startLive(fx); };
-ACT.instant = () => {
+ACT.instant = async () => {
   const fx = userFixture();
   if (!fx || played(fx)) return;
   if (liveOn(fx) || liveFromSave(fx)) { go('match'); return liveInstant(); }
-  playUserInstant(fx);
+  await playUserInstantAsync(fx);
   go('post', { fid: fx.id });
 };
 
@@ -274,8 +277,8 @@ ACT.pause = () => { const L = LIVE; if (!L || L.done || (L.overlay && L.overlay.
 ACT.hlCycle = () => { G.settings.hl = { key: 'ext', ext: 'full', full: 'key' }[G.settings.hl || 'ext']; if (LIVE && LIVE.mq) LIVE.mq.segs = segments(LIVE.M.marks || [], LIVE.mq.t0, Math.min(0, LIVE.mq.p), LIVE.M); updateBoard(LIVE); toast('Highlights: ' + HL[G.settings.hl]); };
 ACT.camCycle = () => { G.settings.cam = (G.settings.cam || 'follow') === 'follow' ? 'full' : 'follow'; updateBoard(LIVE); };
 ACT.speedCycle = () => { G.settings.speed = { 1: 2, 2: 4, 4: 1 }[G.settings.speed] || 2; updateBoard(LIVE); };
-ACT.instant2 = () => { if (LIVE && !LIVE.done) liveInstant(); };
-ACT.toPost = () => { const fid = LIVE.fid; go('post', { fid }); LIVE = null; };
+ACT.instant2 = () => { if (LIVE && !LIVE.done) return liveInstant(); };
+ACT.toPost = () => { if (LIVE.finishing) return; const fid = LIVE.fid; go('post', { fid }); LIVE = null; };
 ACT.talk = ds => applyTalk(ds.k);
 ACT.shout = ds => applyShout(ds.k);
 ACT.liveSheet = ds => {
@@ -412,4 +415,4 @@ SCREENS.sacked = {
   },
 };
 ACT.takeJob = ds => { takeJob(ds.id); UI.tab = {}; go('home'); };
-ACT.newGame2 = () => { deleteSave(); G = null; go('start'); };
+ACT.newGame2 = async () => { await deleteSave(); G = null; LIVE = null; go('start'); };

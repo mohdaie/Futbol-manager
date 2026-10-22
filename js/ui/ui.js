@@ -1,4 +1,5 @@
 'use strict';
+let ACTION_BUSY = false; // in-flight work is runtime state, never view-history state
 /* ===== ui.js =====
    Tiny UI framework: router, app shell, bottom sheets, toasts, click/change
    dispatch through data-a / data-c attributes, and shared components. */
@@ -237,15 +238,29 @@ function playerRow(p, extra = '', opts = {}) {
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]');
   if (!el || el.disabled) return;
+  if (ACTION_BUSY && !['pause', 'dayRunStop'].includes(el.dataset.a)) return;
   const f = ACT[el.dataset.a];
-  if (f) { e.preventDefault(); viewAction(() => f(el.dataset, el)); }
+  if (f) {
+    e.preventDefault();
+    const result = viewAction(() => f(el.dataset, el));
+    if (result && typeof result.catch === 'function') {
+      const exclusive = ['instant', 'instant2', 'admWeeks', 'admSimMine', 'newGame', 'newGame2', 'returnTitle', 'importDo'].includes(el.dataset.a);
+      if (exclusive) ACTION_BUSY = true;
+      el.disabled = true;
+      result.catch(() => toast('The operation could not finish. Your existing progress has been kept.')).finally(() => { if (exclusive) ACTION_BUSY = false; if (el.isConnected) el.disabled = false; syncViewHistory(); });
+    }
+  }
 });
 document.addEventListener('change', e => {
   const el = e.target.closest('[data-c]');
   if (!el) return;
   const f = CHG[el.dataset.c];
   // deferred so a re-render never happens while the field is still blurring
-  if (f) { const v = el.type === 'checkbox' ? el.checked : el.value, ds = { ...el.dataset }; setTimeout(() => { if (el.isConnected) viewAction(() => f(v, ds, el)); }, 0); }
+  if (f) { const v = el.type === 'checkbox' ? el.checked : el.value, ds = { ...el.dataset }; setTimeout(() => {
+    if (!el.isConnected || ACTION_BUSY) return;
+    const result = viewAction(() => f(v, ds, el));
+    if (result && typeof result.catch === 'function') { ACTION_BUSY = true; result.catch(() => toast('The change could not finish.')).finally(() => { ACTION_BUSY = false; syncViewHistory(); }); }
+  }, 0); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); backView(); } });
 
@@ -256,12 +271,14 @@ ACT.dismissSheet = () => dismissPopup();
 ACT.tab = ds => { UI.tab[ds.key] = ds.v; render(); };
 // Continue: the calendar moves day by day (dayrun.js).
 
-function boot() {
+async function boot() {
+  if (typeof SaveStorage !== 'undefined') await SaveStorage.ready;
   loadGame();
   UI.s = 'title';
   if (G) restoreScreen();
   try { render(true); } catch (e) { UI.s = G ? 'home' : 'title'; UI.p = {}; render(true); } // a screen that no longer fits the save
   initViewHistory();
   if (UI.s === 'title') checkForUpdate();
+  if (typeof SaveStorage !== 'undefined' && SaveStorage.error) toast('Save storage could not be opened. Your existing backup has been kept; export your career before leaving.');
 }
 window.addEventListener('DOMContentLoaded', boot);

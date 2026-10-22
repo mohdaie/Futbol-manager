@@ -19,13 +19,13 @@ function startDayRun() {
   DAYRUN.timer = setTimeout(dayTick, DAY_MS * 0.6);
 }
 
-function matchdayNow(fx) {
-  simUpTo(fx, false); G.day = fx.d ?? 5; saveGame();
+async function matchdayNow(fx) {
+  await simUpToAsync(fx, false); G.day = fx.d ?? 5; await saveGameAsync();
   return go('prematch');
 }
 
 const HOUR_MS = 900; // each hour of deadline day
-function dayTick() {
+async function dayTick() {
   DAYRUN.timer = 0;
   if (!DAYRUN.on || !G) return;
   // Deadline day: the hours tick by before the day moves on.
@@ -46,7 +46,9 @@ function dayTick() {
   }
   DAYRUN.hourly = false;
   const firstNews = G.nextId, playedBefore = G.fixtures.filter(played).length, wasDay = today();
-  const r = advanceDay();
+  let r;
+  try { r = await advanceDayAsync(); } catch { DAYRUN.on = false; toast('Results could not be updated. Your completed matches have been kept; try Continue again.'); return drawDayRun(); }
+  if (!DAYRUN.on) return;
   DAYRUN.days++;
   if (r === 'ok') saveGame(); // every day is saved, so a refresh never loses days
   const games = G.fixtures.filter(played).length - playedBefore;
@@ -98,6 +100,7 @@ function drawDayRun(first) {
       ${DD ? `<div class="dr-cal dl"><span class="dr-mon">Deadline day · ${d.getDate()} ${MONTHS[d.getMonth()]}</span><b class="dr-day">${String(Math.min(23, DD.h)).padStart(2, '0')}:00</b><span class="dr-wd">${DD.done ? 'The window is shut' : DD.h < 9 ? 'Window shuts at 23:00' : (23 - DD.h) + ' hour' + (23 - DD.h === 1 ? '' : 's') + ' left'}</span></div>`
         : `<div class="dr-cal${first ? '' : ' flip'}"><span class="dr-mon">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><b class="dr-day">${d.getDate()}</b><span class="dr-wd">${WDAYS[d.getDay()]}</span></div>`}
       <p class="dr-phase">${esc(phaseLabel())}${nf ? ` · ${toMatch === 0 ? 'matchday' : toMatch === 1 ? 'next match tomorrow' : `next match in ${toMatch} days`}` : ''}</p>
+      <p id="simulationProgress" class="muted" role="status"></p>
       ${items.length ? `<h3 class="dr-h">News just in</h3><div class="list">${items.map(n => `<button class="row act news unread" data-a="dayRunOpen" data-id="${n.id}"><span class="grow"><b>${esc(n.title)}</b><small>${esc(String(n.body).slice(0, 90))}${String(n.body).length > 90 ? '…' : ''}</small></span></button>`).join('')}</div>`
         : S && S.kind === 'quiet' ? '<p class="muted">Nothing has happened for a while. Continue when you are ready.</p>'
         : `<ul class="dr-feed">${DAYRUN.feed.map(f => `<li><b>${f.lbl || WDAYS[f.d.getDay()] + ' ' + f.d.getDate()}</b> ${esc(f.t)}</li>`).join('') || '<li class="muted">Moving through the week…</li>'}</ul>`}

@@ -221,11 +221,11 @@ ACT.admCreate = () => {
 };
 
 /* ---------- time ---------- */
-ACT.admWeeks = ds => {
+ACT.admWeeks = async ds => {
   let n = +ds.n, done = 0, r = 'ok';
   for (let guard = 0; guard < 200 && done < n; guard++) {
-    r = advanceWeek();
-    if (r === 'match') { playUserInstant(userFixture()); continue; }
+    r = await advanceWeekAsync();
+    if (r === 'match') { await playUserInstantAsync(userFixture()); continue; }
     done++;
     if (r === 'season' || r === 'sacked') break;
   }
@@ -233,7 +233,7 @@ ACT.admWeeks = ds => {
   if (r === 'season' || r === 'sacked') return go('home');
   toast(`Moved ${done} week${done === 1 ? '' : 's'} on. ${phaseLabel()}.`); render();
 };
-ACT.admSimMine = () => { const fx = userFixture(); if (fx && !played(fx)) { playUserInstant(fx); toast(`${clubName(fx.h)} ${fx.hg}-${fx.ag} ${clubName(fx.a)}`); } render(); };
+ACT.admSimMine = async () => { const fx = userFixture(); if (fx && !played(fx)) { await playUserInstantAsync(fx); toast(`${clubName(fx.h)} ${fx.hg}-${fx.ag} ${clubName(fx.a)}`); } render(); };
 
 /* ---------- engine ---------- */
 CHG.admTune = (v, ds) => {

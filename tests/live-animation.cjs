@@ -56,7 +56,7 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
 
     await page.evaluate(() => { G.settings.speed = 4; G.settings.hl = 'full'; while (!userFixture()) advanceWeek(); go('prematch'); ACT.kickoff(); });
     await page.waitForFunction(() => LIVE.mq && LIVE.mq.fr.length > 0);
-    const motion = await page.evaluate(() => {
+    const motion = await page.evaluate(async () => {
       const L = LIVE;
       L.paused = true;
       const fr = L.mq.fr, start = fr[0][0];
@@ -72,7 +72,7 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       result.pause = L.dots[0].every((d, i) => !d || d.stride === stride[i]);
       // A regular minute boundary must keep previous samples for its incoming tangent.
       const q = L.mq, last = q.fr[q.fr.length - 1];
-      q.p = 60; q.ev = []; q.main = null; endMinute(L); liveStep(L);
+      q.p = 60; q.ev = []; q.main = null; endMinute(L); await liveStep(L);
       result.seam = L.mq.fr.some(f => f[0] === last[0]) && L.mq.fr.some(f => f[0] < L.mq.t0);
       L.paused = false;
       return result;

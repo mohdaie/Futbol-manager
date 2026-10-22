@@ -45,7 +45,7 @@ const server = require('node:http').createServer((req, res) => {
     await back(); check('Back returns to original news', await page.evaluate(() => UI.popup.key), 'news:' + info.news);
     await page.locator('.related-actions [data-a="trackPlayer"]').click();
     check('Shortlist action opens shortlist tab', await page.evaluate(() => [UI.s, UI.tab.tr]), ['transfers', 'short']);
-    check('Shortlist action persists player', await page.evaluate(id => JSON.parse(localStorage.getItem(SAVE_KEY)).shortlist.includes(id), info.pid), true);
+    check('Shortlist action persists player', await page.evaluate(async id => { await SaveStorage.flush(); return (await SaveStorage.request('load')).shortlist.includes(id); }, info.pid), true);
     await act('trackPlayer', { id: info.pid });
     check('Repeated shortlist action never duplicates player', await page.evaluate(id => G.shortlist.filter(x => x === id).length, info.pid), 1);
     await page.locator('.linked-prow [data-a="clubPage"]').first().click();
@@ -56,6 +56,7 @@ const server = require('node:http').createServer((req, res) => {
     check('Opposition youth squad is browsable', await page.locator('.player-main').count(), 20);
     await layout('Club squad');
     await page.reload();
+    await page.waitForFunction(() => !!G);
     check('Refresh restores opposition club and squad level', await page.evaluate(() => [UI.s, UI.p.cid, UI.p.level]), ['clubview', info.cid, 'Y']);
     await act('go', { s: 'clubs' });
     check('Directory includes all 33 clubs and free agents', await page.locator('.main .row[data-a="clubPage"]').count(), 34);

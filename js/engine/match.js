@@ -49,6 +49,10 @@ function matchMods(fx) {
 }
 
 function createMatch(fx) {
+  const random = { rng: Math.floor(hash01(`${G.simSeed ?? G.createdAt ?? G.season}:${fx.id}:${fx.h}:${fx.a}`) * 4294967295) };
+  return matchRandom(random, () => { const M = createMatchState(fx); M.rng = random.rng; return M; });
+}
+function createMatchState(fx) {
   // Real fixtures: players recover for the days since their last match before teams are picked.
   if (fx.id > 0 && fx.w != null) [fx.h, fx.a].forEach(cid => squadOf(cid).forEach(p => recoverTo(p, fxDayNo(fx))));
   if (fx.id > 0 && (fx.h === G.club || fx.a === G.club) && typeof adviceAtKickoff === 'function') adviceAtKickoff(fx);
@@ -272,26 +276,34 @@ function aiManage(M, S) {
 }
 
 function stepMatch(M, autoUser) {
+  return matchRandom(M, () => stepMatchState(M, autoUser));
+}
+function stepMatchState(M, autoUser) {
   const evs = simMinute(M);
   M.sides.forEach(S => { if (!S.user || autoUser) evs.push(...aiManage(M, S)); });
   return evs;
 }
 
 function quickSim(fx) {
+  if (played(fx)) return null;
   const M = createMatch(fx);
   M.instant = fx.h === G.club || fx.a === G.club;
-  while (!M.ended) stepMatch(M, true);
+  if (!M.instant && typeof runFastMatch === 'function') runFastMatch(M);
+  else while (!M.ended) stepMatch(M, true);
   finishMatch(M);
   return M;
 }
 
 function finishMatch(M) {
+  const fixture = G.fixtures.find(f => f.id === M.fid);
+  if (!fixture || played(fixture)) return false; // retries cannot settle a fixture twice
   if (typeof scoutWatchMatch === 'function') scoutWatchMatch(M);
   if (typeof brainCloudDuels === 'function') brainCloudDuels(M);
   brainScore(M);
   const fx = G.fixtures.find(f => f.id === M.fid);
   const [H, W] = M.sides;
   fx.hg = H.st.g; fx.ag = W.st.g;
+  fx.model = M.model || 'positional-v3';
   fx.goals = [].concat(...M.sides.map((S, si) => S.goals.map(g => [si, g.min, g.pid, g.pen ? 1 : 0]))).sort((a, b) => a[1] - b[1]);
   // Compact stats for every league match (analyst reports): [possession %, shots, on target, xG, passes, completed, crosses, corners, set-piece goals], and each side's style.
   const totPos = M.sides[0].st.pos + M.sides[1].st.pos || 1;

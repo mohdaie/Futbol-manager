@@ -44,7 +44,7 @@ const assert = require('node:assert/strict');
     check('Both starters remain selected exactly once', await page.evaluate(() => new Set(G.tactics.slots).size), 11);
     check('Roles and individual instructions stay with their positions', await page.evaluate(() => [G.tactics.roles, JSON.stringify(G.tactics.pi)]), [original.roles, original.pi]);
     check('Swapping players does not change tactical familiarity', await page.evaluate(() => G.training.fam), original.fam);
-    check('Pitch swaps save immediately', await page.evaluate(() => JSON.parse(localStorage.getItem(SAVE_KEY)).tactics.slots), expected);
+    check('Pitch swaps persist in the autosave', await page.evaluate(async () => { await SaveStorage.flush(); return (await SaveStorage.request('load')).tactics.slots; }), expected);
     check('After a swap the first selection is cleared', await page.evaluate(() => UI.swapFrom), null);
     await page.screenshot({ path: '/tmp/futbol-lineup-swap.png', animations: 'disabled' });
     // Tapping the same player twice cancels; Done must restore the normal picker.
@@ -68,7 +68,8 @@ const assert = require('node:assert/strict');
     await page.locator(`#layer [data-a="pickSlot"][data-id="${sub}"]`).click();
     check('A substitute still replaces the selected starter', await page.evaluate(i => G.tactics.slots[i], original.st), sub);
     check('Replaced starter moves onto the bench', await page.evaluate(id => G.tactics.bench.includes(id), original.xi[original.st]), true);
-    await page.reload();
+    await page.evaluate(() => SaveStorage.flush());
+    await page.reload(); await page.waitForFunction(() => !!G);
     check('Reload retains the revised selection', await page.evaluate(i => G.tactics.slots[i], original.st), sub);
     // Out-of-possession uses the mapped tokens but swaps the same player IDs.
     await act('tview', { v: 'oop' });

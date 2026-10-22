@@ -9,6 +9,12 @@ A football manager game for the browser, designed for a phone held in portrait. 
 
 Your career saves automatically in the browser. Use Settings → Export save to keep a backup.
 
+Autosaves use IndexedDB on this device, with serialization and database writes in a worker. Existing localStorage careers are copied and verified before use; their original recovery copy is retained. Save now and Save & return to title wait for the checkpoint to finish. If you close or refresh during an unfinished save, the browser can ask you to stay until it completes. Clearing site data still removes local saves.
+
+Settings also offers a portable JSON download and file import, plus the existing save-code format. Browsers with file-system access can update a user-selected save file. These files are manual backups; they are not cloud saves.
+
+Unwatched computer fixtures use an event-based engine. Your watched matches and instant results retain the detailed positional engine. Normal gameplay runs both models in a Web Worker, keeping match generation off the rendering thread. See [PERFORMANCE.md](PERFORMANCE.md) for validation commands and compatibility details.
+
 ## What's in it
 
 - The 20 top-flight clubs under their nicknames (Gunners, Reds, Citizens and so on). Every club has a first team, reserves and U18s (about 1,300 players). First teams, and some youth squads, are based on the real 2026/27 squads, renamed with different names that sound similar (same age, nationality and position). The rest of the youth squads are generated.

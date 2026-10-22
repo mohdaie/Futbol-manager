@@ -2,7 +2,18 @@
 /* ===== util.js =====
    Randomness, maths and formatting helpers. Holds no game state. */
 
-const R = Math.random;
+let MATCH_RANDOM = null;
+const R = () => {
+  if (!MATCH_RANDOM) return Math.random();
+  let t = MATCH_RANDOM.rng = (MATCH_RANDOM.rng + 0x6D2B79F5) >>> 0;
+  t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+};
+function matchRandom(M, run) {
+  if (!Number.isFinite(M.rng)) M.rng = 1;
+  const previous = MATCH_RANDOM; MATCH_RANDOM = M;
+  try { return run(); } finally { MATCH_RANDOM = previous; }
+}
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
 const rf = (a, b) => a + R() * (b - a);
 const pick = a => a[Math.floor(R() * a.length)];

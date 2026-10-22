@@ -312,38 +312,75 @@ SCREENS.settings = {
       <div class="card"><button class="btn pri wide" data-a="returnTitle">Save &amp; return to title</button></div>
       <div class="card"><h3>Manager portrait</h3>${avatarPicker(G.avatar || 1, 'setAvatar')}</div>
       <div class="card"><h3>Default match speed</h3><div class="seg">${[1, 2, 4].map(s => `<button class="${G.settings.speed === s ? 'on' : ''}" data-a="speed" data-v="${s}">${s}x</button>`).join('')}</div></div>
-      <div class="card"><h3>Save game</h3><p class="muted">The game saves itself in this browser after every week and match. Clearing site data removes it, so export a copy to keep a backup.</p>
-        <div class="btns"><button class="btn" data-a="saveNow">Save now</button><button class="btn" data-a="exportSave">Export save</button><button class="btn" data-a="importOpen">Import save</button></div>
+      <div class="card"><h3>Save game</h3><p class="muted">Autosaves stay on this device. Clearing site data removes them. Keep a save file as a backup or import it on another device.</p>
+        <p id="saveStatus" role="status" class="${SaveStorage.error ? 'bad' : 'muted'}">${SaveStorage.error ? 'Saving failed. Export a backup before leaving.' : 'Automatic saving on this device.'}</p>
+        <div class="btns"><button class="btn" data-a="saveNow">Save now</button>${window.showSaveFilePicker ? `<button class="btn" data-a="savePhone">${SaveStorage.file ? 'Update phone file' : 'Save to phone'}</button>` : ''}<button class="btn" data-a="downloadSave">Download save file</button><button class="btn" data-a="exportSave">Export save code</button><button class="btn" data-a="importOpen">Import save</button></div>
         ${exp ? `<textarea id="saveBox" class="code" rows="5" readonly>${esc(exp)}</textarea><button class="btn" data-a="copySave">Copy to clipboard</button>` : ''}</div>
       <div class="card danger"><h3>New game</h3><p class="muted">Starts a new career and deletes the current save.</p><button class="btn ${UI.tab.confirmNew ? 'bad' : ''}" data-a="newGame">${UI.tab.confirmNew ? 'Tap again to delete and restart' : 'Start a new game'}</button></div>`;
   },
 };
 ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to Manager ' + ds.v + '.'); render(); };
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
-ACT.saveNow = () => toast(saveGame() ? 'Game saved.' : 'Saving failed. Browser storage is blocked here, so export your save instead.');
-ACT.returnTitle = () => {
+ACT.saveNow = async () => toast(await saveGameAsync() ? 'Game saved on this device.' : 'Saving failed. Export a backup before leaving.');
+ACT.returnTitle = async () => {
   DAYRUN.on = false; clearTimeout(DAYRUN.timer); DAYRUN.timer = 0;
   closeDayRun();
   stopLive();
-  if (!saveGame()) return toast('Saving failed. Stay here and export your save before leaving.');
+  if (!await saveGameAsync()) return toast('Saving failed. Stay here and export your save before leaving.');
   try { sessionStorage.removeItem(LAST_VIEW_KEY); } catch (e) { /* storage blocked */ }
   UI.tab = {};
   go('title');
 };
-ACT.exportSave = () => { syncPlaytime(); UI.tab.export = btoa(unescape(encodeURIComponent(JSON.stringify(G)))); render(); };
+ACT.exportSave = async () => {
+  try { syncPlaytime(); UI.tab.export = await SaveStorage.request('exportCode', SaveStorage.snapshot()); render(); }
+  catch { toast('The backup could not be prepared. Please try again.'); }
+};
+ACT.savePhone = async () => {
+  try {
+    // The chooser must open directly in the user gesture, before export awaits.
+    const handle = window.showSaveFilePicker ? SaveStorage.file || await showSaveFilePicker({ suggestedName: `futbol-manager-${G.season}.json`, types: [{ description: 'Futbol Manager save', accept: { 'application/json': ['.json'] } }] }) : null;
+    syncPlaytime();
+    const json = await SaveStorage.request('export', SaveStorage.snapshot());
+    if (handle) {
+      const writable = await handle.createWritable();
+      try { await writable.write(json); await writable.close(); } catch (error) { await writable.abort().catch(() => {}); throw error; }
+      SaveStorage.file = handle; toast('Save file updated.'); render();
+    } else {
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' })), link = document.createElement('a');
+      link.href = url; link.download = `futbol-manager-${G.season}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); toast('Save file download started.');
+    }
+  } catch (error) { if (error.name !== 'AbortError') { SaveStorage.file = null; toast('The phone file could not be saved. Choose Download save file instead.'); } }
+};
+ACT.downloadSave = async () => {
+  try {
+    syncPlaytime(); const json = await SaveStorage.request('export', SaveStorage.snapshot());
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' })), link = document.createElement('a');
+    link.href = url; link.download = `futbol-manager-${G.season}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); toast('Save file download started.');
+  } catch { toast('The backup could not be prepared. Please try again.'); }
+};
 ACT.copySave = () => {
   const box = document.getElementById('saveBox');
   navigator.clipboard.writeText(box.value).then(() => toast('Save copied.'), () => { box.select(); toast('Select the text and copy it manually.'); });
 };
-ACT.importOpen = () => sheet(`<h3 class="sh-t">Import save</h3><p class="muted">Paste an exported save code. It replaces your current game.</p><textarea id="importBox" class="code" rows="6"></textarea><button class="btn pri wide" data-a="importDo">Load save</button>`);
-ACT.importDo = () => {
+ACT.importOpen = () => sheet(`<h3 class="sh-t">Import save</h3><p class="muted">Choose a save file or paste an exported save code. Loading it replaces your current career. Export a backup first if you want to keep it.</p><input id="importFile" type="file" accept=".json,application/json" data-c="importFile"><textarea id="importBox" class="code" rows="6"></textarea><button class="btn pri wide" data-a="importDo">Load save code</button>`);
+async function importCareer(text) {
   try {
-    const data = JSON.parse(decodeURIComponent(escape(atob(document.getElementById('importBox').value.trim()))));
-    if (!data.players || !data.clubs) throw new Error('bad');
-    G = data; saveGame(); closeSheet(true); UI.tab = {}; go('home'); toast('Save loaded.');
-  } catch (e) { toast('That save code could not be read. Check it was copied in full.'); }
-};
-ACT.newGame = () => {
+    const data = await SaveStorage.request('import', text);
+    DAYRUN.on = false; clearTimeout(DAYRUN.timer); stopLive();
+    const previous = G;
+    try { G = data; ensureWorld(); ensureUserLineup(); } finally { G = previous; }
+    if (!await saveGameAsync()) return toast('Your current career could not be saved. Export it before replacing it.');
+    // Commit the replacement before changing the running career.
+    SaveStorage.replacing = true;
+    await SaveStorage.request('save', data);
+    LIVE = null; SaveStorage.file = null; SaveStorage.current = SaveStorage.cached = data; SaveStorage.written = SaveStorage.dirty;
+    G = data; ensureWorld(); closeSheet(true); UI.tab = {}; go('home'); toast('Save loaded.');
+  } catch (e) { toast('The save could not be loaded. Your current career has been kept.'); }
+  finally { SaveStorage.replacing = false; }
+}
+ACT.importDo = () => importCareer(document.getElementById('importBox').value.trim());
+CHG.importFile = (v, ds, el) => { const file = el.files[0]; if (file) return file.text().then(importCareer).catch(() => toast('The file could not be read.')); };
+ACT.newGame = async () => {
   if (!UI.tab.confirmNew) { UI.tab.confirmNew = true; return render(); }
-  deleteSave(); G = null; UI.tab = {}; go('start');
+  try { await deleteSave(); G = null; LIVE = null; UI.tab = {}; go('start'); } catch { toast('The existing save could not be removed.'); }
 };

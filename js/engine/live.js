@@ -31,10 +31,9 @@ function startLive(fx) {
 // Keep the match in the save. Called between minutes, when the screen is left and when the page is hidden.
 function liveKeep(L = LIVE) {
   if (!L || L.done || L.G !== G || !G) return;
-  const fr = L.M.frames; L.M.frames = null; // frames of the minute on screen are not needed to resume
-  G.live = { fid: L.fid, M: L.M, feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
+  // Freeze this checkpoint before the next worker minute changes the live match.
+  G.live = { fid: L.fid, M: structuredClone(cleanMatch(L.M)), feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
   saveGame();
-  L.M.frames = fr;
 }
 // Pick the match up from the save at the minute it reached. It waits paused until Play.
 function liveFromSave(fx) {
@@ -120,7 +119,7 @@ function placeFromSim(L) {
   Object.assign(L.ball, { x: L.M.sim.B.x, y: L.M.sim.B.y, z: 0 });
 }
 
-function stopLive() { if (LIVE && LIVE.raf) cancelAnimationFrame(LIVE.raf); if (LIVE) { LIVE.raf = 0; liveKeep(LIVE); } }
+function stopLive() { if (LIVE && LIVE.raf) cancelAnimationFrame(LIVE.raf); if (LIVE) { LIVE.generation = (LIVE.generation || 0) + 1; LIVE.raf = 0; liveKeep(LIVE); } }
 
 function liveFrame(ts) {
   const L = LIVE;
@@ -141,9 +140,28 @@ function liveFrame(ts) {
 }
 
 // The next minute: the engine plays it, then the screen shows it (or the highlights of it).
-function liveStep(L) {
+async function liveStep(L) {
+  if (L.simBusy) return;
+  L.simBusy = true;
+  const generation = L.generation || 0, match = L.M;
+  try {
   liveKeep(L); // everything up to this minute has been shown
-  const prev = L.previousMinute, evs = stepMatch(L.M, false), M = L.M, cur = M.frames || [];
+  const signature = JSON.stringify(cleanMatch(match));
+  let evs;
+  if (Simulation.worker) {
+    let result;
+    try { result = await Simulation.request('minute', Simulation.input(match)); }
+    catch { await new Promise(resolve => setTimeout(resolve, 0)); }
+    if (LIVE !== L || L.G !== G || generation !== (L.generation || 0) || UI.s !== 'match' || signature !== JSON.stringify(cleanMatch(match))) return;
+    if (result) {
+      const callback = match.onAsync;
+      Object.assign(match, result.match); match.onAsync = callback;
+      evs = result.events;
+      matchRandom(match, () => match.sides.forEach(S => { if (!S.user) evs.push(...aiManage(match, S)); }));
+    }
+  }
+  if (!evs) evs = stepMatch(match, false);
+  const prev = L.previousMinute, M = L.M, cur = M.frames || [];
   const t0 = cur.length ? cur[0][0] : 0;
   // A highlight early in the minute keeps its build-up from the end of the last minute (if that wasn't shown).
   const lo = prev && prev.fr.length && !prev.segs.some(s => s[1] >= 59.5) ? -25 : 0;
@@ -156,6 +174,8 @@ function liveStep(L) {
   now.forEach(e => pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'sub' ? 'info' : 'tac', commLine(L, e), e.side));
   updateBoard(L);
   if (UI.popup && UI.popup.key === 'live:pl') { const b = document.querySelector('#layer .sh-body'), h = plCardHtml(L); if (b && h) b.innerHTML = h; }
+  } catch (error) { L.paused = true; updateBoard(L); toast('The match could not advance. Your checkpoint has been kept; press Play to retry.'); }
+  finally { L.simBusy = false; }
 }
 // Parts of the minute to show, by highlight level: [from, to] in seconds of the minute (from lo: the build-up can
 // start in the last minute). A highlight is a story: from the moment the team won the ball (or the set piece it came
@@ -492,6 +512,7 @@ function updateBoard(L) {
   const hl = el('btnHl'); if (hl) hl.textContent = HL[G.settings.hl || 'ext'];
   const cm = el('btnCam'); if (cm) cm.textContent = (G.settings.cam || 'follow') === 'full' ? 'Full pitch' : 'Follow';
   const ft = el('ftBar'); if (ft) ft.hidden = !L.done;
+  const report = ft && ft.querySelector('button'); if (report) { report.disabled = !!L.finishing; report.textContent = L.finishing ? 'Updating results…' : 'Match report'; }
   updateLiveFitness(L);
 }
 
@@ -635,23 +656,32 @@ function applyShout(k) {
   closeSheet();
 }
 
-function liveInstant() {
+async function liveInstant() {
   const L = LIVE, M = L.M;
-  while (!M.ended) stepMatch(M, true);
+  L.generation = (L.generation || 0) + 1; L.paused = true;
+  if (Simulation.worker) {
+    const result = await Simulation.request('full', Simulation.input(M));
+    if (LIVE !== L || L.G !== G) return;
+    Object.assign(M, result.match);
+  } else while (!M.ended) { stepMatch(M, true); await new Promise(resolve => setTimeout(resolve, 0)); }
   L.mq = null; L.hold = 0; L.paused = false;
   L.disp = [M.sides[0].st.g, M.sides[1].st.g];
   closeSheet();
-  onFullTime(L);
+  await onFullTime(L);
 }
 
-function onFullTime(L) {
+async function onFullTime(L) {
+  if (L.done) return;
   L.done = true;
+  L.finishing = true;
   if (G.live && G.live.fid === L.fid) G.live = null;
   finishMatch(L.M);
-  finishRound();
   L.overlay = { big: 'FULL TIME', small: clubName(L.M.sides[0].cid) + ' ' + L.disp.join(' - ') + ' ' + clubName(L.M.sides[1].cid), t: 1, stay: true };
   pushFeed(L, 'info', 'The referee blows for full time.');
   updateBoard(L);
+  try { await finishRoundAsync(); }
+  catch { toast('Other results could not be updated. Continue from the dashboard to retry.'); }
+  finally { L.finishing = false; updateBoard(L); }
 }
 
 // The live player card (tap a player on the pitch). Refreshed every minute while open.

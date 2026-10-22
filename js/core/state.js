@@ -276,15 +276,27 @@ function saveGame() {
   if (!G) return false;
   syncPlaytime();
   if (typeof brainSave === 'function') brainSave();
+  if (typeof SaveStorage !== 'undefined') {
+    G.savedAt = Date.now(); return SaveStorage.enqueue(G);
+  }
   const previous = G.savedAt;
   try { G.savedAt = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(G)); return true; } catch (e) { G.savedAt = previous; return false; }
 }
 function loadGame() {
+  if (typeof SaveStorage !== 'undefined') {
+    const saved = SaveStorage.current || SaveStorage.cached;
+    if (!saved) return false;
+    G = structuredClone(SaveStorage.snapshot(saved)); ensureWorld(); return true;
+  }
   try {
     const s = localStorage.getItem(SAVE_KEY);
     if (s) { G = JSON.parse(s); ensureWorld(); return true; }
   } catch (e) { /* storage blocked or corrupt */ }
   return false;
 }
-function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
-function deleteSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ } }
+function hasSave() { if (typeof SaveStorage !== 'undefined') return !!(SaveStorage.current || SaveStorage.cached); try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
+function deleteSave() { if (typeof SaveStorage !== 'undefined') return SaveStorage.clear(); try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ } }
+async function saveGameAsync() {
+  if (!saveGame()) return false;
+  try { return typeof SaveStorage === 'undefined' || await SaveStorage.flush(); } catch { return false; }
+}

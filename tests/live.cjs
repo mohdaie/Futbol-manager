@@ -36,6 +36,7 @@ const assert = require('node:assert/strict');
     // The 2D view draws the engine's own frames; the camera follows the ball; highlight levels skip quiet play.
     await page.evaluate(() => { G.settings.hl = 'full'; });
     await page.waitForFunction(() => LIVE.mq && LIVE.mq.fr.length > 0 && LIVE.M.min >= 2, null, { timeout: 30000 });
+    await page.evaluate(() => { LIVE.paused = false; LIVE.hold = 0; LIVE.overlay = null; closeSheet(true); G.settings.hl = 'full'; LIVE.mq.segs = [[0, 60]]; LIVE.mq.p = 0; });
     const v = await page.evaluate(() => new Promise(done => {
       const L = LIVE, out = { frames: L.mq.fr.length, width: L.mq.fr[0].length, fast: 0, off: 0, inView: 0, samples: 0, match: 0 };
       // Speeds straight from the engine's frames (half a second apart).
@@ -57,6 +58,7 @@ const assert = require('node:assert/strict');
       requestAnimationFrame(tick);
     }));
     console.log('view', JSON.stringify(v));
+    check('Playback checks sampled actual animated frames', v.samples >= 20, true);
     check('The engine records the minute every half second (ball + 22 players and where each faces)', [v.frames >= 110, v.width], [true, 73]);
     check('Players move at football speeds', v.fast, 0);
     check('The camera keeps the ball on screen', v.inView >= v.samples * 0.9, true);
@@ -81,7 +83,7 @@ const assert = require('node:assert/strict');
     const score = await page.evaluate(() => LIVE.M.sides.map(S => S.st.g).join('-'));
     await act('back'); await page.waitForFunction(() => UI.s !== 'match');
     check('Back leaves the match', (await state()).screen, 'prematch');
-    check('Match is kept in the save', await page.evaluate(id => JSON.parse(localStorage.getItem(SAVE_KEY)).live.fid === id, fid), true);
+    check('Match is kept in the save', await page.evaluate(async id => { await SaveStorage.flush(); return (await SaveStorage.request('load')).live.fid === id; }, fid), true);
     await act('go', { s: 'home' });
     await act('go', { s: 'squad' });
     await page.evaluate(() => go('prematch'));
@@ -97,6 +99,7 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => window.addEventListener('pagehide', () => {
       sessionStorage.setItem('test:live-exit', JSON.stringify({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-') }));
     }, { once: true }));
+    await page.evaluate(async () => { LIVE.paused = true; liveKeep(); await SaveStorage.flush(); });
     await page.reload();
     await page.waitForFunction(() => typeof LIVE !== 'undefined' && LIVE && UI.s === 'match');
     const after = await page.evaluate(() => ({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-'), paused: LIVE.paused, s: UI.s }));
@@ -112,7 +115,7 @@ const assert = require('node:assert/strict');
     await act('kickoff');
     check('Save and load resumes the same minute', await page.evaluate(() => LIVE.M.min), m2);
     check('Loaded match is the saved one, not a new kick-off', await page.evaluate(() => LIVE.M === G.live.M), true);
-    const kb = await page.evaluate(() => Math.round(localStorage.getItem(SAVE_KEY).length / 1024));
+    const kb = await page.evaluate(async () => { await SaveStorage.flush(); return Math.round(JSON.stringify(await SaveStorage.request('load')).length / 1024); });
     const ms = await page.evaluate(() => { const t = performance.now(); saveGame(); return Math.round(performance.now() - t); });
     console.log('save', kb + ' KB', ms + ' ms');
     check('Saving each minute is quick', ms < 80, true);

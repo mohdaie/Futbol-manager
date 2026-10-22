@@ -131,10 +131,12 @@ const assert = require('node:assert/strict');
     await act('go', { s: 'settings' });
     await page.screenshot({ path: '/tmp/futbol-settings-title.png' });
     await page.getByRole('button', { name: 'Save & return to title' }).click();
+    await page.waitForFunction(() => UI.s === 'title');
     check('Settings returns to title', (await state()).screen, 'title');
-    check('Returning saves the live fixture', await page.evaluate(() => JSON.parse(localStorage.getItem(SAVE_KEY)).live.fid), fid);
+    check('Returning saves the live fixture', await page.evaluate(async () => { await SaveStorage.flush(); return (await SaveStorage.request('load')).live.fid; }), fid);
     check('Returning stops match playback', await page.evaluate(() => LIVE.raf), 0);
     await page.reload();
+    await page.locator('.title-screen').waitFor();
     check('Refresh stays on title', (await state()).screen, 'title');
     await page.getByRole('button', { name: 'Continue game', exact: true }).click();
     check('Continue returns to career dashboard', (await state()).screen, 'home');
@@ -146,13 +148,14 @@ const assert = require('node:assert/strict');
 
     await act('go', { s: 'settings' });
     await page.evaluate(() => {
-      window.originalStorageWrite = Storage.prototype.setItem;
-      Storage.prototype.setItem = function(k, v) { if (k === SAVE_KEY) throw new Error('Storage unavailable'); return window.originalStorageWrite.call(this, k, v); };
+      window.originalSaveRequest = SaveStorage.request;
+      SaveStorage.request = function(type, data) { if (type === 'save') return Promise.reject(new Error('Storage unavailable')); return window.originalSaveRequest.call(this, type, data); };
     });
     await page.getByRole('button', { name: 'Save & return to title' }).click();
+    await page.getByText('Saving failed. Stay here and export your save before leaving.').waitFor();
     check('Failed save stays in Settings', (await state()).screen, 'settings');
     check('Failed save explains export option', await page.getByText('Saving failed. Stay here and export your save before leaving.').count(), 1);
-    await page.evaluate(() => { Storage.prototype.setItem = window.originalStorageWrite; delete window.originalStorageWrite; });
+    await page.evaluate(async () => { SaveStorage.request = window.originalSaveRequest; delete window.originalSaveRequest; await SaveStorage.flush(); });
 
     await page.reload(); await back(); await back();
     check('Reload keeps root guard working', page.url(), base + '/');

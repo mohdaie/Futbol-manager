@@ -40,5 +40,5 @@ setInterval(() => {
   updatePlaytimeDisplay();
 }, 15000);
 document.addEventListener('visibilitychange', () => { syncPlaytime(); if (G) saveGame(); });
-window.addEventListener('pagehide', () => { PLAY_CLOCK.hidden = true; syncPlaytime(); if (G) saveGame(); });
+window.addEventListener('pagehide', () => { PLAY_CLOCK.hidden = true; syncPlaytime(); if (G) { saveGame(); if (typeof SaveStorage !== 'undefined') SaveStorage.flush().catch(() => {}); } });
 window.addEventListener('pageshow', () => { PLAY_CLOCK.hidden = false; syncPlaytime(); });
