@@ -721,3 +721,6 @@ the ball exposed, the attacker turned, or a team-mate covering). Jockeying is no
 on the live pitch and in analysis frames are the body radius at pitch scale (`bodyRadius`, 0.3-0.46 m), so the
 on-screen contacts match the physics. Seeds 1-3, 120 matches: goals 2.6-2.9, fouls 25.5-25.9, tackles 31-32 (still
 above the 15-20 target), dribbles 17-18 (target 8-10), wins by 5+ 4-9%, home wins 43-48%.
+Tested a lower commitment rate (0.04 instead of 0.09 for exposed or covered duels) on seeds 1-3, 120 matches: tackles
+22 per team, ground duels 44, fouls 20-21, goals 2.9-3.4, wins by 5+ 5-10%. Fewer tackles but fewer duels and more
+goals, so it was reverted. Tackle counts are a calibration question still open; goal excess is a defence question.
