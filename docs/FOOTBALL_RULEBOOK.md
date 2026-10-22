@@ -69,6 +69,28 @@ the rest is restarts, goals, fouls, injuries and substitutions. This sets the rh
 **You should see:** play stopping and restarting like a real match, with the ball going out mostly from
 contested, hurried or overhit balls.
 
+## 1c. Body shape: where a player faces
+
+Every player faces somewhere, and that decides what he can see, how fast he can go where he wants, and what he
+can do when the ball arrives.
+- **Turning takes time.** A full turn takes about half a second to a second (quicker with Agility, slower at full
+  speed). A player runs fastest forwards; sideways he is much slower, and backwards (backpedalling) slower still.
+- **Without the ball he watches the ball.** Defenders face the ball and shuffle (side-on, backpedalling) to stay
+  goal-side; when the ball goes over or past them they must turn, and the attacker facing forward gains a yard.
+- **With his team on the ball he opens up.** A good receiver stands half-turned (between the ball and the goal he
+  attacks) so he can see forward; Decisions, Vision and Anticipation make him open up more.
+- **Receiving.** Facing forward or on the half-turn he can play forward straight away. With his back to goal he
+  needs a touch to turn (or plays back, lays it off, or holds it up); a marker tight behind him makes turning
+  hard.
+- **Shooting and heading.** He shoots best facing the goal; with his back to it he has to turn first (or try a
+  hook or overhead kick, rarely). A header is aimed where he faces.
+- **Duels.** A defender caught facing the wrong way cannot tackle and is easy to run past; a carrier who turns
+  his back on goal exposes the ball (a pressing trigger).
+
+**You should see:** defenders side-on and backpedalling, turning when the ball goes over them; strikers holding
+it up with their back to goal and laying it off; midfielders receiving on the half-turn and playing forward first
+time; runners in behind beating defenders who have to turn.
+
 ## 2. Phases of the game
 
 The team is always in one phase. The phase decides the shape and what the ball carrier looks for.
@@ -150,7 +172,8 @@ switches of play, triangles around the ball, and players staying back as rest de
    the goal, matching his movement and showing him one way. The defender commits to a tackle only when it is on
    (a heavy touch, the ball exposed, the attacker turned away, a team-mate covering). A team makes about 15-20
    tackles a match and its opponents about 8-10 successful dribbles; only a defender who commits and misses, or is
-   beaten by a take-on, is left behind.
+   beaten by a take-on, is left behind. A take-on beats the defender a bit under half the time; a tackle committed
+   when it is on wins the ball about three times in five.
 6. **Cover shadow.** A presser runs on the line that cuts off the pass behind him (usually into the 6).
 7. **Back line moves as one.** It steps up when the ball goes back or the carrier is pressed and can't play forward;
    it drops when the carrier is free and facing forward ("ball pressure / no ball pressure"). This is the offside

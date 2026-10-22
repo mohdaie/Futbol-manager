@@ -200,8 +200,10 @@ function setFrame(L, p, snap) {
   const lerp = (i) => (a[i] == null ? null : b[i] == null ? a[i] : a[i] + (b[i] - a[i]) * u);
   L.ball.x = lerp(1); L.ball.y = lerp(2); L.ball.z = lerp(3); L.own = [a[4], a[5]]; L.rs = a[6];
   for (let s = 0; s < 2; s++) for (let i = 0; i < 11; i++) {
-    const x = lerp(7 + (s * 11 + i) * 2), y = lerp(8 + (s * 11 + i) * 2);
-    L.dots[s][i] = x == null ? null : { x, y };
+    const x = lerp(7 + (s * 11 + i) * 2), y = lerp(8 + (s * 11 + i) * 2), fi = 51 + s * 11 + i;
+    // Where he faces (rulebook 1c), turned the short way round between the two frames.
+    const fa = a[fi] == null ? null : b[fi] == null ? a[fi] : a[fi] + Math.atan2(Math.sin(b[fi] - a[fi]), Math.cos(b[fi] - a[fi])) * u;
+    L.dots[s][i] = x == null ? null : { x, y, fa };
   }
   if (snap) moveCam(L, 0, true);
 }
@@ -279,6 +281,11 @@ function draw(L) {
       g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); g.fill();
       g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = 2;
       g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
+      if (d.fa != null) { // where he faces: a small pointer on the edge of the circle
+        const fa = L.bottom === 0 ? d.fa : d.fa + Math.PI, cx = Math.cos(fa), cy = Math.sin(fa);
+        g.fillStyle = gk ? '#1B1B1B' : col.s; g.beginPath();
+        g.moveTo(x + cx * (r + 4), y + cy * (r + 4)); g.lineTo(x + cx * r * 0.7 - cy * r * 0.55, y + cy * r * 0.7 + cx * r * 0.55); g.lineTo(x + cx * r * 0.7 + cy * r * 0.55, y + cy * r * 0.7 - cx * r * 0.55); g.closePath(); g.fill();
+      }
       if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
       if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r + 5, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';

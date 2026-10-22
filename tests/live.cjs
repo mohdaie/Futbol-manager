@@ -40,7 +40,7 @@ const assert = require('node:assert/strict');
       const L = LIVE, out = { frames: L.mq.fr.length, width: L.mq.fr[0].length, fast: 0, off: 0, inView: 0, samples: 0, match: 0 };
       // Speeds straight from the engine's frames (half a second apart).
       const fr = L.mq.fr;
-      for (let k = 1; k < fr.length; k++) for (let n = 7; n < fr[k].length; n += 2) { if (fr[k][n] == null || fr[k - 1][n] == null) continue; const m = Math.hypot(fr[k][n] - fr[k - 1][n], fr[k][n + 1] - fr[k - 1][n + 1]); if (m > 6.5 && fr[k][6] === fr[k - 1][6] && !fr[k][6]) out.fast++; }
+      for (let k = 1; k < fr.length; k++) for (let n = 7; n < 51; n += 2) { if (fr[k][n] == null || fr[k - 1][n] == null) continue; const m = Math.hypot(fr[k][n] - fr[k - 1][n], fr[k][n + 1] - fr[k - 1][n + 1]); if (m > 6.5 && fr[k][6] === fr[k - 1][6] && !fr[k][6]) out.fast++; }
       let n = 0;
       const tick = () => {
         if (n++ > 120 || LIVE !== L) return done(out);
@@ -57,7 +57,7 @@ const assert = require('node:assert/strict');
       requestAnimationFrame(tick);
     }));
     console.log('view', JSON.stringify(v));
-    check('The engine records the minute every half second (ball + 22 players)', [v.frames >= 110, v.width], [true, 51]);
+    check('The engine records the minute every half second (ball + 22 players and where each faces)', [v.frames >= 110, v.width], [true, 73]);
     check('Players move at football speeds', v.fast, 0);
     check('The camera keeps the ball on screen', v.inView >= v.samples * 0.9, true);
     check('The screen draws the engine positions', v.match >= v.samples * 0.85, true);

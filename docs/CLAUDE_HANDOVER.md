@@ -371,3 +371,12 @@ attribute towards 11 (`av()`). Calibration: `ENG.fin` 1.25, `ENG.tackleFoul` 0.1
 float32 value on every read. Wins by 5+ 3.3-5.8% (was 13-17%), most goals by one team 7-11 (was 17-22).
 Measure with a paired design (each fixture twice, each side boosted once) and a no-change control: run-to-run
 noise is about +/-0.5 goals a match on 40 fixtures.
+
+## Round 4: body orientation (2026-10-22, not released)
+
+Rulebook 1c. `p.fa` (world angle), `fwdA`, `faceOff`, `backness` in sim.js; turning and the speed penalty in
+`movePlayers`; receiving back to goal adds decision time (`giveBall`); pass/through-ball risk, carry time, shot
+facing term (`chanceAt` `fo`), wrong-way defenders cannot tackle (`challenges`). Frames carry the 22 facings after
+the positions (width 73); the 2D view draws a pointer. Fixed a processing-order bias: `movePlayers` now reads the
+other side from a start-of-tick snapshot (side 0 used to win 48% v 30% with no home bonus). Mirror and swap tests:
+scratchpad scripts described in report 4. Calibration `ENG.fin` 1.12. The `mood` test is intermittent on main too.
