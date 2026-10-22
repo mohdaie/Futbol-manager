@@ -231,10 +231,12 @@ ACT.pressA = ds => {
 ACT.pressSkip = () => { const fx = userFixture(); G.press[fx.id].done = true; G.press[fx.id].said = 'Your assistant handled the media.'; render(); };
 ACT.kickoff = () => { const fx = userFixture(); if (fx && !played(fx)) startLive(fx); };
 ACT.instant = async () => {
+  const game = G;
   const fx = userFixture();
   if (!fx || played(fx)) return;
   if (liveOn(fx) || liveFromSave(fx)) { go('match'); return liveInstant(); }
   await playUserInstantAsync(fx);
+  if (G !== game) return;
   go('post', { fid: fx.id });
 };
 

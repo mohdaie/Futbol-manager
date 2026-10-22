@@ -42,7 +42,27 @@ node scripts/engine-qa.cjs --strict
 The paired distribution check runs 120 matches per model in each seeded world. Run it with SEED=1, 2 and 3; retain each result separately. The broad gates detect large regressions in goals, shots, xG, passing and discipline, not exact football realism or real-phone performance.
 
 ```sh
-SEED=1 node scripts/realism/league.cjs "$(cat scripts/realism/fast-compare.js)"
+SEED=1 node scripts/realism/league.cjs "globalThis.MATCH_COMPARE_SEED=1;$(cat scripts/realism/fast-compare.js)"
 ```
 
 The background suite reports a 32-fixture batch time and verifies that rendering continues during a detailed instant match. Benchmark without other CPU-heavy suites running when recording release performance. Physical-device and long-career testing remain separate validation.
+
+## Release 2026.10.22.39 measurements
+
+Headless Chromium on the development machine processed 32 background fixtures in approximately 0.5–1.1 seconds across the recorded runs. The earlier detailed background engine took roughly 0.9–1.5 seconds for each fixture. A 16-second live sample at 4x playback rendered 961 frames, with a 95th-percentile interval of 16.8 ms and no observed main-thread long tasks over 50 ms. These measurements are not promises for all phones.
+
+Across 360 paired fixtures (120 each in seeded worlds 1, 2 and 3), the models produced these averages per match:
+
+| Metric | Detailed | Event model |
+| --- | ---: | ---: |
+| Goals | 3.03 | 3.23 |
+| Shots | 21.86 | 22.97 |
+| xG | 3.01 | 3.07 |
+| Pass attempts | 1,291 | 1,326 |
+| Pass completion | 78.0% | 76.5% |
+| Fouls | 26.46 | 25.15 |
+| Yellow cards | 3.74 | 3.93 |
+| Red cards | 0.23 | 0.24 |
+| Final on-pitch condition | 77.5% | 76.9% |
+
+For reproducing worlds 2 and 3, change both SEED and MATCH_COMPARE_SEED in the command above. These are measured comparisons against the shipped positional model, not a claim that all statistics match real-world football. User fixtures keep the detailed model in both watched and instant play.

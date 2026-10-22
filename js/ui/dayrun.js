@@ -20,12 +20,15 @@ function startDayRun() {
 }
 
 async function matchdayNow(fx) {
-  await simUpToAsync(fx, false); G.day = fx.d ?? 5; await saveGameAsync();
+  const game = G;
+  await simUpToAsync(fx, false); if (G !== game) return;
+  G.day = fx.d ?? 5; await saveGameAsync(); if (G !== game) return;
   return go('prematch');
 }
 
 const HOUR_MS = 900; // each hour of deadline day
 async function dayTick() {
+  const game = G;
   DAYRUN.timer = 0;
   if (!DAYRUN.on || !G) return;
   // Deadline day: the hours tick by before the day moves on.
@@ -47,8 +50,8 @@ async function dayTick() {
   DAYRUN.hourly = false;
   const firstNews = G.nextId, playedBefore = G.fixtures.filter(played).length, wasDay = today();
   let r;
-  try { r = await advanceDayAsync(); } catch { DAYRUN.on = false; toast('Results could not be updated. Your completed matches have been kept; try Continue again.'); return drawDayRun(); }
-  if (!DAYRUN.on) return;
+  try { r = await advanceDayAsync(); } catch { if (G !== game) return; DAYRUN.on = false; toast('Results could not be updated. Your completed matches have been kept; try Continue again.'); return drawDayRun(); }
+  if (!DAYRUN.on || G !== game) return;
   DAYRUN.days++;
   if (r === 'ok') saveGame(); // every day is saved, so a refresh never loses days
   const games = G.fixtures.filter(played).length - playedBefore;

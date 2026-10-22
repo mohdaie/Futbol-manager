@@ -663,7 +663,7 @@ async function liveInstant() {
     const result = await Simulation.request('full', Simulation.input(M));
     if (LIVE !== L || L.G !== G) return;
     Object.assign(M, result.match);
-  } else while (!M.ended) { stepMatch(M, true); await new Promise(resolve => setTimeout(resolve, 0)); }
+  } else while (!M.ended) { if (LIVE !== L || L.G !== G) return; stepMatch(M, true); await new Promise(resolve => setTimeout(resolve, 0)); }
   L.mq = null; L.hold = 0; L.paused = false;
   L.disp = [M.sides[0].st.g, M.sides[1].st.g];
   closeSheet();
@@ -680,8 +680,8 @@ async function onFullTime(L) {
   pushFeed(L, 'info', 'The referee blows for full time.');
   updateBoard(L);
   try { await finishRoundAsync(); }
-  catch { toast('Other results could not be updated. Continue from the dashboard to retry.'); }
-  finally { L.finishing = false; updateBoard(L); }
+  catch { if (L.G === G) toast('Other results could not be updated. Continue from the dashboard to retry.'); }
+  finally { L.finishing = false; if (LIVE === L && L.G === G) updateBoard(L); }
 }
 
 // The live player card (tap a player on the pitch). Refreshed every minute while open.

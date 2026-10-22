@@ -49,7 +49,10 @@ function matchMods(fx) {
 }
 
 function createMatch(fx) {
-  const random = { rng: Math.floor(hash01(`${G.simSeed ?? G.createdAt ?? G.season}:${fx.id}:${fx.h}:${fx.a}`) * 4294967295) };
+  // Real fixtures keep their stream across workers/reloads. Hypothetical advice
+  // and training games need independent trials rather than the same result n times.
+  const seed = fx.id < 0 ? Math.floor(R() * 4294967295) : Math.floor(hash01(`${G.simSeed ?? G.createdAt ?? G.season}:${fx.id}:${fx.h}:${fx.a}`) * 4294967295);
+  const random = { rng: seed };
   return matchRandom(random, () => { const M = createMatchState(fx); M.rng = random.rng; return M; });
 }
 function createMatchState(fx) {

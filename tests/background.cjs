@@ -29,6 +29,11 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     });
     check('Detailed minutes have identical frames and random state in the worker', parity.minute);
     check('Fast match results are deterministic across worker and compatibility paths', parity.fast);
+    check('Hypothetical advice matches retain independent trial random streams', await page.evaluate(() => {
+      const ids = plClubs().filter(id => id !== G.club), seeds = new Set();
+      for (let n = 0; n < 8; n++) seeds.add(createMatch({ id: -1, h: ids[0], a: ids[1] }).rng);
+      return seeds.size === 8;
+    }));
     const effects = await page.evaluate(async () => {
       const fx = G.fixtures.find(f => !isUserFx(f));
       const [a, b] = await Promise.all([simulateMatchAsync(fx), simulateMatchAsync(fx)]);
@@ -55,6 +60,11 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       const old = G, fx = G.fixtures.find(f => !played(f) && !isUserFx(f)), job = simulateMatchAsync(fx);
       G = structuredClone(G); await job;
       const untouched = !played(fx) && !played(G.fixtures.find(f => f.id === fx.id)); G = old; return untouched;
+    }));
+    check('A cancelled matchday transition cannot move a replacement career date or screen', await page.evaluate(async () => {
+      const old = G, screen = UI.s, fx = G.fixtures.find(isUserFx), job = matchdayNow(fx);
+      G = structuredClone(G); G.day = 2; const replacement = G;
+      await job; const untouched = G === replacement && G.day === 2 && UI.s === screen; G = old; return untouched;
     }));
     check('Compatibility mode still completes event matches without a worker', await page.evaluate(async () => {
       const worker = Simulation.worker; Simulation.worker = null;
