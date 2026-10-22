@@ -60,6 +60,15 @@ const assert = require('node:assert/strict');
     await act('liveSheet', { k: 'tactics' });
     await page.selectOption('#lsp-pk', String(taker));
     check('the penalty taker chosen on the tactics page is kept for the match', await page.evaluate(() => liveSide().pk), taker);
+    // A shot is drawn along its real flight: starts at the shooter, ends at the target, and moves at shot speed (26 m/s).
+    check('a shot is drawn along its flight from the shooter to the target', await page.evaluate(() => {
+      const m = { t: 10, x0: 30, y0: 20, tx: 34, ty: 0 }; m.flight = Math.hypot(m.tx - m.x0, m.ty - m.y0) / 26;
+      const g0 = LIVE.gt, at = t => { LIVE.gt = t; return shotPathPoint(LIVE, m); };
+      const start = at(10), end = at(10 + m.flight); let worst = 0, prev = null;
+      for (let k = 0; k * 0.05 <= m.flight; k++) { const q = at(10 + Math.min(k * 0.05, m.flight)); if (prev) worst = Math.max(worst, Math.hypot(q[0] - prev[0], q[1] - prev[1])); prev = q; }
+      LIVE.gt = g0;
+      return Math.abs(start[0] - 30) < 1e-6 && Math.abs(start[1] - 20) < 1e-6 && Math.abs(end[0] - 34) < 1e-6 && Math.abs(end[1]) < 1e-6 && worst <= 26 * 0.05 + 1e-6;
+    }), true);
     // A penalty: the taker runs in from six metres behind the spot before he strikes; the view must draw it cleanly.
     await page.waitForFunction(() => LIVE.mq && LIVE.mq.marks, null, { timeout: 30000 });
     await page.evaluate(() => { LIVE.mq.marks.push({ t: LIVE.gt + 1, k: 'sfx', s: 0, kind: 'penalty', who: 9, x0: 34, y0: 92, ax: 0, az: 0, res: 'goal', flight: 0.8 }); });

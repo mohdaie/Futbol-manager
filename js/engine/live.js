@@ -291,6 +291,15 @@ function endMinute(L) {
 // Injury events from the engine have no time in the minute: shown at once.
 
 /* ---------- drawing ---------- */
+// Where a shot is along its real flight (a straight line at the engine's shot speed). The frames are 0.5 s apart and a
+// shot lasts about 0.4 s, so the ball is drawn along this path rather than interpolated between frames. Null outside the flight.
+function shotPathPoint(L, m) {
+  if (!m || m.tx == null || m.x0 == null) return null;
+  const fl = Math.max(0.05, m.flight || 0.4);
+  if (L.gt < m.t || L.gt > m.t + fl + 1e-6) return null;
+  const u = clamp((L.gt - m.t) / fl, 0, 1);
+  return [m.x0 + (m.tx - m.x0) * u, m.y0 + (m.ty - m.y0) * u];
+}
 function draw(L) {
   const g = L.ctx, W = L.W, H = L.H, s = L.cam.s, X = vx => sx(L, vx), Y = vy => sy(L, vy);
   g.fillStyle = '#1E6F43'; g.fillRect(0, 0, W, H);
@@ -400,7 +409,8 @@ function draw(L) {
   // The ball, lifted by its height, with its shadow on the grass.
   // The carrier has the ball just ahead of his feet, in the way he faces (0.6 m, as the simulation keeps it).
   const own = L.own && L.own[0] >= 0 && L.dots[L.own[0]] ? L.dots[L.own[0]][L.own[1]] : null, dribble = !!own && own.fa != null && zOver == null && !(L.ball.z > 0.3);
-  const [bx, by] = dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.6, Y(ovy) + Math.sin(fa) * s * 0.6]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
+  const shotP = sf ? shotPathPoint(L, sf) : null;
+  const [bx, by] = shotP ? (() => { const [vx, vy] = view(L, shotP[0], shotP[1]); return [X(vx), Y(vy)]; })() : dribble ? (() => { const [ovx, ovy] = view(L, own.x, own.y), fa = L.bottom === 0 ? own.fa : own.fa + Math.PI; return [X(ovx) + Math.cos(fa) * s * 0.6, Y(ovy) + Math.sin(fa) * s * 0.6]; })() : (() => { const [vx, vy] = view(L, L.ball.x, L.ball.y); return [X(vx), Y(vy)]; })();
   const z = zOver != null ? zOver : L.ball.z || 0, br = Math.max(3, s * 0.32) * (1 + z * 0.06);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br, br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
