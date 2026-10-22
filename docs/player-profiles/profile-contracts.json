@@ -1,0 +1,21 @@
+{
+  "passed": 16,
+  "checks": [
+    "All 887 named first-team entries have an authored profile",
+    "Every actual first-team player uses its profile and calculated overall",
+    "Every profile has finite bounded attributes, potential, physique and valid alternatives",
+    "Market value cannot change a named first-team profile",
+    "Different random worlds retain identical first-team attributes and physical identity",
+    "Haaland remains an elite finisher without Doku dribbling",
+    "High-review players move into the proposed original bands",
+    "Creators and veterans retain distinct technique and mobility",
+    "Missing valuation no longer cripples Lecomte",
+    "Named versatility is fixed rather than randomly reassigned",
+    "Prospects still vary and have specialised skill patterns",
+    "Profile baselines are independent copies, not references into live attributes",
+    "Untouched legacy careers get corrected without changing IDs, contracts, finances or injury state",
+    "Progressed legacy careers retain every attribute and training edit",
+    "Migration is idempotent and retained-career warning persists",
+    "Save/load retains original baseline and profiles"
+  ]
+}

@@ -77,6 +77,7 @@ function dofMemo(p) {
   if (r >= 6 && mates) { har.push(['good', `${mates} ${natName(p.nat)} team-mate${mates > 1 ? 's' : ''} to help him settle.`]); hs += 0.5; }
   if (fit && fit.cur && gain >= 3 && fit.cur.status === 'Key player') har.push(['warn', `${pname(fit.cur)} is a key player and would lose his place: handle it carefully.`]);
   if (p.at[A.ldr] >= 15 && k >= 75) { har.push(['good', 'A leader in the dressing room.']); hs += 0.5; }
+  if (!har.length) har.push(['', 'No specific dressing-room benefit or concern identified.']);
   const n = 2 + Math.floor(r / 5), score = fs + ts + hs, grade = scoutGrade(p);
   const verdict = grade === 'D' || score <= 0 || ts < 0 ? 'Drop' : score >= (typeof dofBar === 'function' ? dofBar() : 3) && fs >= 0 ? 'Proceed' : 'Monitor';
   const open = est ? roundMoney(est * (0.82 + r * 0.004)) : 0, max = est ? roundMoney(Math.min(Math.max(G.fin.tb, est), est * 1.12)) : 0;

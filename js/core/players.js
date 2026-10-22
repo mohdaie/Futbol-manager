@@ -59,63 +59,73 @@ function genName(nat) {
 }
 const pickNat = table => wpick(Object.keys(table), k => table[k]);
 
+// 11a: fictional prospects also have a football type, rather than being good at every
+// attribute that happens to contribute to their primary position's overall.
+const GENERATOR_TYPES = {
+  GK: ['gk', 'sk'], DC: ['stopper', 'bpd', 'cover'], DL: ['fb', 'wb', 'inverted'], DR: ['fb', 'wb', 'inverted'],
+  DM: ['anchor', 'destroyer', 'regista'], MC: ['box', 'creator', 'regista', 'runner'],
+  ML: ['wing', 'runner', 'creator'], MR: ['wing', 'runner', 'creator'],
+  AML: ['wing', 'dribbler', 'inside'], AMR: ['wing', 'dribbler', 'inside'],
+  AMC: ['ten', 'ss', 'runner'], ST: ['poacher', 'target', 'press', 'link', 'complete'],
+};
+function generatedAttrs(pos, ca) {
+  const type = pick(GENERATOR_TYPES[pos]), ref = PLAYER_ARCHETYPES[type], w = WEIGHTS[pos];
+  const total = Object.values(w).reduce((s,v)=>s+v,0);
+  const mean = Object.entries(w).reduce((s,[k,v])=>s+ref[k]*v,0)/total;
+  const shift = ca/5-mean;
+  return ATTRS.map(([k,,group]) => clamp(Math.round(ref[k] + (pos === 'GK' ? (group === 'G' || w[k] ? shift : 0) : group === 'G' ? 0 : shift) + gauss()*1.1),1,20));
+}
+
 function genPlayer(o) {
   const pos = o.pos, nat = o.nat || 'ENG';
   const ca = clamp(Math.round(o.ca), 25, 94);
-  const at = ATTRS.map(([k, , g]) => {
-    const w = WEIGHTS[pos][k] || 0;
-    let base;
-    if (g === 'G') base = pos === 'GK' ? ca / 5 : rf(1, 4);
-    else if (pos === 'GK') base = w ? ca / 5 : (ca / 5) * 0.55;
-    else base = w ? (ca / 5) * (1 + 0.025 * w) : (ca / 5) * 0.72;
-    return clamp(Math.round(base + gauss() * 1.7), 1, 20);
-  });
-  // Nudge key attributes until the positional rating hits the target.
-  const keys = Object.keys(WEIGHTS[pos]);
-  for (let k = 0; k < 80; k++) {
-    const r = ratingFor(at, pos);
-    if (Math.abs(r - ca) <= 1) break;
-    const i = A[pick(keys)];
-    at[i] = clamp(at[i] + (r < ca ? 1 : -1), 1, 20);
-  }
-  at[A.ldr] = clamp(Math.round(rf(4, 15) + (o.age - 24) * 0.3), 1, 20);
+  const at = o.profile ? o.profile.at.slice() : generatedAttrs(pos, ca);
+  if (!o.profile) at[A.ldr] = clamp(Math.round(rf(4, 15) + (o.age - 24) * 0.3), 1, 20);
   const [fn, ln] = genName(nat);
   const left = ['DL', 'ML', 'AMR'].includes(pos) ? 0.6 : 0.22;
   const p = {
     id: G.nextId++, fn, ln, nat, age: o.age, pos,
-    alt: pos !== 'GK' && R() < 0.45 ? [pick(ALT_POS[pos])] : [],
+    alt: o.profile ? o.profile.alt.slice() : pos !== 'GK' && R() < 0.45 ? [pick(ALT_POS[pos])] : [],
     at, ca: ratingFor(at, pos), pa: 0, club: o.club || 'FA', no: 0, wage: 0, con: 0,
     mor: ri(55, 80), cond: 100, shp: ri(55, 75), inj: null, ban: 0,
     foot: R() < left ? 'Left' : 'Right', pers: pick(PERSONALITIES),
     st: newStats(), car: { a: 0, g: 0 }, status: (o.lvl || (o.youth ? 'Y' : 'A')) === 'A' ? '' : 'Prospect', listed: false, lvl: o.lvl || (o.youth ? 'Y' : 'A'), prev: null,
   };
+  if (o.profile) {
+    const profile = o.profile;
+    p.originProfile = { version: ROSTER_PROFILE_VERSION, key: o.profileKey, at: at.slice(), ca: p.ca,
+      pa: Math.max(p.ca, profile.pa), ht: profile.ht, wt: profile.wt, alt: profile.alt.slice() };
+    p.ht = profile.ht; p.wt = profile.wt;
+  }
   p.pa = clamp(Math.round(o.pa ?? p.ca), p.ca, 97);
   genBio(p);
   return p;
 }
 
 // Starting rating and potential from a real market value (EUR millions) and age.
-// Young players' value is mostly potential, veterans' value is discounted by age.
-// Older players' market value understates their level, so age adds to the rating, up to age 35
-// (a 41-year-old with a small value is not a world-class player).
+// Used only for unprofiled reserves/youth. Named first teams use authored profiles (11a).
+// Price is a weak fallback signal, not an age-based boost to every skill.
 function ratingFromValue(v, age, lvl) {
   if (v > 0) {
     const base = 63 + 4.2 * Math.log2(v);
-    const ca = clamp(base - (age <= 23 ? (24 - age) * 1.8 : 0) + (age >= 30 ? (Math.min(age, 35) - 29) * 2.2 : 0) + gauss() * 1.2, 38, 93);
+    const ca = clamp(base - (age <= 23 ? (24 - age) * 1.8 : 0) + gauss() * 1.2, 38, lvl === 'Y' ? 60 : lvl === 'R' ? 70 : 86);
     const pa = age <= 23 ? Math.max(ca + 2, base + (24 - age) * 0.8 + rf(0, 4)) : ca + (age <= 26 ? rf(0, 3) : 0);
     return [ca, clamp(pa, ca, 96)];
   }
   if (lvl === 'Y') { const ca = clamp(36 + (age - 15) * 3.5 + gauss() * 3, 28, 58); return [ca, clamp(56 + gauss() * 9, ca + 5, 92)]; }
   if (lvl === 'R') { const ca = clamp(46 + (age - 17) * 2.5 + gauss() * 3, 38, 66); return [ca, clamp(ca + rf(5, 20), ca, 90)]; }
-  const ca = clamp(56 + gauss() * 3, 46, 66);
+  const ca = clamp(68 + gauss() * 2, 62, 74); // unknown senior value is missing data, not low ability
   return [ca, ca + (age <= 23 ? rf(3, 10) : 0)];
 }
 
 // A player from a ROSTERS row: [level, name, position, age, nation, foot, contract, value]
 function playerFromRoster(row, club) {
   const [lvl, name, pos, age, nat, foot, con, val] = row;
-  const [ca, pa] = ratingFromValue(val, age, lvl);
-  const p = genPlayer({ pos, ca, pa, age, nat, club, lvl });
+  const candidate = typeof ROSTER_PROFILES !== 'undefined' ? ROSTER_PROFILES[name] : null;
+  const profile = candidate && candidate.insp === row[8] && candidate.pos === pos && candidate.age === age ? candidate : null;
+  if (lvl === 'A' && row[8] && !profile) throw new Error('Missing first-team profile: ' + name);
+  const [ca, pa] = profile ? [ratingFor(profile.at, pos), profile.pa] : ratingFromValue(val, age, lvl);
+  const p = genPlayer({ pos, ca, pa, age, nat, club, lvl, profile, profileKey: name });
   const parts = name.split(' ');
   p.fn = parts.length > 1 ? parts[0] : '';
   p.ln = parts.length > 1 ? parts.slice(1).join(' ') : name;
@@ -123,6 +133,30 @@ function playerFromRoster(row, club) {
   p.con = con >= START_SEASON + 1 ? con : START_SEASON + (lvl === 'A' ? ri(1, 3) : ri(1, 2));
   if (row[8]) p.insp = row[8]; // inspirational figure: the real player he is based on (a name only)
   return p;
+}
+
+// 11a: only untouched starting careers can safely replace legacy generated attributes.
+// Old training increments have no baseline in the save; never guess them or erase them.
+function migrateRosterProfiles() {
+  if (typeof ROSTER_PROFILES === 'undefined') return;
+  G.flags ||= {};
+  if (G.flags.rosterProfileVersion === ROSTER_PROFILE_VERSION) return;
+  const all = Object.values(G.players);
+  const untouched = G.season === START_SEASON && G.week === 0 && (G.day || 0) === 0 &&
+    !all.some(p => p.st?.a > 0) && !(G.tHist || []).length;
+  let retained = 0;
+  all.forEach(p => {
+    const key = fullName(p), profile = ROSTER_PROFILES[key];
+    // Also require position, inspiration, and original age. A renamed/generated player is not a roster match.
+    if (!profile || p.insp !== profile.insp || p.pos !== profile.pos || p.originProfile) return;
+    if (!untouched || p.age !== profile.age) { retained++; return; }
+    p.at = profile.at.slice(); p.ca = ratingFor(p.at,p.pos); p.pa = Math.max(p.ca,profile.pa);
+    p.alt = profile.alt.slice(); p.ht = profile.ht; p.wt = profile.wt;
+    p.originProfile = { version: ROSTER_PROFILE_VERSION, key, at: p.at.slice(), ca: p.ca, pa: p.pa,
+      ht: p.ht, wt: p.wt, alt: p.alt.slice() };
+  });
+  G.flags.rosterProfileVersion = ROSTER_PROFILE_VERSION;
+  G.flags.legacyRosterProfiles = retained;
 }
 
 // Transfer value. Peaks for young players with room to grow; drops near contract expiry.
