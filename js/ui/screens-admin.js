@@ -168,7 +168,7 @@ ACT.admPlayer = ds => admPlayerSheet(+ds.id);
 function admPlayerSheet(pid) {
   const p = G.players[pid];
   if (!p) return;
-  const clubs = Object.values(G.clubs).map(c => [c.id, c.name]);
+  const clubs = Object.values(G.clubs).filter(c => !c.backgroundOnly).map(c => [c.id, c.name]);
   sheet(`<h3 class="sh-t">Edit ${esc(fullName(p))}</h3><p class="muted">Rating ${p.ca} as ${p.pos}. Rating is recalculated from the attributes when you save.</p>
     <div class="two">
       ${fld('First name', `<input id="apFn" type="text" value="${esc(p.fn)}">`)}${fld('Last name', `<input id="apLn" type="text" value="${esc(p.ln)}">`)}

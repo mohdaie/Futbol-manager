@@ -93,6 +93,7 @@ function dofQueue(p) {
   startDeal(p, 'review');
 }
 function startDeal(p, stage = 'review', extra = {}) {
+  if (!p || G.players[p.id] !== p || G.clubs[p.club]?.backgroundOnly) return null;
   const d = { id: G.nextId++, dir: 'in', pid: p.id, from: p.club, to: G.club, stage, next: wait(1, 2), log: [], created: today().getTime(), round: 0, ...extra };
   G.deals.unshift(d);
   scoutFile(p).folder = 'dof';

@@ -36,6 +36,23 @@ A relegated club retains its best 24 first-team players (protecting two goalkeep
 
 Yellow-card thresholds use 5 by club game 19/23, 10 by 32/37, and 15 across the regular season for Premier League/Championship. Second-yellow dismissals carry one match; the game's default straight-red category carries three. Friendly matches do not count league cautions or serve competitive bans. Outstanding bans survive rollover. This remains a simplified disciplinary model, without all FA offence categories, appeals or misconduct hearings.
 
+## Background club setup: Spain, Italy, Germany and France
+
+Release 2026.10.22.45 adds a separate, browsable club registry for La Liga (20 clubs), Serie A (20), Bundesliga (18) and Ligue 1 (18). The 2026/27 membership comes from the same pinned OpenFootball revision; all club names and source URLs are recorded in [data/world/sources.json](data/world/sources.json). These are community source snapshots, not independently checked official league publications.
+
+This pass contains leagues and clubs only. It adds no league fixtures, table results, promotion/relegation, playable career choices or individual player records. The registry is separate from `G.leagues`, so the English calendar and competition processing stay unchanged. Club directory filters expose each new league, with nicknames and standard names together.
+
+The four existing overseas counterparts (Real Madrid, Paris Saint-Germain, AC Milan and Bayer Leverkusen) are reused, preserving their club IDs, existing squads, transfers and friendlies. The 72 missing clubs have 25 virtual placeholder slots each. Those slots have no player ID, attributes, age, contract or inspirational figure, and never enter the player database, search, scouting or transfer market. Their UI has no player-profile or transfer actions. The club's central ownership guard rejects real-player arrivals as well. Full player squads can be added in a later release.
+
+Placeholder clubs have no weekly finances, generated managers, agent relationships, AI recruitment, youth intake, friendlies or automatic squad top-ups. Three rollover checks verify that they stay empty. Existing saves receive the registry on load without replacing their existing players or fixtures; the migration is idempotent and consumes no player IDs. Existing club renames and roster data are retained.
+
+Dedicated validation:
+
+```sh
+node tests/world-leagues.cjs
+node tests/world-leagues-ui.cjs
+```
+
 ## Deliberately pending
 
 Official 2026/27 PL/EFL handbooks were inaccessible in the environment. This release does not claim full verification of every current competition regulation.

@@ -55,6 +55,8 @@ function freePreseasonWeek() {
 }
 
 function arrangeFriendly(cid) {
+  const opponent = G.clubs[cid];
+  if (!opponent || opponent.backgroundOnly || opponent.squad.length < 11) return { error: 'This club does not have a playable squad yet.' };
   if (G.fixtures.some(f => f.fr && (f.h === cid || f.a === cid))) return { error: 'Already arranged.' };
   const w = freePreseasonWeek();
   if (w == null) return { error: 'No pre-season week is free.' };

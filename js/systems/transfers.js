@@ -41,6 +41,7 @@ function wageDemand(p, renew) {
 function makeBid(pid, fee) {
   if (!squadSpace(userClub())) return { r: 'reject', msg: squadLimitMessage(userClub()) };
   const p = G.players[pid];
+  if (!p || G.clubs[p.club]?.backgroundOnly) return { r: 'reject', msg: 'This player is unavailable for transfer.' };
   const c = G.clubs[p.club];
   if (!c.fa && !inWindow()) return { r: 'reject', msg: 'The transfer window is closed. You can still sign free agents.' };
   if (fee > G.fin.tb) return { r: 'reject', msg: `That is more than your transfer budget of ${money(G.fin.tb)}.` };
@@ -57,6 +58,7 @@ function makeBid(pid, fee) {
 function offerContract(pid, wage, years, status, fee, mode) {
   if (mode !== 'renew' && !squadSpace(userClub())) return { ok: false, msg: squadLimitMessage(userClub()) };
   const p = G.players[pid];
+  if (!p || G.clubs[p.club]?.backgroundOnly) return { ok: false, msg: 'This player is unavailable for transfer.' };
   const demand = wageDemand(p, mode === 'renew');
   const bill = clubWageBill(userClub()) - (mode === 'renew' ? p.wage : 0) + wage;
   if (bill > G.fin.wb) return { ok: false, msg: `The board will not exceed the wage budget of ${wageFmt(G.fin.wb)}. Raise it in Finance or offer less.` };
@@ -79,6 +81,7 @@ function offerContract(pid, wage, years, status, fee, mode) {
 
 // Signed players join the first team unless they are still U18 age.
 function moveClub(p, toId) {
+  if (!p || G.players[p.id] !== p || G.clubs[p.club]?.backgroundOnly) throw new Error('This player is unavailable for transfer.');
   const destination = G.clubs[toId];
   if (!squadSpace(destination, p)) throw new Error(squadLimitMessage(destination));
   const from = p.club;
@@ -90,6 +93,7 @@ function moveClub(p, toId) {
 }
 
 function completeSigning(p, fee, wage, years, status) {
+  if (!p || G.players[p.id] !== p || G.clubs[p.club]?.backgroundOnly) throw new Error('This player is unavailable for transfer.');
   if (!squadSpace(userClub(), p)) throw new Error(squadLimitMessage(userClub()));
   const me = userClub(), from = G.clubs[p.club];
   const fromName = from.fa ? 'free agency' : 'the ' + from.name;

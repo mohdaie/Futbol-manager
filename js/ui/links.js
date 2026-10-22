@@ -132,16 +132,30 @@ ACT.fixturePage = ds => {
 
 SCREENS.clubs = {
   render() {
-    return `<h1 class="h1">Club directory</h1><p class="muted">Browse league clubs, overseas teams and free agents.</p><div class="list">${Object.values(G.clubs).map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.fa ? 'Unattached players' : c.pl ? leagueName(leagueOf(c.id)) : natName(c.nat)} · ${c.squad.length} players</small></span><span class="chev">›</span></button>`).join('')}</div>`;
+    const selected = UI.tab.clubLeague || 'all';
+    const groups = [['all', 'All clubs'], ...G.leagues.map(id => [id, leagueName(id)]), ...Object.values(WORLD_LEAGUES).map(l => [l.id, `${l.country} · ${l.name}`])];
+    const clubs = Object.values(G.clubs).filter(c => selected === 'all' || c.worldLeague === selected || !c.worldLeague && c.league === selected);
+    const definition = WORLD_LEAGUES[selected];
+    return `<h1 class="h1">Club directory</h1><div class="chips wrap">${groups.map(([id, label]) => `<button class="chip ${selected === id ? 'on' : ''}" data-a="clubLeague" data-id="${id}">${esc(label)}</button>`).join('')}</div>
+      <p class="muted">${definition ? `${definition.country} · ${definition.name} · ${clubs.length} clubs. Club setup only; league fixtures and new player data will be added later.` : 'Browse league clubs, overseas teams and free agents.'}</p>
+      <div class="list">${clubs.map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.realName ? esc(c.realName) + ' · ' : ''}${c.fa ? 'Unattached players' : esc(clubCompetitionLabel(c))} · ${c.backgroundOnly ? '25 placeholders' : c.squad.length + ' players'}</small></span><span class="chev">›</span></button>`).join('')}</div>`;
   },
 };
+ACT.clubLeague = ds => { UI.tab.clubLeague = ds.id === 'all' || LEAGUES[ds.id] || WORLD_LEAGUES[ds.id] ? ds.id : 'all'; render(); };
 SCREENS.clubview = {
   render(p) {
     const c = G.clubs[p.cid];
     if (!c) return empty('Club unavailable', 'Browse clubs from the directory.');
     const section = p.section || 'overview', level = p.level || 'A';
     const tab = (s, label) => `<button class="chip ${section === s ? 'on' : ''}" data-a="clubPage" data-id="${c.id}" data-section="${s}">${label}</button>`;
-    const heading = `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 50)}<div><h1 class="h1" data-no-links>${esc(c.name)}</h1><p class="muted">${c.fa ? 'Unattached players' : esc(c.city || natName(c.nat)) + ' · Manager ' + esc(c.mgr || 'Not recorded')}</p></div></section><div class="chips">${tab('overview', 'Dashboard')}${tab('squad', 'Squad')}${tab('fixtures', 'Fixtures')}${tab('transfers', 'Transfers')}</div>`;
+    const heading = `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 50)}<div><h1 class="h1" data-no-links>${esc(c.name)}</h1>${c.realName ? `<p class="muted" data-no-links>${esc(c.realName)}</p>` : ''}<p class="muted">${c.fa ? 'Unattached players' : esc(c.city || natName(c.nat)) + (c.worldLeague ? ' · ' + esc(clubCompetitionLabel(c)) : '') + (!c.backgroundOnly ? ' · Manager ' + esc(c.mgr || 'Not recorded') : '')}</p></div></section><div class="chips">${tab('overview', 'Dashboard')}${tab('squad', 'Squad')}${tab('fixtures', 'Fixtures')}${!c.backgroundOnly ? tab('transfers', 'Transfers') : ''}</div>`;
+    if (c.backgroundOnly) {
+      const note = '<p class="note">This club has a placeholder squad. Player data will be added later. Placeholders cannot be scouted, signed or transferred.</p>';
+      if (section === 'squad') return heading + note + `<h2 class="h2">First team · 25 placeholders</h2><div class="list">${dummySquadSlots(c).map(p => `<div class="row"><span class="pos">${p.pos}</span><span class="grow"><b>${p.name}</b><small>Player data pending · unavailable for transfer</small></span></div>`).join('')}</div>`;
+      if (section === 'fixtures') return heading + empty('Fixtures pending', 'This league currently contains clubs only. Its fixtures will be added later.');
+      if (section === 'transfers') return heading + note;
+      return heading + note + `<div class="card"><h3>Club details</h3><div class="kv"><div><small>Country</small><b>${esc(WORLD_LEAGUES[c.worldLeague].country)}</b></div><div><small>League</small><b>${esc(clubCompetitionLabel(c))}</b></div><div><small>City</small><b>${esc(c.city)}</b></div><div><small>First team</small><b>25 placeholders</b></div></div></div><button class="btn wide" data-a="clubPage" data-id="${c.id}" data-section="squad">View squad</button>`;
+    }
     if (section === 'squad') {
       const levels = c.fa || c.foreign ? '' : `<div class="seg">${Object.entries(clubLevels(c)).map(([l, n]) => `<button class="${level === l ? 'on' : ''}" data-a="clubLevel" data-id="${c.id}" data-level="${l}">${n}</button>`).join('')}</div>`;
       const players = squadOf(c.id).filter(x => c.fa || c.foreign || lvlOf(x) === level).sort(SORTS.pos);

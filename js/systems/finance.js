@@ -19,7 +19,7 @@ function weeklyFinance() {
 
   // computer clubs: commercial income minus wages
   Object.values(G.clubs).forEach(o => {
-    if (o.id === G.club || o.fa) return;
+    if (o.id === G.club || o.fa || o.backgroundOnly) return;
     o.bal += sponsorWeekly(o.rep) * 1.2 - clubWageBill(o) - opsWeekly(o.rep) * 0.6;
   });
 }

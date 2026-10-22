@@ -39,7 +39,7 @@ function mediaAcc(id) {
     : { id, name: c.name + ' Faithful', handle: cid + 'Faithful', kind: 'fan', tier: 5, rel: 0.2, fol: c.rep * 1500, cid };
 }
 const pressR = () => staffAvg('Press', 8);
-const bigClubs = () => Object.values(G.clubs).filter(c => !c.fa && c.rep >= 78);
+const bigClubs = () => Object.values(G.clubs).filter(c => !c.fa && !c.backgroundOnly && c.rep >= 78);
 
 function post(acc, txt, o = {}) {
   const a = mediaAcc(acc), reach = a.fol / 1e6;

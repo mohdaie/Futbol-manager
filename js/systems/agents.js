@@ -67,7 +67,7 @@ function makeAgents() {
   const out = {};
   AGENT_DATA.forEach(([id, name, agency, insp, markets, rep, greed, style]) => {
     const rel = {};
-    Object.keys(G.clubs).forEach(c => { if (!G.clubs[c].fa) rel[c] = Math.round((hash01(id + ':' + c) - 0.5) * 30); });
+    Object.keys(G.clubs).forEach(c => { if (!G.clubs[c].fa && !G.clubs[c].backgroundOnly) rel[c] = Math.round((hash01(id + ':' + c) - 0.5) * 30); });
     out[id] = { id, name, agency, insp, markets, rep, greed, style, rel };
   });
   return out;

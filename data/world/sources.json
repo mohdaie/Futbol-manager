@@ -1,0 +1,113 @@
+{
+  "season": "2026/27",
+  "revision": "e6744429ee395bc86f247348c6184bb08d4eb361",
+  "license": "CC0-1.0",
+  "mode": "clubs-only",
+  "note": "Membership matches the pinned community dataset, not an independently verified official handbook. No scores, fixtures or real player records are imported. Nicknames, city labels and club colours are presentation data. Placeholder slots have no player IDs, contracts, attributes or transfer eligibility. Existing overseas squads are retained when a club overlaps.",
+  "leagues": {
+    "ES1": {
+      "name": "La Liga",
+      "country": "Spain",
+      "teams": [
+        "Athletic Club",
+        "CA Osasuna",
+        "Club Atlético de Madrid",
+        "Deportivo Alavés",
+        "Elche CF",
+        "FC Barcelona",
+        "Getafe CF",
+        "Levante UD",
+        "Málaga CF",
+        "RC Celta de Vigo",
+        "RC Deportivo La Coruña",
+        "RCD Espanyol de Barcelona",
+        "Rayo Vallecano de Madrid",
+        "Real Betis Balompié",
+        "Real Madrid CF",
+        "Real Racing Club de Santander",
+        "Real Sociedad de Fútbol",
+        "Sevilla FC",
+        "Valencia CF",
+        "Villarreal CF"
+      ],
+      "url": "https://github.com/openfootball/football.json/blob/e6744429ee395bc86f247348c6184bb08d4eb361/2026-27/es.1.json"
+    },
+    "IT1": {
+      "name": "Serie A",
+      "country": "Italy",
+      "teams": [
+        "AC Milan",
+        "AC Monza",
+        "ACF Fiorentina",
+        "AS Roma",
+        "Atalanta BC",
+        "Bologna FC 1909",
+        "Cagliari Calcio",
+        "Como 1907",
+        "FC Internazionale Milano",
+        "Frosinone Calcio",
+        "Genoa CFC",
+        "Juventus FC",
+        "Parma Calcio 1913",
+        "SS Lazio",
+        "SSC Napoli",
+        "Torino FC",
+        "US Lecce",
+        "US Sassuolo Calcio",
+        "Udinese Calcio",
+        "Venezia FC"
+      ],
+      "url": "https://github.com/openfootball/football.json/blob/e6744429ee395bc86f247348c6184bb08d4eb361/2026-27/it.1.json"
+    },
+    "DE1": {
+      "name": "Bundesliga",
+      "country": "Germany",
+      "teams": [
+        "1. FC Köln",
+        "1. FC Union Berlin",
+        "1. FSV Mainz 05",
+        "Bayer 04 Leverkusen",
+        "Borussia Dortmund",
+        "Borussia Mönchengladbach",
+        "Eintracht Frankfurt",
+        "FC Augsburg",
+        "FC Bayern München",
+        "FC Schalke 04",
+        "Hamburger SV",
+        "RB Leipzig",
+        "SC Freiburg",
+        "SC Paderborn 07",
+        "SV 07 Elversberg",
+        "SV Werder Bremen",
+        "TSG 1899 Hoffenheim",
+        "VfB Stuttgart"
+      ],
+      "url": "https://github.com/openfootball/football.json/blob/e6744429ee395bc86f247348c6184bb08d4eb361/2026-27/de.1.json"
+    },
+    "FR1": {
+      "name": "Ligue 1",
+      "country": "France",
+      "teams": [
+        "AJ Auxerre",
+        "AS Monaco FC",
+        "Angers SCO",
+        "ES Troyes AC",
+        "FC Lorient",
+        "Le Havre AC",
+        "Le Mans FC",
+        "Lille OSC",
+        "OGC Nice",
+        "Olympique Lyonnais",
+        "Olympique de Marseille",
+        "Paris FC",
+        "Paris Saint-Germain FC",
+        "RC Strasbourg Alsace",
+        "Racing Club de Lens",
+        "Stade Brestois 29",
+        "Stade Rennais FC 1901",
+        "Toulouse FC"
+      ],
+      "url": "https://github.com/openfootball/football.json/blob/e6744429ee395bc86f247348c6184bb08d4eb361/2026-27/fr.1.json"
+    }
+  }
+}

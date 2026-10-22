@@ -137,6 +137,7 @@ function aiTactic(rep = 70) {
 }
 
 function newGame(clubId, manager, avatar) {
+  if (!CLUBS.concat(CHAMPIONSHIP_CLUBS).some(c => c.id === clubId)) throw new Error('This club is not playable yet. Choose a Premier League or Championship club.');
   G = {
     createdAt: Date.now(),
     leagues: ['EPL', 'ECH'], competitionVersion: 2, v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,

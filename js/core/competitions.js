@@ -10,10 +10,10 @@ const leagueRules = (id = leagueOf(G?.club)) => LEAGUES[id] || LEAGUES.EPL;
 const leagueName = (id = leagueOf(G?.club)) => leagueRules(id).name;
 const domesticClubs = () => Object.values(G.clubs).filter(c => c.pl && !c.foreign && !c.fa).map(c => c.id);
 const leagueClubs = (id = leagueOf(G.club)) => domesticClubs().filter(cid => leagueOf(cid) === id);
-const clubLevels = c => Object.fromEntries(leagueRules(c?.league || 'EPL').levels.map(k => [k, LEVELS[k]]));
-const clubSquadMax = c => leagueRules(c?.league || 'EPL').squadMax ?? Infinity;
-const squadSpace = (c, p) => !!c && (p?.club === c.id && c.squad.includes(p.id) || c.squad.length < clubSquadMax(c));
-const squadLimitMessage = c => `${c.name} already have ${clubSquadMax(c)} players. Release or transfer someone before signing another player.`;
+const clubLevels = c => c?.backgroundOnly ? {} : Object.fromEntries(leagueRules(c?.league || 'EPL').levels.map(k => [k, LEVELS[k]]));
+const clubSquadMax = c => c?.backgroundOnly ? 0 : leagueRules(c?.league || 'EPL').squadMax ?? Infinity;
+const squadSpace = (c, p) => !!c && !c.backgroundOnly && (p?.club === c.id && c.squad.includes(p.id) || c.squad.length < clubSquadMax(c));
+const squadLimitMessage = c => c?.backgroundOnly ? `${c.name} have a placeholder squad. Transfers are unavailable until player data is added.` : `${c.name} already have ${clubSquadMax(c)} players. Release or transfer someone before signing another player.`;
 function ensureCompetitions() {
   if (!G.competitionVersion) (G.flags ||= {}).legacyLeagueSetup = true;
   // A loaded career keeps its own membership and fixtures. Do not rewrite a

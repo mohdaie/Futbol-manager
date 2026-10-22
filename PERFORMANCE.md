@@ -110,3 +110,14 @@ A single paired headless Chromium run at 390 × 844, with **6× CPU throttling**
 Both runs completed without browser errors. The larger career increases main-thread snapshot copying cost; IndexedDB does not remove structured-clone cost. An unthrottled background-suite run processed 32 fixtures in 533 ms and confirmed continued rendering during a detailed instant match. Save coalescing, bounded storage failures and navigation during pending saves retain their existing checks.
 
 The release also passed the dedicated Championship UI suite (17 checks), identity checks (8), competition rules checks (15), discipline checks (14), player profiles (16), storage (19), input recovery (8), navigation (47), links (51), briefing (33), lineup (23), Dashboard/friendlies (11), red-card reorganization (16), live tactics (28), and updates (13). The strict engine audit passed 1,109 scenarios / 3,555 assertions. Legacy release-43 migration retained all 1,738 player records and fixture records byte-for-byte in the tested career. Long-career and physical-device testing remain separate.
+
+
+## Release 2026.10.22.45: background club registry
+
+Four top-division club registries cover 76 clubs in Spain, Italy, Germany and France. Four existing overseas counterparts are reused; only 72 club records are added. Placeholder slots are derived on demand from a shared position template. No individual dummy player, agent relationship, fixture, weekly financial simulation or automatic squad generation is created.
+
+In a seeded browser comparison against release 44, the player count stayed at 2,556 and fixture count at 932. SHA-256 digests of the complete player and fixture payloads were identical. Agent-to-club relationship entries stayed at 2,280. The serialized career grew from 1,942,946 to 1,965,588 UTF-8 bytes: about 23 KB (1.17%). This is storage overhead, not a physical-phone timing guarantee.
+
+A single paired headless Chromium run at 390 × 844 and 6× CPU throttling recorded a 32-match batch at 2.30 s before / 2.11 s after, and dashboard render medians at 116 / 95 ms. These differences include normal measurement noise and do not establish an improvement. The all-clubs directory increased from 147 to 220 ms while its club count grew from 58 to 130; country filters reduce the list to 18 or 20 clubs. Both runs completed without browser errors. Real-device and long-career measurements remain separate.
+
+The focused world suites check all four memberships against the pinned source, transfer and friendly exclusions, migration preserving players and fixtures, save/reload, phone layout, and three rollovers without materializing dummy players. Existing English competition, profile, transfer-deal, storage, input-recovery, club-navigation and friendly suites also passed; the strict engine audit retained 1,109 passing scenarios / 3,555 assertions.
