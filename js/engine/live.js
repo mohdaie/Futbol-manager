@@ -337,17 +337,19 @@ function draw(L) {
     S.on.forEach((id, i) => {
       const d = L.dots[si][i]; if (!id || !d) return;
       const [vx, vy] = view(L, d.x, d.y), x = X(vx), y = Y(vy), gk = i === 0;
+      // The circle is his body (sim.js bodyRadius) at pitch scale, so contacts on screen match the physics.
+      const br = Math.max(3, bodyRadius(S, i) * s);
       if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
-      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + br * 0.7, br * 0.9, br * 0.35, 0, 0, Math.PI * 2); g.fill();
       g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = 2;
-      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.beginPath(); g.arc(x, y, br, 0, Math.PI * 2); g.fill(); g.stroke();
       if (d.fa != null) { // where he faces: a small pointer on the edge of the circle
         const fa = L.bottom === 0 ? d.fa : d.fa + Math.PI, cx = Math.cos(fa), cy = Math.sin(fa);
         g.fillStyle = gk ? '#1B1B1B' : col.s; g.beginPath();
-        g.moveTo(x + cx * (r + 4), y + cy * (r + 4)); g.lineTo(x + cx * r * 0.7 - cy * r * 0.55, y + cy * r * 0.7 + cx * r * 0.55); g.lineTo(x + cx * r * 0.7 + cy * r * 0.55, y + cy * r * 0.7 - cx * r * 0.55); g.closePath(); g.fill();
+        g.moveTo(x + cx * (br + 3), y + cy * (br + 3)); g.lineTo(x + cx * br * 0.7 - cy * br * 0.55, y + cy * br * 0.7 + cx * br * 0.55); g.lineTo(x + cx * br * 0.7 + cy * br * 0.55, y + cy * br * 0.7 - cx * br * 0.55); g.closePath(); g.fill();
       }
-      if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
-      if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r + 5, 0, Math.PI * 2); g.stroke(); }
+      if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, br + 3, 0, Math.PI * 2); g.stroke(); }
+      if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, br + 5, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
       g.font = `700 ${Math.round(r * 1.05)}px "Plus Jakarta Sans", system-ui, sans-serif`;
       g.fillText(String(G.players[id] ? G.players[id].no : ''), x, y + 0.5);

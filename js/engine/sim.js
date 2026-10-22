@@ -424,12 +424,13 @@ function carrierDecide(M, s, i, o = {}) {
     // Everyone who can get across his path in the time the carry takes (keeper included) has to be beaten:
     // the defender's speed and Anticipation against the carrier's pace, then Dribbling against Tackling.
     // (The two who get there best count: the rest are cover.)
-    let f1 = 1, f2 = 1;
+    let f1 = 1, f2 = 1, inPath = 0;
     const tk = (ac(S, i, 'dri') + ac(S, i, 'agi') + ac(S, i, 'fla') * 0.5) / 2.5, OS = speeds(O), tC = len / (speeds(S)[i * 2] * 0.85) + Math.max(0, faceOff(p, cx, cy) - 0.5) / (2.5 + ac(S, i, 'agi') * 0.15); // 1c: turning first
     sim.P[1 - s].forEach((q, j) => {
       if (!q) return;
       const d = segD(q.x, q.y, p.x, p.y, cx, cy), u = SD.u, tq = Math.max(0, d - 1.2) / OS[j * 2] - (ac(O, j, 'ant') - 10) * 0.03, late = tq - u * tC;
-      if (late >= 0) return;
+      if (late >= 0 || (q.y - p.y) * fwdY(s) < 0.5) return; // 4.5: a take-on is against a man in front; one level with him is not
+      inPath++; // 4.5: a defender in front who can cut off this path in time makes the carry a take-on
       const f = sigm((tk - (j === 0 ? ac(O, 0, 'one') : avg2(O, j, [['tck', 0.6], ['ant', 0.2], ['pos', 0.2]]))) / 3 + ENG.carryRisk + late * 1.2);
       if (f < f1) { f2 = f1; f1 = f; } else if (f < f2) f2 = f;
     });
@@ -437,7 +438,9 @@ function carrierDecide(M, s, i, o = {}) {
     // Rulebook 6.2: a centre-back with nobody within 10 m steps into midfield with the ball (a Ball-Playing
     // Defender all the more), until someone comes out to him and frees a team-mate.
     const cbStep = FORMATIONS[S.ip][i][0] === 'DC' && oy > 0.4 && dd > 10 ? 0.02 * (roleName(S, i) === 'Ball-Playing Defender' ? 1.5 : 1) : 0;
-    opts.push({ k: 'carry', cx, cy, v: cbStep + (beat * threat(s, cx, cy) * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1 });
+    // 4.5: a carrier runs at a man only when he judges he can beat him more often than not; a blocked carrier
+    // who cannot passes, shields or carries away from him instead.
+    if (thru1 || inPath === 0 || beat >= 0.5) opts.push({ k: 'carry', cx, cy, v: cbStep + (beat * threat(s, cx, cy) * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1, takeOn: inPath > 0 });
     // Round the keeper when he comes out: Dribbling, Agility and Composure against his One on Ones.
     if (thru1 && gk1 && hyp(gk1.x - p.x, gk1.y - p.y) < 3.5 && dGoal(s, gk1.x, gk1.y) < d2g) { // 7.3: only when he rushes at his feet
       const pr = duel(roundSkill(S, i), roundStop(O), 0.35);
@@ -532,7 +535,7 @@ function playOption(M, s, i, op, press) {
   const S = M.sides[s], sim = M.sim, B = sim.B, p = P_(M, s, i);
   if (op.k === 'shot') return shoot(M, s, i, { press });
   if (op.k === 'cross') return crossBall(M, s, i, {});
-  if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; return; }
+  if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; p.takeOn = !!op.takeOn; return; }
   if (op.k === 'round') return roundKeeper(M, s, i);
   if (op.k === 'touch') return kick(M, s, i, 'clear', p.x < PW / 2 ? -3 : PW + 3, p.y + fwdY(s) * rf(2, 10), -1, { air: false, err: 1 });
   if (op.k === 'clear') {
@@ -567,7 +570,7 @@ function kick(M, s, i, k, tx, ty, j, o = {}) {
   B.vz = o.air ? 9.8 * flight / 2 : 0;
   B.fl = { k, s, i, j, tx: ex, ty: ey, t0: sim.t, arr: sim.t + flight, off: !!o.off, air: !!o.air, len, xg: o.xg || 0, aid: o.aid || null, sp,
     linesBroken: INTENT_PASSES.has(k) ? brokenLines(M, s, p.y, ey) : 0 };
-  B.ls = s; B.li = i; p.carry = 0;
+  B.ls = s; B.li = i; p.carry = 0; p.takeOn = 0;
   // Offside: every team-mate beyond the second-last defender (and the ball) when the ball is played.
   B.offS = s; B.offSet = 0;
   if (k !== 'shot') { const line = offsideY(M, s), P = sim.P[s]; for (let m = 1; m < P.length; m++) { const q = P[m]; if (q && m !== i && beyond(s, q.y, line)) B.offSet |= 1 << m; } }
@@ -973,21 +976,23 @@ function challenges(M) {
   const sim = M.sim, B = sim.B, own = owner(M);
   if (!own || sim.rs) return;
   const s = B.os, i = B.oi, S = M.sides[s], o = 1 - s, O = M.sides[o];
+  // 4.5: only a carry the carrier chose to run at a defender is a take-on; carrying past one is not.
+  const takeOn = !!(own.carry && own.takeOn);
   sim.P[o].forEach((q, j) => {
     if (!q || j === 0 && toOwn(o, own.x, own.y)[1] < 0.8 || q.cool > 0 || B.os !== s) return;
     const d = hyp(q.x - own.x, q.y - own.y);
     if (d > 2.3) return;
-    // A defender goal-side and in his path blocks him: he has to beat him (a take-on every second).
+    // A defender goal-side and in his path blocks a take-on: he has to beat him (a take-on every second).
     const front = (q.y - own.y) * fwdY(s) > 0.3 && d < 1.8, wrongWay = faceOff(q, own.x, own.y) > 1.9; // 1c: facing away, he cannot tackle
-    if (wrongWay && !(front && own.carry)) return;
-    if (front && own.carry && sim.t - (q.toT || -9) >= 1) q.toT = sim.t;
-    else if (front && own.carry) return;
+    if (wrongWay && !(front && takeOn)) return;
+    if (front && takeOn && sim.t - (q.toT || -9) >= 1) q.toT = sim.t;
+    else if (front && takeOn) return;
     // 4.5: near his own box he delays, and only commits when the ball is exposed (the attacker facing away from
     // goal) or a team-mate covers him; elsewhere he presses to win it.
-    const deep = toOwn(s, own.x, own.y)[1] < 0.4;
-    const exposed = backness(s, own) > 0.6, covered = deep && sim.P[o].some((c, k) => c && k && k !== j && hyp(c.x - own.x, c.y - own.y) < 7 && (c.y - own.y) * fwdY(s) > (q.y - own.y) * fwdY(s));
-    // 4.5: otherwise he jockeys; a committed tackle is the exception (per half second, not the norm).
-    const go = front && own.carry ? 1 : (exposed || covered ? 0.09 : deep ? 0.03 : 0.05) * (1 + bh(O, j, 'tk') * 0.4) * (1 + ((O.press ?? 1) - 1) * 0.15) * (own.carry ? 1.3 : 1);
+    const exposed = backness(s, own) > 0.6, covered = sim.P[o].some((c, k) => c && k && k !== j && hyp(c.x - own.x, c.y - own.y) < 7 && (c.y - own.y) * fwdY(s) > (q.y - own.y) * fwdY(s));
+    // 4.5: a tackle is a committed duel. A take-on is one; otherwise he commits only when the ball is exposed or a
+    // team-mate covers him, and otherwise he jockeys (no duel, nothing counted).
+    const go = front && takeOn ? 1 : exposed || covered ? 0.09 * (1 + bh(O, j, 'tk') * 0.4) * (1 + ((O.press ?? 1) - 1) * 0.15) * (own.carry ? 1.3 : 1) : 0;
     if (go < 1 && R() > go * TICK * 2) return;
     // Foul? Rash challenges, poor tacklers, temperament, the weather; fewer in the box.
     const pl = G.players[O.on[j]], inBox = toOwn(s, own.x, own.y)[1] < 0.157 && Math.abs(own.x - PW / 2) < 20;
@@ -996,8 +1001,8 @@ function challenges(M) {
     const a = avg2(S, i, [['dri', 0.4], ['agi', 0.2], ['str', 0.2 + bh(S, i, 'hold') * 0.2], ['fla', 0.1], ['fir', 0.1]]) + (faceOff(q, own.x, own.y) > 1.6 ? 1.5 : 0); // a defender caught turned is easier to beat
     const dd = avg2(O, j, [['tck', 0.25], ['str', 0.2], ['agi', 0.15], ['ant', 0.25], ['pos', 0.15]]) + bh(O, j, 'tk') * 0.8;
     pstat(S, i, 'da');
-    if (duelRoll(M, 'tackle', toOwn(s, own.x, own.y)[1], a + S.boost * 20, dd + O.guard * 20, front && own.carry ? 0.47 : 0.38, 1, S, O)) { // 4.5: take-on a bit under half; a tackle that is on wins three in five
-      pstat(S, i, 'dw'); bump(S, i, 0.05); bump(O, j, -0.03); q.cool = 1.5; // beaten: he needs a moment to turn
+    if (duelRoll(M, 'tackle', toOwn(s, own.x, own.y)[1], a + S.boost * 20, dd + O.guard * 20, front && takeOn ? 0.47 : 0.38, 1, S, O)) { // 4.5: take-on a bit under half; a tackle that is on wins three in five
+      if (takeOn) pstat(S, i, 'dw'); bump(S, i, 0.05); bump(O, j, -0.03); q.cool = 1.5; // beaten: he needs a moment to turn
       return;
     }
     pstat(O, j, 'tk'); bump(O, j, 0.06); bump(S, i, -0.04);
@@ -1260,6 +1265,32 @@ function movePlayers(M) {
       if (p.y < m) p.y = m; else if (p.y > PL - m) p.y = PL - m;
     }
   }
+  separateBodies(M);
+}
+// Body space: every player is a soft circle sized by height and build (about 0.3-0.45 m: shoulders and arms). Two
+// players cannot share the same ground, so a presser stands beside a carrier rather than inside him. The on-screen
+// circle is this radius at pitch scale. Duels are still dice rolls.
+function bodyRadius(S, i) {
+  const p = G.players[S.on[i]];
+  if (!p || !p.ht) return 0.36;
+  return clamp(0.34 + (p.ht - 182) * 0.0015 + (bmiOf(p) - 23) * 0.01, 0.3, 0.46);
+}
+function separateBodies(M) {
+  const sim = M.sim, bodies = [];
+  for (let s = 0; s < 2; s++) sim.P[s].forEach((q, i) => { if (q) bodies.push({ q, r: bodyRadius(M.sides[s], i) }); });
+  for (let pass = 0; pass < 2; pass++) for (let a = 0; a < bodies.length; a++) for (let b = a + 1; b < bodies.length; b++) {
+    const A = bodies[a].q, C = bodies[b].q, min = bodies[a].r + bodies[b].r;
+    let dx = C.x - A.x, dy = C.y - A.y;
+    // Against a goal line or touchline they slide apart along it: a push into the line would be clamped back.
+    if (Math.min(A.y, PL - A.y, C.y, PL - C.y) < 1.5) dy = 0;
+    let d = Math.sqrt(dx * dx + dy * dy);
+    if (d >= min) continue;
+    if (d < 1e-3) { dx = 1; dy = 0; d = 1; } // exactly on top of each other: part sideways
+    const push = (min - d) / 2 / d;
+    A.x -= dx * push; A.y -= dy * push; C.x += dx * push; C.y += dy * push;
+    A.x = clamp(A.x, 0.5, PW - 0.5); A.y = clamp(A.y, 0.5, PL - 0.5); C.x = clamp(C.x, 0.5, PW - 0.5); C.y = clamp(C.y, 0.5, PL - 0.5);
+  }
+  bodies.forEach(({ q }) => { q.x = clamp(q.x, 0.5, PW - 0.5); q.y = clamp(q.y, 0.5, PL - 0.5); });
 }
 // Top speed (Pace) and acceleration (Agility) per slot, both lower when tired: worked out once a minute.
 function speeds(S) {

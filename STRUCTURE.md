@@ -696,3 +696,47 @@ training and get a Settings note. Fixed a neutral-personality transfer memo with
 version reveal higher challenge/foul rates and 11-/12-goal extremes. After disclosure, the owner explicitly
 requested release and will reset the career; these match-balance limitations remain open.
 See `docs/player-profiles/README.md` for the complete comparison, provisional-data limits and next work.
+
+## 2026.10.22.33 — take-on episodes, tackle definition, body space (owner-requested release)
+
+Released on the owner's request, with the match-balance limits below still open and the realism gate not passed.
+Rule 4.5 now separates running at a man from carrying past
+him. A carry is a take-on only when a defender can cut off its path in time, and a carrier takes a man on only
+when he judges he can beat him more often than not (`carrierDecide`, `takeOn`). Blocked carriers who cannot
+pass, shield or carry away. Only a take-on creates a forced contest (`challenges`), the take-on odds, and a
+counted successful dribble; ground duels still count every contest.
+
+Seed 3, 120 matches, before → after: fouls 32.3 → 28.1, tackles 38.6 → 30.4, successful dribbles 33.8 → 18.0,
+ground duels 73.1 → 57.5, most goals by one team 12 → 7. Passes rose 640 → 678 (fewer carries), so the realism
+gate has not passed. Dribbles remain above the rulebook's 8-10 per team; take-ons are still about two thirds of
+contests. Strict audit 3,555 assertions and all 23 suites pass.
+A defender level with the carrier is no longer a take-on (4.5); he jockeys. Seeds 1-3, 120 matches: fouls 26.6-27.5,
+tackles 32-33, successful dribbles 16.5-16.9, ground duels 61. Goals rise to 2.9-3.2 and wins by 5+ to 7-8%, so the
+side defence now needs work before any release.
+Body space (`separateBodies`): every player is a soft circle, 0.2-0.36 m, sized by height and build. Players cannot
+share ground: frames with two players closer than 0.4 m went from 5-6% to 0% on five recorded halves. Seeds 1-3,
+120 matches: goals 3.0-3.3, wins by 5+ 5-7%, fouls 26.5-27.7, tackles 33-34, successful dribbles 16.8-17.4.
+Duels and fouls are unchanged dice rolls; circles on screen are unchanged.
+Tackles (rulebook 4.5): a tackle is a committed duel, won or lost, counted only when a defender commits (a take-on,
+the ball exposed, the attacker turned, or a team-mate covering). Jockeying is no duel and counts nothing. Circles
+on the live pitch and in analysis frames are the body radius at pitch scale (`bodyRadius`, 0.3-0.46 m), so the
+on-screen contacts match the physics. Seeds 1-3, 120 matches: goals 2.6-2.9, fouls 25.5-25.9, tackles 31-32 (still
+above the 15-20 target), dribbles 17-18 (target 8-10), wins by 5+ 4-9%, home wins 43-48%.
+Tested a lower commitment rate (0.04 instead of 0.09 for exposed or covered duels) on seeds 1-3, 120 matches: tackles
+22 per team, ground duels 44, fouls 20-21, goals 2.9-3.4, wins by 5+ 5-10%. Fewer tackles but fewer duels and more
+goals, so it was reverted. Tackle counts are a calibration question still open; goal excess is a defence question.
+Passing diagnosis (handover item 5, not yet changed): 72% of carrier decisions are passes; 42% of passes go more than 3 m
+backward, and in the middle third without pressure 64% do (rule 3.8 says forward first). Forward options exist (90% of
+unpressed middle-third moments have an onside team-mate 4-30 m ahead) but the top-four pass cut removes them, and their
+value loses to backward passes because the receivers are marked (median 4.7 m from the nearest opponent, against 15.8 m
+for team-mates behind the ball) and the passes are riskier (risk 0.39 against 0.15). The fix is attacking support
+movement into free space between the lines, not the pass weights alone. Keeping the best forward pass in the cut
+changed backward share from 64% to 61%, so it was not kept.
+Attacking movement tests (handover item 5), all reverted: six matches each, balanced against balanced, full time.
+(1) Wider free-space search for attackers (5x5 zone, forward bonus): forward receivers moved only from 4.6 m to 4.9 m
+from the nearest opponent, and goals fell from 2.7 to 1.7 per match. Marking defenders follow runners, so the space
+does not open. (2) Back players not on rest-defence duty look for free space: back line still for 34-36% of the time
+instead of about 50%, but goals per match rose from 2.5 to 3.0. (3) Skill-based pass risk (passer's Vision, Passing,
+Decisions, Composure; receiver's Off the Ball, First Touch): forward passes rose from 36% to 40%, passes per minute
+fell from 7.3 to 7.2, but goals rose from about 2.7 to about 3.1 on 120-match seeds 1-3. Steps 2 and 3 together gave
+goals 3.2-3.6 and wins by 5+ at 7-12%. Next attempt: the defence has to respond to forward movement, not only attack.
