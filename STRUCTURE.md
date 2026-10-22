@@ -697,9 +697,10 @@ version reveal higher challenge/foul rates and 11-/12-goal extremes. After discl
 requested release and will reset the career; these match-balance limitations remain open.
 See `docs/player-profiles/README.md` for the complete comparison, provisional-data limits and next work.
 
-## Unreleased — take-on episodes (rulebook 4.5)
+## 2026.10.22.33 — take-on episodes, tackle definition, body space (owner-requested release)
 
-Not released: no version bump, PR or deployment. Rule 4.5 now separates running at a man from carrying past
+Released on the owner's request, with the match-balance limits below still open and the realism gate not passed.
+Rule 4.5 now separates running at a man from carrying past
 him. A carry is a take-on only when a defender can cut off its path in time, and a carrier takes a man on only
 when he judges he can beat him more often than not (`carrierDecide`, `takeOn`). Blocked carriers who cannot
 pass, shield or carry away. Only a take-on creates a forced contest (`challenges`), the take-on odds, and a
