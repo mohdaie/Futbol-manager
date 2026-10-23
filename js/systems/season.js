@@ -174,7 +174,7 @@ function retire(p) {
 }
 
 function rollover() {
-  if (typeof payInstalments === 'function') payInstalments();
+  if (typeof payInstalments === 'function') payInstalments(true);
   seasonFavourites();
   staffSeasonEnd();
   const S = G.season, c = userClub(), left = [];
@@ -221,7 +221,7 @@ function rollover() {
   weeklyTransfers();
   if (!G.gameOver) {
     G.board.target = expectationFor(G.club);
-    G.fin.tb = roundMoney(Math.max(5e6, c.bal * 0.3));
+    G.fin.tb = roundMoney(Math.max(0, Math.max(5e6, c.bal * 0.3) - (typeof transferCommitments === 'function' ? transferCommitments(c.id).nextYear : 0)));
     G.fin.wb = roundWage(Math.max(clubWageBill(c) * 1.1, G.fin.wb));
   }
   G.ledgerPrev = G.ledger; G.ledger = emptyLedger();

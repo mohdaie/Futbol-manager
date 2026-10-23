@@ -169,20 +169,24 @@ ACT.sendContract = () => {
 /* ---------- finance ---------- */
 SCREENS.finance = {
   render() {
-    const c = userClub(), L = G.ledger, bill = clubWageBill(c);
+    const c = userClub(), L = G.ledger, bill = clubWageBill(c), commitments = transferCommitments(c.id);
     const inc = [['TV money', L.tv], ['Gate receipts', L.gate], ['Sponsorship', L.spon], ['Merchandise', L.merch], ['Player sales', L.sales], ['Prize money', L.prize]];
     const exp = [['Player wages', L.wages], ['Staff wages', L.staff], ['Transfer fees', L.buys], ['Running costs', L.ops], ['Scouting', L.scout]];
     const ti = sum(inc, x => x[1]), te = sum(exp, x => x[1]);
     const h = G.balHist, mn = Math.min(...h, 0), mx = Math.max(...h, 1), W = 320, H = 90;
     const pts = h.map((v, i) => `${(i / Math.max(1, h.length - 1)) * W},${H - ((v - mn) / (mx - mn || 1)) * (H - 10) - 5}`).join(' ');
     const top = seniorSquad(G.club).sort((a, b) => b.wage - a.wage).slice(0, 8);
+    const rights = Object.values(G.players).filter(p => p.sellOn?.club === G.club || activeBuyBack(p));
     return `<h1 class="h1">Finances</h1>
       <div class="tiles">
         <div class="tile"><small>Balance</small><b class="${c.bal < 0 ? 'bad' : ''}">${money(c.bal)}</b><span>${c.bal < 0 ? 'In the red' : 'Healthy'}</span></div>
-        <div class="tile"><small>Transfer budget</small><b>${money(G.fin.tb)}</b><span>50% of sale fees added</span></div>
+        <div class="tile"><small>Transfer budget</small><b>${money(G.fin.tb)}</b><span>50% of sale cash received</span></div>
         <div class="tile"><small>Wage bill</small><b>${wageFmt(bill)}</b>${bar(bill / G.fin.wb * 100, bill > G.fin.wb ? 'bad' : bill > G.fin.wb * 0.95 ? 'warn' : 'good')}</div>
         <div class="tile"><small>Wage budget</small><b>${wageFmt(G.fin.wb)}</b><span>${wageFmt(Math.max(0, G.fin.wb - bill))} free</span></div>
       </div>
+      <div class="card transfer-commitments"><h3>Transfer commitments</h3><div class="kvrow"><span>Future payments owed</span><b>${money(commitments.owed)}</b></div><div class="kvrow"><span>Future payments due to us</span><b>${money(commitments.due)}</b></div><div class="kvrow"><span>Owed within 12 months</span><b>${money(commitments.nextYear)}</b></div>
+      <p class="muted">Bank balance and the income/expenditure ledger record cash when paid. The full guaranteed purchase fee is reserved from transfer budget at signing. Half of sale cash received is released to transfer budget.</p>
+      <div class="list">${commitments.rows.slice().sort((a,b)=>(a.due||weekDate(SEASON_WEEKS,a.season).getTime())-(b.due||weekDate(SEASON_WEEKS,b.season).getTime())).slice(0,20).map(row=>`<div class="row"><span class="grow"><b>${row.from===G.club?'Pay':'Receive'} ${money(row.amount)}</b><small>${esc(row.name||G.players[row.pid]&&fullName(G.players[row.pid])||'Transfer')} · ${row.due?fmtDate(row.due,false):'End of '+seasonLabel(row.season)} · ${esc(clubName(row.from===G.club?row.to:row.from))}</small></span></div>`).join('')||'<p class="muted">No outstanding instalments.</p>'}</div>${commitments.rows.length>20?`<p class="muted">Showing the next 20 of ${commitments.rows.length} payments.</p>`:''}</div>
       <div class="card"><h3>Balance trend</h3>${h.length < 3 ? '<p class="muted">The trend fills in as the weeks pass.</p>' : `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Club balance over recent weeks"><polyline points="0,${H} ${pts} ${W},${H}" class="area"/><polyline points="${pts}" class="line"/></svg><div class="spark-l"><span>${money(mn)}</span><span>${money(mx)}</span></div>`}</div>
       <div class="card"><h3>Adjust budgets</h3><p class="muted">Every £1k a week of wage budget is worth £100k of transfer budget.</p>
         <div class="btns">${[[-10000, '−£10k/w wages'], [-1000, '−£1k/w'], [1000, '+£1k/w'], [10000, '+£10k/w wages']].map(([v, n]) => `<button class="btn sm" data-a="budget" data-v="${v}">${n}</button>`).join('')}</div></div>
@@ -190,6 +194,7 @@ SCREENS.finance = {
         <div class="card"><h3>Income <small>${seasonLabel()}</small></h3>${inc.map(([n, v]) => `<div class="kvrow"><span>${n}</span><b>${money(v)}</b></div>`).join('')}<div class="kvrow tot"><span>Total</span><b>${money(ti)}</b></div></div>
         <div class="card"><h3>Expenditure</h3>${exp.map(([n, v]) => `<div class="kvrow"><span>${n}</span><b>${money(v)}</b></div>`).join('')}<div class="kvrow tot"><span>Total</span><b>${money(te)}</b></div></div>
       </div>
+      <div class="card"><h3>Conditional transfer rights</h3><p class="muted">These are not guaranteed receipts or amounts included in the instalment totals. Sell-on shares apply on the next sale; buy-backs require a valid window, budget, personal terms and medical.</p><div class="list">${rights.slice(0,20).map(p=>`<div class="row"><span class="grow"><b>${playerLink(p.id,fullName(p))}</b><small>${p.sellOn?.club===G.club?p.sellOn.pct+'% of next sale':''}${activeBuyBack(p)?' · Buy-back '+money(p.buyBack.price)+' until '+fmtDate(p.buyBack.expires,false):''}</small></span>${activeBuyBack(p)?`<button class="btn sm" data-a="buyBack" data-id="${p.id}">Buy back</button>`:''}</div>`).join('')||'<p class="muted">No active former-club rights.</p>'}</div>${rights.length>20?`<p class="muted">Showing 20 of ${rights.length}; all rights remain attached to their player profiles.</p>`:''}</div>
       <div class="sec-h"><h2>Highest earners</h2></div>
       <div class="list">${top.map(p => playerRow(p, `<span class="stat"><b>${wageFmt(p.wage)}</b><small>to ${p.con}</small></span>`, { noBadge: true })).join('')}</div>`;
   },

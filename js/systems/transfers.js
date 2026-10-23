@@ -85,6 +85,8 @@ function moveClub(p, toId) {
   const destination = G.clubs[toId];
   if (!squadSpace(destination, p)) throw new Error(squadLimitMessage(destination));
   const from = p.club;
+  if (p.buyBack && p.buyBack.holder !== toId) delete p.buyBack;
+  if (destination.fa) delete p.sellOn;
   delete p.unset; p.treq = null; p.listed = false;
   removeFromClub(p);
   favPersonMoved(p, from, toId);
@@ -92,31 +94,29 @@ function moveClub(p, toId) {
   addToClub(p, G.clubs[toId]);
 }
 
-function completeSigning(p, fee, wage, years, status) {
+function completeSigning(p, fee, wage, years, status, terms) {
   if (!p || G.players[p.id] !== p || G.clubs[p.club]?.backgroundOnly) throw new Error('This player is unavailable for transfer.');
   if (!squadSpace(userClub(), p)) throw new Error(squadLimitMessage(userClub()));
   const me = userClub(), from = G.clubs[p.club];
   const fromName = from.fa ? 'free agency' : 'the ' + from.name;
-  if (!from.fa) from.bal += fee;
-  me.bal -= fee; G.fin.tb = Math.max(0, G.fin.tb - fee); G.ledger.buys += fee;
+  const settlement = settleTransferFee(p, G.club, fee, terms, terms?.exchangeValue || 0);
   moveClub(p, G.club);
   p.wage = wage; p.con = G.season + years; p.status = status; p.mor = clamp(p.mor + 10, 0, 100);
   G.know[p.id] = 100;
   G.shortlist = G.shortlist.filter(id => id !== p.id);
   G.pitches = G.pitches.filter(x => x.pid !== p.id);
-  G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: from.id, to: G.club, fee });
+  G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: from.id, to: G.club, fee, upfront: settlement.upfront, deferred: settlement.deferred, exchangeValue: terms?.exchangeValue || 0 });
   addNews('transfer', `${fullName(p)} signs for the ${me.name}`, `${fullName(p)} (${p.age}, ${p.pos}) arrives from ${fromName}${fee ? ' for ' + money(fee) : ''} on a ${years}-year deal worth ${wageFmt(wage)}.`);
 }
 
-function sellPlayer(p, toId, fee) {
+function sellPlayer(p, toId, fee, terms) {
   if (!squadSpace(G.clubs[toId], p)) return false;
   const me = userClub(), to = G.clubs[toId];
-  me.bal += fee; G.fin.tb += roundMoney(fee * 0.5); G.ledger.sales += fee;
-  to.bal -= fee;
+  const settlement = settleTransferFee(p, toId, fee, terms, terms?.exchangeValue || 0);
   moveClub(p, toId);
   p.wage = wageFor(p, to.rep); p.con = G.season + ri(2, 5);
-  G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: G.club, to: toId, fee });
-  addNews('transfer', `${fullName(p)} leaves for the ${to.name}`, `${fullName(p)} has been sold for ${money(fee)}. Half of the fee has been added to your transfer budget.`);
+  G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: G.club, to: toId, fee, upfront: settlement.upfront, deferred: settlement.deferred, exchangeValue: terms?.exchangeValue || 0 });
+  addNews('transfer', `${fullName(p)} leaves for the ${to.name}`, `${fullName(p)} has been sold for ${money(fee)}. Half of cash received is added to your transfer budget; future instalments are credited when paid.`);
 }
 
 function releasePlayer(p) {
@@ -183,7 +183,7 @@ function aiMarket() {
     if (!pool.length) continue;
     const p = wpick(pool, x => Math.pow(1.1, x.ca - 60));
     const from = G.clubs[p.club];
-    aiDeal(c, p, from.fa ? 0 : roundMoney(askingPrice(p) * rf(0.95, 1.1)));
+    aiDeal(c, p, from.fa ? 0 : activeBuyBack(p, c.id) ? p.buyBack.price : roundMoney(askingPrice(p) * rf(0.95, 1.1)));
   }
   if (G.tHist.length > 120) G.tHist.length = 120;
 }
@@ -197,7 +197,7 @@ function aiBidsForUser() {
     const buyers = Object.values(G.clubs).filter(c => c.id !== G.club && !c.fa && squadSpace(c) && c.rep >= p.ca - 12 && c.bal > val * 0.8);
     if (!buyers.length) return;
     const b = pick(buyers);
-    const fee = roundMoney(val * (p.listed ? rf(0.7, 1.05) : rf(0.95, 1.3)));
+    const fee = activeBuyBack(p, b.id) ? p.buyBack.price : roundMoney(val * (p.listed ? rf(0.7, 1.05) : rf(0.95, 1.3)));
     bidForUser(b, p, fee);
   });
 }

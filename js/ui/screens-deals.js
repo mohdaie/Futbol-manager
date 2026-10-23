@@ -36,6 +36,39 @@ TR_TABS.deals = () => {
     ${closed.length ? sec('Recently closed', closed) : ''}`;
 };
 
+// These drafts stay separate from agreed terms until the manager submits them.
+function dealTermsDraft(d) {
+  if (UI.dealTerms?.id !== d.id) UI.dealTerms = { id: d.id, ...transferProposal(d) };
+  return UI.dealTerms;
+}
+function readDealTerms(d) {
+  const draft = dealTermsDraft(d);
+  for (const k of Object.keys(TRANSFER_TERMS_DEFAULT)) {
+    const field = document.getElementById('dt-' + k);if (field) draft[k] = +field.value;
+  }
+  const { id, ...terms } = draft;return terms;
+}
+function dealTermsHtml(d) {
+  const p = G.players[d.pid];if (G.clubs[d.from].fa) return '<p class="muted">Free transfer: no club fee, instalments, exchange or former-club clauses. Agent fees and signing bonus are paid upfront.</p>';
+  const f = dealTermsDraft(d), rule = instalmentPolicy(d.fee || d.memo?.max || 0, G.clubs[d.from]);
+  const candidates = squadOf(d.to).filter(q => q.id !== p.id && !G.deals.some(x => x.id !== d.id && dealOpen(x) && (x.pid === q.id || x.proposal?.exchangePid === q.id)));
+  const select = (key, options) => selectHtml('dt-' + key, options, f[key], 'dealTerms', `data-k="${key}"`);
+  return `<section class="fsec transfer-package"><h4>Proposed transfer package</h4>
+    <div class="two"><div class="field"><label for="dt-years">Deferred payments</label>${select('years', [[0,'Pay all upfront'],[1,'1 annual payment'],[2,'2 annual payments'],[3,'3 annual payments']])}</div>
+    <div class="field"><label for="dt-upfrontPct">Cash paid upfront</label>${select('upfrontPct', [[25,'25%'],[40,'40%'],[50,'50%'],[75,'75%'],[100,'100%']])}</div></div>
+    <p class="muted">Club policy for this fee: at least ${rule.upfrontPct}% upfront, up to ${rule.years} years. Subject to club and agent agreement. The full guaranteed cash fee uses transfer budget; instalments spread bank payments.</p>
+    <div class="field"><label for="dt-exchangePid">Optional player exchange</label>${select('exchangePid', [[0,'No player exchange'],...candidates.map(q=>[q.id,fullName(q)+' · '+q.pos])])}</div>
+    <div class="field"><label for="dt-exchangeValue">Agreed exchange value (£, additional to cash)</label><input id="dt-exchangeValue" type="number" min="0" max="10000000000" step="1000" value="${f.exchangeValue}" data-c="dealTerms" data-k="exchangeValue"></div>
+    <div class="two"><div class="field"><label for="dt-sellOnPct">Former club’s next-sale share (%)</label><input id="dt-sellOnPct" type="number" min="0" max="50" value="${f.sellOnPct}" data-c="dealTerms" data-k="sellOnPct"></div>
+    <div class="field"><label for="dt-buyBackPrice">Former club’s buy-back price (£, 0 = none)</label><input id="dt-buyBackPrice" type="number" min="0" max="10000000000" step="1000" value="${f.buyBackPrice}" data-c="dealTerms" data-k="buyBackPrice"></div></div>
+    <div class="field"><label for="dt-buyBackYears">Buy-back right expires after</label>${select('buyBackYears', [[1,'1 year'],[2,'2 years'],[3,'3 years']])}</div>
+    <p class="muted">Sell-on is a percentage of the next total sale package, including agreed exchange value. Buy-back is a fixed price and still needs player agreement. Exchange players and their agents can refuse; their wages and agent fees must be affordable.</p></section>`;
+}
+CHG.dealTerms = (value, ds) => {
+  const d = G.deals.find(x => x.id === UI.dealTerms?.id);if (!d) return;
+  readDealTerms(d);UI.dealTerms[ds.k] = +value;
+  if (ds.k === 'exchangePid') { UI.dealTerms.exchangeValue = +value ? pValue(G.players[+value]) : 0;dealSheet(d.id); }
+};
 function dealSheet(id) {
   const d = G.deals.find(x => x.id === id);
   if (!d) return toast('That deal has been cleared.');
@@ -57,6 +90,7 @@ function dealSheet(id) {
       ${M.est ? `<h5>Most you will pay <small>(he estimates ${money(M.est)})</small></h5><div class="stepper"><button class="btn" aria-label="Lower fee by ${moneyExact(fs * 4)}" data-a="dealForm" data-k="fee" data-v="${-fs * 4}">−−</button><button class="btn" aria-label="Lower fee by ${moneyExact(fs)}" data-a="dealForm" data-k="fee" data-v="${-fs}">−</button><b aria-live="polite" aria-atomic="true">${moneyExact(F.fee)}</b><button class="btn" aria-label="Raise fee by ${moneyExact(fs)}" data-a="dealForm" data-k="fee" data-v="${fs}">+</button><button class="btn" aria-label="Raise fee by ${moneyExact(fs * 4)}" data-a="dealForm" data-k="fee" data-v="${fs * 4}">++</button></div>` : ''}
       <h5>Most wage a week <small>(he expects about ${wageFmt(M.wage)})</small></h5><div class="stepper"><button class="btn" aria-label="Lower weekly wage by ${moneyExact(ws * 5)}" data-a="dealForm" data-k="wage" data-v="${-ws * 5}">−−</button><button class="btn" aria-label="Lower weekly wage by ${moneyExact(ws)}" data-a="dealForm" data-k="wage" data-v="${-ws}">−</button><b aria-live="polite" aria-atomic="true">${moneyExact(F.wage)}/w</b><button class="btn" aria-label="Raise weekly wage by ${moneyExact(ws)}" data-a="dealForm" data-k="wage" data-v="${ws}">+</button><button class="btn" aria-label="Raise weekly wage by ${moneyExact(ws * 5)}" data-a="dealForm" data-k="wage" data-v="${ws * 5}">++</button></div>
       <p class="muted c">Budget ${money(G.fin.tb)} · wage room ${wageFmt(Math.max(0, G.fin.wb - clubWageBill(userClub())))}</p>
+      ${dealTermsHtml(d)}
       <div class="btns col"><button class="btn pri wide" data-a="dealGo" data-id="${d.id}" data-k="proceed">Proceed</button><button class="btn wide" data-a="dealGo" data-id="${d.id}" data-k="monitor">Keep monitoring</button><button class="btn wide ghost" data-a="dealGo" data-id="${d.id}" data-k="drop">Drop him</button></div></section>`;
   } else if (n) {
     const btn = (k, t, cls = '') => `<button class="btn wide ${cls}" data-a="dealGo" data-id="${d.id}" data-k="${k}">${t}</button>`;
@@ -67,9 +101,10 @@ function dealSheet(id) {
       wagelimit: () => btn('raise', 'Offer ' + wageFmt(n.wage) + ' a week', 'pri') + btn('walk', 'Walk away', 'ghost'),
       final: () => btn('complete', 'Complete the transfer', 'pri') + btn('pull', 'Pull out', 'ghost'),
       offer: () => btn('accept', 'Accept ' + money(d.fee), 'pri') + btn('counter', 'Ask for ' + money(roundMoney(d.fee * 1.2))) + btn('reject', 'Reject', 'ghost'),
-      finalout: () => btn('sell', 'Sanction the sale', 'pri') + btn('block', 'Block the move', 'ghost'),
+      finalout: () => btn('sell', 'Sanction the sale', 'pri') + (d.buyBackTriggered ? '' : btn('block', 'Block the move', 'ghost')),
+      package: () => btn('package', 'Submit revised package', 'pri') + btn('walk', 'Walk away', 'ghost'),
     }[n.k];
-    act = body ? `<section class="fsec"><h4>Your decision</h4><p>${esc(dealStatus(d))}.</p><div class="btns col">${body()}</div></section>` : '';
+    act = body ? `<section class="fsec"><h4>Your decision</h4><p>${esc(n.reason || dealStatus(d))}.</p>${['offer', 'package'].includes(n.k) ? dealTermsHtml(d) : ''}<div class="btns col">${body()}</div></section>` : '';
   }
   const terms = dealSummary(d);
   sheet(`<article class="dealsheet">
@@ -99,13 +134,18 @@ ACT.dealGo = ds => {
   if (!d || !d.need) return;
   let msg = '';
   const k = ds.k;
-  if (k === 'proceed') { const F = UI.dealForm; dealProceed(d, F.approach, F.fee, F.wage); msg = 'The Director of Football is on it.'; }
+  if (k === 'proceed') { const F = UI.dealForm; const error = dealProceed(d, F.approach, F.fee, F.wage, readDealTerms(d)); if (error) return toast(error);msg = 'The Director of Football is on it.'; }
   if (k === 'monitor') { dealMonitor(d); msg = 'Kept on file.'; }
   if (k === 'drop') { dealDrop(d); msg = 'Dropped.'; }
   if (k === 'raise') msg = dealRaise(d, d.need.k === 'wagelimit' ? d.need.wage : d.need.k === 'agentfee' ? d.agentFee : d.need.fee);
   if (k === 'walk' || k === 'pull') { dealWalk(d); msg = 'You walked away.'; }
   if (k === 'complete') { msg = completeIn(d); if (!d.closed) return toast(msg); }
+  if (['accept', 'counter'].includes(k)) { const error = setTransferProposal(d, readDealTerms(d));if(error)return toast(error); }
   if (['accept', 'counter', 'reject'].includes(k)) msg = answerOffer(d, k);
+  if (k === 'package') {
+    const error = setTransferProposal(d, readDealTerms(d));if(error)return toast(error);
+    d.need=null;d.stage=d.dir==='in'?'bid':'offer';d.bidOut=false;d.next=dayAbs()+1;msg='Revised terms sent for club and agent approval.';
+  }
   if (k === 'sell') msg = completeOut(d);
   if (k === 'block') { blockOut(d); msg = 'Sale blocked.'; }
   G.news.forEach(x => { if (x.action && x.action.t === 'deal' && x.action.id === d.id) x.done = true; });
@@ -149,3 +189,5 @@ function agentSheet(id) {
   { key: 'agent:' + id, restore: () => agentSheet(id), valid: () => !!G?.agents?.[id] });
 }
 ACT.agent = ds => agentSheet(ds.id);
+
+ACT.buyBack = ds => { const result=activateBuyBack(+ds.id);if(result.error)return toast(result.error);saveGame();dealSheet(result.deal.id); };

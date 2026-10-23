@@ -7,6 +7,7 @@ const staffWageBill = () => sum(G.staff, s => s.wage);
 const opsWeekly = rep => Math.round(60000 + rep * 5000);
 
 function weeklyFinance() {
+  payTransferInstalments();
   const c = userClub(), L = G.ledger;
   const spon = Math.round(sponsorWeekly(c.rep) * (0.9 + G.board.fans / 500));
   const merch = Math.round(spon * 0.2);

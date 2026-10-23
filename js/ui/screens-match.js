@@ -120,14 +120,16 @@ SCREENS.start = {
   },
 };
 const seasonLabelRaw = s => s + '/' + String(s + 1).slice(2);
-ACT.pickLeague = ds => { if (!LEAGUES[ds.id]) return; START.league = ds.id; START.club = (ds.id === 'ECH' ? CHAMPIONSHIP_CLUBS : CLUBS)[0].id; render(); };
-ACT.pickClub = ds => { START.club = ds.id; render(); };
-ACT.pickAvatar = ds => { START.avatar = +ds.v; render(); };
-CHG.mgr = v => { START.name = v.trim(); };
+function rememberManagerName() { const field=document.getElementById('mgr');if(field)START.name=field.value; }
+document.addEventListener('input', e => { if(e.target.id==='mgr')START.name=e.target.value; });
+ACT.pickLeague = ds => { if (!LEAGUES[ds.id]) return; rememberManagerName(); START.league = ds.id; START.club = (ds.id === 'ECH' ? CHAMPIONSHIP_CLUBS : CLUBS)[0].id; render(); };
+ACT.pickClub = ds => { rememberManagerName(); START.club = ds.id; render(); };
+ACT.pickAvatar = ds => { rememberManagerName(); START.avatar = +ds.v; render(); };
+CHG.mgr = v => { START.name = v; };
 ACT.resume = () => { if (loadGame()) go('home'); };
 ACT.startGame = async () => {
   const n = document.getElementById('mgr');
-  START.name = (n && n.value.trim()) || START.name;
+  START.name = (n ? n.value : START.name).trim();
   const speed = titleSpeed();
   newGame(START.club, START.name || 'The Boss', START.avatar);
   G.settings.speed = speed;
