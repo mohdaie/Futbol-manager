@@ -149,7 +149,10 @@ ACT.news = ds => {
   if (a && a.t === 'scoutfile' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="scoutFile" data-id="${a.pid}">Open scouting file</button></div>`;
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;
   if (a && n.done) actions += '<p class="note">Dealt with.</p>';
-  sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div><h3 class="sh-t">${esc(n.title)}</h3><p class="body">${esc(n.body)}</p>${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
+  const playerIds = n.action?.pid && G.players[n.action.pid] ? [+n.action.pid] : null;
+  const title = playerIds ? `<h3 class="sh-t">${playerMentionsHtml(n.title, playerIds)}</h3>` : `<h3 class="sh-t">${esc(n.title)}</h3>`;
+  const body = playerIds ? `<p class="body">${playerMentionsHtml(n.body, playerIds)}</p>` : `<p class="body">${esc(n.body)}</p>`;
+  sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div>${title}${body}${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
 };
 ACT.bid = ds => {
   const n = G.news.find(x => x.id === +ds.id);

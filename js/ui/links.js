@@ -28,6 +28,24 @@ function playerLink(pid, label) {
   const p = G.players[pid];
   return p ? `<button class="entity-link" data-a="player" data-id="${p.id}" aria-label="View ${esc(fullName(p))}">${esc(label || pname(p))}</button>` : esc(label || 'Retired player');
 }
+function playerMentionsHtml(text, ids) {
+  const aliases = new Map();
+  [...new Set(ids || [])].forEach(id => {
+    const p = G.players[id]; if (!p) return;
+    [pname(p), fullName(p)].forEach(name => { const set = aliases.get(name) || new Set(); set.add(p.id); aliases.set(name, set); });
+  });
+  const names = [...aliases.keys()].sort((a, b) => b.length - a.length);
+  if (!names.length) return esc(text);
+  const re = new RegExp('(?<![\\p{L}\\p{N}_])(?:' + names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}\\p{N}_])', 'gu');
+  let html = '', at = 0;
+  for (const m of String(text).matchAll(re)) {
+    html += esc(String(text).slice(at, m.index));
+    const matches = aliases.get(m[0]);
+    html += matches.size === 1 ? playerLink([...matches][0], m[0]) : `<span data-no-links>${esc(m[0])}</span>`;
+    at = m.index + m[0].length;
+  }
+  return html + esc(String(text).slice(at));
+}
 function linkEntities(root) {
   if (!G || !root) return;
   const skip = 'button,a,input,textarea,select,option,svg,canvas,script,style,code,pre,[data-a],[data-no-links]';
@@ -42,6 +60,7 @@ function linkEntities(root) {
     const frag = document.createDocumentFragment(); let at = 0;
     found.forEach(m => {
       frag.append(document.createTextNode(n.textContent.slice(at, m.at)));
+      if (m.refs.length > 1 && m.refs.some(r => r.kind === 'player')) { frag.append(document.createTextNode(m.name)); at = m.at + m.name.length; return; }
       const b = document.createElement('button'), ref = m.refs[0];
       b.className = 'entity-link'; b.textContent = m.name;
       if (m.refs.length === 1) { b.dataset.a = ref.kind === 'player' ? 'player' : 'clubPage'; b.dataset.id = ref.id; }

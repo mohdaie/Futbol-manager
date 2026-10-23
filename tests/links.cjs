@@ -92,14 +92,15 @@ const server = require('node:http').createServer((req, res) => {
     }, info);
     check('Transfer history has exact player link', await page.locator('.tx [data-a="player"]').count(), 1);
     check('Transfer history links both clubs', await page.locator('.tx [data-a="clubPage"]').count(), 2);
-    // Duplicate names must offer a choice rather than open an arbitrary player.
+    // Generic duplicate-name text must not open a wrong or ambiguous profile.
     const duplicate = await page.evaluate(({ pid, ours }) => {
       G.players[ours].fn = G.players[pid].fn; G.players[ours].ln = G.players[pid].ln;
       render(); sheet('<p class="probe">' + esc(fullName(G.players[pid])) + '</p>');
       return fullName(G.players[pid]);
     }, info);
-    await page.locator('.probe [data-a="entityChoose"]').click();
-    check('Duplicate player names offer both profiles', await page.locator('#layer .player-main').count(), 2);
+    check('Duplicate player-name text never opens an ambiguous chooser', await page.locator('.probe [data-a="entityChoose"]').count(), 0);
+    check('Duplicate player-name text remains visible and unlinked', await page.locator('.probe').textContent(), duplicate);
+    check('ID-backed player links still open the exact player among duplicates', await page.evaluate(pid => { sheet('<div class="probe">' + playerLink(pid, fullName(G.players[pid])) + '</div>'); return document.querySelector('.probe [data-a="player"]')?.dataset.id; }, info.pid), String(info.pid));
     await page.evaluate(() => { sheet('<p class="probe">&lt;img src=x onerror=alert(1)&gt; CitizensExtra / Citizens</p>'); });
     check('Plain text is not reinterpreted as HTML', await page.locator('.probe img').count(), 0);
     check('Names do not match inside a larger word', await page.locator('.probe [data-a="clubPage"]').count(), 1);
@@ -133,6 +134,7 @@ const server = require('node:http').createServer((req, res) => {
     });
     check('News with an exact player action resolves an ambiguous abbreviated name to that player', await page.locator('.related-actions [data-a="player"]').count(), 1);
     check('The news player link uses the action player ID', await page.locator('.related-actions [data-a="player"]').getAttribute('data-id'), String(exactNewsPid));
+    check('The exact player mentioned in news body links to its action player ID', await page.locator('#layer .body [data-a="player"]').getAttribute('data-id'), String(exactNewsPid));
     await page.evaluate(() => {
       const p = seniorSquad(G.club)[0]; addNews('inbox', 'Bid for ' + pname(p), `${clubName('CIT')} offered £1m for ${fullName(p)}.`, { t: 'bid', pid: p.id, from: 'CIT', fee: 1e6 }); ACT.news({ id: G.news[0].id });
     });

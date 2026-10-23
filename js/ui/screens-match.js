@@ -177,7 +177,7 @@ SCREENS.prematch = {
       ${assistCard(fx)}
       <div class="card"><h3>Your line-up <small>${T.ip} · ${INSTRUCTIONS[0].o[T.ment]}</small></h3>
         <div class="xi">${T.slots.map((id, i) => { const p = G.players[id]; return `<span class="${p && fam(p, ip[i][0]) < 0.9 ? 'warn' : ''}"><em>${ip[i][0]}</em>${p ? playerLink(p.id, p.ln) : '-'}</span>`; }).join('')}</div>
-        ${warn.length ? `<ul class="warns">${warn.slice(0, 4).map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '<p class="muted">No selection problems.</p>'}
+        ${warn.length ? `<ul class="warns" data-no-links>${warn.slice(0, 4).map(w => `<li>${playerMentionsHtml(w, T.slots.filter(Boolean))}</li>`).join('')}</ul>` : '<p class="muted">No selection problems.</p>'}
         <button class="btn wide" data-a="go" data-s="tactics">Edit tactics</button></div>
       <div class="card press"><h3>Press conference</h3>${pc.done ? `<p class="muted">Done. ${esc(pc.said)}</p>` : `<p class="q">“${esc(Q.q)}”</p><div class="list">${Q.a.map((a, k) => `<button class="row act" data-a="pressA" data-k="${k}"><span class="grow">${esc(a[0])}</span><span class="chev">›</span></button>`).join('')}</div><button class="link" data-a="pressSkip">Send the assistant instead</button>`}</div>
       <div class="btns col"><button class="btn pri wide big" data-a="kickoff">${liveOn(fx) || (G.live && G.live.fid === fx.id) ? 'Resume match' : 'Kick off'}</button><button class="btn wide ghost" data-a="instant">Instant result</button></div>`;
@@ -320,10 +320,10 @@ ACT.liveTok = ds => {
     const from = L.swapFrom;
     if (!S.on[from] || !S.on[i]) {
       const gap = S.on[from] ? i : from, id = S.on[from] || S.on[i];
-      if (id && moveIntoGap(L.M, S, id, gap)) pushFeed(L, 'tac', `${pname(G.players[id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom);
+      if (id && moveIntoGap(L.M, S, id, gap)) pushFeed(L, 'tac', `${pname(G.players[id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom, [id]);
       else toast('Choose a player and an empty position.');
     }
-    else if (swapInMatch(L.M, S, from, i)) pushFeed(L, 'tac', `${pname(G.players[S.on[from]])} and ${pname(G.players[S.on[i]])} change places.`, L.bottom);
+    else if (swapInMatch(L.M, S, from, i)) pushFeed(L, 'tac', `${pname(G.players[S.on[from]])} and ${pname(G.players[S.on[i]])} change places.`, L.bottom, [S.on[from], S.on[i]]);
     else toast('Keepers swap only with keepers.');
     L.swapFrom = null;
   }
@@ -334,7 +334,7 @@ ACT.liveRole = ds => {
   const L = LIVE, S = liveSide(), i = +ds.i, k = +ds.k, pl = FORMATIONS[S.ip][i][0];
   if (S.roles[i] === k) return;
   S.roles[i] = k; S._shape = null; S._bh = null; S._attC = null; L.M.dirty = true;
-  pushFeed(L, 'tac', `${pname(G.players[S.on[i]])} takes a new role: ${ROLES[pl][k].n}.`, L.bottom);
+  pushFeed(L, 'tac', `${pname(G.players[S.on[i]])} takes a new role: ${ROLES[pl][k].n}.`, L.bottom, [S.on[i]]);
   reopenLive('tactics');
 };
 // A man down: one of the side moves into the gap; the spot he leaves is the new gap, so the sheet stays open.
@@ -347,7 +347,7 @@ ACT.liveGap = ds => {
 ACT.gapMove = ds => {
   const L = LIVE, S = liveSide(), gap = ds.i == null ? (L.gapSlot ?? S.on.indexOf(null)) : +ds.i;
   if (gap < 0 || !moveIntoGap(L.M, S, +ds.id, gap)) { toast('Choose a player to move into the gap.'); return; }
-  pushFeed(L, 'tac', `${pname(G.players[+ds.id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom);
+  pushFeed(L, 'tac', `${pname(G.players[+ds.id])} moves into the gap at ${FORMATIONS[S.ip][gap][0]}.`, L.bottom, [+ds.id]);
   L.gapSlot = S.on.indexOf(null); reopenLive('gap');
 };
 ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`, LIVE.bottom); reopenLive('tactics'); };
@@ -359,7 +359,7 @@ ACT.livePiSet = ds => {
   x[ds.k] = +ds.v; if (+ds.v === 1) delete x[ds.k];
   LIVE.M.dirty = true;
   const ins = PLAYER_INS.find(q => q.k === ds.k);
-  pushFeed(LIVE, 'tac', `${G.manager} tells ${pname(G.players[S.on[i]])}: ${ins.o[+ds.v].toLowerCase()}.`, LIVE.bottom);
+  pushFeed(LIVE, 'tac', `${G.manager} tells ${pname(G.players[S.on[i]])}: ${ins.o[+ds.v].toLowerCase()}.`, LIVE.bottom, [S.on[i]]);
   reopenLive('pi');
 };
 ACT.liveIns = ds => { const S = liveSide(); S[ds.k] = +ds.v; LIVE.M.dirty = true; reopenLive('tactics'); };
@@ -381,7 +381,7 @@ SCREENS.post = {
   render(p) {
     const fx = G.fixtures.find(f => f.id === +p.fid);
     if (!fx) return '<p class="muted">Match not found.</p>';
-    const sc = si => fx.goals.filter(g => g[0] === si).map(g => `${esc(G.players[g[2]] ? pname(G.players[g[2]]) : 'Unknown')} ${g[1]}'${g[3] ? ' (p)' : ''}`).join('<br>');
+      const sc = si => fx.goals.filter(g => g[0] === si).map(g => `${G.players[g[2]] ? playerLink(g[2], pname(G.players[g[2]])) : 'Unknown'} ${g[1]}'${g[3] ? ' (p)' : ''}`).join('<br>');
     let stats = '', rats = '';
     if (fx.stats) {
       const [h, a] = fx.stats, tot = h.pos + a.pos || 1;

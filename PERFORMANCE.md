@@ -280,3 +280,7 @@ Facilities now opens directly on Club and offers Club, Finance, and Board & Fans
 ## Release 2026.10.23.27: link coach training advice to exact players
 
 Coach individual training recommendations now use their player IDs for profile links, so repeated abbreviated names do not open the ambiguous name chooser. Names in the coach's quoted advice resolve against the same assigned-player IDs. Navigation coverage forces a duplicate player name and confirms the direct link remains exact.
+
+## Release 2026.10.23.28: use player IDs across player links
+
+ID-backed player mentions in news, coach and staff advice, pre-match warnings, live commentary, match scorers and other player records now link to the exact profile. Generic text with a duplicate player name remains readable without opening an ambiguous chooser. Navigation and link suites force duplicate names and verify both safe generic text and exact ID-backed links.

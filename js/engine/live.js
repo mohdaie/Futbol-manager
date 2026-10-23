@@ -32,7 +32,7 @@ function startLive(fx) {
 function liveKeep(L = LIVE) {
   if (!L || L.done || L.G !== G || !G) return;
   // Freeze this checkpoint before the next worker minute changes the live match.
-  G.live = { fid: L.fid, matchView:L.matchView||'2d', formationPhase:L.formationPhase||'ip', M: structuredClone(cleanMatch(L.M)), feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
+  G.live = { fid: L.fid, matchView:L.matchView||'2d', formationPhase:L.formationPhase||'ip', M: structuredClone(cleanMatch(L.M)), feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, players: f.players || [], at: 0 })) };
   saveGame();
 }
 // Pick the match up from the save at the minute it reached. It waits paused until Play.
@@ -291,22 +291,22 @@ function setFrame(L, p, snap) {
   if (snap) moveCam(L, 0, true);
 }
 function liveEvent(L, e) {
-  const M = L.M;
+  const M = L.M, players = ['pid', 'aid', 'out'].map(k => +e[k]).filter(id => G.players[id]);
   if (e.t === 'goal') {
     L.shotT = L.gt;
     L.disp[e.side]++; updateBoard(L);
-    pushFeed(L, 'goal', commLine(L, e), e.side);
+    pushFeed(L, 'goal', commLine(L, e), e.side, players);
     L.overlay = { big: e.pen ? 'PENALTY GOAL' : 'GOAL', small: pname(G.players[e.pid]) + ' ' + e.min + "'", t: 2200, side: e.side };
     L.hold = 1600;
     return;
   }
   if (e.t === 'yellow' || e.t === 'red') {
-    pushFeed(L, e.t, commLine(L, e), e.fside);
+    pushFeed(L, e.t, commLine(L, e), e.fside, players);
     L.overlay = { big: e.t === 'red' ? 'RED CARD' : 'YELLOW', small: pname(G.players[e.pid]), t: 1200, card: e.t };
     L.hold = 600; return;
   }
   if (e.t === 'offside') {
-    pushFeed(L, 'info', commLine(L, e), 1 - e.side);
+    pushFeed(L, 'info', commLine(L, e), 1 - e.side, players);
     L.overlay = { big: 'OFFSIDE', small: pname(G.players[e.pid]), t: 1200, flag: true };
     L.line = e.line != null ? { y: e.line, until: L.t + 1600 } : null;
     L.hold = 500; return;
@@ -314,11 +314,11 @@ function liveEvent(L, e) {
   if (e.t === 'save' || e.t === 'miss' || e.t === 'shot') {
     L.shotT = L.gt; // the ball's trail turns gold
     if (e.t === 'save') { const g = L.dots[1 - e.side] && L.dots[1 - e.side][0]; if (g) (L.fx || (L.fx = [])).push({ k: 'save', x: g.x, y: g.y, side: 1 - e.side, t0: L.gt }); }
-    const txt = commLine(L, e); if (txt) pushFeed(L, 'chance', txt, e.side); return;
+    const txt = commLine(L, e); if (txt) pushFeed(L, 'chance', txt, e.side, players); return;
   }
-  if (e.t === 'foul') { if (e.pen) { pushFeed(L, 'info', `Penalty! ${pname(G.players[e.pid])} brings his man down.`, e.side); L.overlay = { big: 'PENALTY', small: clubName(M.sides[e.side].cid), t: 1400 }; } else if (R() < 0.35) pushFeed(L, 'info', commLine(L, e), e.fside); return; }
-  if (e.t === 'inj') { pushFeed(L, 'inj', commLine(L, e), e.side); return; }
-  const txt = commLine(L, e); if (txt) pushFeed(L, 'info', txt, e.side);
+  if (e.t === 'foul') { if (e.pen) { pushFeed(L, 'info', `Penalty! ${pname(G.players[e.pid])} brings his man down.`, e.side, players); L.overlay = { big: 'PENALTY', small: clubName(M.sides[e.side].cid), t: 1400 }; } else if (R() < 0.35) pushFeed(L, 'info', commLine(L, e), e.fside, players); return; }
+  if (e.t === 'inj') { pushFeed(L, 'inj', commLine(L, e), e.side, players); return; }
+  const txt = commLine(L, e); if (txt) pushFeed(L, 'info', txt, e.side, players);
 }
 function liveMark(L, m) {
   const tn = 'The ' + clubName(L.M.sides[m.s].cid);
@@ -558,10 +558,10 @@ function updateLiveFitness(L) {
 }
 
 // Commentary: the newest line is a full-width bar in the colour of the team it is about; a goal flashes.
-function pushFeed(L, k, txt, side) {
+function pushFeed(L, k, txt, side, players = []) {
   if (!txt) return;
   const M = L.M;
-  L.feed.unshift({ k, txt, min: M.min, side: side == null ? null : side, at: performance.now() });
+  L.feed.unshift({ k, txt, min: M.min, side: side == null ? null : side, players, at: performance.now() });
   if (L.feed.length > 40) L.feed.length = 40;
   renderFeed(L);
 }
@@ -577,7 +577,8 @@ function renderFeed(L) {
     const c = feedColor(L, f.side);
     const style = c ? (i === 0 ? `style="--tc:${c.bg};--tf:${c.fg}"` : `style="--tc:${c.bg}"`) : '';
     const blink = i === 0 && f.k === 'goal' && performance.now() - f.at < 4000 ? ' blink' : '';
-    return `<li class="fd-${f.k}${i === 0 ? ' fd-main' : ''}${c ? ' tc' : ''}${blink}" ${style}><b>${f.min ? f.min + "'" : ''}</b><span>${esc(f.txt)}</span></li>`;
+    const text = f.players?.length ? `<span data-no-links>${playerMentionsHtml(f.txt, f.players)}</span>` : esc(f.txt);
+    return `<li class="fd-${f.k}${i === 0 ? ' fd-main' : ''}${c ? ' tc' : ''}${blink}" ${style}><b>${f.min ? f.min + "'" : ''}</b><span>${text}</span></li>`;
   }).join('');
   linkEntities(el);
 }

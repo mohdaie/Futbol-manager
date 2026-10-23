@@ -4,27 +4,7 @@
    and the match report. Admin > AI Staff reviews and approves the staff learning tables. */
 
 const staffHead = (role, title) => { const s = staffOf(role), r = staffR(role); return `<h3>${title} <small>${s.length ? esc(s.map(x => x.name).join(', ')) + ' · ' : ''}${Math.round(r)}/20</small></h3>`; };
-const aiWords = t => (t ? `<p class="note">“${esc(t)}”</p>` : '');
-function coachWords(t, ids) {
-  if (!t) return '';
-  const aliases = new Map();
-  ids.forEach(id => {
-    const p = G.players[id]; if (!p) return;
-    [pname(p), fullName(p)].forEach(name => { const set = aliases.get(name) || new Set(); set.add(p.id); aliases.set(name, set); });
-  });
-  const names = [...aliases.keys()].sort((a, b) => b.length - a.length);
-  if (!names.length) return `<p class="note">“${esc(t)}”</p>`;
-  const re = new RegExp('(?<![\\p{L}\\p{N}_])(?:' + names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}\\p{N}_])', 'gu');
-  let html = '', at = 0;
-  for (const m of t.matchAll(re)) {
-    html += esc(t.slice(at, m.index));
-    const idsForName = aliases.get(m[0]);
-    html += idsForName.size === 1 ? playerLink([...idsForName][0], m[0]) : `<span data-no-links>${esc(m[0])}</span>`;
-    at = m.index + m[0].length;
-  }
-  html += esc(t.slice(at));
-  return `<p class="note" data-no-links>“${html}”</p>`;
-}
+const aiWords = (t, ids = null) => t ? `<p class="note" ${ids ? 'data-no-links' : ''}>“${ids ? playerMentionsHtml(t, ids) : esc(t)}”</p>` : '';
 const evidenceLine = key => { const e = typeof staffEvidence === 'function' ? staffEvidence(key) : null; return e ? `<p class="muted">From experience (${e.n} similar cases): ${e.mean >= 0 ? 'this has worked' : 'this has not worked well'} on average.</p>` : ''; };
 
 function analystCard(full) {
@@ -46,7 +26,7 @@ function coachCard() {
   const P = UI.coachPlan.plan, T = G.training, same = T.focus === P.focus && T.intensity === P.intensity;
   const foc = TRAINING_FOCUS.find(f => f.k === P.focus);
   const words = staffWords('Coach', 'co:' + UI.coachPlan.k, [`${foc.n} training at ${INTENSITY[P.intensity].toLowerCase()} intensity.`, ...P.why, ...Object.entries(P.indiv).map(([id, g]) => `${pname(G.players[id])}: ${INDIV_FOCUS[g].toLowerCase()} work.`)]);
-  return `<div class="card">${staffHead('Coach', 'Coaches')}${coachWords(words, Object.keys(P.indiv).map(Number))}
+  return `<div class="card">${staffHead('Coach', 'Coaches')}${aiWords(words, Object.keys(P.indiv).map(Number))}
     <p><b>${foc.n}</b>, ${INTENSITY[P.intensity].toLowerCase()} intensity.</p>
     <ul class="notes">${P.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
     ${Object.keys(P.indiv).length ? `<h4 class="lbl">Individual plans</h4><ul class="notes">${Object.entries(P.indiv).map(([id, g]) => `<li>${playerLink(+id, pname(G.players[id]))}: ${INDIV_FOCUS[g].toLowerCase()} work</li>`).join('')}</ul>` : ''}
@@ -61,7 +41,7 @@ function physioCard() {
   if (!UI.physio || UI.physio.k !== k) UI.physio = { k, adv: physioAdvice() };
   const P = UI.physio.adv, r = P.r;
   const words = P.list.length ? staffWords('Physio', 'ph:' + UI.physio.k, P.list.map(x => `${pname(G.players[x.id])} should rest: ${r >= 9 ? `about ${x.exp}% condition at kick-off` : 'still tired'}, injury risk ${r >= 12 ? 'x' + x.risk.toFixed(1) : x.risk > 2 ? 'high' : 'raised'}${x.starter ? ', in the starting eleven' : ''}.`)) : null;
-  return `<div class="card">${staffHead('Physio', 'Physio')}${aiWords(words)}
+  return `<div class="card">${staffHead('Physio', 'Physio')}${aiWords(words, P.list.map(x => x.id))}
     ${P.list.length ? `<p>Rest before the next match${P.rest != null ? ` (${P.rest} days after the last one)` : ''}:</p>
       <div class="list">${P.list.map(x => { const p = G.players[x.id]; return `<button class="row act" data-a="player" data-id="${p.id}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${r >= 9 ? `About ${x.exp}% condition at kick-off` : 'Still tired'} · injury risk ${r >= 12 ? '×' + x.risk.toFixed(1) : x.risk > 2 ? 'high' : 'raised'}${x.starter ? ' · in the starting XI' : ''}</small></span></button>`; }).join('')}</div>
       <button class="btn wide pri" data-a="physioApply">Leave them out</button>` : '<p class="muted">Everyone in the matchday squad is fit enough to play.</p>'}
@@ -75,7 +55,7 @@ function scoutCard() {
   logScoutRecs(A);
   const needTxt = n => `${POS_NAME[n.pos]}: ${n.type === 'weak' ? 'a weak spot in the XI' : n.type === 'age' ? 'the starter is ageing' : 'no cover behind the starter'}`;
   const words = staffWords('Scout', 'sc:' + UI.scoutAdv.k, A.needs.map(n => needTxt(n) + '.').concat(A.recs.map(x => `${pname(x.p)} of ${clubName(x.p.club)} would improve us at ${POS_NAME[x.nd.pos]} by ${x.gain}, ${x.fee ? 'fee ' + money(x.fee) : 'free transfer'}.`)));
-  return `<div class="card">${staffHead('Scout', 'Scouts')}${aiWords(words)}
+  return `<div class="card">${staffHead('Scout', 'Scouts')}${aiWords(words, A.recs.map(x => x.p.id))}
     <h4 class="lbl">Where we need players</h4><ul class="notes">${A.needs.map(n => `<li>${esc(needTxt(n))}</li>`).join('') || '<li>No obvious gaps in the squad.</li>'}</ul>
     <h4 class="lbl">Recommended</h4>
     <div class="list">${A.recs.map(x => playerRow(x.p, `<span class="stat"><b>+${x.gain}</b><small>${x.nd.pos}</small></span>`, { sub: `${x.fee ? money(x.fee) : 'Free'} · ${wageFmt(x.wage)} · ${esc(clubName(x.p.club))}` })).join('') || '<p class="muted">Nobody our scouts have watched fits the budget and the need. Send scouts on assignments to widen the search.</p>'}</div>
