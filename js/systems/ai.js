@@ -153,7 +153,7 @@ async function dsChat(messages, note = 'request', opts = {}) {
     const res = await aiFetch(base + '/chat/completions', body, headers, c.timeout);
     const ms = Math.round(performance.now() - t0), u = res.usage || {}, cost = dsCost(c.model, u);
     aiRecord('ds', true, ms, u.prompt_tokens || 0, u.completion_tokens || 0, cost, note);
-    return { text: (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content || '').trim(), usage: u, cost, ms, model: res.model };
+    return { text: (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content || '').trim(), usage: u, cost, ms, model: res.model, finishReason: res.choices?.[0]?.finish_reason || null };
   } catch (e) { aiRecord('ds', false, Math.round(performance.now() - t0), 0, 0, 0, note + ': ' + e.message); throw e; }
 }
 

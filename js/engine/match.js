@@ -426,7 +426,7 @@ function finishMatch(M) {
     fx.stats = M.sides.map(X => ({ ...X.st, xg: Math.round(X.st.xg * 100) / 100 }));
     fx.ratings = M.sides.map(X => X.played.map(id => [id, X.rat[id]]));
     // Player action stats for the match report: [id, passes completed, attempted, key passes, dribbles won, tackles, interceptions, aerials, shots, on target]
-    fx.pstats = M.sides.map(X => X.played.map(id => { const s = X.ps[id] || {}; return [id, s.pc || 0, s.pa || 0, s.kp || 0, s.dw || 0, s.tk || 0, s.int || 0, s.aer || 0, s.sh || 0, s.sot || 0]; }));
+    fx.pstats = M.sides.map(X => X.played.map(id => { const s = X.ps[id] || {}; return [id, s.pc || 0, s.pa || 0, s.kp || 0, s.dw || 0, s.tk || 0, s.int || 0, s.aer || 0, s.sh || 0, s.sot || 0, s.sv || 0]; }));
     boardAfterMatch(S.st.g, O.st.g, G.clubs[O.cid].rep, us === 0 && !fx.neutral);
     if (typeof adviceResult === 'function') adviceResult(fx, S.st.g, O.st.g, S.st.xg, O.st.xg);
     if (typeof postMatchAnalysis === 'function') postMatchAnalysis(M, fx);
