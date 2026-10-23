@@ -73,7 +73,7 @@ function weeklyTraining(playedThisWeek) {
     // development
     const indiv = mine ? T.indiv[p.id] : null;
     const keys = indiv && indiv !== 'none' ? ATTRS.filter(x => x[2] === indiv).map(x => x[0]) : foc.attrs;
-    const quality = mine ? q : c && c.rep ? 6 + (c.rep - 60) / 4 : 8;
+    const quality = mine ? q : c?.academy && lvlOf(p) === 'R' && p.age <= 24 ? c.academy.strength : c && c.rep ? 6 + (c.rep - 60) / 4 : 8;
     develop(p, quality, keys, mine ? im : 1);
     // morale drifts back toward neutral
     if (p.fpn == null) linkBio(p);

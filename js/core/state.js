@@ -28,7 +28,7 @@ function assignNumber(c, p) {
 
 function addToClub(p, c) {
   if (!squadSpace(c, p)) throw new Error(squadLimitMessage(c));
-  if (c.league === 'ECH' && lvlOf(p) === 'Y') { p.lvl = 'R'; p.youth = false; }
+  if ((c.league === 'ECH' || c.foreignSquad) && lvlOf(p) === 'Y') { p.lvl = 'R'; p.youth = false; }
   G.players[p.id] = p;
   p.club = c.id;
   assignNumber(c, p);
@@ -70,7 +70,7 @@ function genFreeAgent() {
 }
 
 function genYouth(c, quality) {
-  if (!squadSpace(c)) return null;
+  if (!squadSpace(c) || c.academy?.noAnnualIntake) return null;
   const pos = pick(SQUAD_TEMPLATE);
   const age = ri(15, 17);
   const pa = clamp(quality + gauss() * 9 + (R() < 0.06 ? 12 : 0), 45, 95);
@@ -86,6 +86,7 @@ function genYouth(c, quality) {
 // filling the positions the level is short of first. Bigger clubs have better prospects.
 const LEVEL_TEMPLATE = ['GK', 'GK', 'DC', 'DC', 'DC', 'DC', 'DL', 'DL', 'DR', 'DR', 'DM', 'DM', 'MC', 'MC', 'MC', 'AML', 'AMR', 'AMC', 'ST', 'ST'];
 function fillLevel(c, l, target) {
+  if (c.academy?.noAnnualIntake) return;
   const have = levelSquad(c.id, l);
   const need = LEVEL_TEMPLATE.slice();
   have.forEach(p => { const i = need.indexOf(p.pos); if (i >= 0) need.splice(i, 1); });
@@ -160,6 +161,8 @@ function newGame(clubId, manager, avatar) {
     const id = 'F' + i;
     const cl = { ...f, id, city: NATIONS[f.nat].n, ground: '', cap: 0, squad: [], bal: 50e6, tac: aiTactic(), foreign: true, code: f.name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() };
     G.clubs[id] = cl;
+    // Selected world clubs receive their compact squads after registry creation.
+    if (WORLD_CLUBS.some(e => e.existingRoster === f.ros && WORLD_SQUAD_DATA[e.id])) return;
     // Real-based first team when there is one (with the real player each is inspired by), otherwise generated.
     if (typeof FOREIGN_ROSTERS !== 'undefined' && FOREIGN_ROSTERS[f.ros]) {
       const domesticIdentities = new Set(Object.values(G.players).filter(p => p.insp).map(p => p.insp));
@@ -175,7 +178,7 @@ function newGame(clubId, manager, avatar) {
     G.know[p.id] = c.pl ? 45 : c.fa ? 20 : 10;
   });
 
-  ensureWorld();
+  ensureWorld({ newCareer: true });
   G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
   setupUserClub();
   addNews('club', 'Welcome to the ' + clubName(clubId), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${G.board.target.text.toLowerCase()}. The transfer budget is ${money(G.fin.tb)}.`, null);
@@ -221,7 +224,8 @@ function autoPick(cid, formation, keep) {
   const slots = FORMATIONS[formation];
   let pool = seniorSquad(cid).filter(available);
   // short of fit first-team players: call up the best reserves
-  if (pool.length < 16) pool = pool.concat(levelSquad(cid, 'R').filter(available).sort((a, b) => b.ca - a.ca).slice(0, 16 - pool.length));
+  const poolTarget = G.clubs[cid].foreignSquad ? 20 : 16;
+  if (pool.length < poolTarget) pool = pool.concat(levelSquad(cid, 'R').filter(available).sort((a, b) => b.ca - a.ca).slice(0, poolTarget - pool.length));
   const xi = Array(11).fill(null);
   const used = new Set();
   if (keep) keep.forEach((id, i) => { if (id && pool.some(p => p.id === id)) { xi[i] = id; used.add(id); } });

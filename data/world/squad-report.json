@@ -1,0 +1,865 @@
+{
+  "counts": {
+    "EXISTING": 41,
+    "TM2025": 293,
+    "GENERATED": 6
+  },
+  "clubs": {
+    "ES1_RMA": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "EXISTING": 11,
+        "TM2025": 6
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Real Madrid",
+        "Real Madrid Castilla"
+      ],
+      "inspirations": [
+        "Thibaut Courtois",
+        "Álvaro Carreras",
+        "Dean Huijsen",
+        "Éder Militão",
+        "Trent Alexander-Arnold",
+        "Aurélien Tchouaméni",
+        "Federico Valverde",
+        "Eduardo Camavinga",
+        "Vinicius Junior",
+        "Kylian Mbappé",
+        "Rodrygo",
+        "Sergio Mestre",
+        "Diego Aguado",
+        "Hugo de Llanos",
+        "Manuel Ángel",
+        "Daniel Yáñez",
+        "Endrick"
+      ]
+    },
+    "ES1_BAR": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "FC Barcelona",
+        "FC Barcelona Atlètic"
+      ],
+      "inspirations": [
+        "Joan García",
+        "Alejandro Balde",
+        "Pau Cubarsí",
+        "Andreas Christensen",
+        "Jules Koundé",
+        "Marc Casadó",
+        "Frenkie de Jong",
+        "Pedri",
+        "Raphinha",
+        "Robert Lewandowski",
+        "Lamine Yamal",
+        "Diego Kochen",
+        "Alexis Olmedo",
+        "David Oduro",
+        "Brian Fariñas",
+        "Roony Bardghji",
+        "Víctor Barberá"
+      ]
+    },
+    "ES1_ATM": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Atlético Madrileño",
+        "Atlético de Madrid"
+      ],
+      "inspirations": [
+        "Jan Oblak",
+        "Javi Galán",
+        "Robin Le Normand",
+        "José María Giménez",
+        "Marcos Llorente",
+        "Thiago Almada",
+        "Pablo Barrios",
+        "Koke",
+        "Giuliano Simeone",
+        "Julián Alvarez",
+        "Alexander Sørloth",
+        "Salvi Esquivel",
+        "Gerónimo Spina",
+        "Julio Díaz",
+        "Jorge Castillo",
+        "Koke Mota",
+        "Omar Janneh"
+      ]
+    },
+    "ES1_ATH": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Athletic Bilbao",
+        "Bilbao Athletic"
+      ],
+      "inspirations": [
+        "Unai Simón",
+        "Yuri Berchiche",
+        "Dani Vivian",
+        "Aymeric Laporte",
+        "Jesús Areso",
+        "Mikel Vesga",
+        "Mikel Jauregizar",
+        "Nico Williams",
+        "Oihan Sancet",
+        "Iñaki Williams",
+        "Gorka Guruzeta",
+        "Iker Galindo",
+        "Eneko Ebro",
+        "Miguel Barandalla",
+        "Javi Sola",
+        "Elijah Gift",
+        "Txus Vizcay"
+      ]
+    },
+    "ES1_VIL": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Villarreal CF",
+        "Villarreal CF B"
+      ],
+      "inspirations": [
+        "Luiz Júnior",
+        "Sergi Cardona",
+        "Juan Foyth",
+        "Renato Veiga",
+        "Adrià Altimira",
+        "Pape Gueye",
+        "Dani Parejo",
+        "Santi Comesaña",
+        "Alberto Moleiro",
+        "Georges Mikautadze",
+        "Tajon Buchanan",
+        "Yakiv Kinareykin",
+        "Jean Ives Valou",
+        "Eneko Ortiz",
+        "Pablo Pascual",
+        "Víctor Moreno",
+        "Pau Cabanes"
+      ]
+    },
+    "IT1_INT": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Inter Milan",
+        "Inter Milan Primavera"
+      ],
+      "inspirations": [
+        "Yann Sommer",
+        "Alessandro Bastoni",
+        "Stefan de Vrij",
+        "Manuel Akanji",
+        "Federico Dimarco",
+        "Hakan Çalhanoğlu",
+        "Nicolò Barella",
+        "Andy Diouf",
+        "Luis Henrique",
+        "Lautaro Martínez",
+        "Marcus Thuram",
+        "Alain Taho",
+        "Gabriele Garonetti",
+        "Aymen Zouin",
+        "Matias Mancuso",
+        "Tommaso Della Mora",
+        "Pio Esposito"
+      ]
+    },
+    "IT1_JUV": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Juventus FC",
+        "Juventus Next Gen",
+        "Juventus Primavera"
+      ],
+      "inspirations": [
+        "Carlo Pinsoglio",
+        "Bremer",
+        "Federico Gatti",
+        "Pierre Kalulu",
+        "Andrea Cambiaso",
+        "Manuel Locatelli",
+        "Khéphren Thuram",
+        "Weston McKennie",
+        "João Mário",
+        "Dušan Vlahović",
+        "Jonathan David",
+        "Matteo Fuscaldo",
+        "Mattia Brugarello",
+        "David Puczka",
+        "Francesco Crapisto",
+        "Francisco Conceição",
+        "Silvano Biggi"
+      ]
+    },
+    "IT1_MIL": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "EXISTING": 8,
+        "TM2025": 9
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "AC Milan",
+        "AC Milan Primavera"
+      ],
+      "inspirations": [
+        "Mike Maignan",
+        "Pervis Estupiñán",
+        "Fikayo Tomori",
+        "Matteo Gabbia",
+        "Zachary Athekame",
+        "Samuele Ricci",
+        "Adrien Rabiot",
+        "Luka Modrić",
+        "Rafael Leão",
+        "Gonçalo Ramos",
+        "Christian Pulisic",
+        "Lorenzo Torriani",
+        "Mattia Piermarini",
+        "Davide Bartesaghi",
+        "Tommaso Mancioppi",
+        "Filippo Scotti",
+        "Alex Castiello"
+      ]
+    },
+    "IT1_NAP": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 16,
+        "GENERATED": 1
+      },
+      "generatedGaps": [
+        {
+          "position": "GK",
+          "reason": "No eligible unused source identity available"
+        }
+      ],
+      "sourceClubs": [
+        "Napoli Primavera",
+        "SSC Napoli"
+      ],
+      "inspirations": [
+        "Alex Meret",
+        "Mathías Olivera",
+        "Amir Rrahmani",
+        "Alessandro Buongiorno",
+        "Giovanni Di Lorenzo",
+        "Stanislav Lobotka",
+        "Scott McTominay",
+        "Frank Anguissa",
+        "Noa Lang",
+        "Romelu Lukaku",
+        "Matteo Politano",
+        "Luca Marianucci",
+        "Miguel Gutiérrez",
+        "Emmanuele De Chiara",
+        "Andrea Smeraldi",
+        "Umberto Camelio"
+      ]
+    },
+    "IT1_ATA": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Atalanta BC",
+        "Atalanta Primavera",
+        "Atalanta U23"
+      ],
+      "inspirations": [
+        "Marco Carnesecchi",
+        "Giorgio Scalvini",
+        "Isak Hien",
+        "Berat Djimsiti",
+        "Nicola Zalewski",
+        "Marten de Roon",
+        "Éderson",
+        "Mario Pasalić",
+        "Raoul Bellanova",
+        "Gianluca Scamacca",
+        "Nikola Krstović",
+        "Edoardo Zanchi",
+        "Relja Obric",
+        "Federico Simonetto",
+        "Mattia Arrigoni",
+        "Nicolò Artesani",
+        "Henry Camara"
+      ]
+    },
+    "DE1_BAY": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Bayern Munich",
+        "FC Bayern Munich II"
+      ],
+      "inspirations": [
+        "Manuel Neuer",
+        "Alphonso Davies",
+        "Dayot Upamecano",
+        "Jonathan Tah",
+        "Konrad Laimer",
+        "Joshua Kimmich",
+        "Aleksandar Pavlovic",
+        "Luis Díaz",
+        "Jamal Musiala",
+        "Michael Olise",
+        "Harry Kane",
+        "Leon Klanac",
+        "Grayson Dettoni",
+        "Julien Yanda",
+        "Kurt Rüger",
+        "Bajung Darboe",
+        "Louis Richter"
+      ]
+    },
+    "DE1_DOR": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Borussia Dortmund"
+      ],
+      "inspirations": [
+        "Gregor Kobel",
+        "Ramy Bensebaini",
+        "Nico Schlotterbeck",
+        "Waldemar Anton",
+        "Julian Ryerson",
+        "Salih Özcan",
+        "Felix Nmecha",
+        "Julien Duranville",
+        "Marcel Sabitzer",
+        "Karim Adeyemi",
+        "Serhou Guirassy",
+        "Silas Ostrzinski",
+        "Filippo Mane",
+        "Almugera Kabar",
+        "Jobe Bellingham",
+        "Cole Campbell",
+        "Maximilian Beier"
+      ]
+    },
+    "DE1_LEV": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "EXISTING": 11,
+        "GENERATED": 1,
+        "TM2025": 5
+      },
+      "generatedGaps": [
+        {
+          "position": "GK",
+          "reason": "No eligible unused source identity available"
+        }
+      ],
+      "sourceClubs": [
+        "Bayer 04 Leverkusen"
+      ],
+      "inspirations": [
+        "Mark Flekken",
+        "Edmond Tapsoba",
+        "Loïc Badé",
+        "Jarell Quansah",
+        "Martin Terrier",
+        "Aleix García",
+        "Robert Andrich",
+        "Lucas Vázquez",
+        "Eliesse Ben Seghir",
+        "Patrik Schick",
+        "Nathan Tella",
+        "Jeanuël Belocian",
+        "Axel Tape",
+        "Ibrahim Maza",
+        "Ernest Poku",
+        "Alejo Sarco"
+      ]
+    },
+    "DE1_RBL": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 15,
+        "GENERATED": 2
+      },
+      "generatedGaps": [
+        {
+          "position": "AMR",
+          "reason": "No eligible unused source identity available"
+        },
+        {
+          "position": "ST",
+          "reason": "No eligible unused source identity available"
+        }
+      ],
+      "sourceClubs": [
+        "RB Leipzig"
+      ],
+      "inspirations": [
+        "Péter Gulácsi",
+        "David Raum",
+        "Willi Orbán",
+        "Castello Lukeba",
+        "Benjamin Henrichs",
+        "Nicolas Seiwald",
+        "Christoph Baumgartner",
+        "Antonio Nusa",
+        "Ezechiel Banzuzi",
+        "Johan Bakayoko",
+        "Rômulo",
+        "Maarten Vandevoordt",
+        "El Chadaille Bitshiabu",
+        "Yan Diomande",
+        "Conrad Harder"
+      ]
+    },
+    "DE1_FRA": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Eintracht Frankfurt",
+        "Eintracht Frankfurt II"
+      ],
+      "inspirations": [
+        "Kauã Santos",
+        "Nathaniel Brown",
+        "Robin Koch",
+        "Arthur Theate",
+        "Rasmus Kristensen",
+        "Ellyes Skhiri",
+        "Noah Fenyö",
+        "Mario Götze",
+        "Farès Chaïbi",
+        "Ritsu Doan",
+        "Jonathan Burkardt",
+        "Amil Siljevic",
+        "Nnamdi Collins",
+        "Can Uzun",
+        "Oscar Højlund",
+        "Jonas Bauer",
+        "Lukas Sonnenwald"
+      ]
+    },
+    "FR1_PSG": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "EXISTING": 11,
+        "TM2025": 6
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Paris Saint-Germain",
+        "Paris Saint-Germain Espoirs"
+      ],
+      "inspirations": [
+        "Lucas Chevalier",
+        "Nuno Mendes",
+        "Marquinhos",
+        "Willian Pacho",
+        "Achraf Hakimi",
+        "Vitinha",
+        "João Neves",
+        "Fabián Ruiz",
+        "Khvicha Kvaratskhelia",
+        "Ousmane Dembélé",
+        "Désiré Doué",
+        "Renato Marin",
+        "Noham Kamara",
+        "Lucas Beraldo",
+        "Senny Mayulu",
+        "Warren Zaïre-Emery",
+        "Ilyes Housni"
+      ]
+    },
+    "FR1_MAR": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Olympique Marseille",
+        "Olympique de Marseille B"
+      ],
+      "inspirations": [
+        "Jeffrey de Lange",
+        "Emerson",
+        "Leonardo Balerdi",
+        "Benjamin Pavard",
+        "Amir Murillo",
+        "Pierre-Emile Højbjerg",
+        "Bilal Nadir",
+        "Angel Gomes",
+        "Igor Paixão",
+        "Amine Gouiri",
+        "Mason Greenwood",
+        "Jelle Van Neck",
+        "Hilan Hamzaoui Slimani",
+        "CJ Egan-Riley",
+        "Alexandre Issanga",
+        "Keyliane Abdallah",
+        "Ange Lago"
+      ]
+    },
+    "FR1_MON": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "AS Monaco",
+        "AS Monaco U19",
+        "AS Monaco U21"
+      ],
+      "inspirations": [
+        "Philipp Köhn",
+        "Kassoum Ouattara",
+        "Mohammed Salisu",
+        "Eric Dier",
+        "Vanderson",
+        "Denis Zakaria",
+        "Lamine Camara",
+        "Ansu Fati",
+        "Aleksandr Golovin",
+        "Maghnes Akliouche",
+        "Folarin Balogun",
+        "Jules Stawiecki",
+        "Ritchy Valme",
+        "Lucas Michal",
+        "Mamadou Coulibaly",
+        "Nazim Babaï",
+        "Joan Tincres"
+      ]
+    },
+    "FR1_LYO": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 17
+      },
+      "generatedGaps": [],
+      "sourceClubs": [
+        "Olympique Lyon",
+        "Olympique Lyon B"
+      ],
+      "inspirations": [
+        "Dominik Greif",
+        "Nicolás Tagliafico",
+        "Moussa Niakhaté",
+        "Clinton Mata",
+        "Téo Barišić",
+        "Tanner Tessmann",
+        "Tyler Morton",
+        "Afonso Moreira",
+        "Pavel Sulc",
+        "Ernest Nuamah",
+        "Martín Satriano",
+        "Matthias da Silva",
+        "Mathys De Carvalho",
+        "Achraf Laâziri",
+        "Joss Marques",
+        "Yannis Lagha",
+        "Alejandro Gomes Rodríguez"
+      ]
+    },
+    "FR1_LIL": {
+      "firstTeam": 11,
+      "reserves": 6,
+      "sources": {
+        "TM2025": 15,
+        "GENERATED": 2
+      },
+      "generatedGaps": [
+        {
+          "position": "GK",
+          "reason": "No eligible unused source identity available"
+        },
+        {
+          "position": "ST",
+          "reason": "No eligible unused source identity available"
+        }
+      ],
+      "sourceClubs": [
+        "LOSC Lille",
+        "LOSC Lille B"
+      ],
+      "inspirations": [
+        "Berke Özer",
+        "Romain Perraud",
+        "Chancel Mbemba",
+        "Ousmane Touré",
+        "Marius Broholm",
+        "Benjamin André",
+        "Nabil Bentaleb",
+        "Félix Correia",
+        "Hákon Arnar Haraldsson",
+        "Ethan Mbappé",
+        "Hamza Igamane",
+        "Nathan Ngoy",
+        "Younes Lachaab",
+        "Lilian Baret",
+        "Rafael Fernandes"
+      ]
+    }
+  },
+  "unknownSourceIdentitiesSkipped": [
+    {
+      "name": "Loren Zúñiga",
+      "age": 23,
+      "nation": null,
+      "position": "ST"
+    },
+    {
+      "name": "Óscar Ureña",
+      "age": 23,
+      "nation": null,
+      "position": "AML"
+    },
+    {
+      "name": "Dario Sits",
+      "age": 22,
+      "nation": null,
+      "position": "ST"
+    },
+    {
+      "name": "Iván Rodríguez",
+      "age": 20,
+      "nation": null,
+      "position": "DL"
+    },
+    {
+      "name": "Henrikh Mkhitaryan",
+      "age": 37,
+      "nation": null,
+      "position": "MC"
+    },
+    {
+      "name": "Roberts Kukulis",
+      "age": 19,
+      "nation": null,
+      "position": "AMC"
+    },
+    {
+      "name": "Henrikh Mkhitaryan",
+      "age": 37,
+      "nation": null,
+      "position": "MC"
+    },
+    {
+      "name": "Fabio Bădărău",
+      "age": 17,
+      "nation": null,
+      "position": "DC"
+    },
+    {
+      "name": "Riccardo Radu",
+      "age": 18,
+      "nation": null,
+      "position": "GK"
+    },
+    {
+      "name": "Christian Vechiu",
+      "age": 18,
+      "nation": null,
+      "position": "DC"
+    },
+    {
+      "name": "Emanuele Borsani",
+      "age": 18,
+      "nation": "ITA",
+      "position": null
+    },
+    {
+      "name": "Eljif Elmas",
+      "age": 26,
+      "nation": null,
+      "position": "AML"
+    },
+    {
+      "name": "Andrea Caucci",
+      "age": null,
+      "nation": "ITA",
+      "position": "DC"
+    },
+    {
+      "name": "Domenico Avvisati",
+      "age": null,
+      "nation": "ITA",
+      "position": "MC"
+    },
+    {
+      "name": "Francisco Baridó",
+      "age": null,
+      "nation": "ARG",
+      "position": "AMC"
+    },
+    {
+      "name": "",
+      "age": 20,
+      "nation": "ITA",
+      "position": "DL"
+    },
+    {
+      "name": "Modestino Sorbino",
+      "age": null,
+      "nation": "ITA",
+      "position": "MC"
+    },
+    {
+      "name": "Eljif Elmas",
+      "age": 26,
+      "nation": null,
+      "position": "AML"
+    },
+    {
+      "name": "Digne Kaelas Pounga",
+      "age": 20,
+      "nation": null,
+      "position": "MC"
+    },
+    {
+      "name": "Mattia Aliprandi",
+      "age": null,
+      "nation": "ITA",
+      "position": "DL"
+    },
+    {
+      "name": "Felipe Chávez",
+      "age": 19,
+      "nation": null,
+      "position": "MC"
+    },
+    {
+      "name": "Mahmoud Dahoud",
+      "age": 30,
+      "nation": null,
+      "position": "MC"
+    },
+    {
+      "name": "Mahmoud Dahoud",
+      "age": 30,
+      "nation": null,
+      "position": "MC"
+    },
+    {
+      "name": "",
+      "age": 34,
+      "nation": "FRA",
+      "position": "AML"
+    },
+    {
+      "name": "Geoffrey Kondogbia",
+      "age": 33,
+      "nation": null,
+      "position": "DM"
+    },
+    {
+      "name": "",
+      "age": 25,
+      "nation": "DEN",
+      "position": "MC"
+    },
+    {
+      "name": "Pierre-Emerick Aubameyang",
+      "age": 37,
+      "nation": null,
+      "position": "ST"
+    },
+    {
+      "name": "Geoffrey Kondogbia",
+      "age": 33,
+      "nation": null,
+      "position": "DM"
+    },
+    {
+      "name": "",
+      "age": 25,
+      "nation": "DEN",
+      "position": "MC"
+    },
+    {
+      "name": "Pierre-Emerick Aubameyang",
+      "age": 37,
+      "nation": null,
+      "position": "ST"
+    },
+    {
+      "name": "Safouane Benzahra",
+      "age": 17,
+      "nation": "MAR",
+      "position": null
+    },
+    {
+      "name": "Clément Dragon",
+      "age": 38,
+      "nation": "FRA",
+      "position": null
+    },
+    {
+      "name": "",
+      "age": 21,
+      "nation": "COD",
+      "position": "DM"
+    },
+    {
+      "name": "",
+      "age": 21,
+      "nation": "COD",
+      "position": "DM"
+    }
+  ]
+}

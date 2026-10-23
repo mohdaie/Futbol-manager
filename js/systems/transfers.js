@@ -90,7 +90,7 @@ function moveClub(p, toId) {
   delete p.unset; p.treq = null; p.listed = false;
   removeFromClub(p);
   favPersonMoved(p, from, toId);
-  p.lvl = p.age <= 17 ? (destination.league === 'ECH' ? 'R' : 'Y') : 'A';
+  p.lvl = p.age <= 17 ? (destination.league === 'ECH' || destination.foreignSquad ? 'R' : 'Y') : 'A';
   addToClub(p, G.clubs[toId]);
 }
 
@@ -145,6 +145,7 @@ function respondBid(n, choice) {
 }
 
 function weeklyTransfers() {
+  maintainForeignSquads();
   if (inWindow()) {
     aiMarket();
     aiBidsForUser();

@@ -1,6 +1,6 @@
 'use strict';
-// Background club registry. No new player records, fixtures, AI jobs or match
-// processing are created until these leagues are explicitly activated later.
+// Background club registry. Selected compact squads are added separately;
+// registry membership itself never creates players, fixtures or league jobs.
 function ensureWorldLeagues() {
   if (G.worldLeagueVersion === 1) return;
   const existing = Object.values(G.clubs);
@@ -22,7 +22,8 @@ function ensureWorldLeagues() {
       c.realName ||= entry.realName;
       ids.push(c.id);
     }
-    G.worldLeagues[definition.id] = { clubs: ids, mode: 'clubs-only' };
+    G.worldLeagues[definition.id] = { clubs: ids,
+      mode: ids.some(id => G.clubs[id].foreignSquad) ? 'clubs-and-squads' : 'clubs-only', active: false };
   }
   G.worldLeagueVersion = 1;
 }

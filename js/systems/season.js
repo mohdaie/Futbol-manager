@@ -210,7 +210,7 @@ function rollover() {
     if (cl.league === 'ECH') fillLevel(cl, 'R', Math.min(12, Math.max(0, 36 - seniorSquad(id).length)));
     else { fillLevel(cl, 'R', 18); fillLevel(cl, 'Y', 20); }
   });
-  Object.values(G.clubs).filter(x => x.foreign && !x.fa && !x.backgroundOnly).forEach(x => {
+  Object.values(G.clubs).filter(x => x.foreign && !x.fa && !x.backgroundOnly && !x.foreignSquad).forEach(x => {
     while (x.squad.length < 16) { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (x.rep - 50) * 0.6 - rf(0, 8), pa: 0, age: ri(17, 24), nat: R() < 0.75 ? x.nat : pickNat(PL_NATS), club: x.id }); p.pa = clamp(p.ca + ri(3, 18), p.ca, 95); addToClub(p, x); G.know[p.id] = 10; }
   });
   G.season++; G.week = 0; G.day = 0;
@@ -240,7 +240,7 @@ function sack(reason) {
 }
 
 function takeJob(cid) {
-  if (!G.clubs[cid] || G.clubs[cid].backgroundOnly) return false;
+  if (!G.clubs[cid] || G.clubs[cid].backgroundOnly || G.clubs[cid].foreignSquad) return false;
   const old = G.club;
   G.club = cid;
   G.gameOver = null;

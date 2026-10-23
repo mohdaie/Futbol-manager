@@ -2,8 +2,8 @@
   "season": "2026/27",
   "revision": "e6744429ee395bc86f247348c6184bb08d4eb361",
   "license": "CC0-1.0",
-  "mode": "clubs-only",
-  "note": "Membership matches the pinned community dataset, not an independently verified official handbook. No scores, fixtures or real player records are imported. Nicknames, city labels and club colours are presentation data. Placeholder slots have no player IDs, contracts, attributes or transfer eligibility. Existing overseas squads are retained when a club overlaps.",
+  "mode": "inactive-leagues",
+  "note": "Membership matches the pinned community dataset, not an independently verified official handbook. This membership import adds no scores, fixtures or player records. Selected compact squads are sourced separately in squads-sources.json. The other 56 clubs retain virtual placeholders without player IDs or transfer eligibility. Existing overseas club IDs and owned players are retained.",
   "leagues": {
     "ES1": {
       "name": "La Liga",

@@ -1,0 +1,44 @@
+{
+  "selection": "Five established leading clubs in each country, including historically strong development clubs; this is a game selection, not a verified current top-five table.",
+  "academy": "Original game estimates on a 1–20 scale, based on historical development reputation. Not an official or verified 2026 academy ranking.",
+  "identitySources": [
+    {
+      "id": "TM2025",
+      "url": "https://github.com/salimt/football-datasets",
+      "revision": "da9227e1f42baf74561324290dbf1ad2e3c00edd",
+      "path": "datalake/transfermarkt/player_profiles/player_profiles.csv",
+      "snapshotDate": "2025-09-13",
+      "fieldsUsed": [
+        "player_id",
+        "player_name",
+        "date_of_birth",
+        "citizenship",
+        "position",
+        "foot",
+        "current_club_id",
+        "current_club_name"
+      ],
+      "limitations": "Older accessible identity/club snapshot. These are not verified complete 2026/27 squads. Nation uses first listed citizenship where the game has no existing authored football nationality. B/U23 affiliation does not prove homegrown academy status."
+    },
+    {
+      "id": "EXISTING",
+      "path": "js/core/rosters.js: FOREIGN_ROSTERS and js/core/profiles.js",
+      "limitations": "Existing original game roster identities and fictional aliases for the four previously authored counterparts. Real-world membership is not newly verified. Available same-club profile DOB may be reused; ages without DOB retain the authored game age."
+    },
+    {
+      "id": "FPL2026",
+      "url": "https://github.com/vaastav/Fantasy-Premier-League",
+      "path": "data/2026-27/players_raw.csv",
+      "snapshotDate": "2026-10-22",
+      "use": "Exclusion only: current known English affiliations override older foreign snapshot membership."
+    },
+    {
+      "id": "GENERATED",
+      "use": "Fictional reserve gaps. No real inspiration, DOB or claimed real-world affiliation."
+    }
+  ],
+  "ability": "Ability, potential, wages, contracts, heights, development and valuations remain original game estimates. No Transfermarkt valuations or commercial ability ratings were imported.",
+  "season": "Ages are evaluated at 2026-07-06 where DOB exists. The runtime advances age for an existing career season.",
+  "scope": "20 compact squads of 11 first-team and six reserves. Foreign league schedules remain inactive. Historical academy strength is an original game parameter; no annual intake.",
+  "rebuild": "python3 scripts/build-world-squads.py /path/to/player_profiles.csv /path/to/FPL/data/2026-27"
+}

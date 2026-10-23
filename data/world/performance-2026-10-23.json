@@ -1,0 +1,421 @@
+{
+  "captured": "2026-10-23",
+  "baselineCommit": "b39c74122b2b271158b21b96b91b2ab626ed157c",
+  "feature": {
+    "version": "foreign-squads-draft",
+    "captured": "2026-10-23",
+    "reports": [
+      {
+        "cpuThrottle": 6,
+        "dpr": 3,
+        "bootMs": 693,
+        "newCareerMs": 2396,
+        "menus": {
+          "home": {
+            "renderMedianMs": 114.6,
+            "paintMedianMs": 148.2,
+            "paintMaxMs": 167.6
+          },
+          "squad": {
+            "renderMedianMs": 90.6,
+            "paintMedianMs": 133.1,
+            "paintMaxMs": 167.4
+          },
+          "tactics": {
+            "renderMedianMs": 128.9,
+            "paintMedianMs": 168.9,
+            "paintMaxMs": 217.7
+          },
+          "fixtures": {
+            "renderMedianMs": 97,
+            "paintMedianMs": 134.2,
+            "paintMaxMs": 166
+          },
+          "table": {
+            "renderMedianMs": 95.3,
+            "paintMedianMs": 133.1,
+            "paintMaxMs": 154.4
+          },
+          "clubs": {
+            "renderMedianMs": 196.3,
+            "paintMedianMs": 317.3,
+            "paintMaxMs": 336.7
+          },
+          "search": {
+            "renderMedianMs": 173.5,
+            "paintMedianMs": 234.2,
+            "paintMaxMs": 303.2
+          }
+        },
+        "saves": {
+          "copyMedianMs": 83.7,
+          "copyMaxMs": 84.2,
+          "durableMedianMs": 161.5,
+          "durableMaxMs": 203
+        },
+        "day": {
+          "ms": 961.7,
+          "matches": 11,
+          "outcome": "ok"
+        },
+        "batch": {
+          "ms": 1800.7,
+          "matches": 32
+        },
+        "players": 2791,
+        "clubs": 130,
+        "fixtures": 932,
+        "saveBytes": 2280365,
+        "live": {
+          "durationMs": 12002.4,
+          "fps": 55.6,
+          "p95FrameMs": 33.3,
+          "p99FrameMs": 33.4,
+          "maxFrameMs": 116.6,
+          "framesOver50ms": 3,
+          "activeFrames": 662,
+          "pausedFrames": 0,
+          "busyFrames": 4,
+          "minutesGenerated": 1,
+          "canvas": [
+            1110,
+            1149
+          ],
+          "longTasks": [
+            {
+              "phase": "live",
+              "ms": 61
+            },
+            {
+              "phase": "live",
+              "ms": 81
+            },
+            {
+              "phase": "live",
+              "ms": 90
+            },
+            {
+              "phase": "live",
+              "ms": 96
+            }
+          ]
+        },
+        "mainHeapMB": 16.7,
+        "tasks": {
+          "boot": {
+            "count": 2,
+            "maxMs": 143,
+            "totalMs": 244
+          },
+          "newCareer": {
+            "count": 2,
+            "maxMs": 1912,
+            "totalMs": 2005
+          },
+          "menus": {
+            "count": 34,
+            "maxMs": 323,
+            "totalMs": 5724
+          },
+          "save": {
+            "count": 4,
+            "maxMs": 136,
+            "totalMs": 386
+          },
+          "advanceDay": {
+            "count": 4,
+            "maxMs": 89,
+            "totalMs": 260
+          },
+          "batch": {
+            "count": 6,
+            "maxMs": 296,
+            "totalMs": 841
+          },
+          "live": {
+            "count": 4,
+            "maxMs": 96,
+            "totalMs": 328
+          }
+        },
+        "errors": []
+      }
+    ],
+    "coldNetwork": {
+      "cpuThrottle": 6,
+      "latencyMs": 150,
+      "downloadMbps": 1.6,
+      "gzip": true,
+      "titleReadyMs": 3399,
+      "resourceCount": 69,
+      "transferBytes": 470221
+    }
+  },
+  "method": "Local Chromium,390x844,DPR3,synthetic6x CPU;5menu samples,3saves,one32fixture batch,12secondlive sample. Lab-only and single-run timing differences; live varied substantially. See SQUADS.md.",
+  "baseline": {
+    "version": "baseline-45",
+    "captured": "2026-10-23",
+    "reports": [
+      {
+        "cpuThrottle": 6,
+        "dpr": 3,
+        "bootMs": 633,
+        "newCareerMs": 1927,
+        "menus": {
+          "home": {
+            "renderMedianMs": 78.5,
+            "paintMedianMs": 104.8,
+            "paintMaxMs": 144.9
+          },
+          "squad": {
+            "renderMedianMs": 68.6,
+            "paintMedianMs": 100.3,
+            "paintMaxMs": 132.2
+          },
+          "tactics": {
+            "renderMedianMs": 91.4,
+            "paintMedianMs": 133.9,
+            "paintMaxMs": 182.4
+          },
+          "fixtures": {
+            "renderMedianMs": 74.1,
+            "paintMedianMs": 115.7,
+            "paintMaxMs": 150.8
+          },
+          "table": {
+            "renderMedianMs": 70,
+            "paintMedianMs": 103.9,
+            "paintMaxMs": 118.7
+          },
+          "clubs": {
+            "renderMedianMs": 173.4,
+            "paintMedianMs": 242.2,
+            "paintMaxMs": 307.2
+          },
+          "search": {
+            "renderMedianMs": 155.2,
+            "paintMedianMs": 185.7,
+            "paintMaxMs": 233.5
+          }
+        },
+        "saves": {
+          "copyMedianMs": 67.4,
+          "copyMaxMs": 82.3,
+          "durableMedianMs": 138.2,
+          "durableMaxMs": 184.6
+        },
+        "day": {
+          "ms": 730,
+          "matches": 11,
+          "outcome": "ok"
+        },
+        "batch": {
+          "ms": 1621.8,
+          "matches": 32
+        },
+        "players": 2556,
+        "clubs": 130,
+        "fixtures": 932,
+        "saveBytes": 2039234,
+        "live": {
+          "durationMs": 12005.1,
+          "fps": 38.5,
+          "p95FrameMs": 66.6,
+          "p99FrameMs": 116.6,
+          "maxFrameMs": 200,
+          "framesOver50ms": 36,
+          "activeFrames": 125,
+          "pausedFrames": 0,
+          "busyFrames": 3,
+          "minutesGenerated": 1,
+          "canvas": [
+            1110,
+            1149
+          ],
+          "longTasks": [
+            {
+              "phase": "live",
+              "ms": 53
+            },
+            {
+              "phase": "live",
+              "ms": 67
+            },
+            {
+              "phase": "live",
+              "ms": 63
+            },
+            {
+              "phase": "live",
+              "ms": 59
+            },
+            {
+              "phase": "live",
+              "ms": 60
+            },
+            {
+              "phase": "live",
+              "ms": 93
+            },
+            {
+              "phase": "live",
+              "ms": 55
+            },
+            {
+              "phase": "live",
+              "ms": 58
+            },
+            {
+              "phase": "live",
+              "ms": 94
+            },
+            {
+              "phase": "live",
+              "ms": 99
+            },
+            {
+              "phase": "live",
+              "ms": 194
+            },
+            {
+              "phase": "live",
+              "ms": 94
+            },
+            {
+              "phase": "live",
+              "ms": 89
+            },
+            {
+              "phase": "live",
+              "ms": 63
+            },
+            {
+              "phase": "live",
+              "ms": 111
+            },
+            {
+              "phase": "live",
+              "ms": 54
+            },
+            {
+              "phase": "live",
+              "ms": 55
+            },
+            {
+              "phase": "live",
+              "ms": 84
+            },
+            {
+              "phase": "live",
+              "ms": 52
+            },
+            {
+              "phase": "live",
+              "ms": 61
+            },
+            {
+              "phase": "live",
+              "ms": 66
+            },
+            {
+              "phase": "live",
+              "ms": 121
+            },
+            {
+              "phase": "live",
+              "ms": 64
+            },
+            {
+              "phase": "live",
+              "ms": 59
+            },
+            {
+              "phase": "live",
+              "ms": 52
+            },
+            {
+              "phase": "live",
+              "ms": 50
+            },
+            {
+              "phase": "live",
+              "ms": 71
+            },
+            {
+              "phase": "live",
+              "ms": 60
+            },
+            {
+              "phase": "live",
+              "ms": 58
+            },
+            {
+              "phase": "live",
+              "ms": 73
+            },
+            {
+              "phase": "live",
+              "ms": 62
+            },
+            {
+              "phase": "live",
+              "ms": 64
+            },
+            {
+              "phase": "live",
+              "ms": 54
+            }
+          ]
+        },
+        "mainHeapMB": 13.9,
+        "tasks": {
+          "boot": {
+            "count": 2,
+            "maxMs": 105,
+            "totalMs": 183
+          },
+          "newCareer": {
+            "count": 2,
+            "maxMs": 1457,
+            "totalMs": 1519
+          },
+          "menus": {
+            "count": 34,
+            "maxMs": 264,
+            "totalMs": 4515
+          },
+          "save": {
+            "count": 4,
+            "maxMs": 132,
+            "totalMs": 334
+          },
+          "advanceDay": {
+            "count": 1,
+            "maxMs": 63,
+            "totalMs": 63
+          },
+          "batch": {
+            "count": 6,
+            "maxMs": 250,
+            "totalMs": 689
+          },
+          "live": {
+            "count": 33,
+            "maxMs": 194,
+            "totalMs": 2412
+          }
+        },
+        "errors": []
+      }
+    ],
+    "coldNetwork": {
+      "cpuThrottle": 6,
+      "latencyMs": 150,
+      "downloadMbps": 1.6,
+      "gzip": true,
+      "titleReadyMs": 3243,
+      "resourceCount": 67,
+      "transferBytes": 454171
+    }
+  }
+}

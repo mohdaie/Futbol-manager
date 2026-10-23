@@ -6,9 +6,9 @@ Membership and all 932 home/away fixtures come from the pinned OpenFootball snap
 
 ## Squads and player identities
 
-Championship clubs start with 24 first-team players and 12 generated reserves. The combined ownership limit is 36, with no U18 squad. Transfers, contracts, AI recruitment, intake, admin creation and automatic top-ups check capacity before changing ownership or money. New prospects join the reserves if space exists. Moving a player between these two squad groups does not consume another place.
+Championship clubs start with 24 first-team players and 12 generated reserves. The combined ownership limit is 36, with no U 18 squad. Transfers, contracts, AI recruitment, intake, admin creation and automatic top-ups check capacity before changing ownership or money. New prospects join the reserves if space exists. Moving a player between these two squad groups does not consume another place.
 
-Premier League clubs start with 25 first-team players, 20 reserves and 20 U18 players. The Championship ownership limit does not apply to the Premier League. These are game squad sizes, separate from real-world registration rules.
+Premier League clubs start with 25 first-team players, 20 reserves and 20 U 18 players. The Championship ownership limit does not apply to the Premier League. These are game squad sizes, separate from real-world registration rules.
 
 First-team facts use these sources:
 
@@ -23,14 +23,14 @@ Existing authored ability profiles are reused where available. Other sourced ide
 Rebuild identity facts after checking out the pinned mirrors:
 
 ```sh
-python3 scripts/build-england-rosters.py /path/to/Fantasy-Premier-League/data/2026-27 /path/to/player_profiles.csv
+python 3 scripts/build-england-rosters.py /path/to/Fantasy-Premier-League/data/2026-27 /path/to/player_profiles.csv
 ```
 
 ## Implemented competition format
 
 Both divisions use three points for a win and one for a draw, separate league tables and awards, nine substitutes, five substitutions and three substitution windows. Half-time substitutions do not use a window.
 
-The Premier League has 38 matches per club. Its bottom three exchange places with the Championship's top two and playoff winner at rollover. Championship clubs play 46 regular-season matches. Places 3–6 play two-legged semifinals (3rd v 6th and 4th v 5th), with the higher seed home second, then a neutral final. There is no away-goals rule. Tied deciding legs use 30 minutes of extra time, then penalties. Extra time permits a sixth substitute and fourth window. Playoff results do not affect league points. Playoff scheduling uses game dates after the final Championship round; it does not claim confirmed official 2027 playoff dates.
+The Premier League has 38 matches per club. Its bottom three exchange places with the Championship's top two and playoff winner at rollover. Championship clubs play 46 regular-season matches. Places 3–6 play two-legged semifinals (3 rd v 6 th and 4 th v 5 th), with the higher seed home second, then a neutral final. There is no away-goals rule. Tied deciding legs use 30 minutes of extra time, then penalties. Extra time permits a sixth substitute and fourth window. Playoff results do not affect league points. Playoff scheduling uses game dates after the final Championship round; it does not claim confirmed official 2027 playoff dates.
 
 A relegated club retains its best 24 first-team players (protecting two goalkeepers) and 12 remaining prospects. Excess players enter the free-agent pool with the game's contract compensation; the season review lists the managed club's releases. Championship clubs continue to respect the 36-player cap through subsequent seasons.
 
@@ -40,15 +40,20 @@ Yellow-card thresholds use 5 by club game 19/23, 10 by 32/37, and 15 across the 
 
 Release 2026.10.22.45 adds a separate, browsable club registry for La Liga (20 clubs), Serie A (20), Bundesliga (18) and Ligue 1 (18). The 2026/27 membership comes from the same pinned OpenFootball revision; all club names and source URLs are recorded in [data/world/sources.json](data/world/sources.json). These are community source snapshots, not independently checked official league publications.
 
-This pass contains leagues and clubs only. It adds no league fixtures, table results, promotion/relegation, playable career choices or individual player records. The registry is separate from `G.leagues`, so the English calendar and competition processing stay unchanged. Club directory filters expose each new league, with nicknames and standard names together.
+The registry remains separate from `G.leagues`: no foreign league fixtures, results, promotion/relegation or manageable career choices are enabled. Twenty selected leading clubs now have transferable players and can be arranged as friendly opponents directly from their club dashboard. Club directory filters retain nicknames alongside standard names.
 
-The four existing overseas counterparts (Real Madrid, Paris Saint-Germain, AC Milan and Bayer Leverkusen) are reused, preserving their club IDs, existing squads, transfers and friendlies. The 72 missing clubs have 25 virtual placeholder slots each. Those slots have no player ID, attributes, age, contract or inspirational figure, and never enter the player database, search, scouting or transfer market. Their UI has no player-profile or transfer actions. The club's central ownership guard rejects real-player arrivals as well. Full player squads can be added in a later release.
+New careers use 11 first-team players and six reserve prospects per selected club. The four existing counterparts (Real Madrid, Paris Saint-Germain, AC Milan and Bayer Leverkusen) keep their club IDs. In older careers their complete squads, trained attributes, contracts, ownership and sold/retired identities are preserved; only missing reserve slots and the 16 newly populated clubs are seeded. The one-time migration never rebuilds first teams at those four legacy clubs.
 
-Placeholder clubs have no weekly finances, generated managers, agent relationships, AI recruitment, youth intake, friendlies or automatic squad top-ups. Three rollover checks verify that they stay empty. Existing saves receive the registry on load without replacing their existing players or fixtures; the migration is idempotent and consumes no player IDs. Existing club renames and roster data are retained.
+Academy strength is a separate 1–20 game estimate for these 20 clubs, based on historical development reputation. It affects reserve prospect potential and training quality independently of club reputation. There is no annual intake or generated reserve refill. Departures can be replaced with existing free agents; compact squads remain bounded. Older authored rosters have a capacity exception so existing players are not deleted.
+
+The remaining 56 clubs retain 25 virtual placeholder slots with no player ID, attributes, age, contract or inspirational figure. They cannot own players, arrange friendlies, recruit, train, generate managers or enter weekly finances. Three rollover checks verify that they stay empty and selected clubs create no new annual intake.
+
+The selected clubs, source dates, generated gaps and performance measurements are documented in [data/world/SQUADS.md](data/world/SQUADS.md). The accessible identity snapshot is September 2025, supplemented by existing authored squads; this is not a verified 2026/27 roster update. Academy ratings are original estimates, not official rankings.
 
 Dedicated validation:
 
 ```sh
+node tests/world-squads.cjs
 node tests/world-leagues.cjs
 node tests/world-leagues-ui.cjs
 ```
@@ -61,7 +66,7 @@ Official 2026/27 PL/EFL handbooks were inaccessible in the environment. This rel
 - Senior-list/homegrown/Under-21 registration, loan quotas, financial regulations, exceptional disciplinary cases and official broadcast/prize distributions are not enforced. Configuration fields for registration are preparatory only.
 - After the model's points, goal difference, goals, wins (Championship) and head-to-head criteria, an unresolved exact tie uses a stable club-ID order. A special neutral league-position decider is not implemented.
 - FA Cup, League Cup, European competitions and team-only simulation of additional countries are not part of this release.
-- Academy facilities still use the existing reputation-based starting value. No new historically researched academy ranking has been added.
+- English academy facilities retain their existing reputation-based starting value. Selected overseas clubs have independent historical development estimates; an officially verified academy ranking is not implemented.
 
 ## Validation
 

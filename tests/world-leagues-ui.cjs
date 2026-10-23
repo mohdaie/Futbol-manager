@@ -21,8 +21,21 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
       check(id+' lists its complete club membership',await page.locator('.main .row[data-a=clubPage]').count()===n);
     }
     await page.locator('[data-a=clubLeague][data-id=ES1]').tap();
-    check('Standard club names appear beside their game nicknames',/FC Barcelona/.test(await page.locator('[data-a=clubPage][data-id=ES1_BAR]').textContent()));
     await page.locator('[data-a=clubPage][data-id=ES1_BAR]').tap();
+    check('Selected clubs explain academy quality and no annual youth intake',/Academy development/.test(await page.locator('.main').textContent())&&/no annual youth intake/.test(await page.locator('.main').textContent()));
+    check('A selected club can be arranged directly as a friendly opponent',await page.locator('[data-a=friendlyArrange][data-id=ES1_BAR]').count()===1);
+    await page.locator('[data-a=friendlyArrange][data-id=ES1_BAR]').tap();
+    check('Arranging a selected opponent creates a friendly without league schedules',await page.evaluate(()=>G.fixtures.filter(f=>f.fr&&f.a==='ES1_BAR').length===1&&G.fixtures.filter(f=>!f.fr).length===932));
+    await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
+    check('Selected clubs show eleven first-team players',await page.locator('.main .list [data-a=player]').count()===11);
+    await page.locator('[data-a=clubLevel][data-level=R]').tap();
+    check('Selected clubs expose six reserve prospects and no U18 section',await page.locator('.main .list [data-a=player]').count()===6&&await page.locator('[data-a=clubLevel][data-level=Y]').count()===0);
+    await page.locator('.main .list [data-a=player]').first().tap();
+    await page.locator('[data-a=psTab][data-v=bio]').tap();
+    check('A reserve profile shows its real inspirational figure and transfer action',/Inspirational figure/.test(await page.locator('#layer .sheet').textContent())&&await page.locator('#layer .sheet [data-a=offer]').count()===1);
+    await page.evaluate(()=>{closeSheet(true);go('clubs');});
+    check('Standard club names appear beside their game nicknames',/Getafe CF/.test(await page.locator('[data-a=clubPage][data-id=ES1_GET]').textContent()));
+    await page.locator('[data-a=clubPage][data-id=ES1_GET]').tap();
     check('A placeholder club has a working dashboard with its league and country',/La Liga/.test(await page.locator('.main').textContent())&&/Spain/.test(await page.locator('.main').textContent()));
     await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
     check('The dummy squad shows 25 slots with no player profile or transfer controls',await page.locator('.main .list .row').count()===25&&await page.locator('.main [data-a=player],.main [data-a=contract],.main [data-a=scoutFile]').count()===0);
@@ -34,7 +47,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('[data-a=clubLeague][data-id=all]').tap();
     check('All clubs are reachable without duplicating the existing four overseas clubs',await page.locator('.main .row[data-a=clubPage]').count()===130);
     await page.evaluate(()=>admPlayerSheet(seniorSquad(G.club)[0].id));
-    check('Admin cannot move a real player into a placeholder club',await page.locator('#apClub option[value=ES1_BAR]').count()===0&&await page.locator('#apClub option[value=F0]').count()===1);
+    check('Admin cannot move a real player into a placeholder club',await page.locator('#apClub option[value=ES1_GET]').count()===0&&await page.locator('#apClub option[value=F0]').count()===1);
     await page.evaluate(()=>{closeSheet(true);go('home');});
     check('Placeholder clubs have no agent relationships or weekly financial processing',await page.evaluate(()=>{
       weeklyFinance();
@@ -42,7 +55,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
       return ids.every(id=>G.clubs[id].bal===0)&&Object.values(G.agents).every(a=>ids.every(id=>!Object.hasOwn(a.rel,id)));
     }));
     check('A placeholder club cannot become the managed club through job changes',await page.evaluate(()=>{
-      const before=JSON.stringify([G.club,G.tactics,G.fin]);return takeJob('ES1_BAR')===false&&before===JSON.stringify([G.club,G.tactics,G.fin]);
+      const before=JSON.stringify([G.club,G.tactics,G.fin]);return takeJob('ES1_GET')===false&&before===JSON.stringify([G.club,G.tactics,G.fin]);
     }));
     const legacy=await page.evaluate(async()=>{
       const players=JSON.stringify(G.players),fixtures=JSON.stringify(G.fixtures);
@@ -52,9 +65,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     });
     await page.reload();await page.waitForFunction(()=>G?.worldLeagueVersion===1);
     check('Loading an old save adds the club registry while retaining every player and fixture',await page.evaluate(({players,fixtures})=>JSON.stringify(G.players)===players&&JSON.stringify(G.fixtures)===fixtures&&Object.keys(G.clubs).length===130,legacy));
-    check('Three rollovers cannot materialize or recruit dummy squads',await page.evaluate(()=>{
-      for(let n=0;n<3;n++)rollover();
-      return Object.values(G.clubs).filter(c=>c.backgroundOnly).length===72&&Object.values(G.clubs).filter(c=>c.backgroundOnly).every(c=>!c.squad.length)&&Object.values(G.players).every(p=>!G.clubs[p.club].backgroundOnly)&&G.fixtures.length===932;
+    check('Three rollovers create no annual selected-club intake or dummy player records',await page.evaluate(()=>{
+      const original=genPlayer;let generated=0;genPlayer=options=>{if(G.clubs[options?.club]?.foreignSquad)generated++;return original(options);};
+      for(let n=0;n<3;n++)rollover();genPlayer=original;
+      return generated===0&&Object.values(G.clubs).filter(c=>c.backgroundOnly).length===56&&Object.values(G.clubs).filter(c=>c.backgroundOnly).every(c=>!c.squad.length)&&Object.values(G.players).every(p=>!G.clubs[p.club].backgroundOnly)&&G.fixtures.length===932;
     }));
     await page.evaluate(async()=>{go('home');await saveGameAsync();});await page.reload();await page.waitForFunction(()=>G?.season===2029);
     check('Durable saves retain all four registries and dummy transfer locks',await page.evaluate(()=>Object.keys(G.worldLeagues).length===4&&Object.values(G.clubs).filter(c=>c.backgroundOnly).every(c=>!squadSpace(c)&&!c.squad.length)));

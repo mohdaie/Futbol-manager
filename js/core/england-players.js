@@ -1,7 +1,7 @@
 'use strict';
 // Identity facts and game ability are separate. Reuse an original authored
 // profile where available; otherwise build a stable, original football type.
-function playerFromEnglandIdentity(row, cid) {
+function playerFromEnglandIdentity(row, cid, { level = 'A', academy = 0 } = {}) {
   const [name, pos, age, nat, foot, inspiration, dob, key, source, sourceId] = row;
   const candidate = key && ROSTER_PROFILES[key];
   const authored = candidate && candidate.insp === inspiration && candidate.pos === pos ? candidate : null;
@@ -11,9 +11,9 @@ function playerFromEnglandIdentity(row, cid) {
   // career rerolling a sourced player's starting skills.
   const p = matchRandom({ rng: seed }, () => {
     const top = 60 + (G.clubs[cid].rep - 50) * 0.6;
-    const ca = clamp(top + gauss() * 3 - (age < 21 ? (21 - age) * 1.4 : 0), 43, 87);
-    const pa = ca + (age <= 21 ? rf(6, 16) : age <= 24 ? rf(2, 8) : 0);
-    return genPlayer({ pos, age, nat, club: cid, lvl: 'A', ca,
+    const ca = level === 'R' ? clamp(top - 18 + (age - 18) * 1.2 + gauss() * 3, 40, 70) : clamp(top + gauss() * 3 - (age < 21 ? (21 - age) * 1.4 : 0), 43, 87);
+    const pa = level === 'R' ? clamp(ca + rf(7, 14) + academy * 0.45, ca, 94) : ca + (age <= 21 ? rf(6, 16) : age <= 24 ? rf(2, 8) : 0);
+    return genPlayer({ pos, age, nat, club: cid, lvl: level, ca,
       pa: authored ? authored.pa : pa, profile: authored, profileKey: key });
   });
   const parts = name.split(' ');
