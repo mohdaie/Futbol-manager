@@ -260,3 +260,7 @@ Manager profiles now show the real-world inspirational figure as a small label a
 ## Release 2026.10.23.22: seed manager profiles from 2026/27 references
 
 All 44 English clubs now have records from the supplied 2026/27 reference list. AI managers use fictional sound-alike game names while their saved profiles retain the real reference manager(s), nationality and age; the game identity uses the listed nationality and age. The player-controlled manager keeps their own identity. Existing careers migrate their current AI managers in place, and Welsh, Bosnian, Austrian and Swedish name pools support these identities. Lincoln City records both co-managers and their individual reference details. Navigation coverage checks full club coverage and migration.
+
+## Release 2026.10.23.23: add dashboard competitions and meaningful squad metrics
+
+The Dashboard now has Overview and Competitions tabs, with selectable Premier League and Championship tables and matchweek fixtures. Removed the small Player stats table from Overview. Squad rows now put condition and morale under each player's name and replace the color-only condition bar with a metric based on the selected sort: alternate positions, rating, age, condition with percentage, morale face, or market value.

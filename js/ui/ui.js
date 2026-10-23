@@ -12,10 +12,15 @@ const CHG = {};      // change actions: CHG[name](value, dataset, el)
 
 const NAV = [['home', 'Dashboard'], ['news', 'News'], ['team', 'My Team'], ['transfers', 'Transfers'], ['facilities', 'Facilities'], ['more', 'More']];
 const NAV_GROUPS = {
+  home: ['competitions'],
   team: ['squad', 'tactics', 'pinstr', 'staffroom', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'clubs', 'clubview', 'manager', 'prematch', 'match', 'post'],
   facilities: ['finance', 'board', 'club'],
 };
+const DASHBOARD_SECTIONS = [['home', 'Overview'], ['competitions', 'Competitions']];
 const TEAM_SECTIONS = [['squad', 'Squad'], ['tactics', 'Tactics'], ['fixtures', 'Fixtures'], ['training', 'Training'], ['staffroom', 'Staff room'], ['staff', 'Staff'], ['medical', 'Medical center'], ['youth', 'Youth academy'], ['stats', 'Stats'], ['table', 'League table'], ['clubs', 'Club directory'], ['manager', 'Manager profile']];
+function dashboardSections() {
+  return `<nav class="tabs dashboard-sections" aria-label="Dashboard sections">${DASHBOARD_SECTIONS.map(([s, n]) => `<button class="${UI.s === s ? 'on' : ''}" ${UI.s === s ? 'aria-current="page"' : ''} data-a="go" data-s="${s}">${n}</button>`).join('')}</nav>`;
+}
 function teamSections() {
   const current = UI.s === 'pinstr' ? 'tactics' : UI.s;
   return `<nav class="tabs team-sections" aria-label="My Team sections">${TEAM_SECTIONS.map(([s, n]) => `<button class="${current === s ? 'on' : ''}" ${current === s ? 'aria-current="page"' : ''} data-a="go" data-s="${s}">${n}</button>`).join('')}</nav>`;
@@ -57,7 +62,8 @@ function render(reset) {
   else if (G.gameOver) scr = SCREENS.sacked;
   else if (G.seasonReview && UI.s !== 'review') { UI.s = 'review'; scr = SCREENS.review; }
   else scr = SCREENS[UI.s] || SCREENS.home;
-  const body = (!scr.full && (TEAM_SECTIONS.some(([s]) => s === UI.s) || UI.s === 'pinstr') ? teamSections() : '') + scr.render(UI.p);
+  const subnav = TEAM_SECTIONS.some(([s]) => s === UI.s) || UI.s === 'pinstr' ? teamSections() : ['home', 'competitions'].includes(UI.s) ? dashboardSections() : '';
+  const body = (!scr.full ? subnav : '') + scr.render(UI.p);
   root.innerHTML = scr.full ? `<div class="app full">${body}</div>` : shell(body);
   linkEntities(root);
   const m2 = root.querySelector('.main');
@@ -226,12 +232,13 @@ function selectHtml(id, opts, cur, chg, ds = '') {
 function playerRow(p, extra = '', opts = {}) {
   const mine = p.club === G.club;
   const tags = [p.inj ? '<em class="tag bad">INJ</em>' : '', p.ban > 0 ? '<em class="tag bad">SUS</em>' : '', p.listed ? '<em class="tag warn">LIST</em>' : '', G.shortlist.includes(p.id) && !mine ? '<em class="tag">★</em>' : ''].join('');
+  const detail = opts.hideAge ? opts.sub : `${p.age} yrs · ${opts.sub ?? (mine ? morLabel(p.mor) : esc(clubName(p.club)))}`;
   return `<div class="row act prow linked-prow">
     ${opts.noBadge ? '' : clubLink(p.club, badge(p.club, 20), 'rb')}
     <button class="player-main" data-a="player" data-id="${p.id}">
     ${opts.noBadge ? `<span class="no">${p.no || ''}</span>` : ''}
     <span class="pos">${p.pos}</span>
-    <span class="grow"><b>${esc(pname(p))}</b> ${tags}<small>${p.age} yrs · ${opts.sub ?? (mine ? morLabel(p.mor) : esc(clubName(p.club)))}</small></span>
+    <span class="grow"><b>${esc(pname(p))}</b> ${tags}<small>${esc(detail ?? '')}</small></span>
     ${extra}</button></div>`;
 }
 

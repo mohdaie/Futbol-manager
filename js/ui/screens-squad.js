@@ -5,6 +5,15 @@
 
 const SORTS = { pos: (a, b) => POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || b.ca - a.ca, ovr: (a, b) => b.ca - a.ca, age: (a, b) => a.age - b.age, cond: (a, b) => a.cond - b.cond, mor: (a, b) => b.mor - a.mor, val: (a, b) => pValue(b) - pValue(a) };
 const pitchPosLabel = pos => ({ AMR: 'RW', AML: 'LW', MR: 'RM', ML: 'LM', MC: 'CM', AMC: 'AM', DC: 'CB', DL: 'LB', DR: 'RB' }[pos] || pos);
+function squadMetric(p, sort) {
+  if (sort === 'pos') return `<span class="squad-metric alt"><small>Also</small><b>${p.alt?.length ? p.alt.map(pitchPosLabel).join(' · ') : '—'}</b></span>`;
+  if (sort === 'ovr') return ovrPill(p.ca, p.ca);
+  if (sort === 'age') return `<span class="stat squad-metric"><b>${p.age}</b><small>years</small></span>`;
+  if (sort === 'cond') return `<span class="squad-metric condition"><b>${Math.round(p.cond)}%</b>${condBar(p.cond)}</span>`;
+  if (sort === 'mor') return moodFace(p.mor);
+  if (sort === 'val') return `<span class="stat squad-metric value"><b>${money(pValue(p))}</b><small>market value</small></span>`;
+  return '';
+}
 
 SCREENS.squad = {
   render() {
@@ -17,7 +26,7 @@ SCREENS.squad = {
       <p class="muted">${note}</p>
       <div class="chips">${[['ALL', 'All'], ['GK', 'Keepers'], ['DEF', 'Defence'], ['MID', 'Midfield'], ['ATT', 'Attack']].map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="sqF" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="sortbar"><span class="muted">Sort</span>${[['pos', 'Position'], ['ovr', 'Rating'], ['age', 'Age'], ['cond', 'Condition'], ['mor', 'Morale'], ['val', 'Value']].map(([k, n]) => `<button class="${s === k ? 'on' : ''}" data-a="sqS" data-v="${k}">${n}</button>`).join('')}</div>
-      <div class="list">${list.map(p => playerRow(p, `${xi.has(p.id) ? '<span class="xitag">XI</span>' : ''}${condBar(p.cond)}`, { noBadge: true, sub: s === 'val' ? money(pValue(p)) : l === 'A' ? p.status + ' · ' + morLabel(p.mor) : POS_NAME[p.pos] + ' · ' + morLabel(p.mor) })).join('') || empty('Nobody here', 'No players in this group for that position.')}</div>`;
+      <div class="list">${list.map(p => playerRow(p, squadMetric(p, s), { noBadge: true, hideAge: true, sub: `${Math.round(p.cond)}% condition · ${morLabel(p.mor)}` })).join('') || empty('Nobody here', 'No players in this group for that position.')}</div>`;
   },
 };
 ACT.sqF = ds => { UI.f.squad = ds.v; render(); };

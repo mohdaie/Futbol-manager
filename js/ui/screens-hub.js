@@ -91,18 +91,6 @@ SCREENS.home = {
       </section>`;
     } else next = `<section class="dcard"><div class="dcard-h"><h2>Next match</h2></div><p class="muted">No fixtures left this season.</p></section>`;
 
-    const sort = UI.f.dash || 'xi', xi = G.tactics.slots.map(id => G.players[id]).filter(Boolean);
-    const rows = sort === 'cond' ? xi.slice().sort((a, b) => a.cond - b.cond) : sort === 'mor' ? xi.slice().sort((a, b) => a.mor - b.mor) : xi;
-    const ip = FORMATIONS[G.tactics.ip];
-    const players = `<section class="dcard">
-      <div class="dcard-h"><div><h2>Player stats</h2><small>First team · ${seniorSquad(G.club).length} players</small></div>
-        ${selectHtml('dashSort', [['xi', 'Line-up'], ['cond', 'Lowest health'], ['mor', 'Lowest morale']], sort, 'dashSort')}</div>
-      <table class="ptable"><thead><tr><th>Player</th><th>Pos</th><th>Health</th><th>Morale</th></tr></thead><tbody>
-      ${rows.map(p => { const slot = G.tactics.slots.indexOf(p.id); const hc = p.inj ? 'bad' : p.cond >= 85 ? 'good' : p.cond >= 65 ? 'warn' : 'bad'; return `<tr data-a="player" data-id="${p.id}"><td>${esc(pname(p))}</td><td class="ppos">${slot >= 0 ? ip[slot][0] : p.pos}</td><td><span class="hb">${bar(p.inj ? 0 : p.cond, hc)}<b>${p.inj ? 'INJ' : Math.round(p.cond) + '%'}</b></span></td><td>${moodFace(p.mor)}</td></tr>`; }).join('')}
-      </tbody></table>
-      <button class="dlink" data-a="go" data-s="squad">View full squad <span class="chev">›</span></button>
-    </section>`;
-
     const bill = clubWageBill(c), free = G.fin.wb - bill, h = G.balHist;
     const month = h.length >= 2 ? h[h.length - 1] - h[Math.max(0, h.length - 5)] : null;
     const health = c.bal < 0 ? ['In debt', 'bad'] : free < 0 ? ['Over wage budget', 'warn'] : ['Healthy', 'good'];
@@ -114,13 +102,11 @@ SCREENS.home = {
     </section>`;
 
     return `<div class="dash-h"><h1 class="h1">Dashboard</h1></div>
-      ${assistantBriefingCard()}${clubCard}${next}${players}${finance}
+      ${assistantBriefingCard()}${clubCard}${next}${finance}
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="go" data-s="news">All news</button></div>
       <div class="list">${G.news.slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
   },
 };
-CHG.dashSort = v => { UI.f.dash = v; render(); };
-
 const NEWS_CATS = [['all', 'All'], ['inbox', 'Inbox'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Club'], ['league', 'League']];
 function newsRow(n) {
   const needs = n.action && !n.done && n.action.t !== 'player';
@@ -262,6 +248,31 @@ SCREENS.fixtures = {
   },
 };
 CHG.round = v => { UI.tab.round = +v; render(); };
+
+SCREENS.competitions = {
+  render() {
+    const competition = G.leagues.includes(UI.tab.homeCompetition) ? UI.tab.homeCompetition : leagueOf(G.club);
+    const view = UI.tab.homeCompetitionView || 'table', tbl = leagueTable(competition);
+    let content = '';
+    if (view === 'fixtures') {
+      const all = G.fixtures.filter(f => leagueFixture(f, competition)), rounds = [...new Set(all.map(f => f.r))].sort((a, b) => a - b);
+      const upcoming = all.filter(f => f.w >= G.week).sort(fxSort)[0];
+      const round = rounds.includes(+UI.tab.homeCompetitionRound) ? +UI.tab.homeCompetitionRound : upcoming?.r ?? rounds[rounds.length - 1];
+      const list = all.filter(f => f.r === round).sort(fxSort);
+      content = `<div class="field"><label for="competitionRound">Matchweek</label>${selectHtml('competitionRound', rounds.map(i => { const f = all.find(f => f.r === i); return [i, 'Matchweek ' + (i + 1) + ' · ' + fmtDate(fxDate(f), false)]; }), round, 'competitionRound')}</div>
+        <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="fxt">${fxWhen(f).replace(/ \d+ \w+ ·/, '')}</span><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<button class="res" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '–' + f.ag : 'v'}</button>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('') || empty('No fixtures', 'There are no scheduled fixtures for this competition.')}</div>`;
+    } else {
+      content = `<div class="tablewrap"><table class="tbl"><thead><tr><th>#</th><th class="l">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>
+        ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${competition === 'ECH' ? (i < 2 ? 'z1' : i < 6 ? 'z2' : i >= 21 ? 'z4' : '') : (i < 4 ? 'z1' : i < 6 ? 'z2' : i === 6 ? 'z3' : i >= 17 ? 'z4' : '')}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td></tr>`).join('')}
+        </tbody></table></div>${leagueRulesHtml(competition)}`;
+    }
+    return `<h1 class="h1">Competitions</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p>
+      <div class="seg">${G.leagues.map(id => `<button class="${competition === id ? 'on' : ''}" data-a="homeCompetition" data-id="${id}">${leagueName(id)}</button>`).join('')}</div>
+      ${tabs('homeCompetitionView', [['table', 'League table'], ['fixtures', 'Fixtures']], view)}${content}`;
+  },
+};
+ACT.homeCompetition = ds => { UI.tab.homeCompetition = ds.id; UI.tab.homeCompetitionRound = null; render(); };
+CHG.competitionRound = v => { UI.tab.homeCompetitionRound = +v; render(); };
 
 SCREENS.table = {
   render() {
