@@ -164,6 +164,7 @@ img.crest-art { object-fit: contain; max-width: none; vertical-align: middle; }
 .player-main > .mood svg { width: 18px; height: 18px; }
 .chev { color: var(--mute); font-size: 17px; flex: none; }
 .pos { flex: none; width: 30px; text-align: center; padding: 2.5px 0; border-radius: 5px; background: var(--night); border: 1px solid var(--line); font-family: var(--f-disp); font-weight: 700; font-size: 11px; letter-spacing: .03em; }
+.season-avg { flex: none; min-width: 27px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--cyan); text-align: center; font-size: 10px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .no { flex: none; width: 20px; text-align: center; font-family: var(--f-disp); font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
 .rb { flex: none; display: flex; }
 .rd { flex: none; width: 18.5px; text-align: center; color: var(--mute); font-family: var(--f-disp); font-weight: 700; }

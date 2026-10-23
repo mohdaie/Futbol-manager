@@ -29,7 +29,7 @@ SCREENS.squad = {
       <p class="muted">${note}</p>
       <div class="chips">${[['ALL', 'All'], ['GK', 'Keepers'], ['DEF', 'Defence'], ['MID', 'Midfield'], ['ATT', 'Attack']].map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="sqF" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="sortbar"><span class="muted">Sort</span>${[['pos', 'Position'], ['ovr', 'Rating'], ['age', 'Age'], ['cond', 'Condition'], ['mor', 'Morale'], ['val', 'Value']].map(([k, n]) => `<button class="${s === k ? 'on' : ''}" data-a="sqS" data-v="${k}">${n}</button>`).join('')}</div>
-      <div class="list">${list.map(p => playerRow(p, squadMetric(p, s), { noBadge: true, hideAge: true, sub: `${Math.round(p.cond)}% condition · ${morLabel(p.mor)}` })).join('') || empty('Nobody here', 'No players in this group for that position.')}</div>`;
+      <div class="list">${list.map(p => playerRow(p, squadMetric(p, s), { noBadge: true, hideAge: true, positionExtra: s === 'pos' ? `<span class="season-avg" title="Season average rating" aria-label="Season average rating ${p.st.a ? (p.st.rt / p.st.a).toFixed(1) : 'not rated'}">${p.st.a ? (p.st.rt / p.st.a).toFixed(1) : '—'}</span>` : '', sub: `${Math.round(p.cond)}% condition · ${morLabel(p.mor)}` })).join('') || empty('Nobody here', 'No players in this group for that position.')}</div>`;
   },
 };
 ACT.sqF = ds => { UI.f.squad = ds.v; render(); };

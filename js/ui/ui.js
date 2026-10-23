@@ -243,6 +243,7 @@ function playerRow(p, extra = '', opts = {}) {
     <button class="player-main" data-a="player" data-id="${p.id}">
     ${opts.noBadge ? `<span class="no">${p.no || ''}</span>` : ''}
     <span class="pos">${p.pos}</span>
+    ${opts.positionExtra || ''}
     <span class="grow"><b>${esc(pname(p))}</b> ${tags}<small>${esc(detail ?? '')}</small></span>
     ${extra}</button></div>`;
 }
