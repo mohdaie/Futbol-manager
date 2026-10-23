@@ -290,11 +290,11 @@ ACT.shout = ds => applyShout(ds.k);
 ACT.liveSheet = ds => {
   const L = LIVE;
   if (!L || L.done) return;
-  if (ds.k === 'subs') {
-    const wasPaused = L.paused;
-    L.paused = true; updateBoard(L);
-    openLiveSheet('subs');
-    UI.sheetOpts = { onClose: () => { L.subSel = null; if (!wasPaused && !(L.overlay && L.overlay.stay)) L.paused = false; updateBoard(L); } };
+  if (ds.k === 'subs' || ds.k === 'tactics') {
+    L.paused = true;
+    updateBoard(L);
+    openLiveSheet(ds.k);
+    UI.sheetOpts = { ...UI.sheetOpts, onClose: () => { L.subSel = null; L.paused = true; updateBoard(L); } };
   } else openLiveSheet(ds.k);
 };
 function reopenLive(kind) { const o = UI.sheetOpts; updateLiveFitness(LIVE); openLiveSheet(kind); UI.sheetOpts = o; }
@@ -351,7 +351,7 @@ ACT.gapMove = ds => {
   L.gapSlot = S.on.indexOf(null); reopenLive('gap');
 };
 ACT.liveStyle = ds => { const S = liveSide(); Object.assign(S, STYLES[ds.v].ins); LIVE.M.dirty = true; pushFeed(LIVE, 'tac', `${G.manager} switches to ${STYLES[ds.v].n.toLowerCase()}.`, LIVE.bottom); reopenLive('tactics'); };
-ACT.liveSubFor = ds => { const L = LIVE; L.subSel = +ds.id; const wasPaused = L.paused; L.paused = true; updateBoard(L); openLiveSheet('subs'); UI.sheetOpts = { onClose: () => { L.subSel = null; if (!wasPaused && !(L.overlay && L.overlay.stay)) L.paused = false; updateBoard(L); } }; };
+ACT.liveSubFor = ds => { const L = LIVE; L.subSel = +ds.id; L.paused = true; updateBoard(L); openLiveSheet('subs'); UI.sheetOpts = { ...UI.sheetOpts, onClose: () => { L.subSel = null; L.paused = true; updateBoard(L); } }; };
 ACT.livePl = ds => { LIVE.selId = +ds.id; const si = LIVE.M.sides.findIndex(X => X.on.includes(+ds.id)); LIVE.sel = si >= 0 ? [si, LIVE.M.sides[si].on.indexOf(+ds.id)] : null; reopenLive('pl'); };
 ACT.livePi = ds => { LIVE.piSlot = +ds.i; reopenLive('pi'); };
 ACT.livePiSet = ds => {
