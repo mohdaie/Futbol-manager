@@ -1342,9 +1342,21 @@ function engage(M) {
   });
   trackRuns(M, s, o, OP, gx, gy);
 }
+// How far a back-line defender may drop behind the line's average height while the ball is in front of the line
+// and outside the box (zonal hand-off, 4.7 and 8).
+const MAX_DRIFT_BEHIND_LINE = 2.5;
+// The line a back-line defender holds, or null when the ball is behind the line or in the box (emergency: full tracking).
+function lineHold(M, s, o, OP, m) {
+  const sim = M.sim, B = sim.B, ys = [];
+  for (let k = 1; k < OP.length; k++) if (k !== m && OP[k] && backLine(M.sides[o], k)) ys.push(OP[k].y);
+  if (!ys.length) return null;
+  const line = ys.reduce((a, b) => a + b, 0) / ys.length;
+  const behind = (line - B.y) * fwdY(o) > 0, inBox = dGoal(s, B.x, B.y) <= 16.5 && Math.abs(B.x - PW / 2) <= 20.15;
+  return behind || inBox ? null : line;
+}
 // Runs in behind are tracked: the nearest free defender goes with the runner, goal-side of him.
 function trackRuns(M, s, o, OP, gx, gy) {
-  const sim = M.sim, O = M.sides[o], TP = sim.P[s];
+  const sim = M.sim, O = M.sides[o], TP = sim.P[s], dir = fwdY(o);
   for (let k = 1; k < TP.length; k++) {
     const r = TP[k];
     if (!r || !(r.run > sim.t || (r.vy * fwdY(s) > 4.5 && toOwn(s, r.x, r.y)[1] < 0.6))) continue;
@@ -1357,6 +1369,13 @@ function trackRuns(M, s, o, OP, gx, gy) {
     if (backLine(O, m) && !open && dGoal(s, r.x, r.y) > 22) continue;
     const q = OP[m], px = r.x + r.vx * 0.8, py = r.y + r.vy * 0.8, L2 = hyp(gx - px, gy - py) || 1, lead = 1.4;
     q.tx = px + (gx - px) / L2 * lead; q.ty = py + (gy - py) / L2 * lead; q.eng = sim.t;
+    const line = backLine(O, m) ? lineHold(M, s, o, OP, m) : null;
+    if (line != null) {
+      const lim = line - dir * MAX_DRIFT_BEHIND_LINE; // the deepest he may stand
+      // Runner beyond the limit: he is handed on to the offside trap and the keeper, holds the line and pinches inside.
+      if ((lim - r.y) * dir > 0) q.tx = q.x + (PW / 2 - q.x) * .3;
+      if ((lim - q.ty) * dir > 0) q.ty = lim;
+    }
     if (!backLine(O, m)) { // a midfielder hands him on at the back line
       const ys = OP.map((z, k) => z && k && backLine(O, k) ? z.y : null).filter(v => v != null);
       if (ys.length) { const bl = ys.reduce((a, b) => a + b, 0) / ys.length, fwo = fwdY(o); if ((bl - q.ty) * fwo > 1) q.ty = bl - fwo; }
