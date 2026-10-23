@@ -173,7 +173,7 @@ function evidenceSample(rows, max) {
 }
 function evidenceSummary(e) {
   if (!e) return null;
-  const actions = e.actions, samples = {}, categories = ['decision', 'kick', 'flight', 'receive', 'duel', 'duelResult', 'shotRelease', 'shotArrival', 'sfx', 'keeperApproach', 'restart', 'possession', 'defence', 'restartPlan'];
+  const actions = e.actions, samples = {}, categories = ['decision', 'kick', 'flight', 'receive', 'duel', 'duelResult', 'shotRelease', 'shotArrival', 'sfx', 'keeperApproach', 'restart', 'possession', 'defence', 'restartPlan', 'knockdown'];
   // Each side and category is represented; raw actions remain in the download.
   for (const type of categories) samples[type] = [0, 1].flatMap(s => {
     const rows = actions.filter(a => a.type === type && a.side === s);
@@ -194,7 +194,7 @@ function evidenceSummary(e) {
       pressAssignedPlayerSeconds: a.pressAssignedSeconds, coverAssignedPlayerSeconds: a.coverAssignedSeconds, recoverySeconds: a.recoveringSeconds, counterpressSeconds: a.counterpressSeconds,
       avgCarriedBallGapM: evidenceRound(a.ballGapSum / (a.carrierSeconds || 1)), maxCarriedBallGapM: evidenceRound(a.ballGapMax),
       movementLeaders: Object.entries(e.movement).filter(([id]) => e.contexts.some(c => c.sides[s].on.some(pid => String(pid) === id))).sort((a,b) => b[1].metres-a[1].metres).slice(0,3).map(([id,m]) => [id, evidenceRound(m.metres), m.sprintSeconds]),
-      duels: a.duels, recordedShots: shots.length, shotXgSum: evidenceRound(shots.reduce((n, x) => n + x.xg, 0), 10000),
+      duels: a.duels, knockdowns: actions.filter(x => x.type === 'knockdown' && x.side === s).length, recordedShots: shots.length, shotXgSum: evidenceRound(shots.reduce((n, x) => n + x.xg, 0), 10000),
       shotOutcomes: arrivals.reduce((o, x) => { o[x.result] = (o[x.result] || 0) + 1; return o; }, {}),
       oneOnOneSeconds: a.keeperOneOnOneSeconds, avgKeeperDepthInOneOnOnesM: evidenceRound(a.keeperDepthSum / (a.keeperOneOnOneSeconds || 1)), maxKeeperDepthM: evidenceRound(a.keeperMaxDepth), stationaryKeeper20to30mSeconds: a.keeperStationary25ydSeconds };
   });

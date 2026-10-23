@@ -450,9 +450,10 @@ function carrierDecide(M, s, i, o = {}) {
     let xg = chanceAt(M, s, p.x, p.y, { press, fo: faceOff(p, PW / 2, goalY(s)) }).xg; // 7.5, 1c
     let will = (1 + b('sh') * 0.6) * (0.85 + (ac(S, i, 'fla') - 10) * 0.02) * [0.8, 0.9, 1, 1.1, 1.2][ment] * ENG.shoot * shotNerve(S, i);
     if (thru1) will *= 1 + (12 - ac(S, i, 'cmp')) * 0.04;
-    // Worth its chance (plus a little for rebounds and corners); a miss only gives them a goal kick, so the
-    // choice is mostly against what keeping the ball would bring (the other options).
-    opts.push({ k: 'shot', v: xg * 1.15 * will - (1 - xg) * ENG.keepShot, w: will });
+    // A miss costs the possession we actually have here, not a fixed premium
+    // larger than most shooting chances. Poor angles/pressure still lower xG.
+    const missCost = Math.min(ENG.keepShot, lossCost * 0.25);
+    opts.push({ k: 'shot', v: xg * 1.15 * will - (1 - xg) * missCost, w: will });
   }
   // Passes to team-mates (and through balls into space ahead of runners).
   const range = 20 + vis * 1.1 + [-4, 0, 14][pass] + (gk ? 25 : 0), longOk = gk || pass === 2 || vis >= 13 || bh(S, i, 'rk') > 0.2;
@@ -479,9 +480,12 @@ function carrierDecide(M, s, i, o = {}) {
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > ((q.y - offsideY(M, s)) * fwdY(s) < 1.2 ? 0.15 + (12 - vis) * 0.02 : (20 - vis) / 160)) return; // 4.7: a clear offside he sees; a tight one is easy to misjudge (Vision). He sees the flag coming (poor Vision misses it now and then)
     // Counter-attack (transition 'ctr'): a back-pass is penalised, and a diagonal release to a wide attacker is preferred.
-    const ctrRelease = trn === 'ctr' && fwd > 2 && LINE[FORMATIONS[S.ip][j][0]] >= 4 && Math.abs(toOwn(s, tx, ty)[0] - 0.5) > 0.25 ? 1.1 : 1;
-    const ctrBack = trn === 'ctr' && fwd < -1 ? 0.02 : 0;
-    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style * ctrRelease - ctrBack, risk, rpress, esc });
+    const fwdMetres = fwd * PL; // toOwn() is normalized; these thresholds are metres.
+    const ctrRelease = trn === 'ctr' && fwdMetres > 2 && LINE[FORMATIONS[S.ip][j][0]] >= 4 && Math.abs(toOwn(s, tx, ty)[0] - 0.5) > 0.25 ? 0.01 : 0;
+    const ctrBack = trn === 'ctr' && fwdMetres < -1 ? 0.02 : 0;
+    // An additive reward also improves a currently negative option; multiplying
+    // a negative utility would accidentally discourage the forward release.
+    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style + ctrRelease - ctrBack, risk, rpress, esc });
     // Through ball into the space in behind for a player making a run.
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
     if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03 - (0.25 + Math.max(0, 14 - vis) * 0.1) * R()))) { // 4.7: timing read by Vision; a fraction late is flagged
@@ -523,7 +527,9 @@ function carrierDecide(M, s, i, o = {}) {
     const cbStep = FORMATIONS[S.ip][i][0] === 'DC' && oy > 0.4 && dd > 10 ? 0.02 * (roleName(S, i) === 'Ball-Playing Defender' ? 1.5 : 1) : 0;
     // 4.5: a carrier runs at a man only when he judges he can beat him more often than not; a blocked carrier
     // who cannot passes, shields or carries away from him instead.
-    if (thru1 || inPath === 0 || beat >= 0.5) opts.push({ k: 'carry', cx, cy, v: cbStep + (beat * threat(s, cx, cy) * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1, takeOn: inPath > 0 });
+    const futurePress = recvPressure(M, s, cx, cy)[1];
+    const carryValue = d2g < 25 ? Math.min(threat(s, cx, cy), chanceAt(M, s, cx, cy, { press: futurePress }).xg * 0.65 + 0.015) : threat(s, cx, cy);
+    if (thru1 || inPath === 0 || beat >= 0.5) opts.push({ k: 'carry', cx, cy, v: cbStep + (beat * carryValue * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1, takeOn: inPath > 0 });
     // Round the keeper when he comes out: Dribbling, Agility and Composure against his One on Ones.
     if (thru1 && gk1 && hyp(gk1.x - p.x, gk1.y - p.y) < 3.5 && dGoal(s, gk1.x, gk1.y) < d2g) { // 7.3: only when he rushes at his feet
       const pr = duel(roundSkill(S, i), roundStop(O), 0.35);
@@ -954,14 +960,58 @@ function crossBall(M, s, i, o) {
   kick(M, s, i, 'cross', tx, ty, best, { air: true, err: (20 - del) * 0.35 + 1.5 });
   Object.assign(M.sim.B.fl, { del, ck: !!o.ck, fk: !!o.fk });
 }
+// A contest radius is not a contact radius. Nothing may acquire a ball that
+// is metres away simply because it was selected as the best aerial candidate.
+function aerialContactReach(M, s, i) {
+  return i === 0 ? 1.6 : 1.15 + clamp((ac(M.sides[s], i, 'agi') - 10) * 0.02, -0.15, 0.15);
+}
+function readKeeperCross(M, fl) {
+  const sim = M.sim, side = 1 - fl.s, g = P_(M, side, 0);
+  if (!g) return;
+  if (!fl.claimRead) {
+    fl.claimRead = true;
+    const remaining = Math.max(0, fl.arr - sim.t), depth = Math.abs(fl.ty - goalY(fl.s)), dist = hyp(g.x - fl.tx, g.y - fl.ty);
+    const sp = speeds(M.sides[side]), time = Math.max(0, remaining - 0.2);
+    const travel = Math.min(sp[0] * time, hyp(g.vx, g.vy) * time + 0.5 * sp[1] * time * time);
+    const traffic = sim.P.flatMap(P => P).filter(p => p && p !== g && segD(p.x, p.y, g.x, g.y, fl.tx, fl.ty) < 1.2).length;
+    if (depth < 11.5 && Math.abs(fl.tx - PW / 2) < 18 && dist <= travel + aerialContactReach(M, side, 0) && traffic < 3) fl.claim = { side, x: fl.tx, y: fl.ty };
+  }
+  if (fl.claim) { g.tx = fl.claim.x; g.ty = fl.claim.y; g.chase = sim.t; g.run = sim.t + TICK; }
+}
+function playKnockdown(M, s, i) {
+  const sim = M.sim, S = M.sides[s], p = P_(M, s, i), candidates = [];
+  sim.P[s].forEach((q,j) => {
+    if (!q || !j || j === i || offsideNow(M,s,j)) return;
+    const len = hyp(q.x-p.x,q.y-p.y), press = recvPressure(M,s,q.x,q.y)[1];
+    if (len < 3 || len > 13 || press > .75) return;
+    const risk = passRisk(M,s,p.x,p.y,q.x,q.y,false);
+    if (risk > .5) return;
+    candidates.push({ j, q, score: (q.sup > sim.t ? .5 : 0) + (1-press) - len*.035 - risk + clamp((q.y-p.y)*fwdY(s)/15,-.25,.25) });
+  });
+  candidates.sort((a,b) => b.score-a.score);
+  const receiver = candidates[0]; if (!receiver) return false;
+  S.st.pa++; pstat(S,i,'pa');
+  kick(M,s,i,'pass',receiver.q.x,receiver.q.y,receiver.j,{kind:'header',z0:1.6,err:.6+(20-ac(S,i,'hea'))*.1});
+  if (M.evidence) evidenceAction(M,'knockdown',s,{slot:i,receiver:receiver.j,player:S.on[i],target:[receiver.q.x,receiver.q.y]});
+  // One supporting attacker runs beyond the layoff; the reserved defence stays.
+  const rest = restSlots(S, toOwn(s,p.x,p.y)[0], i), reserved = new Set([...rest.back,...rest.screen]);
+  const runner = sim.P[s].map((q,j)=>q&&j!==i&&j!==receiver.j&&!reserved.has(j)&&LINE[FORMATIONS[S.ip][j][0]]>=3 ? {q,j,d:hyp(q.x-p.x,q.y-p.y)}:null).filter(q=>q&&q.d<22).sort((a,b)=>a.d-b.d)[0];
+  if (runner) {
+    const q=runner.q, fw=fwdY(s), line=offsideY(M,s);
+    q.tx=clamp(receiver.q.x+(p.x<34?5:-5),2,PW-2); q.ty=clamp(p.y+fw*5,2,PL-2);
+    if (beyond(s,q.ty,line)) q.ty=line-fw;
+    q.run=q.sup=sim.t+2;
+  }
+  return true;
+}
 // A high ball comes down: the best-placed players from both sides challenge in the air.
 function airDuel(M, fl) {
   const B = M.sim.B, s = fl.s, o = 1 - s, S = M.sides[s], O = M.sides[o];
-  const near = t => M.sim.P[t].map((q, j) => (q ? [j, hyp(q.x - B.x, q.y - B.y)] : null)).filter(x => x && x[1] < 4.5 && (x[0] > 0 || t === o) && !(t === s && B.offS === s && (B.offSet & (1 << x[0])))).sort((a, b) => a[1] - b[1]); // an offside player stays out of it
+  const near = t => M.sim.P[t].map((q, j) => (q ? [j, hyp(q.x - B.x, q.y - B.y)] : null)).filter(x => x && x[1] <= aerialContactReach(M, t, x[0]) && (x[0] > 0 || t === o) && !(t === s && B.offS === s && (B.offSet & (1 << x[0])))).sort((a, b) => a[1] - b[1]); // an offside player stays out of it
   const A = near(s), D = near(o);
   // The keeper comes for crosses into the six-yard box.
   const gk = P_(M, o, 0), [, gyOwn] = toOwn(s, B.x, B.y);
-  if (gk && fl.k === 'cross' && gyOwn < 0.11 && R() < 0.22 * ac(O, 0, 'han') / 12) { pstat(O, 0, 'cl'); return giveBall(M, o, 0); }
+  if (gk && fl.k === 'cross' && gyOwn < 0.11 && hyp(gk.x - B.x, gk.y - B.y) <= aerialContactReach(M, o, 0) && R() < 0.22 * ac(O, 0, 'han') / 12) { pstat(O, 0, 'cl'); return giveBall(M, o, 0); }
   if (!A.length && !D.length) return; // nobody there: it drops
   const aScore = A.length ? aerialAt(S, A[0][0]) * 0.7 + ac(S, A[0][0], 'str') * 0.2 + ac(S, A[0][0], 'otb') * 0.1 - A[0][1] * 0.8 + ((fl.del || 10) - 10) * 0.3 : -9;
   const dScore = D.length ? aerialAt(O, D[0][0]) * 0.7 + ac(O, D[0][0], 'str') * 0.15 + ac(O, D[0][0], 'mar') * 0.2 - D[0][1] * 0.8 : -9;
@@ -974,9 +1024,12 @@ function airDuel(M, fl) {
     giveBall(M, o, j); return kick(M, o, j, 'clear', tx, ty, -1, { air: true, err: 5 });
   }
   const j = A[0][0], [, yo] = toOwn(s, B.x, B.y);
+  pstat(S, j, 'aer');
   if (yo < 0.2 && Math.abs(B.x - PW / 2) < 14) { giveBall(M, s, j); return shoot(M, s, j, { head: true, del: fl.del, aid: S.on[fl.i], ck: fl.ck, fk: fl.fk }); }
-  // Won further out: knock it down to the nearest team-mate (a flick-on for a runner).
+  // A target man's aerial win should connect to support, not always become
+  // instant control and another isolated carry. Receivers still have to control it.
   giveBall(M, s, j);
+  if (fl.k === 'long' || fl.k === 'clear' || roleName(S, j) === 'Target Forward') playKnockdown(M, s, j);
 }
 // A low cross can be struck first-time before it lands. The attacker must arrive
 // close enough to make contact; touch, finishing and composure are tested against
@@ -1646,6 +1699,7 @@ function readFlight(M) {
 function chase(M) {
   const sim = M.sim, B = sim.B, fl = B.fl;
   if (fl && fl.air && !fl.landed && (fl.k === 'long' || fl.k === 'clear')) readFlight(M);
+  if (fl && fl.k === 'cross' && !fl.landed) readKeeperCross(M, fl);
   if (fl && (fl.k === 'shot' || fl.air && !fl.landed)) return;
   // Rulebook 4.9: a pass on its way to a team-mate is his only while he can still get to it first; a landed long
   // ball or a pass that has run past its man is a loose ball, and both sides go for it.
