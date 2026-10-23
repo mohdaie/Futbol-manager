@@ -385,7 +385,7 @@ function finishMatch(M) {
         }
         const count = p.discipline.cards[comp] = (p.discipline.cards[comp] || 0) + 1;
         const ban = count === 5 && games <= (comp === 'ECH' ? 23 : 19) ? 1 : count === 10 && games <= (comp === 'ECH' ? 37 : 32) ? 2 : count === 15 ? 3 : 0;
-        if (ban) { p.ban += ban; if (S.user) addNews('club', pname(p) + ' suspended', `${fullName(p)} has collected ${count} league yellow cards and misses ${ban} match${ban === 1 ? '' : 'es'}.`); }
+        if (ban) { p.ban += ban; if (S.user) addNews('club', pname(p) + ' suspended', `${fullName(p)} has collected ${count} league yellow cards and misses ${ban} match${ban === 1 ? '' : 'es'}.`, { t: 'player', pid: p.id }); }
       });
       S.reds.forEach(id => { const p = G.players[id]; if (p) { const e = M.log.find(e => e.t === 'red' && e.pid === id); p.ban += e?.second ? 1 : 3; p.st.rc++; } });
     }
@@ -394,7 +394,7 @@ function finishMatch(M) {
       if (!p) return;
       p.inj = { n, w: wk };
       if (S.user) G.flags.injN = (G.flags.injN || 0) + 1;
-      if (S.user) addNews('club', pname(p) + ' injured', `${fullName(p)} suffered a ${n.toLowerCase()} and is expected to be out for ${wk} week${wk > 1 ? 's' : ''}.`);
+      if (S.user) addNews('club', pname(p) + ' injured', `${fullName(p)} suffered a ${n.toLowerCase()} and is expected to be out for ${wk} week${wk > 1 ? 's' : ''}.`, { t: 'player', pid: p.id });
     });
     // squad members who did not play feel the result a little
     if (S.user) squadOf(S.cid).forEach(p => { if (!S.played.includes(p.id) && lvlOf(p) === 'A') p.mor = clamp(p.mor + r * 1.5 - (p.status === 'Key player' ? 2 : 0), 0, 100); });

@@ -108,7 +108,12 @@ function newsLinks(n) {
   const target = a?.pid && G.players[a.pid];
   entityMentions(text).forEach(m => {
     const exactTargetMention = target && [pname(target), fullName(target)].includes(m.name);
-    (exactTargetMention ? [{ kind: 'player', id: target.id }] : m.refs).forEach(r => refs.set(r.kind + ':' + r.id, r));
+    // A short name such as "R. Ward" can belong to several players. Keep it
+    // out of Related unless this news carries the exact player id; a unique
+    // full name elsewhere in the story will still resolve normally.
+    const resolved = exactTargetMention ? [{ kind: 'player', id: target.id }] :
+      m.refs.length > 1 && m.refs.some(r => r.kind === 'player') ? m.refs.filter(r => r.kind !== 'player') : m.refs;
+    resolved.forEach(r => refs.set(r.kind + ':' + r.id, r));
   });
   if (a?.pid && G.players[a.pid]) refs.set('player:' + a.pid, { kind: 'player', id: a.pid });
   if (a?.from && G.clubs[a.from]) refs.set('club:' + a.from, { kind: 'club', id: a.from });

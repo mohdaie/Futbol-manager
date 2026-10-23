@@ -5,7 +5,7 @@ const CAREER_ACTIONS = new Set(['instant', 'instant2', 'admWeeks', 'admSimMine',
    Tiny UI framework: router, app shell, bottom sheets, toasts, click/change
    dispatch through data-a / data-c attributes, and shared components. */
 
-const UI = { s: 'home', p: {}, tab: {}, f: { squad: 'ALL', sort: 'pos', news: 'all', lvl: 'A' }, search: { pos: 'Any', region: 'Everywhere', maxAge: 40, maxFee: 0, minOvr: 0, name: '' }, sheetOpts: null };
+const UI = { s: 'home', p: {}, tab: {}, f: { squad: 'ALL', sort: 'pos', news: 'all', lvl: 'A' }, search: { pos: 'Any', region: 'Everywhere', maxAge: 40, maxFee: 0, minOvr: 0, maxOvr: 100, name: '' }, sheetOpts: null };
 const SCREENS = {};  // name -> { render(p) -> html, after?(p), full?: bool, title?: string }
 const ACT = {};      // click actions: ACT[name](dataset, el)
 const CHG = {};      // change actions: CHG[name](value, dataset, el)

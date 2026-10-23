@@ -94,7 +94,7 @@ function weeklyTraining(playedThisWeek) {
         const inj = pick(INJURIES.slice(0, 4));
         p.inj = { n: inj[0], w: ri(1, 3) };
         G.flags.injN = (G.flags.injN || 0) + 1;
-        addNews('club', pname(p) + ' hurt in training', `${fullName(p)} picked up a ${inj[0].toLowerCase()} in training and will miss ${p.inj.w} week${p.inj.w > 1 ? 's' : ''}.`);
+        addNews('club', pname(p) + ' hurt in training', `${fullName(p)} picked up a ${inj[0].toLowerCase()} in training and will miss ${p.inj.w} week${p.inj.w > 1 ? 's' : ''}.`, { t: 'player', pid: p.id });
       }
     }
     // development
@@ -126,7 +126,7 @@ function weeklyMedical() {
     if (!p.inj) return;
     p.inj.w -= 1;
     if (p.inj.w <= 0) {
-      if (p.club === G.club) addNews('club', pname(p) + ' back in training', `${fullName(p)} has recovered from a ${p.inj.n.toLowerCase()}.`);
+      if (p.club === G.club) addNews('club', pname(p) + ' back in training', `${fullName(p)} has recovered from a ${p.inj.n.toLowerCase()}.`, { t: 'player', pid: p.id });
       p.inj = null;
       p.cond = 75; p.shp = Math.min(p.shp, 50);
     }
