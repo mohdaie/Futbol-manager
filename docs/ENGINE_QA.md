@@ -78,7 +78,7 @@ Jev is an optional triage assistant; the scripts themselves provide the speed-up
 - `tests/engine-qa-ui.cjs`: 10 mobile browser checks, including manual requests,
   local-only runs, caching, honest disconnected state, career isolation and layout.
 - `tests/transitions.cjs`: 16 window, cohort, break/recovery and regain checks.
-- `tests/defending.cjs`: 18 coordinated-unit, trigger and line-movement checks.
+- `tests/defending.cjs`: 20 coordinated-unit, trigger, line-movement and back-line drift-limit checks.
 - `tests/intent.cjs`: 17 scorer, mirrored geometry and possession lifecycle checks.
 - `tests/shape.cjs`: 30 browser checks plus eight full-match smoke tests.
 - `tests/briefing.cjs`: 33 regression checks for the existing manual dashboard AI.

@@ -49,6 +49,12 @@ spend AI credits, edit the career tactic, or change player condition. A low-bloc
   Existing pressing, marking, offside, and carrier decisions still act over the
   anchors and can temporarily stretch the actual team.
 
+- Runner tracking (`trackRuns()` in `sim.js`, rulebook 4.7 and 8): with the ball in front of the back line and outside
+  the box, a back-line defender holds no more than `MAX_DRIFT_BEHIND_LINE` (2.5 m) behind the average depth of the other
+  back-liners. A runner already deeper than that is handed to the offside trap and keeper; the defender holds the line
+  and pinches inside. A ball behind the line or in the 18-yard box restores full tracking. Covered by
+  `tests/defending.cjs`.
+
 ## Deliberate limits before the next layer
 
 **Role-aware lane spacing now handles the audited progression/creation cases.** Rulebook 3.1 says

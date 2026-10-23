@@ -131,15 +131,22 @@ flow defect exists rather than assuming the scoring average itself is a defect.
      free forward-facing carrier, regroup priority; box movement left to marking;
    - actual defensive marking uses mapped **OOP** roles; back-line marking
      outside the box stays within 1.5 m of the shared depth target;
-   - assigned pressure/cover players are protected from runner-tracking overrides.
-   Other free defenders still track runners.
+   - assigned pressure/cover players are protected from runner-tracking overrides;
+   - back-line runner tracking is bounded (`trackRuns()`, `MAX_DRIFT_BEHIND_LINE` = 2.5 m):
+     with the ball in front of the line and outside the box, a back-liner stays within 2.5 m
+     behind the other back-liners' average depth. A runner deeper than that is handed on to the
+     trap and keeper; the defender holds and pinches inside. Ball behind the line or in the box
+     restores full tracking.
+   Midfielders still track runners up to the back line.
 
 **Layer 4 is a foundation, not complete tactical proof.** Existing engagement
 zones and trigger probabilities remain. The approach is a target bias, not a
 curved-path solver. No persistent opponent trap memory or receiver-assignment
 handoff exists. Three local defenders may still leave an important runner free;
-inspect this before claiming robust defending. No strict actual-team compactness
-bound is enforced while tracking/engaging. Planner checks measure anchors.
+inspect this before claiming robust defending. The 2.5 m bound uses the other
+back-liners' current positions, not their targets, and it covers back-line runner
+tracking only. No compactness bound is enforced for midfielders or while engaging.
+Planner checks measure anchors.
 
 ## 2D inspection
 

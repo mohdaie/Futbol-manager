@@ -197,6 +197,11 @@ switches of play, triangles around the ball, and players staying back as rest de
    **The line steps up and drops together, quickly** (sprinting out, not jogging): a defender left a few metres
    behind the others plays every attacker onside, and that is the moment a ball over the top goes in behind.
    Organised, the back four stays within a few metres of each other in depth.
+   **The drift limit.** While the ball is in front of the back line and outside the box, a back-line defender stays
+   no more than 2.5 m behind the average depth of the other back-liners. A runner already deeper than that is handed on
+   to the offside trap and the keeper: the defender holds the line and pinches inside towards the central channel,
+   rather than following him into the six-yard box. If the ball is behind the line or inside the 18-yard box, the back
+   line tracks the runner in full.
    **The line, not the man.** A back-line defender goes with a runner only when the ball carrier is free and
    facing forward (an open ball, and then the whole line drops); otherwise the line holds or steps up and the runner
    is left offside. Forwards play on the shoulder of the last defender; a runner who goes too early, or a pass a
@@ -208,6 +213,7 @@ switches of play, triangles around the ball, and players staying back as rest de
    ball and the goal, to block the shot; showing him to the passing lane is for midfield. The second defender
    covers the pass inside (the cut-back or the square ball). Most shots in a real match go through at least one
    body; a shooter with nobody between him and the goal is a defensive mistake, not the normal case.
+   Inside the 18-yard box the back line may track runners in full; the drift limit in 4.7 does not apply there.
    **In and around the box every defender is goal-side of his man and close (1-2 m), with ball and man in view.**
    Halfway between his zone and his man is ball-watching: the runner arrives in front of him.
 
