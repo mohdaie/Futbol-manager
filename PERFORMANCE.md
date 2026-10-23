@@ -226,3 +226,9 @@ When a news item carries a player ID, matching abbreviated name links in that it
 ## Release 2026.10.23.14: refresh saved overseas crest colors
 
 Existing careers now migrate background-only overseas clubs to their individual crest colors. The migration leaves established clubs, players and fixtures unchanged.
+
+## Release 2026.10.23.15: manager profiles and career earnings
+
+Every club now has a generated manager profile with nationality, age, salary, contract, management style, and a real-world inspirational figure. The manager portrait and club pages open profiles showing appointments, season finishes, honours, and active vacancies across the playable Premier League and Championship. Manager openings appear in league news and can be accepted from the profile.
+
+The active manager receives weekly salary into a persistent personal bank, with owner, match, award, and sponsorship income itemized in the transaction history. Manager wages and bonuses are included in the club finance ledger. Existing saves generate profiles on load. The browser navigation suite checks world-wide profile creation, profile sections, and weekly pay recording.

@@ -428,6 +428,7 @@ function finishMatch(M) {
     G.lastMatch = fx.id;
   }
   if (typeof updateCompetitionSeason === 'function') updateCompetitionSeason();
+  if (typeof managerMatchBonus === 'function') managerMatchBonus(fx);
 }
 
 function boardAfterMatch(gf, ga, oppRep, home) {

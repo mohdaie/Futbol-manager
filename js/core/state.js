@@ -274,7 +274,7 @@ function autoSetPieces() {
   if (!T.ck) T.ck = best(p => p.at[A.cro] * 2 + p.at[A.pas]);
 }
 
-function emptyLedger() { return { tv: 0, gate: 0, spon: 0, merch: 0, sales: 0, prize: 0, wages: 0, staff: 0, buys: 0, ops: 0, scout: 0 }; }
+function emptyLedger() { return { tv: 0, gate: 0, spon: 0, merch: 0, sales: 0, prize: 0, wages: 0, staff: 0, manager: 0, buys: 0, ops: 0, scout: 0 }; }
 
 // News that stops the day-by-day calendar: transfers, offers, contracts, injuries, suspensions, the board.
 const NEWS_STOP = /injur|hurt|suspend|contract|released|board|sack|takes over|scouting assignment|youth intake|season begins/i;

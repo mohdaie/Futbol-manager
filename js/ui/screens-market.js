@@ -173,7 +173,7 @@ SCREENS.finance = {
   render() {
     const c = userClub(), L = G.ledger, bill = clubWageBill(c), commitments = transferCommitments(c.id);
     const inc = [['TV money', L.tv], ['Gate receipts', L.gate], ['Sponsorship', L.spon], ['Merchandise', L.merch], ['Player sales', L.sales], ['Prize money', L.prize]];
-    const exp = [['Player wages', L.wages], ['Staff wages', L.staff], ['Transfer fees', L.buys], ['Running costs', L.ops], ['Scouting', L.scout]];
+    const exp = [['Player wages', L.wages], ['Staff wages', L.staff], ['Manager wages', L.manager || 0], ['Transfer fees', L.buys], ['Running costs', L.ops], ['Scouting', L.scout]];
     const ti = sum(inc, x => x[1]), te = sum(exp, x => x[1]);
     const h = G.balHist, mn = Math.min(...h, 0), mx = Math.max(...h, 1), W = 320, H = 90;
     const pts = h.map((v, i) => `${(i / Math.max(1, h.length - 1)) * W},${H - ((v - mn) / (mx - mn || 1)) * (H - 10) - 5}`).join(' ');

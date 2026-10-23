@@ -12,10 +12,10 @@ const CHG = {};      // change actions: CHG[name](value, dataset, el)
 
 const NAV = [['home', 'Dashboard'], ['news', 'News'], ['team', 'My Team'], ['transfers', 'Transfers'], ['facilities', 'Facilities'], ['more', 'More']];
 const NAV_GROUPS = {
-  team: ['squad', 'tactics', 'pinstr', 'staffroom', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'clubs', 'clubview', 'prematch', 'match', 'post'],
+  team: ['squad', 'tactics', 'pinstr', 'staffroom', 'fixtures', 'training', 'staff', 'medical', 'youth', 'stats', 'table', 'clubs', 'clubview', 'manager', 'prematch', 'match', 'post'],
   facilities: ['finance', 'board', 'club'],
 };
-const TEAM_SECTIONS = [['squad', 'Squad'], ['tactics', 'Tactics'], ['fixtures', 'Fixtures'], ['training', 'Training'], ['staffroom', 'Staff room'], ['staff', 'Staff'], ['medical', 'Medical center'], ['youth', 'Youth academy'], ['stats', 'Stats'], ['table', 'League table'], ['clubs', 'Club directory']];
+const TEAM_SECTIONS = [['squad', 'Squad'], ['tactics', 'Tactics'], ['fixtures', 'Fixtures'], ['training', 'Training'], ['staffroom', 'Staff room'], ['staff', 'Staff'], ['medical', 'Medical center'], ['youth', 'Youth academy'], ['stats', 'Stats'], ['table', 'League table'], ['clubs', 'Club directory'], ['manager', 'Manager profile']];
 function teamSections() {
   const current = UI.s === 'pinstr' ? 'tactics' : UI.s;
   return `<nav class="tabs team-sections" aria-label="My Team sections">${TEAM_SECTIONS.map(([s, n]) => `<button class="${current === s ? 'on' : ''}" ${current === s ? 'aria-current="page"' : ''} data-a="go" data-s="${s}">${n}</button>`).join('')}</nav>`;
@@ -107,7 +107,7 @@ function shell(body) {
       <div class="brand">${ICON.ball}<span>${GAME_NAME}</span></div>
       <div class="top-icons">
         <button class="iconbtn" data-a="go" data-s="news" aria-label="News, ${unread} unread">${ICON.bell}${unread ? '<i class="dot"></i>' : ''}</button>
-        <button data-a="go" data-s="club" aria-label="Your club and manager">${avatarImg(G.avatar)}</button>
+      <button data-a="go" data-s="manager" aria-label="Your manager profile">${avatarImg(G.avatar)}</button>
       </div>
     </header>
     <nav class="tabs2">${NAV.map(([k, n]) => `<button class="${cur === k ? 'on' : ''}" data-a="go" data-s="${k}">${n}</button>`).join('')}</nav>

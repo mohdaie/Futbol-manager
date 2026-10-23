@@ -71,6 +71,7 @@ function ensureWorld(options = {}) {
   Object.values(G.clubs).forEach(c => { if (!c.fa && !c.backgroundOnly && !c.mgr) c.mgr = genManagerName(); if (c.tac && !c.tac.style && !c.fa) c.tac = aiTactic(c.rep); });
   if (G.tactics) { G.tactics.lost ??= 1; G.tactics.won ??= 1; G.tactics.pi ??= {}; }
   if (G.club && G.clubs[G.club]) G.clubs[G.club].mgr = G.manager;
+  if (typeof ensureManagerProfiles === 'function') ensureManagerProfiles();
   if (G.scout && typeof ensureScouting === 'function') ensureScouting();
   if (typeof ensureAgents === 'function') ensureAgents();
   if (typeof ensureDeals === 'function') ensureDeals();

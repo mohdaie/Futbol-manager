@@ -9,11 +9,12 @@ const opsWeekly = rep => Math.round(60000 + rep * 5000);
 function weeklyFinance() {
   payTransferInstalments();
   const c = userClub(), L = G.ledger;
+  const managerWage = managerPayWeek();
   const spon = Math.round(sponsorWeekly(c.rep) * (0.9 + G.board.fans / 500));
   const merch = Math.round(spon * 0.2);
   const wages = clubWageBill(c), staff = staffWageBill(), ops = opsWeekly(c.rep), sc = scoutCost();
   c.bal += spon + merch - wages - staff - ops - sc;
-  L.spon += spon; L.merch += merch; L.wages += wages; L.staff += staff; L.ops += ops; L.scout += sc;
+  L.spon += spon; L.merch += merch; L.wages += wages; L.staff += staff; L.manager = (L.manager || 0) + managerWage; L.ops += ops; L.scout += sc;
   G.balHist.push(Math.round(c.bal));
   if (G.balHist.length > 120) G.balHist.shift();
   if (c.bal < 0) { G.board.conf = Math.max(0, G.board.conf - 1); if (G.week % 4 === 0) addNews('club', 'Board concerned by finances', 'The club is operating with a negative balance. The board expects you to reduce the wage bill or raise funds through sales.'); }

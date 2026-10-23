@@ -13,6 +13,7 @@ function advanceWeek() {
   weeklyTraining(pw);
   weeklyMedical();
   weeklyFinance();
+  managerJobWeek();
   staffWeekly();
   moodWeekly();
   transferLearnWeekly();
@@ -142,6 +143,7 @@ function boardRequest(kind) {
 
 function seasonEnd() {
   const table = leagueTable(), c = userClub();
+  const managerChampions = managerSeasonRecords();
   const pos = table.findIndex(r => r.id === G.club) + 1, me = table[pos - 1];
   for (const id of G.leagues) leagueTable(id).forEach((r, i, rows) => { const prize = (rows.length - i) * (id === 'ECH' ? .15e6 : 1.5e6); G.clubs[r.id].bal += prize; if (r.id === G.club) G.ledger.prize += prize; });
   const pl = Object.values(G.players).filter(p => G.clubs[p.club] && G.clubs[p.club].pl && leagueOf(p.club) === leagueOf(G.club));
@@ -156,6 +158,8 @@ function seasonEnd() {
   const review = { season: seasonLabel(), pos, pts: me.pts, champ: table[0].id, boot: aw(boot), best: aw(best), young: aw(young), verdict, target: G.board.target.text, ledger: { ...G.ledger }, league: leagueOf(G.club), relegated: table.slice(-3).map(r => r.id), promoted: G.playoffs ? G.playoffs.automatic.concat(G.playoffs.winner).filter(Boolean) : [] };
   G.history.unshift({ season: seasonLabel(), champ: table[0].id, pos, pts: me.pts, club: G.club, boot: review.boot && review.boot.name + ' (' + review.boot.v + ')' });
   if (table[0].id === G.club) G.trophies.push({ season: seasonLabel(), name: leagueName() + ' champions' });
+  if (managerChampions[leagueOf(G.club)] === G.club) managerAddAward(`${leagueName()} champions · ${seasonLabel()}`, 250000);
+  else if (pos <= G.board.target.pos) managerOwnerBonus('owner', Math.round((G.clubs[G.club].league === 'ECH' ? 18000 : 90000) * (1 + (G.board.target.pos - pos) * 0.12)), 'The owner rewarded you for meeting the season objective.');
   // Reputation follows this division's results before promotion/relegation.
   const repOrder = leagueClubs().slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
   table.forEach((r, i) => { const cl = G.clubs[r.id]; cl.rep = clamp(Math.round((cl.rep + (repOrder.indexOf(r.id) - i) * 0.4) * 10) / 10, 55, 95); });
@@ -236,16 +240,21 @@ function sack(reason) {
   const offers = domesticClubs().filter(id => id !== G.club && G.clubs[id].rep < me).sort(() => R() - 0.5).slice(0, 3);
   if (!offers.length) offers.push(domesticClubs().filter(id => id !== G.club).sort((a, b) => G.clubs[a].rep - G.clubs[b].rep)[0]);
   G.gameOver = { reason, offers, club: G.club };
+  managerCloseEmployment(G.managerProfileId, 'Dismissed');
+  postManagerJob(G.club, reason);
   saveGame();
 }
 
 function takeJob(cid) {
   if (!G.clubs[cid] || G.clubs[cid].backgroundOnly || G.clubs[cid].foreignSquad) return false;
   const old = G.club;
+  managerCloseEmployment(G.managerProfileId, 'Left for another club');
   G.club = cid;
   G.gameOver = null;
-  if (G.clubs[old]) G.clubs[old].mgr = genManagerName();
-  G.clubs[cid].mgr = G.manager;
+  managerReplaceAt(old, 'Replaced after departure');
+  managerHireUser(cid);
+  const vacancy = G.managerJobs?.find(j => j.cid === cid && j.status === 'open');
+  if (vacancy) { vacancy.status = 'filled'; vacancy.filled = today().getTime(); }
   setupUserClub();
   G.board.conf = 60;
   addNews('club', `${G.manager} takes over at the ${clubName(cid)}`, `After leaving the ${clubName(old)}, ${G.manager} gets a fresh start. Objective: ${G.board.target.text.toLowerCase()}.`);
