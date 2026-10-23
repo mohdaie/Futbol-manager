@@ -210,3 +210,11 @@ The 56 non-selected overseas clubs now show 25 deterministic, country-matched re
 ## Release 2026.10.23.10: overseas club crest colors
 
 The 56 background-only overseas clubs now use club-specific crest colors based on their real-world home identities. Existing selected clubs keep their current palettes.
+
+## Release 2026.10.23.11: closing-window urgency
+
+During the final week of a transfer window, scouting reports arrive sooner and their rush rates rise with urgency. Video reports cost more and can be delivered immediately on deadline day. Transfer negotiations between clubs also advance faster as the deadline approaches.
+
+## Release 2026.10.23.12: final-week transfer urgency
+
+Transfer-window urgency now starts seven days before closing. Scouting rush pricing, faster report timing, and quicker club negotiations are limited to this final-week period.

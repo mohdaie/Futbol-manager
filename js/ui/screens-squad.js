@@ -107,11 +107,11 @@ const PLAYER_ACTIONS = [
     ] },
   { k: 'scouting', n: 'Scouting', d: 'Learn more about him', mine: false,
     items: p => {
-      const job = G.scout.jobs.find(j => j.pid === p.id), k = knowOf(p), wk = ['Premier Division', 'Premier League', 'Championship'].includes(regionOf(p)) ? '£6k' : '£12k';
+      const job = G.scout.jobs.find(j => j.pid === p.id), k = knowOf(p), days = scoutReportDays(SCOUT_DAYS), videoDays = scoutReportDays(VIDEO_DAYS), wk = money(Math.round(jobWeekly({ pid: p.id, mode: 'watch' }) * scoutRushMultiplier())), video = money(Math.round(3000 * scoutRushMultiplier()));
       return [
         { n: 'Scouting file', d: `${k}% · ${knowStage(k)[1]}`, run: () => ACT.scoutFile({ id: p.id }) },
-        { n: 'Send a scout to watch him', d: `Three weeks, ${wk} a week. Every match he watches adds to the file`, off: job ? 'A scout is already on him' : k >= 100 ? 'His file is complete' : '', run: () => ACT.scoutOne({ id: p.id }) },
-        { n: 'Video analysis (£3k)', d: `Ready in two days. Up to ${VIDEO_CAP}%: physical and technical detail`, off: job ? 'Already being scouted' : k >= VIDEO_CAP ? 'Send a scout for more' : '', run: () => ACT.scoutOne({ id: p.id, mode: 'video' }) },
+        { n: `Send a scout (${days} days)`, d: `${wk} a week. Every match he watches adds to the file`, off: job ? 'A scout is already on him' : k >= 100 ? 'His file is complete' : '', run: () => ACT.scoutOne({ id: p.id }) },
+        { n: `Video analysis (${video})`, d: `Ready in ${videoDays} day${videoDays === 1 ? '' : 's'}. Up to ${VIDEO_CAP}%: physical and technical detail`, off: job ? 'Already being scouted' : k >= VIDEO_CAP ? 'Send a scout for more' : '', run: () => ACT.scoutOne({ id: p.id, mode: 'video' }) },
       ];
     } },
 ];

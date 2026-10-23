@@ -70,6 +70,8 @@ function windowState(w = G.week) {
 }
 const deadlineToday = () => { const s = windowState(); return s.open && s.left === 0; };
 const inWindow = () => windowState().open;
+// Urgency rises only during the final seven days and reaches full pressure on deadline day.
+function windowClosingPressure() { const s = windowState(); return s.open ? clamp((7 - s.left) / 7, 0, 1) : 0; }
 
 /* ---------- weather ---------- */
 // Per month: [weights for clear, rain, wind, cold, hot, snow], [min, max] temperature in °C.

@@ -55,7 +55,7 @@ const TR_TABS = {
           <div class="field"><label for="aPos">Position</label>${selectHtml('aPos', ['Any', ...POSITIONS], f.pos, 'af', 'data-k="pos"')}</div>
           <div class="field"><label for="aAge">Max age</label>${selectHtml('aAge', [19, 21, 23, 25, 28, 30, 35], f.maxAge, 'af', 'data-k="maxAge" data-n="1"')}</div>
           <div class="field"><label for="aWk">Duration</label>${selectHtml('aWk', [[2, '2 weeks'], [4, '4 weeks'], [8, '8 weeks']], f.weeks, 'af', 'data-k="weeks" data-n="1"')}</div></div>
-          <button class="btn pri wide" data-a="addAssign">Start assignment (£15k a week)</button>` : '<p class="note">No scout is completely free for an assignment.</p>'}
+          <button class="btn pri wide" data-a="addAssign">Start assignment (${money(Math.round(15000 * scoutRushMultiplier()))} a week)</button>` : '<p class="note">No scout is completely free for an assignment.</p>'}
       </div>
       <div class="sec-h"><h2>Scouting files</h2><span class="muted">${G.scout.reports.length}</span></div>
       <div class="seg wrap">${FOLDERS.map(([k, n]) => `<button class="${fd === k ? 'on' : ''}" data-a="scoutFolder" data-v="${k}">${n} ${G.scout.reports.filter(r => (r.folder || 'new') === k).length}</button>`).join('')}</div>
@@ -102,6 +102,8 @@ function scoutFileSheet(pid) {
   if (!p) return toast('That player has retired.');
   const k = knowOf(p), r = scoutFile(p), st = knowStage(k), nx = nextStage(k), so = seenOvr(p), fit = k >= 25 ? fileFit(p) : null;
   const job = G.scout.jobs.find(j => j.pid === p.id), lock = (need, what) => `<p class="lock">Opens at ${need}%: ${what}.</p>`;
+  const watchDays = scoutReportDays(SCOUT_DAYS), videoDays = scoutReportDays(VIDEO_DAYS);
+  const watchFee = Math.round(jobWeekly({ pid: p.id, mode: 'watch' }) * scoutRushMultiplier()), videoFee = Math.round(3000 * scoutRushMultiplier());
   const groups = p.pos === 'GK' ? ['P', 'G', 'T', 'M'] : ['P', 'T', 'M'];
   const attrs = groups.map(g => `<div><h4 class="lbl">${ATTR_GROUPS[g]} <small>${ATTR_STAGE[g]}%</small></h4>${ATTRS.map((a, i) => (a[2] === g ? `<div class="at"><span>${a[1]}</span>${attrCell(p, i)}</div>` : '')).join('')}</div>`).join('');
   const sec = (title, need, html, what) => `<section class="fsec"><h4>${title}</h4>${k >= need ? html : lock(need, what)}</section>`;
@@ -126,7 +128,7 @@ function scoutFileSheet(pid) {
     <section class="fsec"><h4>Matches watched</h4>${r.seen.length ? `<div class="list">${r.seen.map(x => `<div class="row"><span class="grow"><b>${esc(x.opp || '')}${x.score ? ' ' + esc(x.score) : ''}</b><small>${fmtDate(x.date, false)} · ${esc(x.by || '')}${x.note ? ' · ' + esc(x.note) : ''}${x.gain ? ' · +' + x.gain + '%' : ''}</small></span>${x.rt != null ? `<span class="rt">${x.rt.toFixed(1)}</span>` : ''}</div>`).join('')}</div>` : '<p class="muted">Nobody has watched him yet.</p>'}</section>
     ${r.hist.length > 1 ? `<section class="fsec"><h4>Report history</h4><div class="list">${r.hist.map(h => `<div class="row"><span class="grow"><b>${h.k}% · ${knowStage(h.k)[1]}</b><small>${fmtDate(h.date, false)}</small></span><span class="grade g${h.grade}">${h.grade}</span></div>`).join('')}</div></section>` : ''}
     <section class="fsec"><h4>Folder</h4><div class="seg wrap">${FOLDERS.map(([f, n]) => `<button class="${r.folder === f ? 'on' : ''}" data-a="fileFolder" data-id="${p.id}" data-v="${f}">${n}</button>`).join('')}</div></section>
-    <div class="btns">${job ? '' : `<button class="btn pri" data-a="scoutOne" data-id="${p.id}" ${k >= 100 ? 'disabled' : ''}>Send a scout</button><button class="btn" data-a="scoutOne" data-id="${p.id}" data-mode="video" ${k >= VIDEO_CAP ? 'disabled' : ''}>Video analysis £3k</button>`}<button class="btn" data-a="offer" data-id="${p.id}">${activeDeal(p.id, 'in') ? 'Open the deal' : 'Talk to the Director'}</button><button class="btn" data-a="player" data-id="${p.id}">Player profile</button></div>
+    <div class="btns">${job ? '' : `<button class="btn pri" data-a="scoutOne" data-id="${p.id}" ${k >= 100 ? 'disabled' : ''}>Scout · ${watchDays} days · ${money(watchFee)}/wk</button><button class="btn" data-a="scoutOne" data-id="${p.id}" data-mode="video" ${k >= VIDEO_CAP ? 'disabled' : ''}>Video · ${videoDays} day${videoDays === 1 ? '' : 's'} · ${money(videoFee)}</button>`}<button class="btn" data-a="offer" data-id="${p.id}">${activeDeal(p.id, 'in') ? 'Open the deal' : 'Talk to the Director'}</button><button class="btn" data-a="player" data-id="${p.id}">Player profile</button></div>
   </article>`, { key: 'sfile:' + pid, restore: () => scoutFileSheet(pid), valid: () => !!G?.players[pid] });
 }
 ACT.scoutFile = ds => scoutFileSheet(+ds.id);

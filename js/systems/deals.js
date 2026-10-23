@@ -19,7 +19,11 @@ const WINDOW_STAGES = ['bid', 'agent', 'terms', 'player', 'medical', 'final', 'o
 const dofR = () => staffAvg('Director', 8);
 const dealOpen = d => !d.closed;
 const activeDeal = (pid, dir) => G.deals.find(d => dealOpen(d) && d.pid === pid && (!dir || d.dir === dir));
-const wait = (a, b) => dayAbs() + ri(a, b);
+const wait = (a, b) => {
+  const days = ri(a, b), pressure = typeof windowClosingPressure === 'function' ? windowClosingPressure() : 0;
+  const rush = pressure ? 1 - pressure * 0.8 : 1;
+  return dayAbs() + Math.ceil(days * rush);
+};
 
 function dealLog(d, txt, who = 'dof') {
   d.log.unshift({ date: today().getTime(), txt, who });

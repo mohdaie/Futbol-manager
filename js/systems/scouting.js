@@ -19,6 +19,11 @@ const nextStage = k => KNOW_STAGES.find(s => s[0] > k);
 const STAGE_UNLOCK = { 25: 'physical attributes', 50: 'technical attributes, contract and asking price', 75: 'mental attributes, personality, potential and agent', 90: 'the full file: every value exact' };
 const SCOUT_DAYS = 21, VIDEO_DAYS = 2, VIDEO_CAP = 74, SCOUT_LOAD = 3;
 const dayAbs = () => G.season * 400 + todayNo();
+const scoutRushMultiplier = () => 1 + (typeof windowClosingPressure === 'function' ? windowClosingPressure() : 0) * 1.5;
+const scoutReportDays = base => {
+  const s = typeof windowState === 'function' ? windowState() : null;
+  return s && s.open && s.left <= 7 ? Math.max(1, Math.min(base, s.left)) : base;
+};
 
 // The stage at which an attribute is confirmed: physical first, then technical (and goalkeeping), then mental.
 const ATTR_STAGE = { P: 25, T: 50, G: 50, M: 75 };
@@ -88,7 +93,7 @@ function pickScout(p) {
 }
 const scoutById = id => G.staff.find(s => s.id === id) || null;
 const jobWeekly = j => (j.mode === 'video' ? 0 : ['Premier Division', 'Premier League', 'Championship'].includes(regionOf(G.players[j.pid] || {})) ? 6000 : 12000);
-const scoutCost = () => G.scout.assign.length * 15000 + G.scout.jobs.reduce((t, j) => t + jobWeekly(j), 0);
+const scoutCost = () => Math.round((G.scout.assign.length * 15000 + G.scout.jobs.reduce((t, j) => t + jobWeekly(j), 0)) * scoutRushMultiplier());
 
 /* ---------- files ---------- */
 function scoutFile(p) {
@@ -136,17 +141,26 @@ function scoutPlayer(p, mode = 'watch') {
   if (knowOf(p) >= 100) return { ok: false, msg: 'His file is complete.' };
   if (mode === 'video') {
     if (knowOf(p) >= VIDEO_CAP) return { ok: false, msg: 'Video has told you all it can. Send a scout to watch him.' };
-    if (userClub().bal < 3000) return { ok: false, msg: 'Not enough money for video analysis.' };
-    userClub().bal -= 3000; G.ledger.scout += 3000;
-    G.scout.jobs.push({ id: G.nextId++, pid: p.id, sid: 0, mode, start: dayAbs(), end: dayAbs() + VIDEO_DAYS, n: 0 });
+    const cost = Math.round(3000 * scoutRushMultiplier()), days = scoutReportDays(VIDEO_DAYS);
+    if (userClub().bal < cost) return { ok: false, msg: `Not enough money for video analysis (${money(cost)}).` };
+    userClub().bal -= cost; G.ledger.scout += cost;
+    if (days === 1 && typeof windowState === 'function' && windowState().left <= 1) {
+      const r = scoutFile(p), got = addKnowledge(p, 18 + staffAvg('Scout', 6) * 0.5, 'Urgent video analysis', VIDEO_CAP);
+      r.seen.unshift({ date: today().getTime(), by: 'Urgent video analysis', opp: 'Recent match footage', rt: null, note: 'Rush video', gain: got });
+      r.seen = r.seen.slice(0, 12);
+      addNews('club', `Scouting file ready: ${pname(p)}`, `Urgent video analysis has delivered an immediate ${knowOf(p)}% file on ${fullName(p)} for ${money(cost)}.`, { t: 'scoutfile', pid: p.id });
+      return { ok: true, msg: `Urgent video report is ready now for ${money(cost)}.` };
+    }
+    G.scout.jobs.push({ id: G.nextId++, pid: p.id, sid: 0, mode, start: dayAbs(), end: dayAbs() + days, cost, n: 0 });
     scoutFile(p);
-    return { ok: true, msg: `The analysts will study ${pname(p)}'s footage. File in ${VIDEO_DAYS} days.` };
+    return { ok: true, msg: `The analysts will study ${pname(p)}'s footage. File in ${days} day${days === 1 ? '' : 's'} for ${money(cost)}.` };
   }
   const s = pickScout(p);
   if (!s) return { ok: false, msg: 'Every scout is busy. Each follows up to three players, or runs one assignment.' };
-  G.scout.jobs.push({ id: G.nextId++, pid: p.id, sid: s.id, mode, start: dayAbs(), end: dayAbs() + SCOUT_DAYS, n: 0 });
+  const days = scoutReportDays(SCOUT_DAYS);
+  G.scout.jobs.push({ id: G.nextId++, pid: p.id, sid: s.id, mode, start: dayAbs(), end: dayAbs() + days, n: 0 });
   scoutFile(p);
-  return { ok: true, msg: `${s.name} will watch ${pname(p)} for the next three weeks. The file updates after every match.` };
+  return { ok: true, msg: `${s.name} will watch ${pname(p)} for up to ${days} days. The closing-window rush rate is ${money(Math.round(jobWeekly({ pid: p.id, mode }) * scoutRushMultiplier()))} a week; the file updates after every match.` };
 }
 function stopScouting(id) { G.scout.jobs = G.scout.jobs.filter(j => j.id !== id); }
 
@@ -171,6 +185,16 @@ function scoutDay() {
     const p = G.players[j.pid];
     if (!p || p.club === G.club) { j.end = -1; return; }
     const c = G.clubs[p.club];
+    const pressure = typeof windowClosingPressure === 'function' ? windowClosingPressure() : 0;
+    if (j.mode === 'watch' && pressure >= 0.35) {
+      const rushEnd = dayAbs() + scoutReportDays(SCOUT_DAYS);
+      j.end = Math.min(j.end, rushEnd);
+      if (pressure >= 0.45 && j.rushDay !== dayAbs()) {
+        const s = scoutById(j.sid), r = scoutFile(p), got = addKnowledge(p, Math.round((2 + (s ? s.rating : 6) * 0.35) * pressure));
+        r.seen.unshift({ date: today().getTime(), by: s ? s.name : 'Scouting department', opp: 'Urgent transfer-window review', rt: null, note: 'Rush analysis', gain: got });
+        r.seen = r.seen.slice(0, 12); j.rushDay = dayAbs();
+      }
+    }
     // League clubs in a week without a league match play a friendly.
     const noLeague = c && c.pl && !G.fixtures.some(f => f.w === G.week && (f.h === c.id || f.a === c.id));
     if (j.mode === 'watch' && (!c || !c.pl || noLeague)) {

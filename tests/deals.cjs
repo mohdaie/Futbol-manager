@@ -29,6 +29,15 @@ const assert = require('node:assert/strict');
     await page.goto(base + '/');
     await page.locator('[data-a="titleNew"]').click();
     await page.locator('[data-a="startGame"]').click();
+    const closingUrgency = await page.evaluate(() => {
+      const old = [G.week, G.day], foundDays = {}, positions = {};
+      for (let w = 0; w < SEASON_WEEKS && Object.keys(foundDays).length < 3; w++) for (let d = 0; d < 7; d++) { G.week = w; G.day = d; const left = windowState().left; if ([8, 7, 0].includes(left) && foundDays[left] == null) { foundDays[left] = windowClosingPressure(); positions[left] = [w, d]; } }
+      const deadline = Object.entries(foundDays).find(([left]) => +left === 0);
+      if (deadline) [G.week, G.day] = positions[0];
+      const result = deadline ? { wait: wait(3, 3) - dayAbs(), pressure: foundDays[0], outside: foundDays[8], first: foundDays[7], scoutDays: scoutReportDays(SCOUT_DAYS), videoDays: scoutReportDays(VIDEO_DAYS), fee: scoutRushMultiplier() } : null;
+      [G.week, G.day] = old; return result;
+    });
+    check('Closing-window urgency starts only in the final seven days', closingUrgency && [closingUrgency.outside === 0, closingUrgency.first === 0, closingUrgency.pressure === 1, closingUrgency.wait < 3, closingUrgency.scoutDays === 1, closingUrgency.videoDays === 1, closingUrgency.fee > 1], [true, true, true, true, true, true, true]);
     // Helper in the page: run days, answering decisions like a manager who wants the deal.
     await page.evaluate(() => {
       window.runDays = (n, auto = true) => {
