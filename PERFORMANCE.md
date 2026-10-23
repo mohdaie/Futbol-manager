@@ -218,3 +218,7 @@ During the final week of a transfer window, scouting reports arrive sooner and t
 ## Release 2026.10.23.12: final-week transfer urgency
 
 Transfer-window urgency now starts seven days before closing. Scouting rush pricing, faster report timing, and quicker club negotiations are limited to this final-week period.
+
+## Release 2026.10.23.13: exact players in news links
+
+When a news item carries a player ID, matching abbreviated name links in that item now resolve to that exact player instead of listing every player with the same display name.

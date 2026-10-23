@@ -85,8 +85,12 @@ ACT.trackPlayer = ds => {
 
 function newsLinks(n) {
   const text = n.title + '\n' + n.body, refs = new Map();
-  entityMentions(text).forEach(m => m.refs.forEach(r => refs.set(r.kind + ':' + r.id, r)));
   const a = n.action;
+  const target = a?.pid && G.players[a.pid];
+  entityMentions(text).forEach(m => {
+    const exactTargetMention = target && [pname(target), fullName(target)].includes(m.name);
+    (exactTargetMention ? [{ kind: 'player', id: target.id }] : m.refs).forEach(r => refs.set(r.kind + ':' + r.id, r));
+  });
   if (a?.pid && G.players[a.pid]) refs.set('player:' + a.pid, { kind: 'player', id: a.pid });
   if (a?.from && G.clubs[a.from]) refs.set('club:' + a.from, { kind: 'club', id: a.from });
   const transfer = n.cat === 'transfer' || a?.t === 'bid';

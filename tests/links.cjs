@@ -122,6 +122,17 @@ const server = require('node:http').createServer((req, res) => {
     });
     check('Injury news links medical center', await page.locator('.related-actions [data-s="medical"]').count(), 1);
     check('Training news links training', await page.locator('.related-actions [data-s="training"]').count(), 1);
+    const exactNewsPid = await page.evaluate(() => {
+      const [target, ...sameDisplayName] = seniorSquad(G.club).slice(0, 8);
+      target.fn = 'Jordan'; target.ln = 'Walker';
+      ['Jamal', 'Jesse', 'Julian', 'Jude', 'James', 'Joel', 'Joseph'].forEach((fn, i) => { if (sameDisplayName[i]) { sameDisplayName[i].fn = fn; sameDisplayName[i].ln = 'Walker'; } });
+      ENTITY_INDEX = null;
+      const id = target.id;
+      addNews('club', pname(target) + ' back in training', fullName(target) + ' has recovered from a groin strain.', { t: 'player', pid: id });
+      ACT.news({ id: G.news[0].id }); return id;
+    });
+    check('News with an exact player action resolves an ambiguous abbreviated name to that player', await page.locator('.related-actions [data-a="player"]').count(), 1);
+    check('The news player link uses the action player ID', await page.locator('.related-actions [data-a="player"]').getAttribute('data-id'), String(exactNewsPid));
     await page.evaluate(() => {
       const p = seniorSquad(G.club)[0]; addNews('inbox', 'Bid for ' + pname(p), `${clubName('CIT')} offered £1m for ${fullName(p)}.`, { t: 'bid', pid: p.id, from: 'CIT', fee: 1e6 }); ACT.news({ id: G.news[0].id });
     });
