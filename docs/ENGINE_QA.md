@@ -44,6 +44,12 @@ node scripts/engine-qa.cjs --matches 6 --jev --strict
 ```
 
 `--matches N` adds 1–40 seeded full matches to the report.
+Before/after comparison of two commits: run `--matches 40` on each, then
+`node scripts/compare-defending.cjs base.json head.json out.json`. The drift-limit
+comparison (138febb → 9157b56, 40 matches) is in
+[engine-qa/defending-drift-comparison.json](engine-qa/defending-drift-comparison.json):
+no metric reaches |z| 2, with open chances after a break down from 3.1 to 2.2 per match
+(z −1.9) and goals 2.90 → 2.58 (z −0.7).
 `--baseline-intent` compares the prior carrier scores while still measuring
 pressure and forward opportunities; it requires `--matches`. See
 [TEAM_INTENT.md](TEAM_INTENT.md) for the 24-match comparison.

@@ -1,0 +1,109 @@
+{
+  "description": "Seed 20261021, 40 fixed-tactic matches per side: base /tmp/claude-0/scratch/base40.json vs head /tmp/claude-0/scratch/new40.json. Unpaired; |z| < 2 is not a clear difference.",
+  "seed": 20261021,
+  "matches": 40,
+  "base": {
+    "commit": "138febb"
+  },
+  "head": {
+    "commit": "9157b56"
+  },
+  "metrics": [
+    {
+      "metric": "goals",
+      "base": 2.9,
+      "head": 2.575,
+      "delta": -0.325,
+      "se": 0.455,
+      "z": -0.71
+    },
+    {
+      "metric": "shots",
+      "base": 24.25,
+      "head": 21.725,
+      "delta": -2.525,
+      "se": 1.828,
+      "z": -1.38
+    },
+    {
+      "metric": "onTarget",
+      "base": 7.75,
+      "head": 7.225,
+      "delta": -0.525,
+      "se": 0.839,
+      "z": -0.63
+    },
+    {
+      "metric": "lineBreaks",
+      "base": 92.325,
+      "head": 89.675,
+      "delta": -2.65,
+      "se": 3.742,
+      "z": -0.71
+    },
+    {
+      "metric": "openAfterBreak",
+      "base": 3.075,
+      "head": 2.175,
+      "delta": -0.9,
+      "se": 0.485,
+      "z": -1.86
+    },
+    {
+      "metric": "backOpenAfterBreak",
+      "base": 0.075,
+      "head": 0.05,
+      "delta": -0.025,
+      "se": 0.055,
+      "z": -0.46
+    },
+    {
+      "metric": "counterpressStarts",
+      "base": 56.025,
+      "head": 55.075,
+      "delta": -0.95,
+      "se": 6.932,
+      "z": -0.14
+    },
+    {
+      "metric": "defensiveFrames",
+      "base": 3393.4,
+      "head": 3426.675,
+      "delta": 33.275,
+      "se": 99.511,
+      "z": 0.33
+    },
+    {
+      "metric": "trapFrames",
+      "base": 326.175,
+      "head": 356.375,
+      "delta": 30.2,
+      "se": 34.13,
+      "z": 0.88
+    },
+    {
+      "metric": "stepFrames",
+      "base": 1550.825,
+      "head": 1583.4,
+      "delta": 32.575,
+      "se": 71.902,
+      "z": 0.45
+    },
+    {
+      "metric": "dropFrames",
+      "base": 312.225,
+      "head": 315,
+      "delta": 2.775,
+      "se": 25.809,
+      "z": 0.11
+    },
+    {
+      "metric": "defensiveViolations",
+      "base": 0,
+      "head": 0,
+      "delta": 0,
+      "se": 0,
+      "z": null
+    }
+  ]
+}
