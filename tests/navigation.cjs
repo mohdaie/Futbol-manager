@@ -48,6 +48,8 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => weeklyFinance());
     check('Weekly manager wage is recorded in club ledger', await page.evaluate(() => G.ledger.manager === G.managerProfiles[G.managerProfileId].weeklySalary), true);
     check('Weekly manager salary reaches personal bank', await page.evaluate(() => G.managerProfiles[G.managerProfileId].bank >= G.managerProfiles[G.managerProfileId].weeklySalary), true);
+    await page.evaluate(() => render());
+    check('Manager profile remains accessible after weekly income is recorded', await page.evaluate(() => UI.s === 'manager' && document.querySelector('.main').innerText.includes('Club salary') && document.querySelector('.main').innerText.includes('Recent income')), true);
     await act('go', { s: 'home' });
     await page.locator('.tabs2 [data-s="team"]').click();
     check('My Team opens Squad directly', (await state()).screen, 'squad');

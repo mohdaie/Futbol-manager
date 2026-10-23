@@ -240,3 +240,7 @@ During possession, the ball is positioned just ahead of the carrier's facing dir
 ## Release 2026.10.23.17: manager names match their country
 
 AI managers now receive names and nationalities from their club's country. Existing careers migrate previously generated manager identities once while preserving salaries, finances, awards, and career history. The navigation suite checks country-consistent identities for the full club world and verifies migration of a mismatched Spanish manager profile.
+
+## Release 2026.10.23.18: keep manager profile open after weekly income
+
+The manager profile now formats transaction and career dates with the game's date formatter. This avoids a runtime error from an out-of-scope date helper when weekly income appears in the transaction history. The navigation suite checks that the profile still renders after salary is recorded.
