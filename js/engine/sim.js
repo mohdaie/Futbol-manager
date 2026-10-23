@@ -194,6 +194,14 @@ function syncSide(M, s, place) {
 }
 const P_ = (M, s, i) => M.sim.P[s][i];
 const owner = M => (M.sim.B.os >= 0 ? M.sim.P[M.sim.B.os][M.sim.B.oi] : null);
+function attachBallToCarrier(M) {
+  const B = M.sim.B, p = owner(M);
+  if (!p) return;
+  const a = p.fa ?? fwdA(B.os), d = 0.52;
+  B.x = clamp(p.x + Math.cos(a) * d, 0.05, PW - 0.05);
+  B.y = clamp(p.y + Math.sin(a) * d, 0.05, PL - 0.05);
+  B.z = 0;
+}
 function giveBall(M, s, i) {
   const B = M.sim.B, p = P_(M, s, i);
   if (!p) return looseBall(M);
@@ -558,21 +566,22 @@ function playOption(M, s, i, op, press) {
 // The ball leaves the player's foot: speed and height by the kind of ball, aimed with some error.
 function kick(M, s, i, k, tx, ty, j, o = {}) {
   const sim = M.sim, B = sim.B, p = P_(M, s, i);
+  const held = owner(M) === p, sx = held ? B.x : p.x, sy = held ? B.y : p.y;
   let e = o.err || 0, ex = tx + gauss() * e * 0.6, ey = ty + gauss() * e * 0.6;
   // Now and then a ball is mishit: overhit or sliced well off line (more likely for a poor or hurried kick,
   // and for crosses). These are what run out for throw-ins and goal kicks in a real match.
   if (k !== 'shot' && R() < clamp(0.035 + e * 0.006 + (k === 'cross' ? 0.1 : 0), 0.03, 0.22)) {
-    const L0 = hyp(tx - p.x, ty - p.y) || 1, over = rf(0.15, 0.5) * L0 + 3;
-    ex = tx + (tx - p.x) / L0 * over + gauss() * L0 * 0.18; ey = ty + (ty - p.y) / L0 * over + gauss() * L0 * 0.18;
+    const L0 = hyp(tx - sx, ty - sy) || 1, over = rf(0.15, 0.5) * L0 + 3;
+    ex = tx + (tx - sx) / L0 * over + gauss() * L0 * 0.18; ey = ty + (ty - sy) / L0 * over + gauss() * L0 * 0.18;
   }
-  const len = hyp(ex - p.x, ey - p.y) || 1;
+  const len = hyp(ex - sx, ey - sy) || 1;
   const sp = k === 'shot' ? 26 : k === 'clear' ? 24 : o.air ? clamp(14 + len * 0.18, 16, 26) : clamp(9 + len * 0.42, 10, 22);
-  B.os = -1; B.oi = -1; B.x = p.x; B.y = p.y; B.z = o.air ? 0.1 : 0;
-  B.vx = (ex - p.x) / len * sp; B.vy = (ey - p.y) / len * sp;
+  B.os = -1; B.oi = -1; B.x = sx; B.y = sy; B.z = o.air ? 0.1 : 0;
+  B.vx = (ex - sx) / len * sp; B.vy = (ey - sy) / len * sp;
   const flight = len / sp;
   B.vz = o.air ? 9.8 * flight / 2 : 0;
-  B.fl = { k, s, i, j, tx: ex, ty: ey, t0: sim.t, arr: sim.t + flight, off: !!o.off, air: !!o.air, len, xg: o.xg || 0, aid: o.aid || null, sp,
-    linesBroken: INTENT_PASSES.has(k) ? brokenLines(M, s, p.y, ey) : 0 };
+  B.fl = { k, s, i, j, x0: sx, y0: sy, tx: ex, ty: ey, t0: sim.t, arr: sim.t + flight, off: !!o.off, air: !!o.air, len, xg: o.xg || 0, aid: o.aid || null, sp,
+    linesBroken: INTENT_PASSES.has(k) ? brokenLines(M, s, sy, ey) : 0 };
   B.ls = s; B.li = i; p.carry = 0; p.takeOn = 0;
   // Offside: every team-mate beyond the second-last defender (and the ball) when the ball is played.
   B.offS = s; B.offSet = 0;
@@ -732,7 +741,7 @@ function shoot(M, s, i, o = {}) {
   ev.aim = Math.abs(ax) < 1.2 ? 'central' : ((ax > 0) === (p.x > PW / 2) ? 'near post' : 'far post');
   kick(M, s, i, 'shot', PW / 2 + ax, gy - fwdY(s) * (res === 'save' ? 0.8 : -1.5), -1, {});
   Object.assign(M.sim.B.fl, { res, ev, xg, aid, ax, az, kind: shot.kind });
-  mark(M, 'sfx', s, { kind: shot.kind, ax, az, res, x0: p.x, y0: p.y, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: ev.aim });
+  mark(M, 'sfx', s, { kind: shot.kind, ax, az, res, x0: M.sim.B.fl.x0, y0: M.sim.B.fl.y0, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: ev.aim });
   if (o.head) M.sim.B.vz = 2;
 }
 // The shot arrives: goal, save (held, parried or turned behind), or wide (goal kick, sometimes a deflection for a corner).
@@ -1490,6 +1499,7 @@ function tickSim(M) {
   engage(M);
   keepOnside(M);
   movePlayers(M);
+  if (!sim.rs) attachBallToCarrier(M);
   if (B.os >= 0 || (B.fl && B.fl.k !== 'shot')) M.sides[B.os >= 0 ? B.os : B.fl.s].st.pos += TICK;
   recordFrame(M);
 }

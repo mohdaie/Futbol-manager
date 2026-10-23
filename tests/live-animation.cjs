@@ -64,6 +64,26 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       // Draw a recorded position exactly; interpolation must not change match facts.
       setFrame(L, fr[2][0] - L.mq.t0);
       result.exact = L.dots.every((team, s) => team.every((d, i) => !d || Math.abs(d.x - fr[2][7 + (s * 11 + i) * 2]) < 1e-8 && Math.abs(d.y - fr[2][8 + (s * 11 + i) * 2]) < 1e-8));
+      let engineN = 0, engineMax = 0, engineFacing = 0;
+      for (const f of fr) {
+        const [s, i] = [f[4], f[5]];
+        if (s < 0 || i < 0 || f[6]) continue;
+        const x = f[7 + (s * 11 + i) * 2], y = f[8 + (s * 11 + i) * 2], a = f[51 + s * 11 + i], dx = f[1] - x, dy = f[2] - y;
+        if (x < 1 || x > PW - 1 || y < 1 || y > PL - 1) continue;
+        engineN++; engineMax = Math.max(engineMax, Math.abs(Math.hypot(dx, dy) - 0.52));
+        if (dx * Math.cos(a) + dy * Math.sin(a) > 0.3) engineFacing++;
+      }
+      result.engineAttached = engineN > 10 && engineMax < 0.03 && engineFacing / engineN > 0.95;
+      let displayedN = 0, displayedMax = 0;
+      for (let t = 0.1; t < 60; t += 0.2) {
+        const k = Math.min(fr.length - 2, Math.floor(t / TICK)), a = fr[k], b = fr[k + 1];
+        if (a[4] < 0 || a[4] !== b[4] || a[5] !== b[5] || a[6] || b[6]) continue;
+        setFrame(L, t); const [s, i] = L.own, d = L.dots[s]?.[i];
+        if (!d) continue;
+        const gap = Math.hypot(L.ball.x - d.x, L.ball.y - d.y);
+        displayedN++; displayedMax = Math.max(displayedMax, Math.abs(gap - 0.52));
+      }
+      result.displayAttached = displayedN > 10 && displayedMax < 0.03;
       setFrame(L, 0.1); const a = L.dots[0].map(d => d && [d.x, d.y]);
       setFrame(L, 0.4); const b = L.dots[0].map(d => d && [d.x, d.y]);
       result.startsMoving = a.some((d, i) => d && b[i] && Math.hypot(d[0] - b[i][0], d[1] - b[i][1]) > 0.01);
@@ -79,6 +99,8 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     });
     check('Playback includes second zero and all 120 half-second intervals', motion.zero && motion.samples >= 121 && motion.width === 73);
     check('Player centres agree exactly with recorded engine positions', motion.exact);
+    check('Engine keeps the possessed ball just ahead of the carrier through turns', motion.engineAttached);
+    check('2D interpolation keeps the ball attached between recorded frames', motion.displayAttached);
     check('Players move during the first half-second instead of freezing', motion.startsMoving);
     check('Repeated or paused frames do not advance running footfalls', motion.pause);
     check('Minute boundaries retain samples for continuous incoming motion', motion.seam);

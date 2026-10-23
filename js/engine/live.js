@@ -278,6 +278,16 @@ function setFrame(L, p, snap) {
     const stride = (old && !snap ? old.stride || 0 : (s * 11 + i) * 2.4) + (distance < 6 && !snap ? distance * Math.PI / 1.5 : 0);
     L.dots[s][i] = x == null ? null : { x, y, fa, v, vx, vy, stride };
   }
+  // Interpolate player motion and facing first, then attach a possessed ball to
+  // that displayed pose. Independent ball and player curves otherwise separate
+  // during a turn between the engine's half-second samples.
+  const [os, oi] = L.own, carrier = os >= 0 && oi >= 0 ? L.dots[os]?.[oi] : null;
+  if (carried && carrier) {
+    const fa = carrier.fa ?? fwdA(os), d = 0.52;
+    L.ball.x = clamp(carrier.x + Math.cos(fa) * d, 0.05, PW - 0.05);
+    L.ball.y = clamp(carrier.y + Math.sin(fa) * d, 0.05, PL - 0.05);
+    L.ball.z = 0;
+  }
   if (snap) moveCam(L, 0, true);
 }
 function liveEvent(L, e) {

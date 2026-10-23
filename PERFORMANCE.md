@@ -232,3 +232,7 @@ Existing careers now migrate background-only overseas clubs to their individual 
 Every club now has a generated manager profile with nationality, age, salary, contract, management style, and a real-world inspirational figure. The manager portrait and club pages open profiles showing appointments, season finishes, honours, and active vacancies across the playable Premier League and Championship. Manager openings appear in league news and can be accepted from the profile.
 
 The active manager receives weekly salary into a persistent personal bank, with owner, match, award, and sponsorship income itemized in the transaction history. Manager wages and bonuses are included in the club finance ledger. Existing saves generate profiles on load. The browser navigation suite checks world-wide profile creation, profile sections, and weekly pay recording.
+
+## Release 2026.10.23.16: ball control follows the dribbler
+
+During possession, the ball is positioned just ahead of the carrier's facing direction after player movement, so it stays with the player through movement and turns. The live view reattaches it to the interpolated player pose between half-second engine frames, avoiding divergence from separately smoothed paths. Passes and shots now release from the recorded ball position. The live-animation suite checks engine and in-between-frame attachment during watched play.
