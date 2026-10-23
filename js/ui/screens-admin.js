@@ -15,7 +15,7 @@ SCREENS.admin = {
     const t = UI.tab.adm || 'over';
     return `<h1 class="h1">Admin</h1>
       <div class="banner open"><b>Live editing</b><span>Changes apply to this save at once. Export a backup in Settings first if you want to undo.</span></div>
-      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['jev', 'Jev AI'], ['ds', 'DeepSeek'], ['usage', 'AI usage'], ['data', 'Data']], t)}
+      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['jev', 'Jev AI'], ['ds', 'DeepSeek'], ['match', 'Match Analyst'], ['usage', 'AI usage'], ['data', 'Data']], t)}
       ${ADMIN_TABS[t]()}`;
   },
 };
@@ -289,7 +289,7 @@ ACT.admConfirm = ds => {
 /* ---------- AI services (Jev, DeepSeek) ---------- */
 const AI_INFO = {
   jev: { name: 'Jev (TypeSafe)', role: 'Makes fast decisions for the game: picks an option, scores something, or answers yes/no. It does not write text.', console: 'console.typesafe.ai/keys', docs: 'docs.typesafe.ai' },
-  ds: { name: 'DeepSeek', role: 'Writes text for the game: press questions, player replies, match reports and news.', console: 'platform.deepseek.com/api_keys', docs: 'api-docs.deepseek.com' },
+  ds: { name: 'DeepSeek', role: 'Writes game text and provides an on-demand Match Analysis Officer that reviews match evidence against the rulebook and engine source.', console: 'platform.deepseek.com/api_keys', docs: 'api-docs.deepseek.com' },
 };
 ADMIN_TABS.jev = () => aiTab('jev');
 ADMIN_TABS.ds = () => aiTab('ds');
@@ -319,7 +319,7 @@ function aiTab(svc) {
       ${svc === 'ds' ? `<label class="tgl"><input id="ai-think" type="checkbox" ${c.thinking ? 'checked' : ''}><span>Thinking mode (slower, costs more; not recommended)</span></label>` : ''}
       <h4 class="lbl">Use it for</h4>
       ${AI_FEATURES[svc].map(([k, n]) => `<label class="tgl"><input type="checkbox" class="ai-feat" data-k="${k}" ${c.feat[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
-      <p class="note">Connected now: ${svc === 'jev' ? 'computer managers' : 'second opinions, the press question library and staff advice in words'} (see the AI Brain and AI Staff tabs). Usage by feature is on the AI usage tab. The other ticks are saved for features still to come.</p>
+      <p class="note">Connected now: ${svc === 'jev' ? 'computer managers' : 'second opinions, the press question library, staff advice, and the on-demand Match Analysis Officer (More → Admin → Match Analyst)'}${svc === 'jev' ? ' (see the AI Brain and AI Staff tabs)' : ''}. Usage by feature is on the AI usage tab. Other ticks are saved for features still to come.</p>
       <div class="btns"><button class="btn pri" data-a="aiSave" data-svc="${svc}">Save settings</button><button class="btn" data-a="aiTest" data-svc="${svc}" ${T?.pending ? 'disabled' : ''}>${T?.pending ? 'Testing…' : 'Test connection'}</button>${c.key ? `<button class="btn ghost" data-a="aiClearKey" data-svc="${svc}">Remove key</button>` : ''}</div>
       ${T ? `<div class="aitest ${T.ok ? 'ok' : 'bad'}">${T.html}</div>` : ''}</div>
     <div class="card"><h3>This month</h3><div class="kv">

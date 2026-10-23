@@ -63,6 +63,7 @@ small { font-size: 10px; }
 .link { color: var(--amber); font-weight: 600; font-size: 11px; }
 .note { margin: 6.5px 0; padding: 8.5px 10px; border-radius: 8.5px; background: rgba(255,181,71,.1); border: 1px solid rgba(255,181,71,.25); font-size: 11px; }
 .body { white-space: pre-line; }
+.match-analysis-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ---------- hero (match card) ---------- */
 .hero { position: relative; padding: 13.5px; border-radius: 13.5px; border: 1px solid var(--line); background:

@@ -68,6 +68,10 @@ function createMatchState(fx) {
     M.knockout = { home: first ? first.ag : 0, away: first ? first.hg : 0 };
   }
   M.sides.forEach(S => calcUnits(S));
+  if (fx.id > 0 && (fx.h === G.club || fx.a === G.club)) {
+    M.analysisFrames = []; M.analysisNextFrame = 0;
+    M.analysisTactics = M.sides.map(S => ({ club: S.cid, ip: S.ip, oop: S.oop, roles: S.roles.slice(), mentality: S.ment, tempo: S.tempo, width: S.width, press: S.press, line: S.line, passing: S.pass, startingXI: S.on.slice() }));
+  }
   return M;
 }
 
@@ -335,6 +339,11 @@ function finishMatch(M) {
   brainScore(M);
   const fx = G.fixtures.find(f => f.id === M.fid);
   const [H, W] = M.sides;
+  if (fx.h === G.club || fx.a === G.club) {
+    fx.timeline = M.log.slice(-240).map(e => ({ ...e }));
+    if (M.analysisFrames?.length) fx.trace = M.analysisFrames;
+    if (M.analysisTactics) fx.engineTactics = M.analysisTactics;
+  }
   fx.hg = H.st.g; fx.ag = W.st.g;
   fx.model = M.model || 'positional-v3';
   if (M.extra) fx.extra = true;

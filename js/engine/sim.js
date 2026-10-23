@@ -1682,8 +1682,13 @@ function tickSim(M) {
 }
 // Frames for the 2D view (only for a match being watched): time, ball, then 22 players, then where each faces.
 function recordFrame(M) {
-  if (!M.live) return;
   const sim = M.sim, B = sim.B, f = [Math.round(sim.t * 10) / 10, +B.x.toFixed(2), +B.y.toFixed(2), +B.z.toFixed(2), B.os, B.oi, sim.rs ? sim.rs.k : ''];
+  if (M.analysisFrames && sim.t + 1e-6 >= M.analysisNextFrame) {
+    const sample = [Math.round(sim.t), +B.x.toFixed(1), +B.y.toFixed(1), +B.z.toFixed(1), B.os, B.oi];
+    for (let s = 0; s < 2; s++) for (let i = 0; i < 11; i++) { const p = sim.P[s][i]; sample.push(p ? +p.x.toFixed(1) : null, p ? +p.y.toFixed(1) : null); }
+    M.analysisFrames.push(sample); M.analysisNextFrame = Math.floor(sim.t / 60) * 60 + 60;
+  }
+  if (!M.live) return;
   for (let s = 0; s < 2; s++) for (let i = 0; i < 11; i++) { const p = sim.P[s][i]; f.push(p ? +p.x.toFixed(2) : null, p ? +p.y.toFixed(2) : null); }
   for (let s = 0; s < 2; s++) for (let i = 0; i < 11; i++) { const p = sim.P[s][i]; f.push(p ? +(p.fa ?? 0).toFixed(2) : null); } // 1c: where each faces
   (M.frames || (M.frames = [])).push(f);
