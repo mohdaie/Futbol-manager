@@ -20,7 +20,7 @@ Unwatched computer fixtures use an event-based engine. Your watched matches and 
 - The 2026/27 Premier League (20 clubs) and Championship (24), selectable for new careers. Championship clubs have first team and reserves only, with a combined 36-player limit. Premier League clubs retain reserves and U18s. First-team names are fictional, with real inspirational figures where sourced; prospects and roster gaps are generated. The Championship identity fallback is dated September 2025. See [COMPETITIONS.md](COMPETITIONS.md) for source dates, promotion/playoffs, squad policy and pending official regulations.
 - Background club setup for Spain, Italy, Germany and France’s first divisions (20/20/18/18 teams). Browse them in My Team → Club directory. New clubs have non-transferable placeholder squads; player data and fixtures come later. Existing overseas squads are retained. These leagues are not playable yet.
 - Squad, tactics with separate in-possession and out-of-possession shapes, roles and instructions.
-- Transfers with scouting fog of war, player search, agent pitches, bids and contract talks.
+- Transfers with scouting fog of war, agent pitches, bids and contract talks. Search opens with up to 20 players linked to recent in-game transfer stories; submit a name or filters to browse the database in pages of 20.
 - Training, medical centre, youth academy, finances, staff, board and fans, news and inbox.
 - A live 2D match with commentary, substitutions, shouts and half-time team talks, plus instant results.
 - A real fixture calendar: Friday to Monday and midweek kick-off times, TV games, cup weekends and international breaks. Rest days, weather and kick-off time affect fitness, injuries and results.

@@ -16,27 +16,23 @@ SCREENS.transfers = {
 const TR_TABS = {
   advice() { return scoutCard(); },
   search() {
-    const S = UI.search;
-    const res = Object.values(G.players).filter(p => {
-      if (p.club === G.club) return false;
-      if (S.pos !== 'Any' && p.pos !== S.pos && !p.alt.includes(S.pos)) return false;
-      if (S.region !== 'Everywhere' && regionOf(p) !== S.region) return false;
-      if (p.age > S.maxAge) return false;
-      if (S.maxFee && pValue(p) > S.maxFee) return false;
-      if (S.minOvr && seenOvr(p).v < S.minOvr) return false;
-      if (S.name && !fullName(p).toLowerCase().includes(S.name.toLowerCase())) return false;
-      return true;
-    }).sort((a, b) => seenOvr(b).v - seenOvr(a).v);
-    return `<div class="card filters">
+    const S = UI.search, submitted = UI.tab.transferQuery, searching = hasTransferSearch(submitted);
+    const trends = searching ? [] : trendingTransferPlayers(), res = searching ? searchTransferPlayers(submitted) : trends.map(row => row.p);
+    const pages = Math.max(1, Math.ceil(res.length / TRANSFER_SEARCH_PAGE));
+    const page = clamp(Math.floor(+UI.tab.transferPage || 0), 0, pages - 1), first = page * TRANSFER_SEARCH_PAGE;
+    const list = res.slice(first, first + TRANSFER_SEARCH_PAGE);
+    const status = searching ? `<h2 class="h2">Search results</h2><p class="muted">${res.length} players match${res.length ? ` · ${first + 1}–${first + list.length}` : ''}. Ratings are scouting estimates.</p>` : '<h2 class="h2">Trending players</h2><p class="muted">Up to 20 players in transfer news and rumours from the last 14 days. Search by name or choose filters to find other players.</p>';
+    return `<form id="transferSearchForm" class="card filters">
         <div class="field"><label for="sPos">Position</label>${selectHtml('sPos', ['Any', ...POSITIONS], S.pos, 'sf', 'data-k="pos"')}</div>
         <div class="field"><label for="sReg">Region</label>${selectHtml('sReg', REGIONS, S.region, 'sf', 'data-k="region"')}</div>
         <div class="field"><label for="sAge">Max age</label>${selectHtml('sAge', [18, 21, 23, 25, 28, 30, 33, 40], S.maxAge, 'sf', 'data-k="maxAge" data-n="1"')}</div>
         <div class="field"><label for="sFee">Max value</label>${selectHtml('sFee', [[0, 'Any'], [1e6, '£1m'], [5e6, '£5m'], [10e6, '£10m'], [20e6, '£20m'], [40e6, '£40m'], [70e6, '£70m'], [100e6, '£100m']], S.maxFee, 'sf', 'data-k="maxFee" data-n="1"')}</div>
         <div class="field"><label for="sOvr">Min rating</label>${selectHtml('sOvr', [[0, 'Any'], 60, 65, 70, 75, 80, 85], S.minOvr, 'sf', 'data-k="minOvr" data-n="1"')}</div>
-        <div class="field"><label for="sName">Name</label><input id="sName" type="search" value="${esc(S.name)}" placeholder="Surname" data-c="sf" data-k="name"></div>
-      </div>
-      <p class="muted">${res.length} players match. Ratings shown as ranges are scouting estimates.</p>
-      <div class="list">${res.slice(0, 60).map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`)).join('') || empty('No players found', 'Loosen the filters to see more.')}</div>`;
+        <div class="field"><label for="sName">Name or inspirational figure</label><input id="sName" type="search" value="${esc(S.name)}" placeholder="Player name" data-c="sf" data-k="name"></div>
+        <div class="btns"><button type="submit" class="btn pri" data-a="transferSearch">Search players</button><button type="button" class="btn" data-a="transferTrending">Trending</button></div>
+      </form>${status}
+      <div id="transferSearchResults" class="list">${list.map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`, searching ? {} : { sub: clubName(p.club) + ' · ' + trends.find(row => row.p.id === p.id).label })).join('') || (searching ? empty('No players found', 'Try another name or adjust the filters.') : empty('No transfer stories yet', 'Trending players will appear here as transfer news and rumours develop.'))}</div>
+      ${searching && pages > 1 ? `<div class="btns"><button class="btn" data-a="transferPage" data-page="${page - 1}" ${page === 0 ? 'disabled' : ''}>Previous</button><span class="muted">Page ${page + 1} of ${pages}</span><button class="btn" data-a="transferPage" data-page="${page + 1}" ${page + 1 === pages ? 'disabled' : ''}>Next</button></div>` : ''}`;
   },
   short() {
     const list = G.shortlist.map(id => G.players[id]).filter(p => p && p.club !== G.club);
@@ -82,7 +78,16 @@ const TR_TABS = {
     return `<div class="list">${G.tHist.slice(0, 60).map(t => `<div class="row tx ${t.to === G.club || t.from === G.club ? 'me' : ''}"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><span class="stat"><b>${t.fee ? money(t.fee) : 'Free'}</b></span></div>`).join('') || empty('No transfers yet', 'Completed deals across the league appear here.')}</div>`;
   },
 };
-CHG.sf = (v, ds) => { UI.search[ds.k] = ds.n ? +v : v; render(); };
+CHG.sf = (v, ds) => { UI.search[ds.k] = ds.n ? +v : v; };
+ACT.transferSearch = () => {
+  for (const [key, id] of Object.entries({ pos: 'sPos', region: 'sReg', maxAge: 'sAge', maxFee: 'sFee', minOvr: 'sOvr', name: 'sName' })) {
+    const field = document.getElementById(id); if (field) UI.search[key] = ['maxAge', 'maxFee', 'minOvr'].includes(key) ? +field.value : field.value;
+  }
+  UI.tab.transferQuery = { ...UI.search, name: UI.search.name.trim() }; UI.tab.transferPage = 0; render();
+};
+ACT.transferTrending = () => { UI.search = { ...TRANSFER_SEARCH_DEFAULTS }; UI.tab.transferQuery = null; UI.tab.transferPage = 0; render(); };
+ACT.transferPage = ds => { UI.tab.transferPage = Math.max(0, Math.floor(+ds.page || 0)); render(); };
+document.addEventListener('submit', e => { if (e.target.id === 'transferSearchForm') { e.preventDefault(); viewAction(() => ACT.transferSearch()); } });
 CHG.af = (v, ds) => { UI.tab.newAssign[ds.k] = ds.n ? +v : v; };
 ACT.addAssign = () => { const f = UI.tab.newAssign; if (addAssignment(f.region, f.pos, f.maxAge, f.weeks)) toast('Scout dispatched.'); else toast('No scout is free.'); render(); };
 ACT.scoutFolder = ds => { UI.tab.sfold = ds.v; render(); };

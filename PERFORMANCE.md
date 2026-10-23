@@ -121,3 +121,15 @@ In a seeded browser comparison against release 44, the player count stayed at 2,
 A single paired headless Chromium run at 390 × 844 and 6× CPU throttling recorded a 32-match batch at 2.30 s before / 2.11 s after, and dashboard render medians at 116 / 95 ms. These differences include normal measurement noise and do not establish an improvement. The all-clubs directory increased from 147 to 220 ms while its club count grew from 58 to 130; country filters reduce the list to 18 or 20 clubs. Both runs completed without browser errors. Real-device and long-career measurements remain separate.
 
 The focused world suites check all four memberships against the pinned source, transfer and friendly exclusions, migration preserving players and fixtures, save/reload, phone layout, and three rollovers without materializing dummy players. Existing English competition, profile, transfer-deal, storage, input-recovery, club-navigation and friendly suites also passed; the strict engine audit retained 1,109 passing scenarios / 3,555 assertions.
+
+## Release 2026.10.23.1: transfer search
+
+Transfer Search opens with at most 20 unique players referenced by recent in-game transfer news, rumours or completed moves. The 14-day feed resolves player IDs directly, without enumerating the player database or sorting every player by scouting rating. If no stories exist, the landing page is empty. Name and filter edits remain drafts until Search players or Enter submits them; results use 20-player pages. Both fictional and inspirational names are searchable, including accent-insensitive matches. Players remain in the career database; this change defers search work and limits rendered rows rather than removing player records from memory.
+
+A paired headless Chromium measurement at 390 × 844 with 6× CPU throttling, seven renders per build and 25 linked rumours, recorded median transfer-screen render time of 175.6 ms in release 45 and 91.5 ms in this release. Visible rows fell from 60 to 20. Full-player enumerations across the seven complete screen renders fell from 14 to 7: the shared shell still enumerates players; the landing search itself does not. Both careers contained 2,556 players. This is a development-machine observation, not a physical-phone guarantee.
+
+The focused search suite passes 22 checks covering real story sources, date windows, deduplication, no default database enumeration, names and filters, input stability, Enter submission, paging, profile Back navigation and mobile layout. Navigation (47), links (51), scouting (23) and updates (13) also pass.
+
+```sh
+NODE_PATH=/opt/codex/cua_node/lib/node_modules CHROMIUM_PATH=/usr/bin/chromium node tests/transfer-search.cjs
+```
