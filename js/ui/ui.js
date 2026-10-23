@@ -21,6 +21,11 @@ const TEAM_SECTIONS = [['squad', 'Squad'], ['tactics', 'Tactics'], ['fixtures', 
 function dashboardSections() {
   return `<nav class="tabs dashboard-sections" aria-label="Dashboard sections">${DASHBOARD_SECTIONS.map(([s, n]) => `<button class="${UI.s === s ? 'on' : ''}" ${UI.s === s ? 'aria-current="page"' : ''} data-a="go" data-s="${s}">${n}</button>`).join('')}</nav>`;
 }
+const FACILITY_SECTIONS = [['club', 'Club'], ['finance', 'Finance'], ['board', 'Board & Fans']];
+function facilitySections() {
+  const current = FACILITY_SECTIONS.some(([s]) => s === UI.tab.facility) ? UI.tab.facility : 'club';
+  return `<nav class="tabs facility-sections" aria-label="Facilities sections">${FACILITY_SECTIONS.map(([s, n]) => `<button class="${current === s ? 'on' : ''}" ${current === s ? 'aria-current="page"' : ''} data-a="facilityTab" data-v="${s}">${n}</button>`).join('')}</nav>`;
+}
 function teamSections() {
   const current = UI.s === 'pinstr' ? 'tactics' : UI.s;
   return `<nav class="tabs team-sections" aria-label="My Team sections">${TEAM_SECTIONS.map(([s, n]) => `<button class="${current === s ? 'on' : ''}" ${current === s ? 'aria-current="page"' : ''} data-a="go" data-s="${s}">${n}</button>`).join('')}</nav>`;
@@ -62,7 +67,7 @@ function render(reset) {
   else if (G.gameOver) scr = SCREENS.sacked;
   else if (G.seasonReview && UI.s !== 'review') { UI.s = 'review'; scr = SCREENS.review; }
   else scr = SCREENS[UI.s] || SCREENS.home;
-  const subnav = TEAM_SECTIONS.some(([s]) => s === UI.s) || UI.s === 'pinstr' ? teamSections() : ['home', 'competitions'].includes(UI.s) ? dashboardSections() : '';
+  const subnav = TEAM_SECTIONS.some(([s]) => s === UI.s) || UI.s === 'pinstr' ? teamSections() : ['home', 'competitions'].includes(UI.s) ? dashboardSections() : UI.s === 'facilities' ? facilitySections() : '';
   const body = (!scr.full ? subnav : '') + scr.render(UI.p);
   root.innerHTML = scr.full ? `<div class="app full">${body}</div>` : shell(body);
   linkEntities(root);

@@ -5,6 +5,26 @@
 
 const staffHead = (role, title) => { const s = staffOf(role), r = staffR(role); return `<h3>${title} <small>${s.length ? esc(s.map(x => x.name).join(', ')) + ' · ' : ''}${Math.round(r)}/20</small></h3>`; };
 const aiWords = t => (t ? `<p class="note">“${esc(t)}”</p>` : '');
+function coachWords(t, ids) {
+  if (!t) return '';
+  const aliases = new Map();
+  ids.forEach(id => {
+    const p = G.players[id]; if (!p) return;
+    [pname(p), fullName(p)].forEach(name => { const set = aliases.get(name) || new Set(); set.add(p.id); aliases.set(name, set); });
+  });
+  const names = [...aliases.keys()].sort((a, b) => b.length - a.length);
+  if (!names.length) return `<p class="note">“${esc(t)}”</p>`;
+  const re = new RegExp('(?<![\\p{L}\\p{N}_])(?:' + names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}\\p{N}_])', 'gu');
+  let html = '', at = 0;
+  for (const m of t.matchAll(re)) {
+    html += esc(t.slice(at, m.index));
+    const idsForName = aliases.get(m[0]);
+    html += idsForName.size === 1 ? playerLink([...idsForName][0], m[0]) : `<span data-no-links>${esc(m[0])}</span>`;
+    at = m.index + m[0].length;
+  }
+  html += esc(t.slice(at));
+  return `<p class="note" data-no-links>“${html}”</p>`;
+}
 const evidenceLine = key => { const e = typeof staffEvidence === 'function' ? staffEvidence(key) : null; return e ? `<p class="muted">From experience (${e.n} similar cases): ${e.mean >= 0 ? 'this has worked' : 'this has not worked well'} on average.</p>` : ''; };
 
 function analystCard(full) {
@@ -26,10 +46,10 @@ function coachCard() {
   const P = UI.coachPlan.plan, T = G.training, same = T.focus === P.focus && T.intensity === P.intensity;
   const foc = TRAINING_FOCUS.find(f => f.k === P.focus);
   const words = staffWords('Coach', 'co:' + UI.coachPlan.k, [`${foc.n} training at ${INTENSITY[P.intensity].toLowerCase()} intensity.`, ...P.why, ...Object.entries(P.indiv).map(([id, g]) => `${pname(G.players[id])}: ${INDIV_FOCUS[g].toLowerCase()} work.`)]);
-  return `<div class="card">${staffHead('Coach', 'Coaches')}${aiWords(words)}
+  return `<div class="card">${staffHead('Coach', 'Coaches')}${coachWords(words, Object.keys(P.indiv).map(Number))}
     <p><b>${foc.n}</b>, ${INTENSITY[P.intensity].toLowerCase()} intensity.</p>
     <ul class="notes">${P.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
-    ${Object.keys(P.indiv).length ? `<h4 class="lbl">Individual plans</h4><ul class="notes">${Object.entries(P.indiv).map(([id, g]) => `<li>${esc(pname(G.players[id]))}: ${INDIV_FOCUS[g].toLowerCase()} work</li>`).join('')}</ul>` : ''}
+    ${Object.keys(P.indiv).length ? `<h4 class="lbl">Individual plans</h4><ul class="notes">${Object.entries(P.indiv).map(([id, g]) => `<li>${playerLink(+id, pname(G.players[id]))}: ${INDIV_FOCUS[g].toLowerCase()} work</li>`).join('')}</ul>` : ''}
     ${evidenceLine(`coach|${P.focus}|${P.intensity}`)}
     <button class="btn wide ${same ? '' : 'pri'}" data-a="coachApply">${same ? 'Plan in place' : 'Use this plan'}</button>
     <p class="muted">Judged after four weeks on attribute growth and injuries. Better coaches spot fixture congestion and pick the right area for each young player.</p></div>`;

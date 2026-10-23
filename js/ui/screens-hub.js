@@ -169,13 +169,11 @@ SCREENS.team = {
 
 SCREENS.facilities = {
   render() {
-    return hubMenu('Facilities', [
-      ['finance', 'Finance', 'Budgets, income and spending'],
-      ['board', 'Board & fans', 'Confidence, requests and upgrades'],
-      ['club', 'Club', 'Stadium, facilities, history and trophies'],
-    ]);
+    const section = ['club', 'finance', 'board'].includes(UI.tab.facility) ? UI.tab.facility : 'club';
+    return SCREENS[section].render();
   },
 };
+ACT.facilityTab = ds => { if (!['club', 'finance', 'board'].includes(ds.v)) return; UI.tab.facility = ds.v; render(); };
 
 SCREENS.more = {
   render() {

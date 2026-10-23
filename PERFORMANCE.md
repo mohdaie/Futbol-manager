@@ -272,3 +272,11 @@ The league name in the Dashboard club card now opens the matching competition ta
 ## Release 2026.10.23.25: show and color best alternate position fit
 
 The Position sort now shows each outfield player's best alternate positional fit even when the roster has no explicitly assigned secondary role. Fit ratings below 80 are yellow; ratings of 80 or above are green. This is display-only and does not change tactical familiarity or eligibility. The navigation suite checks alternate fit coverage and the color threshold.
+
+## Release 2026.10.23.26: make Facilities a three-tab section
+
+Facilities now opens directly on Club and offers Club, Finance, and Board & Fans tabs. Existing screens and actions are reused within the tab view. Navigation coverage verifies the default and each tab's content.
+
+## Release 2026.10.23.27: link coach training advice to exact players
+
+Coach individual training recommendations now use their player IDs for profile links, so repeated abbreviated names do not open the ambiguous name chooser. Names in the coach's quoted advice resolve against the same assigned-player IDs. Navigation coverage forces a duplicate player name and confirms the direct link remains exact.
