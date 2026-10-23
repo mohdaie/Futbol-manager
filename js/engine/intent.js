@@ -35,6 +35,8 @@ function applyTeamIntent(M, s, i, options, pressure, context = {}) {
   const forward = read.some(r => r.viable), free = clamp((.65 - pressure) / .65, 0, 1);
   const vision = clamp((ac(S, i, 'vis') + ac(S, i, 'dec')) / 30, .4, 1.2);
   const opp = sim.P[1 - s].filter((q, j) => q && j > 0), centreX = opp.length ? opp.reduce((a, q) => a + q.x, 0) / opp.length : PW / 2;
+  // Weak-side overload: four or more opponents packed into the carrier's flank (14 m across, 20 m deep).
+  const crowded = opp.filter(q => Math.abs(q.x - p.x) < 14 && Math.abs(q.y - p.y) < 20).length >= 4;
   for (const r of read) {
     const { op, pass, fwd, viable } = r;
     // Overload then switch: reward a genuinely free opposite flank when the
@@ -43,6 +45,13 @@ function applyTeamIntent(M, s, i, options, pressure, context = {}) {
       Math.abs(p.x - PW / 2) > 14 && Math.abs(op.tx - PW / 2) > 14 &&
       (p.x - PW / 2) * (op.tx - PW / 2) < 0 && (p.x - PW / 2) * (centreX - PW / 2) > 56;
     if (switchOpen) op.v += .008 * vision;
+    if (switchOpen && crowded && ['Winger', 'Inverted Winger', 'Inside Forward'].includes(roleName(S, op.j))) op.v += .015;
+    // Third man: a pass to a forward who has dropped to receive is worth more while an advancing runner is open behind him.
+    if (pass && isDropper(S, op.j, sim.P[s][op.j], fwdY(s))) {
+      const dropper = sim.P[s][op.j];
+      const runner = sim.P[s].some((q, j) => q && j && j !== op.j && j !== i && q.run > sim.t && q.vy * fwdY(s) >= 0 && (q.y - dropper.y) * fwdY(s) < 0 && recvPressure(M, s, q.x, q.y)[1] < .45);
+      if (runner) op.v += .012;
+    }
     if (forward && viable) {
       const progress = clamp(fwd / 15, .2, 1);
       op.v += (.004 + progress * .004 + (momentum ? .012 : 0)) * free * vision;

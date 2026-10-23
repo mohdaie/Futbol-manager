@@ -57,6 +57,9 @@ function positionJobs(T, raw, bx, by, phase, lines = null) {
   const f = FORMATIONS[T.ip], final = phase === 'create' || phase === 'finish', build = phase === 'build';
   // The pocket between the opponent's midfield and back lines, kept onside (just short of the back line).
   const pocket = lines && lines.mid - lines.back > 8 / 105 ? clamp(lines.back + (lines.mid - lines.back) * 0.45, lines.back + 3 / 105, 0.9) : null;
+  // The ball-side winger holds the touchline (more than 0.35 of the pitch width from the centre): the full-back, wing-back or
+  // mezzala on that side underlaps into the half-space channel instead.
+  const holdsWidth = side => (bx - .5) * side > 0 && raw.some((r, j) => r && j && roleName(T, j) === 'Winger' && (f[j][1] - .5) * side > 0 && Math.abs(r[0] - .5) > .35);
   const jobs = [], positions = raw.map((q, i) => {
     if (!q) { jobs[i] = null; return null; }
     const role = roleName(T, i), slot = f[i], side = slot[1] < .5 ? -1 : 1;
@@ -74,10 +77,13 @@ function positionJobs(T, raw, bx, by, phase, lines = null) {
       x = .5 + side * .15; y = build ? 1 - 30 / 105 : clamp(by + .1, .34, .72); job = 'Invert beside the pivot';
     } else if (role === 'Wing-Back') {
       x = .5 + side * .43; y = build ? 1 - 38 / 105 : clamp(by - .05, .10, .48); job = 'Hold width high';
+      if (!build && near && holdsWidth(side)) { x = half; y = clamp(by - .08, .04, .96); job = 'Underlap half-space channel'; }
     } else if (role === 'Full-Back') {
       job = final && near ? 'Overlap on the ball side' : 'Support width / cover the far side';
       if (build) { x = .5 + side * .44; y = 1 - 32 / 105; job = 'Give width higher up in build-up'; } // 6.3
       if (final && near) y = clamp(by + .03, .10, .38);
+      // Underlap: the advancing full-back takes the half-space channel just ahead of the ball, outside the winger's inside line.
+      if (!build && near && holdsWidth(side)) { x = half; y = clamp(by - .08, .04, .96); job = 'Underlap half-space channel'; }
       // 6.0: when the wide forward on his side plays inside, the touchline is his.
       const inside = !build && f.some((sl, k) => k !== i && LINE[sl[0]] >= 3 && (sl[1] - .5) * side > .25 && T.on && T.on[k] && ['Inside Forward', 'Inverted Winger', 'Wide Playmaker'].includes(roleName(T, k)));
       if (inside) { x = .5 + side * .44; y = Math.min(y, clamp(by + (near ? -.02 : .06), .12, .6)); job = 'Take the touchline (the wide forward is inside)'; }
@@ -87,6 +93,7 @@ function positionJobs(T, raw, bx, by, phase, lines = null) {
     } else if (['Box-to-Box', 'Mezzala', 'Playmaker', 'Ball-Winner'].includes(role) && slot[0] === 'MC') {
       x = half; job = 'Receive on the half-turn in the half-space';
       if (!final && pocket != null) { y = role === 'Playmaker' ? lerp(y, pocket, .5) : pocket; job = 'Receive between the lines in the half-space'; }
+      if (role === 'Mezzala' && !final && near && holdsWidth(side)) { y = clamp(by - .08, .04, .96); job = 'Underlap half-space channel'; }
       if (final) {
         if (role === 'Box-to-Box') { x = .5 + side * .09; y = 20 / 105; job = 'Arrive at the box edge'; }
         else if (role === 'Mezzala') { y = 18 / 105; job = 'Run through the wide channel'; }

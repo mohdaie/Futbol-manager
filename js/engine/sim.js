@@ -398,13 +398,16 @@ function carrierDecide(M, s, i, o = {}) {
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > ((q.y - offsideY(M, s)) * fwdY(s) < 1.2 ? 0.15 + (12 - vis) * 0.02 : (20 - vis) / 160)) return; // 4.7: a clear offside he sees; a tight one is easy to misjudge (Vision). He sees the flag coming (poor Vision misses it now and then)
-    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style, risk, rpress, esc });
+    // Counter-attack (transition 'ctr'): a back-pass is penalised, and a diagonal release to a wide attacker is preferred.
+    const ctrRelease = trn === 'ctr' && fwd > 2 && LINE[FORMATIONS[S.ip][j][0]] >= 4 && Math.abs(toOwn(s, tx, ty)[0] - 0.5) > 0.25 ? 1.1 : 1;
+    const ctrBack = trn === 'ctr' && fwd < -1 ? 0.02 : 0;
+    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style * ctrRelease - ctrBack, risk, rpress, esc });
     // Through ball into the space in behind for a player making a run.
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
     if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03 - (0.25 + Math.max(0, 14 - vis) * 0.1) * R()))) { // 4.7: timing read by Vision; a fraction late is flagged
       const ahead = 9 + ac(S, j, 'pac') * 0.3, sx = clamp(q.x + q.vx * 1.2, 4, PW - 4), sy = clamp(q.y + fwdY(s) * ahead, 2, PL - 2);
       const tl = hyp(sx - p.x, sy - p.y), r2 = clamp(passRisk(M, s, p.x, p.y, sx, sy, false) + 0.12 + (20 - vis) * 0.012 + tl * 0.004 - b('thr') * 0.05 + press * clamp(0.32 - (vis + ac(S, i, 'cmp') - 24) * 0.012, 0.08, 0.4) + Math.max(0, faceOff(p, sx, sy) - 1.75) * 0.1, 0.05, 0.95); // 7.1: a through ball needs time to see the run
-      opts.push({ k: 'thru', j, tx: sx, ty: sy, v: ((1 - r2) * threat(s, sx, sy) * 1.15 - r2 * lossCost) * (1 + b('thr') * 0.4 + b('rk') * 0.2) * [0.85, 1, 1.15][pass], risk: r2, rpress: recvPressure(M, s, sx, sy)[1] });
+      opts.push({ k: 'thru', j, tx: sx, ty: sy, v: ((1 - r2) * threat(s, sx, sy) * 1.15 - r2 * lossCost) * (1 + b('thr') * 0.4 + b('rk') * 0.2) * [0.85, 1, 1.15][pass] * (trn === 'ctr' ? 1.15 : 1), risk: r2, rpress: recvPressure(M, s, sx, sy)[1] });
     }
   });
   // Cross from a wide area near the box.
@@ -1033,6 +1036,13 @@ function foul(M, s, i, o, j) {
 /* ---------- off the ball ---------- */
 // Every second: where each player wants to be. In possession: the shape, support near the ball, runs in behind,
 // width and late runs into the box. Without it: the shape, pressing the ball, marking and a back line that holds.
+// A forward who drops back to receive. Position-based drops need him actually moving back; the deep-lying roles
+// count when they step back.
+function isDropper(S, i, q, fw) {
+  if (!q || !i) return false;
+  if (LINE[FORMATIONS[S.ip][i][0]] >= 4) return q.vy * fw < -2;
+  return ['False Nine', 'Deep-Lying Playmaker', 'Target Forward'].includes(roleName(S, i)) && q.vy * fw < -0.5;
+}
 function targets(M, all) {
   const sim = M.sim, B = sim.B, own = owner(M);
   for (let s = 0; s < 2; s++) {
@@ -1053,6 +1063,22 @@ function targets(M, all) {
     if (has && own) {
       trig = own.vy * fw > 0.5 || pressureOn(M, s, B.oi)[0] < 0.4;
       for (let i = 1; i < P.length; i++) { const q = P[i]; if (!q || i === carrier) continue; if (LINE[ip[i][0]] >= 4 && q.vy * fw < -2) drop = true; if ((q.y - B.y) * fw < 0 && !(q.run > sim.t)) cover++; }
+    }
+    // Third-man run: when a forward drops to receive, the nearest advancing midfielder or winger from behind him is
+    // sent in at once (2.8 s) rather than waiting for the probability roll.
+    let thirdRunner = -1;
+    if (has && own) {
+      const dropI = P.findIndex((q, i) => i > 0 && i !== carrier && isDropper(S, i, q, fw));
+      if (dropI > 0) {
+        const d = P[dropI];
+        let bd = 18;
+        for (let i = 1; i < P.length; i++) {
+          const q = P[i];
+          if (!q || i === carrier || i === dropI || reserves.has(i) || LINE[ip[i][0]] < 3 || q.vy * fw < 0 || (q.y - d.y) * fw >= 0) continue;
+          const dd = hyp(q.x - d.x, q.y - d.y);
+          if (dd < bd) { bd = dd; thirdRunner = i; }
+        }
+      }
     }
     // 4.7: the back line (its anchors after the unit step) sets the offside line for the whole side.
     let backY = null;
@@ -1077,6 +1103,10 @@ function targets(M, all) {
         p.tx = has ? X : clamp(kx, PW / 2 - 3.2, PW / 2 + 3.2); p.ty = has ? Y : ky; continue;
       }
       if (reserves.has(i)) p.run = 0; // the chosen cover cannot join an attacking run
+      // Counter breakout: on the turnover tick a wide attacker goes at once, diagonally inward (see the run geometry).
+      if (has && own && !reserves.has(i) && i === thirdRunner) p.run = sim.t + 2.8;
+      if (has && own && ctr && sim.turn >= sim.t - TICK && role >= 4 && Math.abs(pos[i][0] - 0.5) > 0.3 && !reserves.has(i)) { p.run = sim.t + 2; p.ctrRun = true; }
+      if (!(p.run > sim.t)) p.ctrRun = false;
       const running = p.run > sim.t;
       if (has) {
         // Runs in behind: forwards and runners, timed by Off the Ball and Anticipation, when the ball can be played.
@@ -1095,7 +1125,7 @@ function targets(M, all) {
         if (boxTo) { X = boxTo[0]; Y = boxTo[1]; if (hyp(p.x - X, p.y - Y) > 3) p.boxRun = sim.t + 1.5; }
         else if (p.run > sim.t) { // 6.7: the Winger runs down the line, the Inside Forward diagonally inside, the 9 into the channel
           const rn = roleName(S, i), sd = p.x < PW / 2 ? -1 : 1;
-          X = /Winger$|Wide Midfielder|Wing-Back|Full-Back/.test(rn) && rn !== 'Inverted Winger' ? clamp(p.x, 3, PW - 3)
+          X = p.ctrRun ? PW / 2 + sd * 7 : /Winger$|Wide Midfielder|Wing-Back|Full-Back/.test(rn) && rn !== 'Inverted Winger' ? clamp(p.x, 3, PW - 3)
             : /Inside Forward|Inverted Winger|Shadow Striker/.test(rn) ? PW / 2 + sd * 7
             : LINE[ip[i][0]] === 5 ? PW / 2 + Math.sign(B.x - PW / 2 || sd) * 8 : clamp(p.x + (PW / 2 - p.x) * 0.15, 3, PW - 3);
           Y = line + fw * (6 + ac(S, i, 'pac') * 0.3); }
