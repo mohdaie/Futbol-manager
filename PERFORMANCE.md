@@ -222,3 +222,7 @@ Transfer-window urgency now starts seven days before closing. Scouting rush pric
 ## Release 2026.10.23.13: exact players in news links
 
 When a news item carries a player ID, matching abbreviated name links in that item now resolve to that exact player instead of listing every player with the same display name.
+
+## Release 2026.10.23.14: refresh saved overseas crest colors
+
+Existing careers now migrate background-only overseas clubs to their individual crest colors. The migration leaves established clubs, players and fixtures unchanged.
