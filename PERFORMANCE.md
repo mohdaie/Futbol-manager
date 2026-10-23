@@ -268,3 +268,7 @@ The Dashboard now has Overview and Competitions tabs, with selectable Premier Le
 ## Release 2026.10.23.24: link the dashboard league to its competition
 
 The league name in the Dashboard club card now opens the matching competition table. The navigation suite verifies that the league link selects and displays the current league.
+
+## Release 2026.10.23.25: show and color best alternate position fit
+
+The Position sort now shows each outfield player's best alternate positional fit even when the roster has no explicitly assigned secondary role. Fit ratings below 80 are yellow; ratings of 80 or above are green. This is display-only and does not change tactical familiarity or eligibility. The navigation suite checks alternate fit coverage and the color threshold.

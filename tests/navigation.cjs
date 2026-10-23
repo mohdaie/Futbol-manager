@@ -79,6 +79,13 @@ const assert = require('node:assert/strict');
       const row = document.querySelector('.main .prow'), text = row?.innerText || '';
       return !!row?.querySelector('.squad-metric.alt') && /condition/i.test(text) && /superb|very good|good|okay|poor/i.test(text) && !row.querySelector('.mbar');
     }), true);
+    check('Squad position sort shows an alternative fit for every outfield player, colored by its 80 rating threshold', await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.main .prow')];
+      return rows.filter(row => row.querySelector('.pos')?.textContent.trim() !== 'GK').every(row => {
+        const fit = row.querySelector('.squad-metric.alt b'), score = Number(fit?.textContent.trim().match(/(\d+)$/)?.[1]);
+        return Number.isFinite(score) && !!fit.textContent.trim().match(/^[A-Z]+\s+\d+$/) && fit.classList.contains(score >= 80 ? 'good' : 'warn');
+      });
+    }), true);
     await page.locator('.sortbar [data-v="ovr"]').click();
     check('Squad rating sort displays player rating', await page.locator('.main .prow .ovr').count(), await page.locator('.main .prow').count());
     await page.locator('.sortbar [data-v="age"]').click();

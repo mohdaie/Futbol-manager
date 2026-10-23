@@ -6,7 +6,10 @@
 const SORTS = { pos: (a, b) => POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || b.ca - a.ca, ovr: (a, b) => b.ca - a.ca, age: (a, b) => a.age - b.age, cond: (a, b) => a.cond - b.cond, mor: (a, b) => b.mor - a.mor, val: (a, b) => pValue(b) - pValue(a) };
 const pitchPosLabel = pos => ({ AMR: 'RW', AML: 'LW', MR: 'RM', ML: 'LM', MC: 'CM', AMC: 'AM', DC: 'CB', DL: 'LB', DR: 'RB' }[pos] || pos);
 function squadMetric(p, sort) {
-  if (sort === 'pos') return `<span class="squad-metric alt"><small>Also</small><b>${p.alt?.length ? p.alt.map(pitchPosLabel).join(' · ') : '—'}</b></span>`;
+  if (sort === 'pos') {
+    const alternatives = p.alt?.length ? p.alt : p.pos === 'GK' ? [] : POSITIONS.filter(pos => pos !== 'GK' && pos !== p.pos).sort((a, b) => ovrAt(p, b) - ovrAt(p, a)).slice(0, 1);
+    return `<span class="squad-metric alt"><small>Best fit</small>${alternatives.length ? alternatives.map(pos => { const fit = ovrAt(p, pos); return `<b class="${fit >= 80 ? 'good' : 'warn'}" title="${pitchPosLabel(pos)} fit: ${fit}">${pitchPosLabel(pos)} ${fit}</b>`; }).join('') : '<b>—</b>'}</span>`;
+  }
   if (sort === 'ovr') return ovrPill(p.ca, p.ca);
   if (sort === 'age') return `<span class="stat squad-metric"><b>${p.age}</b><small>years</small></span>`;
   if (sort === 'cond') return `<span class="squad-metric condition"><b>${Math.round(p.cond)}%</b>${condBar(p.cond)}</span>`;
