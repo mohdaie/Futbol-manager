@@ -47,7 +47,7 @@ function playerSheet(pid) {
   let body = '';
   if (t === 'attr') {
     const best = p.pos === 'GK' ? [['GK', ovrAt(p, 'GK')]] : POSITIONS.filter(pos => pos !== 'GK').map(pos => [pos, ovrAt(p, pos)]).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    body = `${playerHex(p)}<div class="attrs">${groups.map(g => `<div><h4 class="lbl">${ATTR_GROUPS[g]}</h4>${ATTRS.map((a, i) => (a[2] === g ? `<div class="at"><span>${a[1]}</span>${attrCell(p, i)}</div>` : '')).join('')}</div>`).join('')}</div>
+    body = `${playerHex(p)}${mine ? `<p class="dev-note">Attribute change since ${seasonLabel()} began</p>` : ''}<div class="attrs">${groups.map(g => `<div><h4 class="lbl">${ATTR_GROUPS[g]}</h4>${ATTRS.map((a, i) => (a[2] === g ? `<div class="at"><span>${a[1]}</span><span class="at-value">${mine && trainingAttrDelta(p, i) ? `<small class="dev-delta ${trainingAttrDelta(p, i) < 0 ? 'down' : ''}">${trainingAttrDelta(p, i) > 0 ? '+' : ''}${trainingAttrDelta(p, i)}</small>` : ''}${attrCell(p, i)}</span></div>` : '')).join('')}</div>`).join('')}</div>
       ${mine || knowOf(p) >= 90 ? `<h4 class="lbl">Best positions</h4><div class="chips">${best.map(([pos, v]) => `<span class="chip static">${pos} ${v}</span>`).join('')}</div>` : `<p class="note">Scouting file ${knowOf(p)}% · ${knowStage(knowOf(p))[1]}. Exact values are confirmed; ranges are estimates; ? is not scouted yet.${nextStage(knowOf(p)) ? ` At ${nextStage(knowOf(p))[0]}%: ${STAGE_UNLOCK[nextStage(knowOf(p))[0]]}.` : ''}</p><button class="btn sm" data-a="scoutFile" data-id="${p.id}">Open scouting file</button>`}`;
   } else if (t === 'bio') {
     const known = mine || knowOf(p) >= 75, fp = G.players[p.fp], ftIn = Math.round(p.ht / 2.54);
@@ -337,8 +337,28 @@ SCREENS.training = {
     const risk = Math.round(0.6 * (1 + T.intensity * 0.6) * (T.focus === 'phy' ? 1.4 : 1) * (1.3 - physio / 40) * 10) / 10;
     const mine = squadOf(G.club);
     const focused = mine.filter(p => T.indiv[p.id] && T.indiv[p.id] !== 'none');
+    const dev = ensureTrainingDev(), reports = (dev?.reports || []).slice().reverse();
+    const deltaCA = p => p.ca - (dev?.base?.[p.id]?.ca ?? p.ca);
+    const changed = mine.filter(p => deltaCA(p) !== 0);
+    const attrNet = mine.reduce((sum, p) => sum + p.at.reduce((n, v, i) => n + v - (dev?.base?.[p.id]?.at?.[i] ?? v), 0), 0);
+    const signed = n => `${n > 0 ? '+' : ''}${n}`;
+    const trainingReport = r => {
+      const when = fmtDate(weekDate(r.week), false);
+      const rows = r.players.map(x => {
+        const p = G.players[x.id];
+        if (!p || p.club !== G.club) return '';
+        const stats = x.changes.map(([i, d]) => `<span class="dev-change ${d < 0 ? 'down' : ''}">${esc(ATTRS[i][1])} ${signed(d)}</span>`).join('');
+        return `<div class="dev-report-row">${playerLink(p.id, fullName(p))}<span class="dev-changes">${stats}</span><small class="dev-ca ${x.ca < 0 ? 'down' : ''}">CA ${signed(x.ca)}</small></div>`;
+      }).join('');
+      return `<details class="dev-week" ${reports[0] === r ? 'open' : ''}><summary><b>${when}</b><span>Week ${r.week + 1} · ${r.players.length} player${r.players.length === 1 ? '' : 's'} with changes</span><i>›</i></summary><div class="dev-week-body">${rows || '<p class="muted">No player attributes changed this week.</p>'}</div></details>`;
+    };
     return `<h1 class="h1">Training</h1>
       ${coachCard()}
+      <section class="card dev-dashboard"><div class="sec-h"><h2>Development dashboard</h2><span class="muted">${seasonLabel()}</span></div>
+        <div class="kv"><div><small>Players with CA change</small><b>${changed.length} / ${mine.length}</b></div><div><small>Net attribute points</small><b class="${attrNet < 0 ? 'down' : 'up'}">${signed(attrNet)}</b></div><div><small>Weekly reports</small><b>${reports.length}</b></div></div>
+        <p class="muted">Season totals include first team, reserves and academy. Player profiles show each attribute's change from the season start. Current ability updates automatically from attributes.</p>
+        <h3 class="lbl">Weekly training report</h3>${reports.length ? reports.map(trainingReport).join('') : '<p class="muted">The first report will appear after the next week advances.</p>'}
+      </section>
       <div class="week">${days.map((d, i) => `<div class="${plan[i] === 'Match' ? 'm' : plan[i] === 'Rest' ? 'r' : ''}"><small>${d}</small><b>${plan[i]}</b></div>`).join('')}</div>
       <div class="sec-h"><h2>Weekly focus</h2></div>
       <div class="grid2">${TRAINING_FOCUS.map(f => `<button class="gcard ${T.focus === f.k ? 'on' : ''}" data-a="tfocus" data-v="${f.k}"><b>${f.n}</b><small>${f.d}</small></button>`).join('')}</div>

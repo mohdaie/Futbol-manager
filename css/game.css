@@ -252,6 +252,27 @@ textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; wor
 .at { display: flex; justify-content: space-between; gap: 3.5px; padding: 2.5px 0; border-bottom: 1px dashed rgba(255,255,255,.06); font-size: 11px; }
 .at span { color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .at b { font-family: var(--f-disp); font-weight: 800; font-variant-numeric: tabular-nums; }
+.at .at-value { display: inline-flex; align-items: center; gap: 4px; overflow: visible; }
+.dev-note { margin: 0 0 5px; color: var(--mute); font-size: 10px; }
+.dev-delta { color: var(--good); font-size: 9px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dev-delta.down, .dev-change.down, .dev-ca.down, .dev-dashboard .down { color: var(--bad); }
+.dev-dashboard { margin-top: 10px; }
+.dev-dashboard .sec-h { margin-top: 0; }
+.dev-dashboard .kv { margin-bottom: 8px; }
+.dev-dashboard .up { color: var(--good); }
+.dev-week { border-top: 1px solid var(--line); }
+.dev-week summary { display: flex; align-items: center; gap: 8px; min-height: 38px; cursor: pointer; list-style: none; }
+.dev-week summary::-webkit-details-marker { display: none; }
+.dev-week summary b { font-size: 11px; }
+.dev-week summary span { flex: 1; color: var(--mute); font-size: 10px; }
+.dev-week summary i { color: var(--mute); font-style: normal; transition: transform .15s; }
+.dev-week[open] summary i { transform: rotate(90deg); }
+.dev-week-body { padding: 2px 0 8px; }
+.dev-report-row { display: grid; grid-template-columns: minmax(80px, .8fr) minmax(0, 2fr) auto; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,.06); font-size: 10px; }
+.dev-report-row .entity-link { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.dev-changes { display: flex; flex-wrap: wrap; gap: 3px; }
+.dev-change { color: var(--good); font-size: 9px; }
+.dev-ca { color: var(--mute); font-size: 9px; white-space: nowrap; }
 .a4 { color: var(--amber); } .a3 { color: var(--good); } .a2 { color: var(--chalk); } .a1 { color: var(--bad); }
 @media (max-width: 319px) { .attrs { grid-template-columns: 1fr 1fr; } }
 

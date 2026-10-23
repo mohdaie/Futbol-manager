@@ -16,6 +16,32 @@ function bumpAttr(p, dir, focusKeys) {
   if (p.ca > p.pa && dir > 0) { p.at[i] -= 1; p.ca = ratingFor(p.at, p.pos); }
 }
 
+// Attribute baselines and weekly change log for the manager's club. The log lives
+// in the save and is reset at season rollover; legacy saves start tracking now.
+function ensureTrainingDev() {
+  if (!G?.training || !G.club) return null;
+  let d = G.training.dev;
+  if (!d || d.season !== G.season || !d.base || !Array.isArray(d.reports)) {
+    d = G.training.dev = { season: G.season, base: {}, reports: [] };
+  }
+  const active = new Set(squadOf(G.club).map(p => String(p.id)));
+  Object.keys(d.base).forEach(id => { if (!active.has(id)) delete d.base[id]; });
+  squadOf(G.club).forEach(p => {
+    if (!d.base[p.id]) d.base[p.id] = { at: p.at.slice(), ca: p.ca };
+  });
+  return d;
+}
+function resetTrainingDev() {
+  if (!G?.training) return;
+  G.training.dev = { season: G.season, base: {}, reports: [] };
+  ensureTrainingDev();
+}
+function trainingAttrDelta(p, i) {
+  if (p?.club !== G?.club) return 0;
+  const d = ensureTrainingDev(), base = d?.base?.[p.id]?.at;
+  return base && Number.isFinite(base[i]) ? p.at[i] - base[i] : 0;
+}
+
 function develop(p, q, focusKeys, im) {
   const a = p.age, gap = p.pa - p.ca;
   const ageF = a <= 18 ? 1.7 : a <= 20 ? 1.45 : a <= 22 ? 1.15 : a <= 24 ? 0.85 : a <= 27 ? 0.45 : a <= 29 ? 0.15 : 0;
@@ -45,6 +71,7 @@ function recoverTo(p, day) {
 
 function weeklyTraining(playedThisWeek) {
   const T = G.training, foc = TRAINING_FOCUS.find(f => f.k === T.focus) || TRAINING_FOCUS[0];
+  const dev = ensureTrainingDev(), weekChanges = [];
   const coach = staffAvg('Coach'), physio = staffAvg('Physio');
   const facility = G.board.facTrain;
   const q = coach * 0.7 + facility * 0.3;
@@ -74,11 +101,23 @@ function weeklyTraining(playedThisWeek) {
     const indiv = mine ? T.indiv[p.id] : null;
     const keys = indiv && indiv !== 'none' ? ATTRS.filter(x => x[2] === indiv).map(x => x[0]) : foc.attrs;
     const quality = mine ? q : c?.academy && lvlOf(p) === 'R' && p.age <= 24 ? c.academy.strength : c && c.rep ? 6 + (c.rep - 60) / 4 : 8;
+    const beforeAt = mine ? p.at.slice() : null, beforeCa = mine ? p.ca : 0;
     develop(p, quality, keys, mine ? im : 1);
+    if (mine) {
+      const changes = [];
+      p.at.forEach((v, i) => { const delta = v - beforeAt[i]; if (delta) changes.push([i, delta]); });
+      if (changes.length) weekChanges.push({ id: p.id, changes, ca: p.ca - beforeCa });
+    }
     // morale drifts back toward neutral
     if (p.fpn == null) linkBio(p);
     p.mor = clamp(Math.floor(p.mor + (62 - p.mor) * 0.06 + moraleDrift(p, nats[p.club] || {}) + R()), 0, 100); // random rounding so small weekly pushes add up
   });
+  if (dev) {
+    const report = { season: G.season, week: G.week, players: weekChanges };
+    const existing = dev.reports.findIndex(r => r.season === G.season && r.week === G.week);
+    if (existing >= 0) dev.reports[existing] = report; else dev.reports.push(report);
+    if (dev.reports.length > SEASON_WEEKS) dev.reports.splice(0, dev.reports.length - SEASON_WEEKS);
+  }
   T.fam = clamp(T.fam + (T.focus === 'tac' ? 5 : 2), 0, 100);
 }
 

@@ -218,6 +218,7 @@ function rollover() {
     while (x.squad.length < 16) { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (x.rep - 50) * 0.6 - rf(0, 8), pa: 0, age: ri(17, 24), nat: R() < 0.75 ? x.nat : pickNat(PL_NATS), club: x.id }); p.pa = clamp(p.ca + ri(3, 18), p.ca, 95); addToClub(p, x); G.know[p.id] = 10; }
   });
   G.season++; G.week = 0; G.day = 0;
+  if (typeof resetTrainingDev === 'function') resetTrainingDev();
   G.playoffs = null;
   G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
   G.press = {};
