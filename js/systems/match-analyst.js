@@ -50,7 +50,10 @@ function matchAnalystSnapshot(f) {
 }
 async function matchAnalystFetch(path) {
   const safe = String(path || '').replace(/^\/+/, '');
-  if (!/^(js|scripts)\/[a-zA-Z0-9_./-]+\.js$/.test(safe) && !/^docs\/[a-zA-Z0-9_./-]+\.md$/.test(safe)) throw new Error('Invalid source path requested.');
+  const codePath = /^(js|scripts)\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.js$/.test(safe);
+  const docPath = /^docs\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.md$/.test(safe);
+  const sourceIndex = safe === 'docs/match-analysis-js.json';
+  if (!codePath && !docPath && !sourceIndex) throw new Error('Invalid source path requested.');
   const r = await fetch(MATCH_ANALYST_RAW + safe, { cache: 'force-cache' });
   if (!r.ok) throw new Error(`Could not load ${safe} (${r.status}).`);
   return r.text();
@@ -58,7 +61,7 @@ async function matchAnalystFetch(path) {
 async function matchAnalystFiles() {
   if (ADM.matchAnalystIndex) return ADM.matchAnalystIndex;
   const raw = await matchAnalystFetch('docs/match-analysis-js.json'), paths = JSON.parse(raw);
-  if (!Array.isArray(paths) || !paths.length || paths.some(p => !/^(js|scripts)\/[a-zA-Z0-9_./-]+\.js$/.test(p))) throw new Error('The JavaScript source index is invalid.');
+  if (!Array.isArray(paths) || !paths.length || paths.some(p => !/^(js|scripts)\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.js$/.test(p))) throw new Error('The JavaScript source index is invalid.');
   ADM.matchAnalystIndex = paths;
   return paths;
 }
