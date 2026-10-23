@@ -39,7 +39,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     check('A placeholder club has a working dashboard with its league and country',/La Liga/.test(await page.locator('.main').textContent())&&/Spain/.test(await page.locator('.main').textContent()));
     await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
     check('The dummy squad shows 25 slots with no player profile or transfer controls',await page.locator('.main .list .row').count()===25&&await page.locator('.main [data-a=player],.main [data-a=contract],.main [data-a=scoutFile]').count()===0);
-    check('Placeholder squads explain that their players are unavailable for transfer',/cannot be scouted, signed or transferred/.test(await page.locator('.main .note').textContent()));
+    check('Virtual squads explain that names are display-only and cannot be scouted or transferred',/fictional, read-only squad/.test(await page.locator('.main .note').textContent())&&/cannot be scouted or transferred/.test(await page.locator('.main .note').textContent())&&await page.locator('.main .list .row').first().textContent().then(t=>!/Placeholder/.test(t)&&/Spain/.test(t)));
     check('Dummy clubs expose no Transfers tab',await page.locator('[data-a=clubPage][data-section=transfers]').count()===0);
     await page.locator('[data-a=clubPage][data-section=fixtures]').tap();
     check('A background club explains its calendar is pending',/Fixtures pending/.test(await page.locator('.main').textContent()));

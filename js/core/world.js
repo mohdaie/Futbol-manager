@@ -36,7 +36,37 @@ function clubCompetitionLabel(c) {
 }
 function dummySquadSlots(c) {
   if (!c.backgroundOnly) return [];
-  return SQUAD_TEMPLATE.slice(0, c.dummySquad?.size || 25).map((pos, i) => ({
-    no: i + 1, pos, name: 'Placeholder ' + String(i + 1).padStart(2, '0'), transferable: false,
-  }));
+  const profile = VIRTUAL_SQUAD_PROFILES[c.worldLeague] || VIRTUAL_SQUAD_PROFILES.ES1;
+  const size = Math.min(c.dummySquad?.size || 25, SQUAD_TEMPLATE.length);
+  const local = Array(size).fill(profile.local).slice(0, profile.localCount);
+  const eu = profile.eu, international = profile.international;
+  const nats = [...local];
+  while (nats.length < size - profile.nonEuCount) nats.push(eu[Math.floor(hash01(c.id + ':eu:' + nats.length) * eu.length)]);
+  while (nats.length < size) nats.push(international[Math.floor(hash01(c.id + ':int:' + nats.length) * international.length)]);
+  const used = new Set();
+  return SQUAD_TEMPLATE.slice(0, size).map((pos, i) => {
+    const nat = nats[i], pool = NATIONS[nat] || NATIONS[profile.local];
+    let name = '';
+    for (let salt = 0; salt < 200; salt++) {
+      const f = pool.f[Math.floor(hash01(`${c.id}:${i}:${salt}:f`) * pool.f.length)];
+      const l = pool.l[Math.floor(hash01(`${c.id}:${i}:${salt}:l`) * pool.l.length)];
+      name = f + ' ' + l;
+      if (!used.has(name)) break;
+    }
+    used.add(name);
+    return { no: i + 1, pos, name, nat, nationality: natName(nat), transferable: false, scoutable: false };
+  });
 }
+
+// Display-only nationality mix for 25-person virtual squads. Spain has a
+// domestic maximum of three non-EU registrations. The other profiles use an
+// eight-player local share as a realism target; they are not legal minima.
+// Italy, Germany and France have no equivalent domestic nationality quota.
+// UEFA's eight locally-trained list places depend on training history, which
+// these virtual, profile-free players do not claim to satisfy.
+const VIRTUAL_SQUAD_PROFILES = {
+  ES1: { local: 'ESP', localCount: 14, eu: ['POR','FRA','GER','ITA','NED','BEL','IRL','SCO','DEN','NOR'], nonEuCount: 3, international: ['BRA','ARG','NGA','GHA','SEN','CIV','JPN','MAS','USA'] },
+  IT1: { local: 'ITA', localCount: 8, eu: ['ESP','FRA','GER','POR','NED','BEL','IRL','SCO','DEN','NOR'], nonEuCount: 7, international: ['BRA','ARG','NGA','GHA','SEN','CIV','JPN','MAS','USA'] },
+  DE1: { local: 'GER', localCount: 8, eu: ['ESP','FRA','ITA','POR','NED','BEL','IRL','SCO','DEN','NOR'], nonEuCount: 7, international: ['BRA','ARG','NGA','GHA','SEN','CIV','JPN','MAS','USA'] },
+  FR1: { local: 'FRA', localCount: 8, eu: ['ESP','GER','ITA','POR','NED','BEL','IRL','SCO','DEN','NOR'], nonEuCount: 7, international: ['BRA','ARG','NGA','GHA','SEN','CIV','JPN','MAS','USA'] },
+};

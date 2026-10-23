@@ -202,3 +202,11 @@ NODE_PATH=/opt/codex/cua_node/lib/node_modules CHROMIUM_PATH=/usr/bin/chromium n
 ## Release 2026.10.23.8: compact live tabs and pause before match management
 
 The live match view tabs use a compact segmented style to fit the phone screen. Opening Tactics or Subs pauses the match and leaves it paused when the panel closes, giving the manager time to make changes before explicitly resuming play. The navigation suite passes 49 checks, including pause behavior for both panels; the match-view suite passes 43 checks across phone and landscape layouts.
+
+## Release 2026.10.23.9: virtual international squads
+
+The 56 non-selected overseas clubs now show 25 deterministic, country-matched read-only player names and nationalities. They remain virtual rows without player IDs or profiles, so they do not enter scouting, transfers, match simulation or saves. The generated nationality mixes respect Spain's three non-EU registration limit; the Italian, German and French splits are marked as plausibility targets rather than domestic legal quotas.
+
+## Release 2026.10.23.10: overseas club crest colors
+
+The 56 background-only overseas clubs now use club-specific crest colors based on their real-world home identities. Existing selected clubs keep their current palettes.

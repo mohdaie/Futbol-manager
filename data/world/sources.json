@@ -3,7 +3,7 @@
   "revision": "e6744429ee395bc86f247348c6184bb08d4eb361",
   "license": "CC0-1.0",
   "mode": "inactive-leagues",
-  "note": "Membership matches the pinned community dataset, not an independently verified official handbook. This membership import adds no scores, fixtures or player records. Selected compact squads are sourced separately in squads-sources.json. The other 56 clubs retain virtual placeholders without player IDs or transfer eligibility. Existing overseas club IDs and owned players are retained.",
+  "note": "Membership matches the pinned community dataset, not an independently verified official handbook. This membership import adds no scores, fixtures or player records. Selected compact squads are sourced separately in squads-sources.json. The other 56 clubs have 25 deterministic, read-only display identities each, with country-appropriate names/nationalities and no player IDs, profile, scouting or transfer eligibility. Existing overseas club IDs and owned players are retained.",
   "leagues": {
     "ES1": {
       "name": "La Liga",
