@@ -257,11 +257,15 @@ function setFrame(L, p, snap) {
   // Do not curve through a restart, missing player or implausible jump.
   const smooth = (i, derivative = false) => {
     const p0 = z[i], p1 = a[i], p2 = b[i], p3 = c[i];
+    if (p1 != null && p2 != null && Math.abs(p2 - p1) > 6) return derivative ? 0 : p1;
     if (p1 == null || p2 == null || p0 == null || p3 == null || a[6] !== b[6] || Math.abs(p2 - p1) > 6 || Math.abs(p1 - p0) > 6 || Math.abs(p3 - p2) > 6) return derivative ? (p1 == null || p2 == null ? 0 : p2 - p1) : lerp(i);
     return liveCurve(p0, p1, p2, p3, u, derivative);
   };
   const carried = a[4] >= 0 && b[4] === a[4] && b[5] === a[5];
   L.ball.x = carried ? smooth(1) : lerp(1); L.ball.y = carried ? smooth(2) : lerp(2); L.ball.z = lerp(3); L.rs = a[6]; L.gt = t;
+  const cut = a[6] !== b[6] && hyp(b[1] - a[1], b[2] - a[2]) > 6;
+  if (cut) { L.ball.x = a[1]; L.ball.y = a[2]; L.ball.z = a[3]; }
+  L.sceneFade = cut ? Math.sin(Math.PI * u) * 0.8 : 0;
   // Possession changing hands in open play: a ring where it was won.
   if (a[4] >= 0 && L.own[0] >= 0 && a[4] !== L.own[0] && !a[6] && !snap) (L.fx || (L.fx = [])).push({ k: 'won', x: L.ball.x, y: L.ball.y, side: a[4], t0: t });
   L.own = [a[4], a[5]];
@@ -283,10 +287,17 @@ function setFrame(L, p, snap) {
   // during a turn between the engine's half-second samples.
   const [os, oi] = L.own, carrier = os >= 0 && oi >= 0 ? L.dots[os]?.[oi] : null;
   if (carried && carrier) {
-    const fa = carrier.fa ?? fwdA(os), d = 0.52;
+    const fa = carrier.fa ?? fwdA(os), d = touchDistance(carrier, t);
     L.ball.x = clamp(carrier.x + Math.cos(fa) * d, 0.05, PW - 0.05);
     L.ball.y = clamp(carrier.y + Math.sin(fa) * d, 0.05, PL - 0.05);
     L.ball.z = 0;
+  }
+  const shot = (q.marks || []).filter(m => m.k === 'sfx' && t >= m.t && t <= m.t + m.flight).pop();
+  if (shot) {
+    const point = flightPoint({ ...shot, k: 'shot', t0: shot.t, arr: shot.t + shot.flight }, t);
+    [L.ball.x, L.ball.y, L.ball.z] = point;
+    const keeper = shot.keeper, g = L.dots[1 - shot.s]?.[0];
+    if (keeper && g) { const u = clamp((t - keeper.start) / Math.max(0.05, keeper.end - keeper.start), 0, 1); g.x = keeper.x0 + (keeper.tx - keeper.x0) * u; g.y = keeper.y0 + (keeper.ty - keeper.y0) * u; }
   }
   if (snap) moveCam(L, 0, true);
 }
@@ -346,8 +357,15 @@ function shotPathPoint(L, m) {
   if (!m || m.tx == null || m.x0 == null) return null;
   const fl = Math.max(0.05, m.flight || 0.4);
   if (L.gt < m.t || L.gt > m.t + fl + 1e-6) return null;
-  const u = clamp((L.gt - m.t) / fl, 0, 1);
-  return [m.x0 + (m.tx - m.x0) * u, m.y0 + (m.ty - m.y0) * u];
+  return flightPoint({ ...m, k: 'shot', t0: m.t, arr: m.t + fl }, L.gt).slice(0, 2);
+}
+function liveAction(L, side, who) {
+  const marks = (L.previousMinute?.marks || []).concat(L.mq?.marks || []);
+  for (let n = marks.length - 1; n >= 0; n--) {
+    const m = marks[n], before = m.k === 'kick' ? 0.18 : 0;
+    if (m.s === side && m.who === who && ['kick', 'touch', 'duel'].includes(m.k) && L.gt >= m.t - before && L.gt <= m.t + (m.duration || 0.45)) return m;
+  }
+  return null;
 }
 function draw(L) {
   const g = L.ctx, W = L.W, H = L.H, s = L.cam.s, X = vx => sx(L, vx), Y = vy => sy(L, vy);
@@ -403,14 +421,16 @@ function draw(L) {
     S.on.forEach((id, i) => {
       const d = L.dots[si][i]; if (!id || !d) return;
       const pr = penRun && penRun.s === si && penRun.who === i ? penAt(penRun) : [d.x, d.y];
-      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), y = Y(vy), gk = i === 0;
+      const action = liveAction(L, si, i);
+      const jump = action?.style === 'header' ? Math.sin(Math.PI * clamp((L.gt - action.t + 0.18) / 0.5, 0, 1)) * s * 0.35 : 0;
+      const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), groundY = Y(vy), y = groundY - jump, gk = i === 0;
       // The circle is his body (sim.js bodyRadius) at pitch scale, so contacts on screen match the physics.
       const br = Math.max(3, bodyRadius(S, i) * s);
       if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
-      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + br * 0.7, br * 0.9, br * 0.35, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, groundY + br * 0.7, br * 0.9, br * 0.35, 0, 0, Math.PI * 2); g.fill();
       // Small alternating boots give runners weight without moving the body away
       // from its real pitch position. Their shadows stay planted on the grass.
-      if (d.v > 0.15 && d.fa != null) {
+      if (d.v > 0.15 && d.fa != null && !action) {
         const fa = d.fa + (liveViewFlipped(L) ? Math.PI : 0), cx = Math.cos(fa), cy = Math.sin(fa);
         const step = Math.sin(d.stride || 0) * Math.min(1, d.v / 4) * br * 1.25;
         g.strokeStyle = '#16251E'; g.lineWidth = Math.max(1.2, br * 0.4); g.lineCap = 'round';
@@ -418,6 +438,15 @@ function draw(L) {
           const fx = x - cy * br * 0.65 * side, fy = y + cx * br * 0.65 * side;
           g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + cx * step * side, fy + cy * step * side); g.stroke();
         }
+      }
+      if (action && action.style !== 'header') {
+        const tx = action.tx ?? action.x, ty = action.ty ?? action.y;
+        const angle = Math.atan2(ty - d.y, tx - d.x) + (liveViewFlipped(L) ? Math.PI : 0);
+        const phase = clamp((L.gt - action.t + 0.18) / ((action.duration || 0.45) + 0.18), 0, 1);
+        const swing = Math.sin(phase * Math.PI), reach = action.k === 'duel' ? 1.7 : action.k === 'touch' ? 0.8 : 1.5;
+        g.strokeStyle = action.k === 'duel' ? '#F2C14E' : '#16251E'; g.lineWidth = Math.max(1.8, br * 0.45); g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(angle) * br * (0.5 + reach * swing), y + Math.sin(angle) * br * (0.5 + reach * swing)); g.stroke();
+        if (action.k === 'touch') { g.strokeStyle = 'rgba(45,226,238,.7)'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, br + 3 * (1 - phase), 0, Math.PI * 2); g.stroke(); }
       }
       g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = Math.max(1, br * 0.3);
       g.beginPath(); g.arc(x, y, br, 0, Math.PI * 2); g.fill(); g.stroke();
@@ -441,12 +470,12 @@ function draw(L) {
   const sf = L.mq && L.gt != null ? L.mq.marks.filter(m => m.k === 'sfx' && L.gt >= m.t && L.gt <= m.t + (m.flight || 0.8) + 1.6).pop() : null;
   let zOver = null;
   if (sf) {
-    const fl = Math.max(0.3, sf.flight || 0.8), u = clamp((L.gt - sf.t) / fl, 0, 1);
-    if (L.gt <= sf.t + fl) zOver = sf.kind === 'chip' ? sf.az * u + 2.2 * u * (1 - u) * 4 : sf.az * Math.min(1, u * 1.15);
+    const fl = Math.max(0.05, sf.flight || 0.8), u = clamp((L.gt - sf.t) / fl, 0, 1);
+    if (L.gt <= sf.t + fl) zOver = flightPoint({ ...sf, k: 'shot', t0: sf.t, arr: sf.t + fl }, L.gt)[2];
     const dside = 1 - sf.s, gk = L.dots[dside] && L.dots[dside][0];
     if (gk && (sf.res === 'save' || sf.res === 'goal') && L.gt >= sf.t + fl * 0.25 && L.gt <= sf.t + fl + 0.9) {
-      const [kvx, kvy] = view(L, gk.x, gk.y), [tvx, tvy] = view(L, PW / 2 + sf.ax, gk.y), dir = Math.sign(tvx - kvx) || 1, k = clamp((L.gt - sf.t - fl * 0.25) / (fl * 0.75), 0, 1);
-      const col = L.colors[dside === L.bottom ? 0 : 1].gk, len = r * (1 + 1.6 * k) * (sf.res === 'goal' ? 0.85 : 1);
+      const [kvx, kvy] = view(L, gk.x, gk.y), [tvx, tvy] = view(L, sf.tx, gk.y), dir = Math.sign(tvx - kvx) || 1, k = clamp((L.gt - sf.t - fl * 0.25) / (fl * 0.75), 0, 1);
+      const col = L.colors[dside === L.bottom ? 0 : 1].gk, len = s * (0.5 + 0.8 * k);
       g.save(); g.fillStyle = col; g.globalAlpha = 0.85; g.beginPath(); g.ellipse(X(kvx) + dir * len * 0.5, Y(kvy), len * 0.75, r * 0.55, 0, 0, Math.PI * 2); g.fill();
       g.globalAlpha = 1; g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(X(kvx) + dir * len * 1.15, Y(kvy) - r * 0.2, r * 0.38, 0, Math.PI * 2); g.fill(); g.restore();
     }
@@ -455,7 +484,7 @@ function draw(L) {
       g.save(); g.fillStyle = `rgba(255,255,255,${0.55 * a})`; g.fillRect(X(PW / 2 - 3.66), Math.min(Y(nvy), Y(nby)), 7.32 * s, Math.abs(Y(nby) - Y(nvy))); g.restore();
     }
     // What kind of shot, then what happened.
-    const after = L.gt > sf.t + fl, outcome = { save: 'Saved!', miss: sf.az > 2.44 ? 'Over the bar' : 'Wide' }[sf.res];
+    const after = L.gt > sf.t + fl, outcome = { save: 'Saved!', miss: sf.az > 2.44 ? 'Over the bar' : 'Wide', block: 'Blocked' }[sf.res];
     const txt = after && outcome ? outcome : (SHOT_NAME[sf.kind] || 'Shot') + (sf.aim && sf.aim !== 'central' && !['chip', 'power', 'open goal', 'penalty'].includes(sf.kind) ? ' \u00B7 ' + sf.aim : '');
     if (!(after && sf.res === 'goal') && !L.overlay) {
       g.font = '700 13px "Plus Jakarta Sans", system-ui, sans-serif'; g.textAlign = 'center';
@@ -473,6 +502,8 @@ function draw(L) {
   g.fillStyle = `rgba(0,0,0,${0.35 / (1 + z * 0.25)})`; g.beginPath(); g.ellipse(bx + 1.5, by + 1.5, br * (1 + z * 0.08), br * 0.6, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = '#FFFFFF'; g.strokeStyle = '#1B1B1B'; g.lineWidth = 1;
   g.beginPath(); g.arc(bx, by - z * s * 0.55, br, 0, Math.PI * 2); g.fill(); g.stroke();
+  // Rolling seams make controlled dribble touches visible while keeping the ball at the feet.
+  if (L.own[0] >= 0) { const a = (L.gt || 0) * 10, yy = by - z * s * 0.55; g.beginPath(); g.moveTo(bx - Math.cos(a) * br * 0.7, yy - Math.sin(a) * br * 0.7); g.lineTo(bx + Math.cos(a) * br * 0.7, yy + Math.sin(a) * br * 0.7); g.stroke(); }
   if ((G.settings.cam || 'follow') === 'follow') miniMap(L);
   // A restart running fast-forward: what it is.
   const RS_NAME = { thr: 'Throw-in', gk: 'Goal kick', ck: 'Corner', fk: 'Free kick', ko: 'Kick-off' };
@@ -482,7 +513,7 @@ function draw(L) {
     g.fillStyle = 'rgba(34,8,47,.72)'; g.beginPath(); g.roundRect ? g.roundRect(8, 8, w, 22, 11) : g.rect(8, 8, w, 22); g.fill();
     g.fillStyle = '#EAF2EE'; g.fillText(txt, 16, 19.5); g.textAlign = 'center';
   }
-  if (L.fade > 0) { g.fillStyle = `rgba(10,4,18,${L.fade * 0.65})`; g.fillRect(0, 0, W, H); }
+  if (L.fade > 0 || L.sceneFade > 0) { g.fillStyle = `rgba(10,4,18,${Math.max((L.fade || 0) * 0.65, L.sceneFade || 0)})`; g.fillRect(0, 0, W, H); }
   if (L.overlay) {
     const o = L.overlay;
     g.fillStyle = 'rgba(34,8,47,.7)'; g.fillRect(0, H / 2 - 44, W, 88);

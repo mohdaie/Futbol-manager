@@ -194,10 +194,13 @@ function syncSide(M, s, place) {
 }
 const P_ = (M, s, i) => M.sim.P[s][i];
 const owner = M => (M.sim.B.os >= 0 ? M.sim.P[M.sim.B.os][M.sim.B.oi] : null);
+function touchDistance(p, t) {
+  return 0.52 + Math.sin(t * 10) * 0.02 * Math.min(1, Math.hypot(p.vx || 0, p.vy || 0) / 4);
+}
 function attachBallToCarrier(M) {
   const B = M.sim.B, p = owner(M);
   if (!p) return;
-  const a = p.fa ?? fwdA(B.os), d = 0.52;
+  const a = p.fa ?? fwdA(B.os), d = touchDistance(p, M.sim.t);
   B.x = clamp(p.x + Math.cos(a) * d, 0.05, PW - 0.05);
   B.y = clamp(p.y + Math.sin(a) * d, 0.05, PL - 0.05);
   B.z = 0;
@@ -205,6 +208,7 @@ function attachBallToCarrier(M) {
 function giveBall(M, s, i) {
   const B = M.sim.B, p = P_(M, s, i);
   if (!p) return looseBall(M);
+  if (B.fl?.s === s && B.fl.i !== i) mark(M, 'touch', s, { who: i, x: p.x, y: p.y });
   if (B.offSet && B.offS === s && (B.offSet & (1 << i)) && !M.sim.rs) { B.offSet = 0; return offside(M, s, i, null); }
   if (B.offS !== s) B.offSet = 0;
   if (M.sim.poss !== s) {
@@ -218,7 +222,11 @@ function giveBall(M, s, i) {
   B.dt = decideDelay(M, s, i, ENG.touch) * (transition(M, s) === 'ctr' ? 0.6 : 1);
   { const bk = backness(s, p); if (bk > 0.45 && !M.sim.rs) B.dt += (bk - 0.45) * 1.2; } // 1c: back to goal, he needs a touch to turn
   // Unpressed, a player takes a touch and looks up before passing; pressed, he plays quickly.
-  if (pressureOn(M, s, i)[2] > 10 && toOwn(s, p.x, p.y)[1] < 0.66 && transition(M, s) !== 'ctr') B.dt = Math.max(B.dt, 1.2 + R() * 0.6); // nobody within 10 m (build-up keeps its tempo)
+  if (transition(M, s) !== 'ctr' && dGoal(s, p.x, p.y) > 30) {
+    const pressure = pressureOn(M, s, i)[0];
+    B.dt += (1 - pressure) * [0.65, 0.4, 0.15][M.sides[s].tempo ?? 1];
+  }
+  if (pressureOn(M, s, i)[2] > 10 && toOwn(s, p.x, p.y)[1] < 0.66 && transition(M, s) !== 'ctr') B.dt = Math.max(B.dt, 1.5 + R() * 0.6);
 }
 // Straight after a change of possession: 'ctr' (counter: quick and forward), 'hold' (keep it, wait for the shape),
 // or null. Set by "When the ball is won".
@@ -259,6 +267,7 @@ function setRestart(M, k, s, X, Y, ev) {
   sim.momentum = null; sim.counterpress = null;
   looseBall(M); sim.B.offSet = 0;
   sim.rs = { k, s, x: clamp(X, 0, PW), y: clamp(Y, 0, PL), w: restartWait(k, s, X, Y), ev: ev || null };
+  mark(M, 'restart', s, { kind: k, x: sim.rs.x, y: sim.rs.y });
   Object.assign(sim.B, { x: sim.rs.x, y: sim.rs.y, z: 0, vx: 0, vy: 0, vz: 0 });
   if (sim.poss !== s) { sim.poss = s; sim.turn = sim.t; }
   if (k === 'ck') { M.sides[s].st.co++; mark(M, 'corner', s); }
@@ -273,6 +282,55 @@ function takerFor(M, k, s) {
   P.forEach((p, i) => { if (!p || i === 0) return; const d = hyp(p.x - rs.x, p.y - rs.y); if (d < bd) { bd = d; best = i; } });
   return best;
 }
+// Explicit runner, marker, rest-defence and wall jobs persist until delivery.
+function setPiecePlan(M, rs) {
+  const s = rs.s, o = 1 - s, S = M.sides[s], O = M.sides[o];
+  const attacking = rs.k === 'ck' || rs.k === 'fk' && dGoal(s, rs.x, rs.y) < 40;
+  if (!attacking) return null;
+  const pool = M.sim.P[s].map((p, i) => p && i > 0 && i !== rs.ti ? i : -1).filter(i => i > 0);
+  const runners = pool.slice().sort((a, b) => aerialAt(S, b) - aerialAt(S, a)).slice(0, 3);
+  const near = rs.x < PW / 2 ? -1 : 1;
+  const spots = [[PW / 2 + near * 5, 6.5], [PW / 2, 11], [PW / 2 - near * 6, 8.5]];
+  const jobs = runners.map((i, n) => ({ i, x: spots[n][0], y: goalY(s) - fwdY(s) * spots[n][1] }));
+  const rest = pool.filter(i => !runners.includes(i)).sort((a, b) => LINE[FORMATIONS[S.ip][a][0]] - LINE[FORMATIONS[S.ip][b][0]]).slice(0, 2);
+  const direct = rs.k === 'fk' && dGoal(s, rs.x, rs.y) < 32 && Math.abs(rs.x - PW / 2) < 20;
+  const wall = direct ? M.sim.P[o].map((p, i) => p && i > 0 ? i : -1).filter(i => i > 0).sort((a, b) => hyp(M.sim.P[o][a].x - rs.x, M.sim.P[o][a].y - rs.y) - hyp(M.sim.P[o][b].x - rs.x, M.sim.P[o][b].y - rs.y)).slice(0, dGoal(s, rs.x, rs.y) < 25 ? 4 : 3) : [];
+  const markers = M.sim.P[o].map((p, i) => p && i > 0 && !wall.includes(i) ? i : -1).filter(i => i > 0).sort((a, b) => aerialAt(O, b) - aerialAt(O, a)).slice(0, jobs.length);
+  return { jobs, rest, wall, markers, target: Math.floor(R() * jobs.length), short: rs.k === 'ck' && R() < 0.12 ? pool.find(i => !runners.includes(i) && !rest.includes(i)) : null };
+}
+function setPieceTargets(M, rs) {
+  const plan = rs.plan;
+  if (!plan) return;
+  const s = rs.s, o = 1 - s, fw = fwdY(s), running = rs.w <= 2.5;
+  plan.jobs.forEach((job, n) => {
+    const p = P_(M, s, job.i);
+    if (p) { p.tx = job.x + (running ? 0 : (n % 2 ? -3 : 3)); p.ty = job.y - fw * (running ? 0 : 3); p.sup = M.sim.t + 2; if (running) p.run = M.sim.t + 3; }
+    const marker = P_(M, o, plan.markers[n]);
+    if (marker && p) { marker.tx = p.tx + (n % 2 ? -0.9 : 0.9); marker.ty = p.ty + fw * 0.8; marker.sup = M.sim.t + 2; }
+  });
+  plan.rest.forEach((i, n) => { const p = P_(M, s, i); if (p) { p.tx = PW / 2 + (n ? 10 : -10); p.ty = goalY(s) - fw * 32; p.sup = M.sim.t + 2; } });
+  const len = hyp(PW / 2 - rs.x, goalY(s) - rs.y) || 1, ux = (PW / 2 - rs.x) / len, uy = (goalY(s) - rs.y) / len;
+  plan.wall.forEach((i, n) => { const p = P_(M, o, i), offset = n - (plan.wall.length - 1) / 2;
+    if (p) { p.tx = rs.x + ux * 9.8 - uy * offset; p.ty = rs.y + uy * 9.8 + ux * offset; p.fa = Math.atan2(-uy, -ux); }
+  });
+  if (plan.short != null) { const p = P_(M, s, plan.short); if (p) { p.tx = rs.x < PW / 2 ? 7 : PW - 7; p.ty = goalY(s) - fw * 7; p.sup = M.sim.t + 3; } }
+}
+function enforceRestartDistance(M) {
+  const rs = M.sim.rs;
+  if (!rs || !['fk', 'ck'].includes(rs.k)) return;
+  M.sim.P[1 - rs.s].forEach(p => {
+    if (!p) return;
+    const td = hyp(p.tx - rs.x, p.ty - rs.y);
+    if (td < 9.15) { const a = td > 0.01 ? Math.atan2(p.ty - rs.y, p.tx - rs.x) : -fwdA(rs.s); p.tx = clamp(rs.x + Math.cos(a) * 9.4, 0.5, PW - 0.5); p.ty = clamp(rs.y + Math.sin(a) * 9.4, 0.5, PL - 0.5); }
+    if (rs.w > TICK) return; // walk away naturally during setup; guard the final placement only
+    let dx = p.x - rs.x, dy = p.y - rs.y, d = hyp(dx, dy);
+    if (d >= 9.15) return;
+    if (d < 0.01) { dx = 0; dy = -fwdY(rs.s); d = 1; }
+    p.x = clamp(rs.x + dx / d * 9.2, 0.5, PW - 0.5); p.y = clamp(rs.y + dy / d * 9.2, 0.5, PL - 0.5);
+    // A touchline clamp can shorten the radial distance; step into the pitch.
+    if (hyp(p.x - rs.x, p.y - rs.y) < 9.15) p.y = clamp(rs.y - fwdY(rs.s) * 9.2, 0.5, PL - 0.5);
+  });
+}
 // Players take up their places for the restart; when the wait is over the taker plays it.
 function restartTick(M) {
   const sim = M.sim, rs = sim.rs, s = rs.s, o = 1 - s;
@@ -281,7 +339,7 @@ function restartTick(M) {
   if (!tk) { rs.ti = null; return; }
   // Taker to the ball; set pieces bring the big men forward; everyone else to the shape for this ball position.
   const [bx, by] = toOwn(s, rs.x, rs.y);
-  if (rs.placed) { rs.w -= TICK; if (rs.w > 0) return; } else rs.placed = true;
+  if (rs.placed) rs.w -= TICK; else { rs.placed = true; rs.plan = setPiecePlan(M, rs); }
   if (rs.w > 0) [s, o].forEach(t => {
     const S = M.sides[t], pos = shapeOf(M, t, t === s, t === s ? bx : 1 - bx, t === s ? by : 1 - by);
     sim.P[t].forEach((p, i) => {
@@ -297,6 +355,7 @@ function restartTick(M) {
       p.tx = X; p.ty = Y;
     });
   });
+  setPieceTargets(M, rs);
   tk.tx = rs.x; tk.ty = rs.y;
   if (rs.k === 'pen' && rs.w > 0) { const g = P_(M, o, 0); if (g) { g.tx = PW / 2; g.ty = goalY(s); } tk.tx = PW / 2; tk.ty = goalY(s) - fwdY(s) * 11; rs.x = tk.tx; rs.y = tk.ty; }
   if (rs.w > 0) return;
@@ -307,9 +366,13 @@ function restartTick(M) {
   giveBall(M, s, rs.ti);
   const B = sim.B;
   if (k === 'pen') return shoot(M, s, rs.ti, { pen: true });
-  if (k === 'ck') return crossBall(M, s, rs.ti, { ck: true });
+  if (k === 'ck' && rs.plan?.short != null) {
+    const j = rs.plan.short, r = P_(M, s, j);
+    if (r) { M.sides[s].st.pa++; pstat(M.sides[s], rs.ti, 'pa'); return kick(M, s, rs.ti, 'pass', r.x, r.y, j, { noOffside: true }); }
+  }
+  if (k === 'ck') return crossBall(M, s, rs.ti, { ck: true, routine: rs.plan });
   if (k === 'fk' && dGoal(s, rs.x, rs.y) < 30 && Math.abs(rs.x - PW / 2) < 20 && R() < 0.55) return shoot(M, s, rs.ti, { fk: true });
-  if (k === 'fk' && dGoal(s, rs.x, rs.y) < 40) return crossBall(M, s, rs.ti, { fk: true });
+  if (k === 'fk' && dGoal(s, rs.x, rs.y) < 40) return crossBall(M, s, rs.ti, { fk: true, routine: rs.plan });
   B.dt = 0; carrierDecide(M, s, rs.ti, { restart: k });
 }
 // Places in and around the box for set pieces, in side s's attack.
@@ -561,7 +624,14 @@ function playOption(M, s, i, op, press) {
   const err = len * (0.035 + (20 - ac(S, i, 'pas')) * 0.0045 + (20 - ac(S, i, 'fir')) * 0.001) * (1 + press * (1.1 - ac(S, i, 'cmp') * 0.04)) * weak * (op.k === 'long' ? 1.3 / M.mod.wind : 1) * ((S.tempo ?? 1) === 2 ? 1.08 : 1);
   S.st.pa++; pstat(S, i, 'pa'); if (op.k === 'long') S.st.lp = (S.st.lp || 0) + 1;
   const tgt = P_(M, s, op.j), off = op.k === 'thru' || (tgt && beyond(s, tgt.y, offsideY(M, s)));
-  kick(M, s, i, op.k, op.tx, op.ty, op.j, { air: op.k === 'long', err, off: off && tgt ? beyond(s, tgt.y, offsideY(M, s)) : false });
+  kick(M, s, i, op.k, op.tx, op.ty, op.j, { air: op.k === 'long', err: err * (press < 0.5 ? 0.85 : 1), off: off && tgt ? beyond(s, tgt.y, offsideY(M, s)) : false });
+}
+// Shared by physics and playback: flight time, height and bend use one clock.
+function flightPoint(fl, t) {
+  const duration = Math.max(0.05, fl.arr - fl.t0), u = clamp((t - fl.t0) / duration, 0, 1);
+  const arc = fl.k === 'shot' ? fl.kind === 'chip' ? 2.2 : fl.kind === 'free kick' ? 0.9 : 0.15 : 9.8 * duration * duration / 8;
+  return [fl.x0 + (fl.tx - fl.x0) * u + (fl.curve || 0) * Math.sin(Math.PI * u), fl.y0 + (fl.ty - fl.y0) * u,
+    fl.k === 'shot' ? (fl.z0 || 0) * (1 - u) + (fl.az || 0) * u + arc * 4 * u * (1 - u) : 0.1 * (1 - u) + arc * 4 * u * (1 - u)];
 }
 // The ball leaves the player's foot: speed and height by the kind of ball, aimed with some error.
 function kick(M, s, i, k, tx, ty, j, o = {}) {
@@ -575,17 +645,18 @@ function kick(M, s, i, k, tx, ty, j, o = {}) {
     ex = tx + (tx - sx) / L0 * over + gauss() * L0 * 0.18; ey = ty + (ty - sy) / L0 * over + gauss() * L0 * 0.18;
   }
   const len = hyp(ex - sx, ey - sy) || 1;
-  const sp = k === 'shot' ? 26 : k === 'clear' ? 24 : o.air ? clamp(14 + len * 0.18, 16, 26) : clamp(9 + len * 0.42, 10, 22);
-  B.os = -1; B.oi = -1; B.x = sx; B.y = sy; B.z = o.air ? 0.1 : 0;
+  const sp = k === 'shot' ? o.speed || 26 : k === 'clear' ? 24 : o.air ? clamp(14 + len * 0.18, 16, 26) : clamp(9 + len * 0.42, 10, 22);
+  B.os = -1; B.oi = -1; B.x = sx; B.y = sy; B.z = o.z0 ?? (o.air ? 0.1 : 0);
   B.vx = (ex - sx) / len * sp; B.vy = (ey - sy) / len * sp;
   const flight = len / sp;
   B.vz = o.air ? 9.8 * flight / 2 : 0;
   B.fl = { k, s, i, j, x0: sx, y0: sy, tx: ex, ty: ey, t0: sim.t, arr: sim.t + flight, off: !!o.off, air: !!o.air, len, xg: o.xg || 0, aid: o.aid || null, sp,
-    linesBroken: INTENT_PASSES.has(k) ? brokenLines(M, s, sy, ey) : 0 };
+    z0: B.z, curve: o.curve || 0, linesBroken: INTENT_PASSES.has(k) ? brokenLines(M, s, sy, ey) : 0 };
+  mark(M, 'kick', s, { who: i, kind: k, style: o.kind || k, x: sx, y: sy, tx: ex, ty: ey, duration: k === 'shot' ? 0.32 : 0.22 });
   B.ls = s; B.li = i; p.carry = 0; p.takeOn = 0;
   // Offside: every team-mate beyond the second-last defender (and the ball) when the ball is played.
   B.offS = s; B.offSet = 0;
-  if (k !== 'shot') { const line = offsideY(M, s), P = sim.P[s]; for (let m = 1; m < P.length; m++) { const q = P[m]; if (q && m !== i && beyond(s, q.y, line)) B.offSet |= 1 << m; } }
+  if (k !== 'shot' && !o.noOffside) { const line = offsideY(M, s), P = sim.P[s]; for (let m = 1; m < P.length; m++) { const q = P[m]; if (q && m !== i && beyond(s, q.y, line)) B.offSet |= 1 << m; } }
   if (j >= 0) { const r = P_(M, s, j); if (r) { r.tx = ex; r.ty = ey; r.want = sim.t + flight + 0.5; } }
   if (o.air && (k === 'long' || k === 'clear')) secondBallSupport(M, s, i, j, ex, ey, flight);
 }
@@ -720,16 +791,24 @@ function shoot(M, s, i, o = {}) {
   const ev = evt(M, { side: s, t: 'shot', pid: pl.id, xg, pen: !!o.pen, sp: !!o.head, volley: !!o.volley, ck: !!o.ck, fk: !!o.fk, aid: aid || null, key: true });
   mark(M, 'shot', s, { xg });
   const gk = P_(M, 1 - s, 0), gkp = G.players[O.on[0]];
-  let blk = -1;
-  if (!o.pen && !o.fk) M.sim.P[1 - s].forEach((q, j) => { if (q && j && blk < 0) { const [d, u] = segDist(q.x, q.y, p.x, p.y, PW / 2, goalY(s)); if (u > 0.05 && u < 0.9 && d < 1.2 && R() < 0.55 * (ac(O, j, 'pos') + ac(O, j, 'ant')) / 24) blk = j; } });
   const gy = goalY(s), shot = shotType(M, s, i, p, o, oneOnOne, press);
+  const curve = ['curler', 'free kick'].includes(shot.kind) ? (shot.ax >= 0 ? -1 : 1) * (o.fk ? 1.7 : 1.1) : 0;
+  let blk = -1;
+  let blockU = 1;
+  if (!o.pen) M.sim.P[1 - s].forEach((q, j) => {
+    if (!q || !j) return;
+    const [, u] = segDist(q.x, q.y, p.x, p.y, PW / 2 + shot.ax, gy);
+    const d = hyp(q.x - (p.x + (PW / 2 + shot.ax - p.x) * u + curve * Math.sin(Math.PI * u)), q.y - (p.y + (gy - p.y) * u));
+    const height = shot.az * u + (o.fk ? 0.9 : 0.15) * 4 * u * (1 - u);
+    if (u > 0.05 && u < blockU && d < 1.2 && height < 2.1 && R() < (o.fk ? 0.28 : 0.55) * (ac(O, j, 'pos') + ac(O, j, 'ant')) / 24) { blk = j; blockU = u; }
+  });
   ev.kind = shot.kind;
   if (blk > 0) {
     const q = P_(M, 1 - s, blk);
-    ev.t = 'miss'; ev.block = true; pstat(O, blk, 'blk'); bump(O, blk, 0.1);
-    kick(M, s, i, 'shot', q.x, q.y, -1, {});
+    ev.block = true; pstat(O, blk, 'blk'); bump(O, blk, 0.1);
+    kick(M, s, i, 'shot', q.x, q.y, -1, { kind: shot.kind, z0: o.head ? 1.8 : o.volley ? 0.9 : 0 });
     Object.assign(M.sim.B.fl, { res: 'block', bj: blk, ev, kind: shot.kind });
-    mark(M, 'sfx', s, { kind: shot.kind, ax: 0, az: 0, res: 'block', x0: M.sim.B.fl.x0, y0: M.sim.B.fl.y0, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: 'central' });
+    mark(M, 'sfx', s, { kind: shot.kind, ax: 0, az: 0, z0: M.sim.B.fl.z0, res: 'block', x0: M.sim.B.fl.x0, y0: M.sim.B.fl.y0, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: 'central' });
     return;
   }
   const fin = o.head ? (aerialAt(S, i) + ac(S, i, 'fin')) / 2 : o.fk ? fkSkill(pl) : ac(S, i, 'fin');
@@ -744,16 +823,41 @@ function shoot(M, s, i, o = {}) {
   // bar for a miss.
   let { ax, az } = shot;
   if (res === 'miss') { if (['power', 'long', 'curler', 'free kick', 'chip'].includes(shot.kind) && R() < 0.5) { az = rf(2.6, 4.5); ev.over = true; } else ax = (Math.sign(ax) || (R() < 0.5 ? -1 : 1)) * rf(3.9, 7.5); }
+  const speed = ({ header: 18, volley: 28, chip: 17, placed: 22, power: 31, driven: 28, long: 29, curler: 24, 'free kick': 25 })[shot.kind] || 26;
+  let tx = PW / 2 + ax, ty = gy + fwdY(s) * 1.5;
+  if (res === 'save' && gk) {
+    const contactD = Math.min(Math.max(0.8, Math.abs(gk.y - gy)), Math.max(0.8, Math.abs(p.y - gy) - 0.8));
+    const cy = gy - fwdY(s) * contactD, u = clamp(Math.abs(p.y - cy) / Math.max(0.1, Math.abs(p.y - gy)), 0, 1);
+    const cx = p.x + (PW / 2 + ax - p.x) * u, seconds = hyp(cx - sim.B.x, cy - sim.B.y) / speed;
+    const reach = 1.05 + Math.max(0, seconds - (0.3 - ac(O, 0, 'ref') * 0.006)) * (3.2 + ac(O, 0, 'agi') * 0.12);
+    // Saved attempts include imperfect placement, rather than every saved shot
+    // being aimed at the far corner. Sample within the real shooting cone;
+    // an out-of-position keeper still cannot save a ball outside his reach.
+    const left = p.x + (PW / 2 - 3.5 - p.x) * u, right = p.x + (PW / 2 + 3.5 - p.x) * u;
+    const contactX = hyp(cx - gk.x, cy - gk.y) <= reach ? cx : clamp(gk.x, Math.min(left, right), Math.max(left, right));
+    if (hyp(contactX - gk.x, cy - gk.y) > reach || az * u > (gkp?.ht || 185) / 100 + 0.7) { res = 'goal'; ev.unreachable = true; }
+    else { tx = contactX; ty = cy; ax = p.x + (contactX - p.x) / Math.max(0.01, u) - PW / 2; az *= u; }
+  }
   ev.aim = Math.abs(ax) < 1.2 ? 'central' : ((ax > 0) === (p.x > PW / 2) ? 'near post' : 'far post');
-  kick(M, s, i, 'shot', PW / 2 + ax, gy - fwdY(s) * (res === 'save' ? 0.8 : -1.5), -1, {});
+  kick(M, s, i, 'shot', tx, ty, -1, { speed, curve, kind: shot.kind, z0: o.head ? 1.8 : o.volley ? 0.9 : 0 });
   Object.assign(M.sim.B.fl, { res, ev, xg, aid, ax, az, kind: shot.kind });
-  mark(M, 'sfx', s, { kind: shot.kind, ax, az, res, x0: M.sim.B.fl.x0, y0: M.sim.B.fl.y0, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: ev.aim });
+  const fl = M.sim.B.fl;
+  if (gk && (res === 'save' || res === 'goal')) {
+    const targetY = res === 'save' ? ty : gk.y, u = clamp(Math.abs(fl.y0 - targetY) / Math.max(0.1, Math.abs(fl.ty - fl.y0)), 0, 1);
+    const targetX = res === 'save' ? tx : fl.x0 + (fl.tx - fl.x0) * u + curve * Math.sin(Math.PI * u);
+    const dist = hyp(targetX - gk.x, targetY - gk.y) || 1, reaction = 0.3 - ac(O, 0, 'ref') * 0.006;
+    const travel = Math.min(Math.max(0, dist - 1.0), Math.max(0, fl.arr - sim.t - reaction) * (3.2 + ac(O, 0, 'agi') * 0.12));
+    fl.keeper = { x0: gk.x, y0: gk.y, tx: gk.x + (targetX - gk.x) / dist * travel, ty: gk.y + (targetY - gk.y) / dist * travel, start: sim.t + reaction, end: fl.arr };
+    gk.diveUntil = fl.arr + 0.4;
+  }
+  mark(M, 'sfx', s, { kind: shot.kind, ax, az, z0: fl.z0, res, x0: fl.x0, y0: fl.y0, tx: fl.tx, ty: fl.ty, curve, keeper: fl.keeper, who: i, flight: fl.arr - M.sim.t, aim: ev.aim });
   if (o.head || o.volley) M.sim.B.vz = o.volley ? 1.6 : 2;
 }
 // The shot arrives: goal, save (held, parried or turned behind), or wide (goal kick, sometimes a deflection for a corner).
 function shotArrives(M, fl) {
   const s = fl.s, S = M.sides[s], O = M.sides[1 - s], ev = fl.ev, i = fl.i, pid = ev.pid;
   setShotOutcomeTime(ev, fl);
+  if (ev.min !== M.min) { ev.min = M.min; (M.mev || (M.mev = [])).push(ev); }
   if (fl.res === 'goal') {
     S.st.g++; S.st.sot++; pstat(S, i, 'sot');
     if (ev.pen) S.st.pkg++;
@@ -768,10 +872,6 @@ function shotArrives(M, fl) {
     mark(M, 'goal', s);
     M.sim.celebrate = 35; // celebration and the walk back for the kick-off
     return kickOff(M, 1 - s);
-  }
-  if ((fl.res === 'save' || fl.res === 'goal') && fl.ax != null) { // 7.6: the keeper ends up where he dived (beaten: short of it)
-    const g = P_(M, 1 - s, 0);
-    if (g) { g.x = clamp(g.x + (PW / 2 + fl.ax * (fl.res === 'save' ? 0.95 : 0.8) - g.x) * (fl.res === 'save' ? 1 : 0.75), PW / 2 - 4, PW / 2 + 4); g.y = goalY(s) - fwdY(s) * 0.8; g.vx = g.vy = 0; g.cool = 0.8; }
   }
   if (fl.res === 'save') {
     S.st.sot++; pstat(S, i, 'sot'); pstat(O, 0, 'sv');
@@ -792,6 +892,15 @@ function shotArrives(M, fl) {
 
 /* ---------- crosses and headers ---------- */
 function crossBall(M, s, i, o) {
+  const job = o.routine?.jobs?.[o.routine.target];
+  if (job && P_(M, s, job.i)) {
+    const S = M.sides[s], del = ac(S, i, 'cro');
+    S.st.cr = (S.st.cr || 0) + 1; pstat(S, i, 'cr'); S.st.pa++; pstat(S, i, 'pa');
+    kick(M, s, i, 'cross', job.x, job.y, job.i, { air: true, err: (20 - del) * 0.2 + 0.6, noOffside: !!o.ck, curve: (P_(M, s, i).x < PW / 2 ? 1 : -1) * 1.2 });
+    Object.assign(M.sim.B.fl, { del, ck: !!o.ck, fk: !!o.fk });
+    o.routine.jobs.forEach(j => { const p = P_(M, s, j.i); if (p) { p.tx = j.x; p.ty = j.y; p.run = p.sup = M.sim.B.fl.arr + 0.5; } });
+    return;
+  }
   // A defender close to the crosser can block it: most go behind for a corner, the rest loose.
   if (!o.ck && !o.fk) {
     const p0 = P_(M, s, i), O = M.sides[1 - s];
@@ -897,14 +1006,35 @@ function ballTick(M) {
     return;
   }
   const fl = B.fl, x0 = B.x, y0 = B.y;
-  // Move, with gravity for lofted balls and friction on the ground.
+  // A kick created at this tick's end must not travel through the preceding tick.
+  if (fl && sim.t <= fl.t0) return;
+  // Airborne delivery uses the same analytic arc as playback. Ground drag must
+  // never make a cross land short of its already calculated destination.
   const steps = 3, h = dt / steps;
   for (let k = 0; k < steps; k++) {
+    const time = sim.t - dt + h * (k + 1);
+    if (fl && (fl.k === 'shot' || fl.air && !fl.landed)) {
+      if (time <= fl.t0) continue;
+      const point = flightPoint(fl, time);
+      B.x = point[0]; B.y = point[1]; B.z = point[2];
+      if (fl.k === 'shot') {
+        if (fl.keeper) {
+          const g = P_(M, 1 - fl.s, 0), q = fl.keeper, u = clamp((time - q.start) / Math.max(0.05, q.end - q.start), 0, 1);
+          if (g) { g.x = q.x0 + (q.tx - q.x0) * u; g.y = q.y0 + (q.ty - q.y0) * u; g.vx = g.vy = 0; }
+        }
+        if (time >= fl.arr) { B.fl = null; return fl.res === 'block' ? blockArrives(M, fl) : shotArrives(M, fl); }
+        continue;
+      }
+      if (time >= fl.arr) {
+        fl.landed = true; B.z = B.vz = 0; B.vx *= 0.45; B.vy *= 0.45;
+        airDuel(M, fl); if (B.fl !== fl) return;
+      } else if (fl.k === 'cross' && tryCrossVolley(M, fl)) return;
+      if (outOfPlay(M)) return;
+      continue;
+    }
     B.x += B.vx * h; B.y += B.vy * h;
     if (B.z > 0 || B.vz > 0) { B.z += B.vz * h; B.vz -= 9.8 * h; if (B.z <= 0) { B.z = 0; B.vz = 0; B.vx *= 0.45; B.vy *= 0.45; if (fl && fl.air && !fl.landed) { fl.landed = true; if (fl.k === 'cross' || fl.k === 'long' || fl.k === 'clear') { airDuel(M, fl); if (sim.B.fl !== fl) return; } } } }
-    if (fl && fl.k === 'cross' && B.z > 0 && tryCrossVolley(M, fl)) return;
-    else { const f = Math.max(0, 1 - 0.55 * h); B.vx *= f; B.vy *= f; }
-    if (fl && fl.k === 'shot') { if (sim.t - dt + h * (k + 1) >= fl.arr) { B.x = fl.tx; B.y = fl.ty; B.z = 0; B.fl = null; return fl.res === 'block' ? blockArrives(M, fl) : shotArrives(M, fl); } continue; }
+    { const f = Math.max(0, 1 - 0.55 * h); B.vx *= f; B.vy *= f; }
     if (outOfPlay(M)) return;
   }
   if (fl && fl.k === 'shot') return;
@@ -956,6 +1086,8 @@ function setShotOutcomeTime(ev, fl) {
 function blockArrives(M, fl) {
   const s = fl.s, O = M.sides[1 - s], B = M.sim.B, ev = fl.ev;
   setShotOutcomeTime(ev, fl);
+  if (ev.min !== M.min) { ev.min = M.min; (M.mev || (M.mev = [])).push(ev); }
+  ev.t = 'miss';
   if (R() < 0.55) { ev.corner = true; return setRestart(M, 'ck', s, B.x < PW / 2 ? 0.5 : PW - 0.5, goalY(s)); }
   B.os = -1; B.fl = null; B.vx = rf(-8, 8); B.vy = -fwdY(s) * rf(3, 10); B.vz = 0; // loose after the block
 }
@@ -1047,6 +1179,7 @@ function challenges(M) {
     // team-mate covers him, and otherwise he jockeys (no duel, nothing counted).
     const go = front && takeOn ? 1 : exposed || covered ? 0.09 * (1 + bh(O, j, 'tk') * 0.4) * (1 + ((O.press ?? 1) - 1) * 0.15) * (own.carry ? 1.3 : 1) : 0;
     if (go < 1 && R() > go * TICK * 2) return;
+    mark(M, 'duel', o, { who: j, os: s, oi: i, x: own.x, y: own.y });
     // Foul? Rash challenges, poor tacklers, temperament, the weather; fewer in the box.
     const pl = G.players[O.on[j]], inBox = toOwn(s, own.x, own.y)[1] < 0.157 && Math.abs(own.x - PW / 2) < 20;
     const fp = ENG.tackleFoul * tune('foulRate') / 0.18 * ENG.foul * (1 + bh(O, j, 'tk') * 0.5) * (pl && pl.pers === 'Temperamental' ? 1.3 : 1) * (1 + (10 - ac(O, j, 'tck')) / 25) * M.mod.foul * (1 - O.calm * 0.5) * (inBox ? 0.015 : 1);
@@ -1059,6 +1192,7 @@ function challenges(M) {
       return;
     }
     pstat(O, j, 'tk'); bump(O, j, 0.06); bump(S, i, -0.04);
+    own.cool = Math.max(own.cool || 0, 0.5); q.cool = Math.max(q.cool || 0, 0.35);
     if (R() < 0.65) return giveBall(M, o, j);
     looseBall(M); { const a = rf(0, 6.283), v = rf(5, 11); B.vx = Math.cos(a) * v + (B.x < PW / 2 ? -2 : 2); B.vy = Math.sin(a) * v; } B.ls = o; B.li = j; // poked away
   });
@@ -1306,6 +1440,7 @@ function movePlayers(M) {
     for (let i = 0; i < P.length; i++) {
       const p = P[i];
       if (!p) continue;
+      if (i === 0 && p.diveUntil > sim.t && B.fl?.k === 'shot') continue;
       if (p.cool > 0) { p.cool -= dt; p.vx *= 0.5; p.vy *= 0.5; p.x += p.vx * dt; p.y += p.vy * dt; continue; }
       const carrier = B.os === s && B.oi === i;
       let tx = p.tx, ty = p.ty;
@@ -1540,6 +1675,7 @@ function tickSim(M) {
   engage(M);
   keepOnside(M);
   movePlayers(M);
+  if (sim.rs) enforceRestartDistance(M);
   if (!sim.rs) attachBallToCarrier(M);
   if (B.os >= 0 || (B.fl && B.fl.k !== 'shot')) M.sides[B.os >= 0 ? B.os : B.fl.s].st.pos += TICK;
   recordFrame(M);
@@ -1558,7 +1694,8 @@ function playMinute(M) {
   if (!M.sim) simInit(M);
   M.sides.forEach(X => refreshForm(M, X));
   M.sides.forEach((S, s) => syncSide(M, s));
-  M.mev = []; M.marks = []; M.frames = M.live ? [] : null;
+  const carryMarks = (M.marks || []).filter(m => ['sfx', 'kick', 'touch', 'duel'].includes(m.k) && m.t + (m.flight || 0) + 0.5 >= M.sim.t);
+  M.mev = []; M.marks = carryMarks; M.frames = M.live ? [] : null;
   if (M.min === 46 && M.sim.half === 1) { M.sim.half = 2; kickOff(M, 1); }
   recordFrame(M); // include second zero: playback must not freeze for the first half-second
   const end = M.sim.t + 60;
