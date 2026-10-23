@@ -20,6 +20,7 @@
   "js/core/world.js",
   "js/engine/background.js",
   "js/engine/defending.js",
+  "js/engine/evidence.js",
   "js/engine/fast.js",
   "js/engine/intent.js",
   "js/engine/live.js",

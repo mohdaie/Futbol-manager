@@ -69,6 +69,7 @@ function createMatchState(fx) {
   }
   M.sides.forEach(S => calcUnits(S));
   if (fx.id > 0 && (fx.h === G.club || fx.a === G.club)) {
+    if (typeof evidenceInit === 'function') evidenceInit(M);
     M.analysisFrames = []; M.analysisNextFrame = 0;
     M.analysisTactics = M.sides.map(S => ({ club: S.cid, ip: S.ip, oop: S.oop, roles: S.roles.slice(), mentality: S.ment, tempo: S.tempo, width: S.width, press: S.press, line: S.line, passing: S.pass, startingXI: S.on.slice() }));
   }
@@ -340,7 +341,8 @@ function finishMatch(M) {
   const fx = G.fixtures.find(f => f.id === M.fid);
   const [H, W] = M.sides;
   if (fx.h === G.club || fx.a === G.club) {
-    fx.timeline = M.log.slice(-240).map(e => ({ ...e }));
+    fx.timeline = (M.evidence ? M.log : M.log.slice(-240)).map(e => ({ ...e }));
+    if (M.evidence) { fx.evidence = evidenceFinish(M); evidenceArchiveFixture(fx, G); }
     if (M.analysisFrames?.length) fx.trace = M.analysisFrames;
     if (M.analysisTactics) fx.engineTactics = M.analysisTactics;
   }

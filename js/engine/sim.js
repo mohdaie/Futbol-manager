@@ -35,6 +35,11 @@ function duelRoll(M, t, y, a, d, base, close = 1, S = null, O = null) {
     const x = M.duels[key] || (M.duels[key] = [0, 0, 0]);
     x[0]++; if (ok) x[1]++; x[2] += p;
   }
+  if (M.evidence) {
+    const side = S?.idx ?? M.sim.poss, row = M.evidence.totals[side].duels[t] || (M.evidence.totals[side].duels[t] = [0, 0, 0]);
+    row[0]++; if (ok) row[1]++; row[2] += p;
+    evidenceAction(M, 'duelResult', side, { kind: t, won: ok, probability: evidenceRound(p, 1000), attackerScore: evidenceRound(a), defenderScore: evidenceRound(d) });
+  }
   return ok;
 }
 const COHESION_K = 0.35;
@@ -217,6 +222,7 @@ function giveBall(M, s, i) {
     M.sim.momentum = null; M.sim.poss = s; M.sim.turn = M.sim.t;
     if (!M.sim.rs) M.sim.tr = { s, t:M.sim.t, quick:!!quick };
   } // won in open play: a transition
+  if (M.evidence) evidenceAction(M, 'possession', s, { slot: i, player: p.id, previousSide: B.os, previousSlot: B.oi, xy: [evidenceRound(p.x), evidenceRound(p.y)] });
   if (toOwn(s, p.x, p.y)[1] < 0.3 && M.sim.t - (M.sim.lastAtt || -99) > 8) { M.sim.lastAtt = M.sim.t; mark(M, 'attack', s); }
   B.os = s; B.oi = i; B.ls = s; B.li = i; B.fl = null; B.x = p.x; B.y = p.y; B.z = 0; B.vx = B.vy = B.vz = 0;
   B.dt = decideDelay(M, s, i, ENG.touch) * (transition(M, s) === 'ctr' ? 0.6 : 1);
@@ -383,8 +389,11 @@ function boxSpot(s, n) {
 }
 
 /* ---------- moments for highlights and commentary ---------- */
-function mark(M, k, s, extra) { (M.marks || (M.marks = [])).push({ t: M.sim.t, k, s, ...(extra || {}) }); }
-function evt(M, e) { const x = { min: M.min, tt: Math.round((M.sim.t % 60) * 10) / 10, ...e }; (M.mev || (M.mev = [])).push(x); return x; }
+function mark(M, k, s, extra) {
+  (M.marks || (M.marks = [])).push({ t: M.sim.t, k, s, ...(extra || {}) });
+  if (M.evidence) evidenceAction(M, k, s, extra);
+}
+function evt(M, e) { if (M.evidence) evidenceAction(M, 'event', e.side, { event: { ...e } }); const x = { min: M.min, tt: Math.round((M.sim.t % 60) * 10) / 10, ...e }; (M.mev || (M.mev = [])).push(x); return x; }
 
 /* ---------- the player on the ball ---------- */
 // Time before the next decision: quick thinkers and a fast tempo decide sooner; pressure hurries everyone.
@@ -538,6 +547,7 @@ function carrierDecide(M, s, i, o = {}) {
   // Decision quality: Decisions and Composure under pressure sharpen the choice.
   const sharp = ENG.sharp * (1 + (ac(S, i, 'dec') - 10) * 0.06 + (ac(S, i, 'cmp') - 10) * press * 0.03);
   const pick1 = wpick(opts, x => Math.exp(sharp * Math.max(-0.2, x.v)));
+  if (M.evidence) evidenceDecision(M, s, i, opts, pick1, press, d2g, thru1);
   playOption(M, s, i, pick1, press);
   sim.last = { s, i, k: pick1.k };
 }
@@ -652,12 +662,13 @@ function kick(M, s, i, k, tx, ty, j, o = {}) {
   B.vz = o.air ? 9.8 * flight / 2 : 0;
   B.fl = { k, s, i, j, x0: sx, y0: sy, tx: ex, ty: ey, t0: sim.t, arr: sim.t + flight, off: !!o.off, air: !!o.air, len, xg: o.xg || 0, aid: o.aid || null, sp,
     z0: B.z, curve: o.curve || 0, linesBroken: INTENT_PASSES.has(k) ? brokenLines(M, s, sy, ey) : 0 };
-  mark(M, 'kick', s, { who: i, kind: k, style: o.kind || k, x: sx, y: sy, tx: ex, ty: ey, duration: k === 'shot' ? 0.32 : 0.22 });
+  mark(M, 'kick', s, { who: i, receiver: j, kind: k, style: o.kind || k, x: sx, y: sy, tx: ex, ty: ey, duration: k === 'shot' ? 0.32 : 0.22 });
   B.ls = s; B.li = i; p.carry = 0; p.takeOn = 0;
   // Offside: every team-mate beyond the second-last defender (and the ball) when the ball is played.
   B.offS = s; B.offSet = 0;
   if (k !== 'shot' && !o.noOffside) { const line = offsideY(M, s), P = sim.P[s]; for (let m = 1; m < P.length; m++) { const q = P[m]; if (q && m !== i && beyond(s, q.y, line)) B.offSet |= 1 << m; } }
   if (j >= 0) { const r = P_(M, s, j); if (r) { r.tx = ex; r.ty = ey; r.want = sim.t + flight + 0.5; } }
+  if (M.evidence) evidenceAction(M, 'flight', s, { slot: i, receiver: j, player: M.sides[s].on[i], kind: k, intended: [tx, ty], flight: { ...B.fl }, offsideLine: offsideY(M, s), offsideSlots: B.offSet });
   if (o.air && (k === 'long' || k === 'clear')) secondBallSupport(M, s, i, j, ex, ey, flight);
 }
 
@@ -782,6 +793,7 @@ function shoot(M, s, i, o = {}) {
   const weak = !o.head && !o.pen && pl.foot !== 'Either' && R() < 0.25;
   if (weak) xg *= 0.8;
   if (!o.pen) xg = clamp(xg * ENG.xg * tune('xgScale') * M.mod.xg * (s === 0 ? tune('homeShot') * M.mod.home : 1) * (1 + S.boost - O.guard), 0.01, 0.85);
+  if (M.evidence) evidenceShot(M, s, i, xg, o, oneOnOne);
   S.st.sh++; S.st.xg += xg; pstat(S, i, 'sh');
   if (o.pen) S.st.pk++;
   const aid = o.aid != null ? o.aid : (sim.lastPass && sim.lastPass.s === s && sim.t - sim.lastPass.t < 6 && sim.lastPass.id !== pl.id ? sim.lastPass.id : null);
@@ -856,6 +868,7 @@ function shoot(M, s, i, o = {}) {
 // The shot arrives: goal, save (held, parried or turned behind), or wide (goal kick, sometimes a deflection for a corner).
 function shotArrives(M, fl) {
   const s = fl.s, S = M.sides[s], O = M.sides[1 - s], ev = fl.ev, i = fl.i, pid = ev.pid;
+  if (M.evidence) evidenceAction(M, 'shotArrival', s, { slot: fl.i, player: ev.pid, result: fl.res, released: fl.t0, flightSeconds: M.sim.t - fl.t0, plannedArrival: fl.arr, xg: ev.xg, xy: [M.sim.B.x, M.sim.B.y], keeper: M.sim.P[1 - s][0] ? [M.sim.P[1 - s][0].x, M.sim.P[1 - s][0].y] : null });
   setShotOutcomeTime(ev, fl);
   if (ev.min !== M.min) { ev.min = M.min; (M.mev || (M.mev = [])).push(ev); }
   if (fl.res === 'goal') {
@@ -1085,6 +1098,7 @@ function setShotOutcomeTime(ev, fl) {
 }
 function blockArrives(M, fl) {
   const s = fl.s, O = M.sides[1 - s], B = M.sim.B, ev = fl.ev;
+  if (M.evidence) evidenceAction(M, 'shotArrival', s, { slot: fl.i, player: ev.pid, result: fl.res, released: fl.t0, flightSeconds: M.sim.t - fl.t0, plannedArrival: fl.arr, xg: ev.xg, xy: [M.sim.B.x, M.sim.B.y], keeper: M.sim.P[1 - s][0] ? [M.sim.P[1 - s][0].x, M.sim.P[1 - s][0].y] : null });
   setShotOutcomeTime(ev, fl);
   if (ev.min !== M.min) { ev.min = M.min; (M.mev || (M.mev = [])).push(ev); }
   ev.t = 'miss';
@@ -1099,6 +1113,7 @@ function receive(M, s, j, fl, d) {
   const sp = hyp(B.vx, B.vy), air = B.z > 0.8, mq = mk > 0 ? (ac(M.sides[1 - s], mk, 'mar') - 10) * 0.03 : 0; // his marker's Marking
   const ctrl = clamp(0.93 + (ac(S, j, 'fir') - 10) * 0.012 - press * (0.13 + mq) - Math.max(0, sp - 16) * 0.012 - (air ? 0.06 : 0), 0.45, 0.99);
   const roll = R();
+  if (M.evidence) evidenceAction(M, 'receive', s, { slot: j, player: S.on[j], controlled: roll < ctrl, probability: evidenceRound(ctrl), pressure: evidenceRound(press), ballSpeed: evidenceRound(sp), air, xy: [B.x, B.y], release: fl?.t0 ?? null, passKind: fl?.k ?? null, firstTouch: evidenceRound(ac(S, j, 'fir')) });
   if (roll < ctrl) {
     pressTrigger(M, s, j, fl, roll > ctrl - 0.15);
     if (fl && fl.i != null && fl.j === j) { S.st.pc++; pstat(S, fl.i, 'pc'); if (toOwn(s, B.x, B.y)[1] < 0.3) bump(S, fl.i, 0.03); sim.lastPass = { s, id: S.on[fl.i], t: sim.t }; }
@@ -1529,6 +1544,7 @@ function engage(M) {
   if (g && throughOnGoal(M, s, own.x, own.y)) {
     const d = dGoal(s, own.x, own.y), f = d < 13 ? clamp(1 - (1.5 + (20 - ac(O, 0, 'one')) * 0.08) / d, 0.3, 0.92) : clamp(0.22 + (ac(O, 0, 'one') - 10) * 0.015, 0.12, 0.4);
     g.tx = gx + (own.x - gx) * f; g.ty = gy + (own.y - gy) * f; g.run = sim.t + 1;
+    if (M.evidence && !sim.rs && !(sim.celebrate > 0)) evidenceKeeper(M, s, own, g);
   }
   let a = -1, ad = 1e9;
   for (let j = 1; j < OP.length; j++) { const q = OP[j]; if (!q) continue; const d = hyp(q.x - own.x, q.y - own.y); if (d < ad) { a = j; ad = d; } }
@@ -1682,6 +1698,7 @@ function tickSim(M) {
 }
 // Frames for the 2D view (only for a match being watched): time, ball, then 22 players, then where each faces.
 function recordFrame(M) {
+  if (M.evidence) evidenceFrame(M);
   const sim = M.sim, B = sim.B, f = [Math.round(sim.t * 10) / 10, +B.x.toFixed(2), +B.y.toFixed(2), +B.z.toFixed(2), B.os, B.oi, sim.rs ? sim.rs.k : ''];
   if (M.analysisFrames && sim.t + 1e-6 >= M.analysisNextFrame) {
     const sample = [Math.round(sim.t), +B.x.toFixed(1), +B.y.toFixed(1), +B.z.toFixed(1), B.os, B.oi];

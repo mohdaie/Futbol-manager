@@ -8,7 +8,7 @@ function aiReady() { return false; }
 let engineKey = '';
 function brainCloudEngine() { return engineKey; }
 function brainCloudUuid() { return crypto.randomUUID(); }
-importScripts(...['../core/util.js', '../core/data.js', '../core/competitions.js', '../core/players.js', '../core/bio.js', '../core/state.js', '../core/calendar.js', '../engine/pitch.js', '../engine/shape.js', '../engine/intent.js', '../engine/defending.js', '../engine/transitions.js', '../engine/sim.js', '../engine/match.js', '../systems/training.js', '../systems/brain.js', '../engine/fast.js'].map(file => file + '?v=' + encodeURIComponent(new URL(self.location.href).searchParams.get('v') || '')));
+importScripts(...['../core/util.js', '../core/data.js', '../core/competitions.js', '../core/players.js', '../core/bio.js', '../core/state.js', '../core/calendar.js', '../engine/pitch.js', '../engine/shape.js', '../engine/intent.js', '../engine/defending.js', '../engine/transitions.js', '../engine/evidence.js', '../engine/sim.js', '../engine/match.js', '../systems/training.js', '../systems/brain.js', '../engine/fast.js'].map(file => file + '?v=' + encodeURIComponent(new URL(self.location.href).searchParams.get('v') || '')));
 self.onmessage = ({ data: { id, type, data } }) => {
   try {
     if (type === 'ping') return self.postMessage({ id, result: true });

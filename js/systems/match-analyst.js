@@ -10,15 +10,15 @@ const MATCH_ANALYST_REFERENCES = [
 const MATCH_ANALYST_CORE = ['js/engine/match.js', 'js/engine/sim.js', 'js/engine/live.js'];
 const MATCH_ANALYST_CORE_FUNCTIONS = {
   'js/engine/match.js': ['createMatchState', 'simMinute', 'quickSim', 'finishMatch'],
-  'js/engine/sim.js': ['chanceAt', 'carrierDecide', 'kick', 'roundKeeper', 'shoot', 'shotArrives', 'crossBall', 'tryCrossVolley', 'receive', 'challenges', 'tickSim', 'recordFrame'],
+  'js/engine/sim.js': ['engage', 'chanceAt', 'carrierDecide', 'kick', 'roundKeeper', 'shoot', 'shotArrives', 'crossBall', 'tryCrossVolley', 'receive', 'challenges', 'tickSim', 'recordFrame'],
   'js/engine/live.js': ['playMinuteView', 'setFrame', 'liveEvent', 'liveMark', 'shotPathPoint', 'draw'],
 };
 const MATCH_ANALYST_FUNCTION_LIMITS = {
   'js/engine/match.js': { createMatchState: 650, simMinute: 450, quickSim: 200, finishMatch: 850 },
-  'js/engine/sim.js': { chanceAt: 350, carrierDecide: 850, kick: 500, roundKeeper: 380, shoot: 800, shotArrives: 520, crossBall: 400, tryCrossVolley: 350, receive: 350, challenges: 450, tickSim: 300, recordFrame: 300 },
+  'js/engine/sim.js': { engage: 850, chanceAt: 350, carrierDecide: 850, kick: 500, roundKeeper: 380, shoot: 800, shotArrives: 520, crossBall: 400, tryCrossVolley: 350, receive: 350, challenges: 450, tickSim: 300, recordFrame: 300 },
   'js/engine/live.js': { playMinuteView: 300, setFrame: 500, liveEvent: 400, liveMark: 200, shotPathPoint: 250, draw: 450 },
 };
-const MATCH_ANALYST_RULE_HEADINGS = [/^## 1\./, /^## 1b\./, /^## 1c\./, /^## 2\./, /^## 3\./, /^## 4\./, /^## 5\./, /^## 7\./, /^## 8\./, /^## 11b\./];
+const MATCH_ANALYST_RULE_HEADINGS = [/^## 1\./, /^## 1b\./, /^## 1c\./, /^## 2\./, /^## 3\./, /^## 4\./, /^## 5\./, /^## 6\./, /^## 7\./, /^## 8\./, /^## 11b\./];
 
 function matchAnalystFixtures() {
   return (G.fixtures || []).filter(f => played(f) && f.stats && (f.h === G.club || f.a === G.club))
@@ -39,7 +39,7 @@ function matchAnalystSampleEvents(rows, max) {
   const picked = new Set([...matchAnalystSample(priority, max), ...matchAnalystSample(rows.filter(e => !priority.includes(e)), Math.max(0, max - priority.length))]);
   return rows.filter(e => picked.has(e));
 }
-function matchAnalystSnapshot(f) {
+function matchAnalystSnapshot(f, recording = f.evidence) {
   const teams = [f.h, f.a], totalPossession = (f.stats || []).reduce((n, s) => n + (Number(s.pos) || 0), 0);
   const stats = (f.stats || []).map((s, i) => ({ club: clubName(teams[i]), goals: i ? f.ag : f.hg,
     possessionPct: totalPossession > 0 ? Math.round(1000 * s.pos / totalPossession) / 10 : null,
@@ -61,7 +61,8 @@ function matchAnalystSnapshot(f) {
     stats, tactics, playerRatingsAndStats: players, goals: (f.goals || []).map(([side, minute, id, pen]) => [clubName(teams[side]), minute, G.players[id] ? fullName(G.players[id]) : 'Unknown', !!pen]),
     actionTimeline: timeline, twoDPositionTrace: f.trace ? matchAnalystSample(f.trace, 24) : null,
     evidenceLimits: { singleMatch: true, recordedEvents: (f.timeline || []).length, eligibleEvents: eligible.length, suppliedEvents: timeline.length, timelineIsExcerpt: true, omittedEventsAreNotEngineFailures: true, fullGoalsInSeparateList: true, sparseTraceCannotProveAnimationTiming: true, sourceIsCurrentMainNotNecessarilyMatchVersion: true },
-    missing: { trace: !f.trace, timeline: !f.timeline, tactics: !f.engineTactics },
+    movementEvidence: recording && !recording.encoding && typeof evidenceSummary === 'function' ? evidenceSummary(recording) : null,
+    missing: { fullMovement: !f.evidence, trace: !f.trace, timeline: !f.timeline, tactics: !f.engineTactics },
   };
 }
 async function matchAnalystFetch(path) {
@@ -82,7 +83,7 @@ async function matchAnalystFiles() {
   return paths;
 }
 function matchAnalystDigest(snapshot) {
-  return JSON.stringify({ fixture: snapshot.fixture, stats: snapshot.stats, goals: snapshot.goals, timeline: snapshot.actionTimeline, traceSamples: snapshot.twoDPositionTrace?.length || 0, missing: snapshot.missing });
+  return JSON.stringify({ fixture: snapshot.fixture, stats: snapshot.stats, goals: snapshot.goals, timeline: snapshot.actionTimeline, traceSamples: snapshot.twoDPositionTrace?.length || 0, movement: snapshot.movementEvidence ? { frames: snapshot.movementEvidence.recordedFrames, bySide: snapshot.movementEvidence.bySide, mentalBehavior: snapshot.movementEvidence.mentalBehavior } : null, missing: snapshot.missing });
 }
 function matchAnalystPlanParse(text) {
   const body = String(text || '').replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
@@ -158,7 +159,7 @@ async function matchAnalystSourcePack(snapshot, paths) {
 function matchAnalystSystem(pack) {
   const refs = MATCH_ANALYST_REFERENCES.map(([n, u]) => `${n}: ${u}`).join('\n');
   const code = pack.files.map(f => `\n[${f.path} excerpt]\n${f.source}`).join('\n');
-  return `Independent match analyst. Review this ONE match with selected rule/source excerpts from a ${pack.index.length}-file index. Finish in 600 words maximum: verdict, up to 4 findings (observed or hypothesis), and prioritized verification tests. Every finding needs exact supplied evidence; name a source/function only when its excerpt supports the claim. Do not invent code or infer a missing mechanism from omitted code. Distinguish engine behavior from limitations of this audit's excerpts. Do not claim tests, live browsing or access to proprietary Football Manager implementation.\nEvidence rules: possessionPct is already normalized. x is pitch WIDTH; y is LENGTH. Defensive depth uses y and the stated attacking directions. Sparse frames cannot establish motion, shot timing, marking response or a repeated tactical pattern. Null saves are unavailable, never seasonal saves. Player natural position does not identify tactical slot. The event timeline is deliberately sampled: omissions do NOT show an engine/replay bug; consult the separate full goal list. A single high-scoring match, low-xG goal or multiple 10 ratings does not prove an engine defect. Do not claim sigma/probability or numerical real-world targets without supplied distributions/calculations. Fast/direct football with a low block is a valid tactic, not inherently contradictory. Treat design documents as targets, not proof that code implements them. Label uncertainty; if evidence is insufficient, propose the measurement needed.\nReference pointers only (not fetched live): ${refs}.\nRULEBOOK EXTRACTS:\n${pack.rulebook}\nPLAN: ${pack.enginePlan}\nQA: ${pack.qaGuide}\nSOURCE EXCERPTS:\n${code}`;
+  return `Independent match analyst. Review this ONE match with selected rule/source excerpts from a ${pack.index.length}-file index. Finish in 850 words maximum. Give a verdict, then cover BOTH teams in these areas: movement/marking/shape; pressing/duels/recovery; passing/through balls/first touch; dribbling/creativity/decision-making/composure; shooting/flight/outcome timing; keeper positioning/one-on-ones; corners/free kicks/aerial play. Use one short finding per area, measured evidence and timestamps where available, then 3 priorities. Say unavailable for an unobserved area instead of inventing behavior. Every finding needs exact supplied evidence; name a source/function only when its excerpt supports the claim. Do not invent code or infer a missing mechanism from omitted code. Distinguish engine behavior from limitations of this audit's excerpts. Do not claim tests, live browsing or access to proprietary Football Manager implementation.\nMovement evidence: the recorder captures every 0.5s ENGINE tick (not rendered display frames), all 22 players, ball, velocities, movement targets, facing, tactics/slot changes and decision/action logs. You receive all-tick aggregates plus selected continuous clips and selected action examples; the full archive is downloadable but is NOT all supplied to you. Respect clip boundaries and use sample counts. Assess decision alternatives and modeled mental attributes, not human thoughts; a high attribute alone proves no realistic behavior. Explain missed opportunities only when the supplied options and geometry support them. Study keeper approach from 20-30m: whether he moves toward his chosen target, narrows the angle, holds for attacker control/defensive cover or commits too late. Stationary does NOT automatically mean wrong: rushing from 25 yards is not universally correct. Counterfactual and population claims need more evidence. A deterministic replay checks repeatability, not realism. Reconcile total xG against ALL shot releases, never goals only.\nEvidence rules: possessionPct is already normalized. x is pitch WIDTH; y is LENGTH. Defensive depth uses y and the stated attacking directions. Sparse frames cannot establish motion, shot timing, marking response or a repeated tactical pattern. Null saves are unavailable, never seasonal saves. Player natural position does not identify tactical slot. The event timeline is deliberately sampled: omissions do NOT show an engine/replay bug; consult the separate full goal list. A single high-scoring match, low-xG goal or multiple 10 ratings does not prove an engine defect. Do not claim sigma/probability or numerical real-world targets without supplied distributions/calculations. Fast/direct football with a low block is a valid tactic, not inherently contradictory. Treat design documents as targets, not proof that code implements them. Label uncertainty; if evidence is insufficient, propose the measurement needed.\nReference pointers only (not fetched live): ${refs}.\nRULEBOOK EXTRACTS:\n${pack.rulebook}\nPLAN: ${pack.enginePlan}\nQA: ${pack.qaGuide}\nSOURCE EXCERPTS:\n${code}`;
 }
 function matchAnalystRequestBytes(messages, note, maxTokens) {
   const c = aiCfg().ds, body = { model: c.model, messages, max_tokens: maxTokens, thinking: { type: c.thinking ? 'enabled' : 'disabled' } };
@@ -167,23 +168,43 @@ function matchAnalystRequestBytes(messages, note, maxTokens) {
   return new TextEncoder().encode(JSON.stringify(body)).length;
 }
 function matchAnalystFitMessages(snapshot, pack) {
-  let evidence = { ...snapshot, twoDPositionTrace: snapshot.twoDPositionTrace && snapshot.twoDPositionTrace.slice() };
+  // Clone before compaction: never alter the saved complete recording.
+  const evidence = JSON.parse(JSON.stringify(snapshot));
   let system = matchAnalystSystem(pack);
   const make = () => [
     { role: 'system', content: system },
-    { role: 'user', content: `Review this match. Trace rows are sparse snapshots, not continuous animation.\n${JSON.stringify(evidence)}` },
+    { role: 'user', content: `Review actual movement and decisions for both teams. movementEvidence, if present, contains all-tick measurements plus selected continuous action clips. Legacy twoDPositionTrace rows are sparse snapshots only.\n${JSON.stringify(evidence)}` },
   ];
-  let messages = make(), bytes = matchAnalystRequestBytes(messages, 'Match analysis officer', 2200);
+  let messages = make(), bytes = matchAnalystRequestBytes(messages, 'Match analysis officer', 3200);
   while (bytes > 29000) {
-    if (evidence.twoDPositionTrace?.length > 8) evidence.twoDPositionTrace = matchAnalystSample(evidence.twoDPositionTrace, Math.max(8, Math.floor(evidence.twoDPositionTrace.length / 2)));
+    const m = evidence.movementEvidence;
+    if (evidence.twoDPositionTrace?.length > 0 && m) evidence.twoDPositionTrace = [];
+    else if (evidence.twoDPositionTrace?.length > 8) evidence.twoDPositionTrace = matchAnalystSample(evidence.twoDPositionTrace, Math.max(8, Math.floor(evidence.twoDPositionTrace.length / 2)));
     else if (evidence.actionTimeline?.length > 10) evidence.actionTimeline = matchAnalystSampleEvents(evidence.actionTimeline, Math.max(10, Math.floor(evidence.actionTimeline.length / 2)));
-    else if (evidence.playerRatingsAndStats?.length > 0) evidence.playerRatingsAndStats = evidence.playerRatingsAndStats.slice(0, Math.floor(evidence.playerRatingsAndStats.length / 2));
-    else if (system.length > 4000) system = system.slice(0, system.length - 1200);
-    else throw new Error('This match report still exceeds the DeepSeek relay’s 32 KB request limit after trimming.');
-    evidence.evidenceLimits = { ...evidence.evidenceLimits, suppliedEvents: evidence.actionTimeline?.length || 0, suppliedTracePoints: evidence.twoDPositionTrace?.length || 0, suppliedPlayerSides: evidence.playerRatingsAndStats?.length || 0 };
-    messages = make(); bytes = matchAnalystRequestBytes(messages, 'Match analysis officer', 2200);
+    else if (evidence.playerRatingsAndStats?.length) evidence.playerRatingsAndStats.pop();
+    else if (m?.throughPassChains?.length > 4) m.throughPassChains = matchAnalystSample(m.throughPassChains, 4);
+    else if (m?.contexts?.length > 1) m.contexts.pop();
+    else if (m && Object.values(m.samples).some(rows => rows.length > 2)) {
+      const key = Object.keys(m.samples).find(k => m.samples[k].length > 2);
+      m.samples[key] = [0, 1].flatMap(s => matchAnalystSample(m.samples[key].filter(a => a.side === s), 1));
+    } else if (evidence.coordinateGuide?.length > 1800) evidence.coordinateGuide = evidence.coordinateGuide.slice(0, 1800);
+    else if (system.length > 7500) {
+      // Preserve action sequences across categories before reducing source excerpts.
+      const at = system.indexOf('RULEBOOK EXTRACTS:');
+      system = system.slice(0, at) + matchAnalystTrim(system.slice(at), Math.max(3000, system.length - at - 1500));
+    } else if (m?.clips?.length > 2) {
+      const keeper = m.clips.find(c => c.reason === 'keeperApproach'), through = m.clips.find(c => c.reason === 'thru');
+      // Remove duplicate categories before any unique movement sequence.
+      let i = m.clips.findIndex((c,n) => c !== keeper && c !== through && m.clips.findIndex(x => x.reason === c.reason) < n);
+      if (i < 0) i = m.clips.findIndex(c => c !== keeper && c !== through);
+      m.clips.splice(i >= 0 ? i : m.clips.length - 1, 1);
+    } else throw new Error('This match evidence exceeds the relay limit. Download the full evidence for offline review.');
+    evidence.evidenceLimits = { ...evidence.evidenceLimits, suppliedEvents: evidence.actionTimeline?.length || 0, suppliedTracePoints: evidence.twoDPositionTrace?.length || 0,
+      suppliedPlayerSides: evidence.playerRatingsAndStats?.length || 0, fullArchiveSupplied: false,
+      suppliedMovementClips: m?.clips?.length || 0, suppliedDecisionAndActionSamples: m ? Object.values(m.samples).reduce((n, a) => n + a.length, 0) : 0 };
+    messages = make(); bytes = matchAnalystRequestBytes(messages, 'Match analysis officer', 3200);
   }
-  return { messages, bytes, tracePoints: evidence.twoDPositionTrace?.length || 0 };
+  return { messages, bytes, tracePoints: evidence.twoDPositionTrace?.length || 0, movementFrames: evidence.movementEvidence?.recordedFrames || 0, movementClips: evidence.movementEvidence?.clips?.length || 0 };
 }
 function matchAnalystPanel() {
   const matches = matchAnalystFixtures(), chosen = matches.find(f => f.id === +(ADM.matchAnalystFid ?? G.lastMatch)) || matches[0];
@@ -191,18 +212,30 @@ function matchAnalystPanel() {
   const job = ADM.matchAnalystJob, ready = aiReady('ds', 'match');
   if (!matches.length) return `<div class="card"><h3>Match Analysis Officer</h3><p class="muted">No completed match reports for your club yet. The officer can review your matches after the next full-time whistle.</p></div>`;
   const choices = matches.slice(0, 24).map(f => [f.id, matchAnalystLabel(f)]);
-  const missingTrace = chosen && !chosen.trace;
+  const missingTrace = chosen && !chosen.trace, recording = chosen?.evidence;
   return `<div class="card"><h3>Match Analysis Officer</h3><p class="muted">DeepSeek compares match evidence with relevant rulebook excerpts and core engine code plus files selected from the complete JavaScript source index. Your match and game are never changed.</p>
       ${fld('Your match', selectHtml('maFixture', choices, chosen.id, 'matchAnalystFixture'))}
-      <p class="note">${missingTrace ? 'This match is from before position-trace capture. The officer can still inspect its stats and event timeline.' : 'For new matches, the saved 2D trace samples ball and player positions once per minute.'} Each review makes two DeepSeek calls: source selection and analysis. Requests are compacted to fit the relay limit; cost depends on your model and budget.</p>
-      <div class="btns"><button class="btn pri" data-a="matchAnalystRun" ${job?.busy ? 'disabled' : ready ? '' : 'disabled'}>${job?.busy ? esc(job.phase) : 'Analyze match'}</button><button class="btn" data-a="tab" data-key="adm" data-v="ds">DeepSeek settings</button></div>
+      <p class="note">${recording ? `Full movement recording: ${recording.frameCount.toLocaleString()} frames at 0.5-second intervals, both teams and ball; ${(recording.actionCount ?? recording.actions.length).toLocaleString()} action/decision records. The review uses measurements from all ticks and selected continuous sequences. Download contains every recorded tick and action. Recordings stay with this season’s fixtures and save backups.` : missingTrace ? 'This older match has no movement recording. Play a new match to capture every simulation step.' : 'This older match has only sparse position samples. Play a new match for full movement and decision capture.'} Each review makes two DeepSeek calls: source selection and analysis. Requests are compacted to fit the relay limit; cost depends on your model and budget.</p>
+      <div class="btns"><button class="btn pri" data-a="matchAnalystRun" ${job?.busy ? 'disabled' : ready ? '' : 'disabled'}>${job?.busy ? esc(job.phase) : 'Analyze match'}</button><button class="btn" data-a="tab" data-key="adm" data-v="ds">DeepSeek settings</button>${recording ? `<button class="btn" data-a="matchAnalystDownload" data-id="${chosen.id}">Download full evidence</button>` : ''}</div>
       ${!ready ? '<p class="muted">Enable DeepSeek, save your key/connection, and turn on “Match analysis officer” in DeepSeek settings.</p>' : ''}
       ${job?.error ? `<p class="bad">${esc(job.error)}</p>` : ''}</div>
-    ${report ? `<div class="card"><div class="btns" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Officer's report <small>${esc(report.model || '')} · ${fmtDate(report.at)}</small></h3><button class="btn sm" data-a="matchAnalystCopy" data-id="${report.fid}">Copy report</button></div>${report.auditVersion !== 2 ? '<p class="note">This report used older analysis inputs. Analyze again for corrected possession, match saves and evidence limits.</p>' : ''}${report.truncated ? '<p class="note">The AI reached its reply limit. This report is incomplete.</p>' : ''}<p class="muted">Reviewed excerpts from ${report.sourceCount} source files in the ${report.indexCount}-file JavaScript index · ${report.tracePoints} 2D samples.</p><div class="match-analysis-text">${esc(report.text)}</div></div>` : ''}
+    ${report ? `<div class="card"><div class="btns" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Officer's report <small>${esc(report.model || '')} · ${fmtDate(report.at)}</small></h3><button class="btn sm" data-a="matchAnalystCopy" data-id="${report.fid}">Copy report</button></div>${report.auditVersion !== 3 ? '<p class="note">This report used older analysis inputs. Analyze again; full movement evidence is available only for newly recorded matches.</p>' : ''}${report.truncated ? '<p class="note">The AI reached its reply limit. This report is incomplete.</p>' : ''}<p class="muted">Reviewed excerpts from ${report.sourceCount} source files in the ${report.indexCount}-file JavaScript index · ${report.movementFrames ? `${report.movementFrames.toLocaleString()} recorded movement frames measured · ${report.movementClips || 0} continuous excerpts supplied` : `${report.tracePoints} sparse 2D samples`}.</p><div class="match-analysis-text">${esc(report.text)}</div></div>` : ''}
     <div class="card"><h3>Reference library</h3><div class="list">${MATCH_ANALYST_REFERENCES.map(([n, u]) => `<div class="row"><span class="grow"><b>${esc(n)}</b><small>${esc(u)}</small></span><a class="btn sm" href="${esc(u)}" target="_blank" rel="noopener">Open</a></div>`).join('')}</div><p class="muted">These links are provided for follow-up. DeepSeek's API cannot browse them during analysis, so reports do not pretend to have live-searched the web.</p></div>`;
 }
 ADMIN_TABS.match = matchAnalystPanel;
 CHG.matchAnalystFixture = v => { ADM.matchAnalystFid = +v; render(); };
+ACT.matchAnalystDownload = async ds => {
+  const f = matchAnalystFixtures().find(f => f.id === +ds.id);
+  if (!f?.evidence) return toast('This older match has no full movement recording.');
+  try {
+  const e = await evidenceLoad(f.evidence);
+  const rows = [...evidenceRows(e)];
+  const data = { fixture: matchAnalystLabel(f), ...e, blocks: undefined, schema: e.schema + ' This export contains decoded integer rows in frames instead of base64 blocks.', frames: rows, fullTimeline: f.timeline };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = `match-evidence-${f.id}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000); toast('Full evidence download started.');
+  } catch (e) { toast(e.message || 'Could not prepare the evidence download.'); }
+};
 ACT.matchAnalystCopy = async ds => {
   const report = (G.matchAnalyses || []).find(r => r.fid === +ds.id);
   if (!report?.text) return toast('Report text is unavailable.');
@@ -226,14 +259,15 @@ ACT.matchAnalystRun = async () => {
   if (!aiReady('ds', 'match')) return toast('Enable DeepSeek and Match analysis officer in Admin settings first.');
   ADM.matchAnalystFid = fx.id; ADM.matchAnalystJob = { busy: true, phase: 'Preparing match and rulebook…' }; render();
   try {
-    const snapshot = matchAnalystSnapshot(fx);
+    const recording = await evidenceLoad(fx.evidence);
+    const snapshot = matchAnalystSnapshot(fx, recording);
     ADM.matchAnalystJob.phase = 'Selecting source code…'; render();
     const pack = await matchAnalystSourcePack(snapshot, []);
     ADM.matchAnalystJob.phase = 'Comparing match, rulebook and engine code…'; render();
     const fit = matchAnalystFitMessages(snapshot, pack);
-    const result = await dsChat(fit.messages, 'Match analysis officer', { maxTokens: 2200 });
+    const result = await dsChat(fit.messages, 'Match analysis officer', { maxTokens: 3200 });
     const history = G.matchAnalyses || [];
-    G.matchAnalyses = [{ fid: fx.id, at: Date.now(), model: result.model || aiCfg().ds.model, text: result.text, auditVersion: 2, truncated: result.finishReason === 'length', sourceCount: pack.files.length, indexCount: pack.index.length, tracePoints: fit.tracePoints, requestBytes: fit.bytes }, ...history.filter(x => x.fid !== fx.id)].slice(0, 40);
+    G.matchAnalyses = [{ fid: fx.id, at: Date.now(), model: result.model || aiCfg().ds.model, text: result.text, auditVersion: 3, movementFrames: fit.movementFrames, movementClips: fit.movementClips, truncated: result.finishReason === 'length', sourceCount: pack.files.length, indexCount: pack.index.length, tracePoints: fit.tracePoints, requestBytes: fit.bytes }, ...history.filter(x => x.fid !== fx.id)].slice(0, 40);
     saveGame(); ADM.matchAnalystJob = null; toast('Match analysis complete.');
   } catch (e) {
     ADM.matchAnalystJob = { error: e.message || 'The match analysis could not finish.' };
