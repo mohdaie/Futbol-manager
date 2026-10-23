@@ -236,3 +236,7 @@ The active manager receives weekly salary into a persistent personal bank, with 
 ## Release 2026.10.23.16: ball control follows the dribbler
 
 During possession, the ball is positioned just ahead of the carrier's facing direction after player movement, so it stays with the player through movement and turns. The live view reattaches it to the interpolated player pose between half-second engine frames, avoiding divergence from separately smoothed paths. Passes and shots now release from the recorded ball position. The live-animation suite checks engine and in-between-frame attachment during watched play.
+
+## Release 2026.10.23.17: manager names match their country
+
+AI managers now receive names and nationalities from their club's country. Existing careers migrate previously generated manager identities once while preserving salaries, finances, awards, and career history. The navigation suite checks country-consistent identities for the full club world and verifies migration of a mismatched Spanish manager profile.

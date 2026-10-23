@@ -27,6 +27,10 @@ function managerCountry(c) {
   if (c.nat && NATIONS[c.nat]) return c.nat;
   return c.league === 'EPL' || c.league === 'ECH' ? 'ENG' : 'ENG';
 }
+function managerNameFor(nat, seed) {
+  const N = NATIONS[nat] || NATIONS.ENG;
+  return `${N.f[Math.floor(hash01(seed + ':manager-first') * N.f.length)]} ${N.l[Math.floor(hash01(seed + ':manager-last') * N.l.length)]}`;
+}
 function managerInfluence(id, style) {
   const pool = MANAGER_INFLUENCES.filter(x => x.style === style);
   const list = pool.length ? pool : MANAGER_INFLUENCES;
@@ -36,7 +40,7 @@ function managerDateLabel(season = G.season, week = G.week) { return `${seasonLa
 function newManagerProfile(name, cid, isUser = false) {
   const c = G.clubs[cid], id = `MGR${G.nextManagerId++}`, nat = managerCountry(c), style = c.tac?.style || 'bal', mentor = managerInfluence(id, style);
   const profile = {
-    id, name: name || genManagerName(), nationality: nat, age: 34 + Math.floor(hash01(id + ':age') * 27),
+    id, name: name || managerNameFor(nat, id), nationality: nat, identityVersion: 2, age: 34 + Math.floor(hash01(id + ':age') * 27),
     born: 'Career-generated profile', style, styleName: MANAGER_STYLES[style] || MANAGER_STYLES.bal,
     inspiration: mentor.name, inspirationNote: mentor.note, reputation: Math.round(c?.rep || 55), birthSeason: G.season,
     weeklySalary: managerSalaryFor(c), contractYears: 2 + Math.floor(hash01(id + ':contract') * 3),
@@ -53,13 +57,20 @@ function ensureManagerProfiles() {
     if (c.fa || c.id === G.club) continue;
     c.mgr ||= genManagerName();
     let p = c.managerId && G.managerProfiles[c.managerId];
-    if (!p || p.name !== c.mgr) p = newManagerProfile(c.mgr, c.id, false);
-    else { p.currentClubId = c.id; p.weeklySalary = managerSalaryFor(c); }
+    if (!p || p.name !== c.mgr) p = newManagerProfile(null, c.id, false);
+    else {
+      const nat = managerCountry(c);
+      if (p.identityVersion !== 2 || p.nationality !== nat) {
+        p.nationality = nat; p.name = managerNameFor(nat, p.id); p.identityVersion = 2; c.mgr = p.name;
+      }
+      p.currentClubId = c.id; p.weeklySalary = managerSalaryFor(c);
+    }
+    c.mgr = p.name;
     p.isUser = false;
   }
   let user = G.managerProfileId && G.managerProfiles[G.managerProfileId];
   if (!user) user = newManagerProfile(G.manager, G.club, true);
-  user.name = G.manager; user.isUser = true; user.currentClubId = G.club;
+  user.name = G.manager; user.isUser = true; user.identityVersion = 2; user.currentClubId = G.club;
   const c = G.clubs[G.club];
   if (c) { c.mgr = G.manager; c.managerId = user.id; user.weeklySalary = managerSalaryFor(c); user.reputation = Math.max(user.reputation || 0, Math.round(c.rep)); }
   G.managerProfileId = user.id;
@@ -139,7 +150,7 @@ function managerHireUser(cid) {
 function managerReplaceAt(cid, reason = 'Dismissed') {
   const c = G.clubs[cid]; if (!c) return null;
   if (c.managerId) managerCloseEmployment(c.managerId, reason);
-  const p = newManagerProfile(genManagerName(), cid, false);
+  const p = newManagerProfile(null, cid, false);
   c.mgr = p.name; c.managerId = p.id;
   return p;
 }
