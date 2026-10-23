@@ -198,3 +198,7 @@ The focused match-view suite passes 43 checks covering both sides, actual half-t
 ```sh
 NODE_PATH=/opt/codex/cua_node/lib/node_modules CHROMIUM_PATH=/usr/bin/chromium node tests/match-views.cjs
 ```
+
+## Release 2026.10.23.8: compact live tabs and pause before match management
+
+The live match view tabs use a compact segmented style to fit the phone screen. Opening Tactics or Subs pauses the match and leaves it paused when the panel closes, giving the manager time to make changes before explicitly resuming play. The navigation suite passes 49 checks, including pause behavior for both panels; the match-view suite passes 43 checks across phone and landscape layouts.
