@@ -1,0 +1,34 @@
+[
+  {
+    "version": "2026.10.23.3",
+    "players": 2556,
+    "fixtures": 932,
+    "saveBytes": 1966662,
+    "menusPaintMedianMs": {
+      "home": 132.7,
+      "tactics": 167.2,
+      "clubs": 292.2,
+      "search": 83.3
+    },
+    "saveCopyMedianMs": 66.6,
+    "durableMedianMs": 131.6,
+    "newCareerMs": 2150,
+    "errors": []
+  },
+  {
+    "version": "2026.10.23.4",
+    "players": 2791,
+    "fixtures": 932,
+    "saveBytes": 2205066,
+    "menusPaintMedianMs": {
+      "home": 136.6,
+      "tactics": 149.3,
+      "clubs": 266.1,
+      "search": 80.8
+    },
+    "saveCopyMedianMs": 66.3,
+    "durableMedianMs": 129.7,
+    "newCareerMs": 2137,
+    "errors": []
+  }
+]

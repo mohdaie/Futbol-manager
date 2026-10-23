@@ -161,3 +161,24 @@ Attacking runs and passing are more coordinated. When a forward drops back to re
 When the ball-side winger holds the touchline, the full-back, wing-back or mezzala on that side underlaps into the half-space in build-up and progression. This applies to teams whose wide player is assigned the Winger role (the Balanced and Long Ball presets). Against four or more opponents packed on the ball side, cross-field switches to an isolated wide winger are slightly preferred.
 
 Defenders pressing wide are triggered less often by the underlap: about a fifth fewer wide-trap situations per match in a 40-match seeded batch. Whether that reads as better or worse on the pitch has not yet been judged. Goals rose in the same batch, but not significantly. Engine suites pass. See [engine-qa/defending-drift-comparison.json](engine-qa/defending-drift-comparison.json) for the comparison method.
+
+
+## Release 2026.10.23.6: twenty compact overseas squads
+
+Five clubs each in Spain, Italy, Germany and France gain transferable first teams, six reserves and separate academy-strength estimates. Foreign leagues stay inactive and clubs are friendly opponents rather than management jobs. No annual youth intake or generated reserve top-up is enabled for these clubs. Existing careers retain the four old authored rosters, trained players, contracts and transfer ownership; new squads are seeded once. The other 56 clubs retain virtual non-transferable placeholders. Source dates and generated gaps are explicit in [data/world/SQUADS.md](data/world/SQUADS.md).
+
+A paired local headless Chromium run against release 3, before merging the newer engine releases, at 390 × 844 with 6× CPU throttling measured 2,556 versus 2,791 players, 932 fixtures in both builds, and serialized new-career saves of 1,966,662 versus 2,205,066 bytes (+238,404, about 0.24 MB). Five menu samples and three save samples produced the observations below. This single run includes timing noise and does not establish a performance improvement or physical-phone guarantee. The isolated feature's earlier comparison against release 45 recorded larger menu/save-copy costs; that report is retained rather than treating one later run as definitive.
+
+| Measurement | Release 3 | Integrated squad draft |
+| --- | ---: | ---: |
+| New career through durable save | 2.15 s | 2.14 s |
+| Dashboard paint median | 133 ms | 137 ms |
+| Tactics paint median | 167 ms | 149 ms |
+| All-clubs directory paint median | 292 ms | 266 ms |
+| Transfer Search paint median | 83 ms | 81 ms |
+| Save-worker synchronous copy median | 67 ms | 66 ms |
+| Durable save median | 132 ms | 130 ms |
+
+Both runs completed without browser errors. Raw measurements are in [data/world/performance-integration-2026-10-23.json](data/world/performance-integration-2026-10-23.json). Save copying and the all-clubs directory remain measurable costs; this feature does not change their underlying mechanisms.
+
+Integration checks pass for foreign squads (22), registry (18), mobile directory/friendlies and three rollovers (27), transfers including Premier League/Championship package simulations (69), deals (20), storage (19), player links (51), navigation (47), update handling (13), friendlies (9), English identities (8), profiles (16), and competition rules (15). The player-link test now expects the selected clubs' explicit inactive-league/friendly/transfer message rather than their old placeholder-era wording.

@@ -9,9 +9,9 @@ Five established leading clubs per country receive compact squads. This is an or
 | Germany | Bayern Munich, Borussia Dortmund, Bayer Leverkusen, RB Leipzig, Eintracht Frankfurt |
 | France | Paris Saint-Germain, Marseille, Monaco, Lyon, Lille |
 
-New careers have 11 first-team players and six reserves per selected club, including two goalkeepers. Names are fictional;334 of 340 initial slots have real inspirational figures and six reserve gaps are generated. The generated slots are Napoli/Leverkusen/Lille backup keepers, two Leipzig outfield reserves and one Lille outfield reserve. Game abilities, potential, contracts, wages and values are original estimates.
+New careers have 11 first-team players and six reserves per selected club, including two goalkeepers. Names are fictional; 334 of 340 initial slots have real inspirational figures and six reserve gaps are generated. The generated slots are Napoli/Leverkusen/Lille backup keepers, two Leipzig outfield reserves and one Lille outfield reserve. Game abilities, potential, contracts, wages and values are original estimates.
 
-The reference data contains 293 identities from the accessible September 13,2025 Transfermarkt mirror and 41 existing authored identities from the game. Current known English affiliations are excluded using the October 22,2026 FPL snapshot and the checked-in English squads. These are not verified complete 2026/27 foreign rosters. Where an existing game football nationality is unavailable, the older mirror's first citizenship is used; this is not a claim about current international eligibility. Reserve-team affiliation does not prove a player was trained at that academy from childhood. Exact provenance and limitations are in [squads-sources.json](squads-sources.json); per-club identities/gaps are in [squad-report.json](squad-report.json).
+The reference data contains 293 identities from the accessible September 13, 2025 Transfermarkt mirror and 41 existing authored identities from the game. Current known English affiliations are excluded using the October 22, 2026 FPL snapshot and the checked-in English squads. These are not verified complete 2026/27 foreign rosters. Where an existing game football nationality is unavailable, the older mirror's first citizenship is used; this is not a claim about current international eligibility. Reserve-team affiliation does not prove a player was trained at that academy from childhood. Exact provenance and limitations are in [squads-sources.json](squads-sources.json); per-club identities/gaps are in [squad-report.json](squad-report.json).
 
 The academy strength parameter is an original 1–20 estimate based on historical development reputation, independent of overall club reputation. It affects initial prospect potential and ongoing reserve training up to age 24. It is not an official 2026 academy category or ranking. Prospects develop through training, but these clubs never receive annual youth intakes or generated level top-ups.
 
@@ -22,7 +22,7 @@ Existing careers retain all players, ownership, trained skills, contracts and ex
 To reproduce identity data from local pinned mirrors:
 
 ```sh
-python 3 scripts/build-world-squads.py /path/to/player_profiles.csv /path/to/FPL/data/2026-27
+python3 scripts/build-world-squads.py /path/to/player_profiles.csv /path/to/FPL/data/2026-27
 ```
 
 The builder imports identity facts only, not commercial valuations or ability ratings. It is deterministic; source revisions are recorded with the data.
