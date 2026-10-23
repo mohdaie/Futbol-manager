@@ -581,16 +581,16 @@ function renderFeed(L) {
   }).join('');
   linkEntities(el);
 }
-const SHOT_WITH = { placed: 'with a placed finish', driven: 'with a low drive', power: 'with a powerful strike', long: 'from distance', curler: 'with a curler from distance', chip: 'with a chip over the keeper', header: 'with a header', 'free kick': 'with a direct free kick', 'open goal': 'into an empty net' };
-const SHOT_NOUN = { placed: 'placed shot', driven: 'low drive', power: 'powerful strike', long: 'shot from distance', curler: 'curler', chip: 'chip', 'free kick': 'free kick' };
-const SHOT_NAME = { placed: 'Placed shot', driven: 'Low drive', power: 'Power shot', long: 'Long shot', curler: 'Curler', chip: 'Chip', header: 'Header', 'free kick': 'Free kick', penalty: 'Penalty', 'open goal': 'Open goal' };
+const SHOT_WITH = { placed: 'with a placed finish', driven: 'with a low drive', power: 'with a powerful strike', long: 'from distance', curler: 'with a curler from distance', chip: 'with a chip over the keeper', volley: 'with a volley', header: 'with a header', 'free kick': 'with a direct free kick', 'open goal': 'into an empty net' };
+const SHOT_NOUN = { placed: 'placed shot', driven: 'low drive', power: 'powerful strike', long: 'shot from distance', curler: 'curler', chip: 'chip', volley: 'volley', 'free kick': 'free kick' };
+const SHOT_NAME = { placed: 'Placed shot', driven: 'Low drive', power: 'Power shot', long: 'Long shot', curler: 'Curler', chip: 'Chip', volley: 'Volley', header: 'Header', 'free kick': 'Free kick', penalty: 'Penalty', 'open goal': 'Open goal' };
 function commLine(L, ev) {
   const M = L.M, S = M.sides[ev.side], O = M.sides[1 - ev.side], n = id => pname(G.players[id]);
   const tn = 'the ' + clubName(S.cid);
   const fk = ev.fk ? 'Free kick. ' : ev.ck ? 'Corner. ' : '';
   switch (ev.t) {
     case 'goal': return ev.pen ? `Penalty to ${tn}. ${n(ev.pid)} sends the keeper the wrong way. ${L.disp.join('-')}.` : `${fk}${n(ev.pid)} scores for ${tn}${SHOT_WITH[ev.kind] ? ' ' + SHOT_WITH[ev.kind] + (ev.aim && ev.aim !== 'central' && !['chip', 'power', 'open goal'].includes(ev.kind) ? ' into the ' + ev.aim : '') : ''}${ev.aid ? ', set up by ' + n(ev.aid) : ''}. ${L.disp.join('-')}.`;
-    case 'shot': return `${n(ev.pid)} ${ev.sp ? 'rises to head it' : 'lets fly'}...`;
+    case 'shot': return `${n(ev.pid)} ${ev.sp ? 'rises to head it' : ev.volley ? 'meets it with a volley' : 'lets fly'}...`;
     case 'save': return `${fk}${n(ev.pid)}${SHOT_NOUN[ev.kind] ? "'s " + SHOT_NOUN[ev.kind] : ''} ${SHOT_NOUN[ev.kind] ? 'is saved by' : 'forces a save from'} ${O.on[0] ? n(O.on[0]) : 'the keeper'}${ev.aim && ev.aim !== 'central' ? ' at the ' + ev.aim : ''}.${ev.corner ? ' Corner.' : ''}`;
     case 'miss':
       if (ev.block) return `${fk}${n(ev.pid)} ${pick(['has a shot blocked', 'sees his shot charged down', 'shoots straight into a defender'])}.${ev.corner ? ' Corner.' : ''}`;

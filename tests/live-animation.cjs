@@ -56,6 +56,38 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
 
     await page.evaluate(() => { G.settings.speed = 4; G.settings.hl = 'full'; while (!userFixture()) advanceWeek(); go('prematch'); ACT.kickoff(); });
     await page.waitForFunction(() => LIVE.mq && LIVE.mq.fr.length > 0);
+    const timing = await page.evaluate(() => {
+      const event = { tt: 1 }, flight = { arr: 4.26 };
+      setShotOutcomeTime(event, flight);
+      const M = createMatch(userFixture()); simInit(M);
+      const B = M.sim.B, j = 10, p = M.sim.P[0][j];
+      M.sim.P[1].forEach(q => { if (q) { q.x = PW - 2; q.y = PL / 2; } });
+      M.sim.poss = 0; M.sim.t = 12;
+      let touchDelay = 0;
+      for (let seed = 1; seed <= 40 && !touchDelay; seed++) {
+        M.rng = seed;
+        Object.assign(B, { os: -1, oi: -1, x: p.x - 3, y: p.y, z: 0, vx: 8, vy: 0, vz: 0, fl: null, offS: 0, offSet: 0 });
+        const pass = { s: 0, i: 8, j, k: 'thru', sp: 8, len: 12, t0: 11, linesBroken: 0 };
+        matchRandom(M, () => receive(M, 0, j, pass, 0));
+        if (B.os === 0 && B.oi === j) touchDelay = B.dt;
+      }
+      const V = createMatch(userFixture()); simInit(V);
+      const VB = V.sim.B, vi = 10, vp = V.sim.P[0][vi];
+      V.sim.P[0].forEach((q, i) => { if (q && i !== vi && i !== 8) { q.x = 5 + i % 3; q.y = 52 + i * 0.2; } });
+      V.sim.P[1].forEach(q => { if (q) { q.x = PW - 2; q.y = PL / 2; } });
+      vp.x = PW / 2 + 2; vp.y = 12;
+      let volley = false;
+      const cross = { s: 0, i: 8, j: vi, k: 'cross', del: 17, ck: false, fk: false };
+      for (let seed = 1; seed <= 40 && !volley; seed++) {
+        V.rng = seed; cross.volleyTried = false;
+        Object.assign(VB, { os: -1, oi: -1, x: vp.x, y: vp.y, z: 1.2, vx: 10, vy: 0, vz: 0, fl: null, offS: 0, offSet: 0 });
+        volley = matchRandom(V, () => tryCrossVolley(V, cross)) && VB.fl?.kind === 'volley' && VB.fl?.ev?.kind === 'volley';
+      }
+      return { outcomeAtArrival: event.tt === 4.3, received: touchDelay > 0, volley };
+    });
+    check('Shot result events are timed at ball arrival', timing.outcomeAtArrival);
+    check('A through pass reaches a controlled striker before the next action', timing.received);
+    check('A clean cross contact can produce a foot volley', timing.volley);
     const motion = await page.evaluate(async () => {
       const L = LIVE;
       L.paused = true;

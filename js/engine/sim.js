@@ -685,6 +685,7 @@ function shotType(M, s, i, p, o, oneOnOne, press) {
   const gOff = g ? g.x - PW / 2 : 0, far = p.x < PW / 2 ? 1 : -1, away = Math.abs(gOff) > 0.6 ? -Math.sign(gOff) : far;
   if (o.pen) return { kind: 'penalty', ax: (R() < 0.5 ? -1 : 1) * rf(1.4, 3.3), az: rf(0, 1.9) };
   if (o.fk) return { kind: 'free kick', ax: away * rf(2, 3.4), az: rf(1.4, 2.35) };
+  if (o.volley) return { kind: 'volley', ax: away * rf(1.2, 3.4), az: rf(0.35, 1.9) };
   if (o.head) return { kind: 'header', ax: away * rf(0.8, 3.3), az: rf(0.1, 1.6) };
   if (o.open) return { kind: 'open goal', ax: rf(-1.5, 1.5), az: rf(0, 0.6) };
   const gkOut = g ? Math.abs(g.y - goalY(s)) : 0;
@@ -700,6 +701,10 @@ function shoot(M, s, i, o = {}) {
   const press = o.press || 0;
   let xg = o.pen ? 0.76 : chanceAt(M, s, p.x, p.y, { press, head: o.head, fo: o.head ? 0 : faceOff(p, PW / 2, goalY(s)) }).xg; // 7.5, 1c
   if (o.head && o.del) xg *= 0.8 + o.del / 50;
+  if (o.volley) {
+    const skill = avg2(S, i, [['fir', 0.3], ['fin', 0.3], ['cmp', 0.2], ['agi', 0.2]]);
+    xg *= clamp(0.62 + (skill - 10) * 0.022 + ((o.del || 10) - 10) * 0.008, 0.42, 0.84);
+  }
   if (o.fk) xg = clamp(0.06 * Math.exp(-(dGoal(s, p.x, p.y) - 18) / 12), 0.02, 0.1);
   // A one-on-one: nobody between him and the keeper.
   const oneOnOne = !o.pen && !o.head && !o.fk && oneOnOneAt(M, s, p.x, p.y);
@@ -712,7 +717,7 @@ function shoot(M, s, i, o = {}) {
   if (aid && S.on.includes(aid)) { pstat(S, S.on.indexOf(aid), 'kp'); bumpRating(S, aid, 0.08); }
   noteThreat(O, pl.id, aid, xg);
   // Outcome: blocked, goal, saved or off target. Finishing, Composure and the keeper decide.
-  const ev = evt(M, { side: s, t: 'shot', pid: pl.id, xg, pen: !!o.pen, sp: !!o.head, ck: !!o.ck, fk: !!o.fk, aid: aid || null, key: true });
+  const ev = evt(M, { side: s, t: 'shot', pid: pl.id, xg, pen: !!o.pen, sp: !!o.head, volley: !!o.volley, ck: !!o.ck, fk: !!o.fk, aid: aid || null, key: true });
   mark(M, 'shot', s, { xg });
   const gk = P_(M, 1 - s, 0), gkp = G.players[O.on[0]];
   let blk = -1;
@@ -723,7 +728,8 @@ function shoot(M, s, i, o = {}) {
     const q = P_(M, 1 - s, blk);
     ev.t = 'miss'; ev.block = true; pstat(O, blk, 'blk'); bump(O, blk, 0.1);
     kick(M, s, i, 'shot', q.x, q.y, -1, {});
-    M.sim.B.fl.res = 'block'; M.sim.B.fl.bj = blk; M.sim.B.fl.ev = ev;
+    Object.assign(M.sim.B.fl, { res: 'block', bj: blk, ev, kind: shot.kind });
+    mark(M, 'sfx', s, { kind: shot.kind, ax: 0, az: 0, res: 'block', x0: M.sim.B.fl.x0, y0: M.sim.B.fl.y0, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: 'central' });
     return;
   }
   const fin = o.head ? (aerialAt(S, i) + ac(S, i, 'fin')) / 2 : o.fk ? fkSkill(pl) : ac(S, i, 'fin');
@@ -742,11 +748,12 @@ function shoot(M, s, i, o = {}) {
   kick(M, s, i, 'shot', PW / 2 + ax, gy - fwdY(s) * (res === 'save' ? 0.8 : -1.5), -1, {});
   Object.assign(M.sim.B.fl, { res, ev, xg, aid, ax, az, kind: shot.kind });
   mark(M, 'sfx', s, { kind: shot.kind, ax, az, res, x0: M.sim.B.fl.x0, y0: M.sim.B.fl.y0, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: ev.aim });
-  if (o.head) M.sim.B.vz = 2;
+  if (o.head || o.volley) M.sim.B.vz = o.volley ? 1.6 : 2;
 }
 // The shot arrives: goal, save (held, parried or turned behind), or wide (goal kick, sometimes a deflection for a corner).
 function shotArrives(M, fl) {
   const s = fl.s, S = M.sides[s], O = M.sides[1 - s], ev = fl.ev, i = fl.i, pid = ev.pid;
+  setShotOutcomeTime(ev, fl);
   if (fl.res === 'goal') {
     S.st.g++; S.st.sot++; pstat(S, i, 'sot');
     if (ev.pen) S.st.pkg++;
@@ -849,6 +856,35 @@ function airDuel(M, fl) {
   // Won further out: knock it down to the nearest team-mate (a flick-on for a runner).
   giveBall(M, s, j);
 }
+// A low cross can be struck first-time before it lands. The attacker must arrive
+// close enough to make contact; touch, finishing and composure are tested against
+// delivery quality, ball height and pressure. A failed attempt continues to the
+// normal landing/header contest.
+function tryCrossVolley(M, fl) {
+  const B = M.sim.B, s = fl.s;
+  if (fl.k !== 'cross' || fl.volleyTried || B.z < 0.65 || B.z > 2.25) return false;
+  const [, y] = toOwn(s, B.x, B.y);
+  if (y > 0.24 || Math.abs(B.x - PW / 2) > 22) return false;
+  const A = M.sides[s], P = M.sim.P[s], eligible = [];
+  for (let j = 1; j < P.length; j++) {
+    const p = P[j];
+    if (!p || j === fl.i || (B.offS === s && (B.offSet & (1 << j)))) continue;
+    const d = hyp(p.x - B.x, p.y - B.y);
+    if (d < 2.15) eligible.push({ j, d });
+  }
+  if (!eligible.length) return false;
+  eligible.sort((a, b) => a.d - b.d);
+  const { j, d } = eligible[0], p = P[j], S = A;
+  fl.volleyTried = true;
+  const [press] = pressureOn(M, s, j), skill = avg2(S, j, [['fir', 0.3], ['fin', 0.3], ['cmp', 0.2], ['agi', 0.2]]);
+  const timing = clamp(1 - Math.abs(B.z - 1.2) * 0.3, 0.55, 1);
+  const connect = clamp(0.36 + (skill - 10) * 0.022 + ((fl.del || 10) - 10) * 0.01 - press * 0.18 - d * 0.06, 0.1, 0.72) * timing;
+  if (R() >= connect) return false;
+  p.fa = Math.atan2(goalY(s) - p.y, PW / 2 - p.x);
+  B.os = -1; B.oi = -1; B.fl = null; B.vx = B.vy = B.vz = 0;
+  shoot(M, s, j, { volley: true, press, del: fl.del, aid: S.on[fl.i], ck: !!fl.ck, fk: !!fl.fk });
+  return true;
+}
 
 /* ---------- the ball each tick ---------- */
 function ballTick(M) {
@@ -866,6 +902,7 @@ function ballTick(M) {
   for (let k = 0; k < steps; k++) {
     B.x += B.vx * h; B.y += B.vy * h;
     if (B.z > 0 || B.vz > 0) { B.z += B.vz * h; B.vz -= 9.8 * h; if (B.z <= 0) { B.z = 0; B.vz = 0; B.vx *= 0.45; B.vy *= 0.45; if (fl && fl.air && !fl.landed) { fl.landed = true; if (fl.k === 'cross' || fl.k === 'long' || fl.k === 'clear') { airDuel(M, fl); if (sim.B.fl !== fl) return; } } } }
+    if (fl && fl.k === 'cross' && B.z > 0 && tryCrossVolley(M, fl)) return;
     else { const f = Math.max(0, 1 - 0.55 * h); B.vx *= f; B.vy *= f; }
     if (fl && fl.k === 'shot') { if (sim.t - dt + h * (k + 1) >= fl.arr) { B.x = fl.tx; B.y = fl.ty; B.z = 0; B.fl = null; return fl.res === 'block' ? blockArrives(M, fl) : shotArrives(M, fl); } continue; }
     if (outOfPlay(M)) return;
@@ -913,8 +950,12 @@ function ballTick(M) {
   }
   if (fl && sp < 2.5 && B.z === 0) B.fl = null; // came to rest: a loose ball
 }
+function setShotOutcomeTime(ev, fl) {
+  if (ev && fl && Number.isFinite(fl.arr)) ev.tt = Math.round((fl.arr % 60) * 10) / 10;
+}
 function blockArrives(M, fl) {
   const s = fl.s, O = M.sides[1 - s], B = M.sim.B, ev = fl.ev;
+  setShotOutcomeTime(ev, fl);
   if (R() < 0.55) { ev.corner = true; return setRestart(M, 'ck', s, B.x < PW / 2 ? 0.5 : PW - 0.5, goalY(s)); }
   B.os = -1; B.fl = null; B.vx = rf(-8, 8); B.vy = -fwdY(s) * rf(3, 10); B.vz = 0; // loose after the block
 }

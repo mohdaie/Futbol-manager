@@ -244,3 +244,11 @@ AI managers now receive names and nationalities from their club's country. Exist
 ## Release 2026.10.23.18: keep manager profile open after weekly income
 
 The manager profile now formats transaction and career dates with the game's date formatter. This avoids a runtime error from an out-of-scope date helper when weekly income appears in the transaction history. The navigation suite checks that the profile still renders after salary is recorded.
+
+## Release 2026.10.23.19: show through-ball control before shot outcomes
+
+A completed through ball now reaches the striker under the normal attribute- and context-based control timing, preserving one-touch finishes. Shot result events, including blocks, are timestamped at the ball's arrival so outcomes appear after the shot flight. The live-animation suite checks reception and outcome timing.
+
+## Release 2026.10.23.20: add foot volleys to aerial crosses
+
+Attackers can strike a cross as a volley before it lands when they reach a viable ball height. First Touch, Finishing, Composure, agility, delivery quality, and pressure affect contact; volleys use a lower expected-goal rate than settled shots. Blocked volleys also show their flight. The live-animation suite checks that a clean cross contact produces a volley.
