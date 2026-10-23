@@ -70,7 +70,7 @@ SCREENS.home = {
 
     const clubCard = `<section class="clubcard">
       <div class="cc-top"><div class="cc-badge">${badge(c.id, 40)}</div>
-        <div class="cc-name"><b>${esc(c.name)}</b><small>${leagueName()} · ${seasonLabel()}</small></div>
+        <div class="cc-name"><b>${esc(c.name)}</b><small><button class="link cc-league-link" data-a="dashboardCompetition" data-id="${leagueOf(c.id)}" aria-label="Open ${esc(leagueName())} competition">${esc(leagueName())}</button> · ${seasonLabel()}</small></div>
         <button class="cc-link" data-a="go" data-s="club">Club overview <span aria-hidden="true">→</span></button></div>
       <div class="cc-stats"><div><small>Position</small><b>${row.p ? ordinal(pos) : '-'}</b></div><div><small>Points</small><b>${row.pts}</b></div><div><small>Played</small><b>${row.p}</b></div></div>
       <div class="cc-form"><span>Recent form</span>${row.form.length ? formChips(row.form) : '<span>No matches yet</span>'}</div>
@@ -106,6 +106,12 @@ SCREENS.home = {
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="go" data-s="news">All news</button></div>
       <div class="list">${G.news.slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
   },
+};
+ACT.dashboardCompetition = ds => {
+  if (!G.leagues.includes(ds.id)) return;
+  UI.tab.homeCompetition = ds.id;
+  UI.tab.homeCompetitionView = 'table';
+  go('competitions');
 };
 const NEWS_CATS = [['all', 'All'], ['inbox', 'Inbox'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Club'], ['league', 'League']];
 function newsRow(n) {

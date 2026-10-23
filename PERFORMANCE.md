@@ -264,3 +264,7 @@ All 44 English clubs now have records from the supplied 2026/27 reference list. 
 ## Release 2026.10.23.23: add dashboard competitions and meaningful squad metrics
 
 The Dashboard now has Overview and Competitions tabs, with selectable Premier League and Championship tables and matchweek fixtures. Removed the small Player stats table from Overview. Squad rows now put condition and morale under each player's name and replace the color-only condition bar with a metric based on the selected sort: alternate positions, rating, age, condition with percentage, morale face, or market value.
+
+## Release 2026.10.23.24: link the dashboard league to its competition
+
+The league name in the Dashboard club card now opens the matching competition table. The navigation suite verifies that the league link selects and displays the current league.
