@@ -21,7 +21,7 @@ const TR_TABS = {
     const pages = Math.max(1, Math.ceil(res.length / TRANSFER_SEARCH_PAGE));
     const page = clamp(Math.floor(+UI.tab.transferPage || 0), 0, pages - 1), first = page * TRANSFER_SEARCH_PAGE;
     const list = res.slice(first, first + TRANSFER_SEARCH_PAGE);
-    const status = searching ? `<h2 class="h2">Search results</h2><p class="muted">${res.length} players match${res.length ? ` · ${first + 1}–${first + list.length}` : ''}. Ratings are scouting estimates.</p>` : '<h2 class="h2">Trending players</h2><p class="muted">Up to 20 players in transfer news and rumours from the last 14 days. Search by name or choose filters to find other players.</p>';
+    const status = searching ? `<h2 class="h2">Search results</h2><p class="muted">${res.length} players match${res.length ? ` · ${first + 1}–${first + list.length}` : ''}.</p>` : '<h2 class="h2">Trending players</h2><p class="muted">Up to 20 players in transfer news and rumours from the last 14 days. Search by name or choose filters to find other players.</p>';
     return `<form id="transferSearchForm" class="card filters">
         <div class="field"><label for="sPos">Position</label>${selectHtml('sPos', ['Any', ...POSITIONS], S.pos, 'sf', 'data-k="pos"')}</div>
         <div class="field"><label for="sReg">Region</label>${selectHtml('sReg', REGIONS, S.region, 'sf', 'data-k="region"')}</div>

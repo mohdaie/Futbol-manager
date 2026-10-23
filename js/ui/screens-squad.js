@@ -184,11 +184,11 @@ SCREENS.tactics = {
     const cur = styleOf(T);
     const toks = T.slots.map((id, i) => {
       const p = G.players[id], pp = prev[i] || (view === 'ip' ? ip[i].slice(1) : oop[map[i]].slice(1)), src = [0, pp[0], pp[1]];
-      const pos = ip[i][0], f = p ? fam(p, pos) : 0, r = p ? ovrAt(p, pos) : '-';
+      const pos = ip[i][0], f = p ? fam(p, pos) : 0;
       const role = ROLES[pos][T.roles[i]] || ROLES[pos][0];
       const label = pitchPosLabel(view === 'ip' ? pos : oop[map[i]][0]);
       return `<button class="tok ${f >= 0.97 ? '' : f >= 0.85 ? 'f2' : 'f3'} ${UI.swapMode && UI.swapFrom === i ? 'swap-picked' : ''}" style="left:${src[1] * 100}%;top:${src[2] * 100}%" data-a="${UI.swapMode ? 'swapSlot' : 'slot'}" data-i="${i}" aria-label="${label}: ${p ? esc(fullName(p)) : 'Empty'}. ${UI.swapMode ? 'Swap position' : 'Choose player'}" ${UI.swapMode ? `aria-pressed="${UI.swapFrom === i}"` : ''}>
-        <span class="tk-pos">${label}</span><span class="tk-c">${r}</span><span class="tk-n">${p ? esc(p.ln) : 'Empty'}</span><span class="tk-r">${view === 'ip' ? esc(role.n) : (oop[map[i]][0])}</span></button>`;
+        <span class="tk-c"><span class="tk-pos">${label}</span></span><span class="tk-n">${p ? esc(p.ln) : 'Empty'}</span><span class="tk-r">${view === 'ip' ? esc(role.n) : (oop[map[i]][0])}</span></button>`;
     }).join('');
     return `<h1 class="h1">Tactics</h1>
       <div class="two"><div class="field"><label for="tip">In possession</label>${selectHtml('tip', Object.keys(FORMATIONS), T.ip, 'shape', 'data-k="ip"')}</div>
@@ -207,7 +207,7 @@ SCREENS.tactics = {
         ${r.active.map(x => `<div class="fitrow"><span><b>${x.n}</b><small>Needs ${x.need}</small></span>${bar(x.pct, x.pct >= 60 ? 'good' : x.pct >= 45 ? 'warn' : 'bad')}<b class="${x.pct >= 60 ? 'good' : x.pct >= 45 ? 'warn' : 'bad'}">${x.pct}%</b></div>`).join('') || '<p class="muted">Balanced settings ask nothing special of the players.</p>'}
         ${r.active.filter(x => x.pct < 45).map(x => `<p class="note">${x.n}: your players are not suited to it. Expect it to cost you more than it gains.</p>`).join('')}</div>`; })()}
       <div class="sec-h"><h2>Substitutes</h2><span class="muted">${T.bench.length}/9</span></div>
-      <div class="list">${T.bench.map((id, i) => { const p = G.players[id]; return `<button class="row act" data-a="benchSlot" data-i="${i}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${morLabel(p.mor)}</small></span>${condBar(p.cond)}${ovrPill(p.ca)}</button>`; }).join('')}
+      <div class="list">${T.bench.map((id, i) => { const p = G.players[id]; return `<button class="row act" data-a="benchSlot" data-i="${i}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${morLabel(p.mor)}</small></span>${condBar(p.cond)}</button>`; }).join('')}
         ${T.bench.length < 9 ? '<button class="row act add" data-a="benchSlot" data-i="-1"><span class="grow"><b>Add a substitute</b></span><span class="chev">+</span></button>' : ''}</div>
       <div class="sec-h"><h2>Team instructions</h2></div>
       <div class="card">${INSTRUCTIONS.map(ins => `<div class="field"><label>${ins.n}</label><div class="seg">${ins.o.map((o, i) => `<button class="${T[ins.k] === i ? 'on' : ''}" data-a="ins" data-k="${ins.k}" data-v="${i}">${o}</button>`).join('')}</div></div>`).join('')}</div>
@@ -262,7 +262,7 @@ ACT.slot = ds => {
   const bench = cands.filter(p => !starter(p) && T.bench.includes(p.id)), others = cands.filter(p => !starter(p) && !T.bench.includes(p.id));
   const row = (p, swap) => {
     const current = starter(p) ? FORMATIONS[T.ip][T.slots.indexOf(p.id)][0] : p.pos;
-    return `<button class="row act" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${available(p) ? '' : 'disabled'}><span class="pos">${pitchPosLabel(current)}</span><span class="grow"><b>${esc(pname(p))}</b><small>${!available(p) ? p.inj ? 'Injured' : 'Suspended' : swap ? `Swap ${pitchPosLabel(current)} ↔ ${pitchPosLabel(pos)}` : 'Select at ' + pitchPosLabel(pos)}</small></span>${condBar(p.cond)}${ovrPill(ovrAt(p, pos))}</button>`;
+    return `<button class="row act" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${available(p) ? '' : 'disabled'}><span class="pos">${pitchPosLabel(current)}</span><span class="grow"><b>${esc(pname(p))}</b><small>${!available(p) ? p.inj ? 'Injured' : 'Suspended' : swap ? `Swap ${pitchPosLabel(current)} ↔ ${pitchPosLabel(pos)}` : 'Select at ' + pitchPosLabel(pos)}</small></span>${condBar(p.cond)}</button>`;
   };
   const group = (name, list, swap = false) => list.length ? `<h4 class="lbl">${name}</h4><div class="list">${list.map(p => row(p, swap)).join('')}</div>` : '';
   sheet(`<h3 class="sh-t">${POS_NAME[pos]}</h3>
@@ -278,7 +278,7 @@ ACT.benchSlot = ds => {
   const cands = seniorSquad(G.club).filter(p => available(p) && !T.slots.includes(p.id) && !T.bench.includes(p.id)).sort((a, b) => b.ca - a.ca);
   sheet(`<h3 class="sh-t">${i >= 0 ? 'Replace ' + esc(pname(G.players[T.bench[i]])) : 'Add a substitute'}</h3>
     ${i >= 0 ? `<button class="btn ghost wide" data-a="benchDrop" data-i="${i}">Remove from the bench</button>` : ''}
-    <div class="list">${cands.map(p => `<button class="row act" data-a="benchPick" data-i="${i}" data-id="${p.id}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${p.status}</small></span>${condBar(p.cond)}${ovrPill(p.ca)}</button>`).join('') || empty('Nobody available', 'Every fit player is already in the matchday squad.')}</div>`, { key: 'bench:' + i, restore: () => ACT.benchSlot({ i }), onClose: () => render() });
+    <div class="list">${cands.map(p => `<button class="row act" data-a="benchPick" data-i="${i}" data-id="${p.id}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${p.status}</small></span>${condBar(p.cond)}</button>`).join('') || empty('Nobody available', 'Every fit player is already in the matchday squad.')}</div>`, { key: 'bench:' + i, restore: () => ACT.benchSlot({ i }), onClose: () => render() });
 };
 ACT.benchPick = ds => { const T = G.tactics, i = +ds.i; if (i >= 0) T.bench[i] = +ds.id; else T.bench.push(+ds.id); closeSheet(true); render(); };
 ACT.benchDrop = ds => { G.tactics.bench.splice(+ds.i, 1); closeSheet(true); render(); };

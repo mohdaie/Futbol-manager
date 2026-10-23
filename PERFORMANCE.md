@@ -133,3 +133,9 @@ The focused search suite passes 22 checks covering real story sources, date wind
 ```sh
 NODE_PATH=/opt/codex/cua_node/lib/node_modules CHROMIUM_PATH=/usr/bin/chromium node tests/transfer-search.cjs
 ```
+
+## Release 2026.10.23.2: position-led team views
+
+Formation circles show the position in the selected in-possession or out-of-possession shape rather than numerical ability. Shared player rows and matchday selection lists omit ability badges; opening a player profile retains the rating and attributes. Live substitute lists also omit OVR text. Condition, fatigue, injury indicators and match-performance scores remain available. The shared row renderer no longer calculates a scouting rating for the removed badge. Player data and match calculations are unchanged.
+
+Lineup (23), live tactics (28), links (51), transfer search (22) and updates (13) pass. A separate 390-pixel browser inspection confirmed both formation shapes display their actual positions, squad and selection rows contain no ability badges, profiles retain ability, and no horizontal overflow or browser errors occurred.

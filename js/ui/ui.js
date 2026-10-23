@@ -224,7 +224,7 @@ function selectHtml(id, opts, cur, chg, ds = '') {
   return `<select id="${id}" data-c="${chg}" ${ds}>${opts.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`; }).join('')}</select>`;
 }
 function playerRow(p, extra = '', opts = {}) {
-  const mine = p.club === G.club, so = mine ? { v: p.ca, txt: p.ca } : seenOvr(p);
+  const mine = p.club === G.club;
   const tags = [p.inj ? '<em class="tag bad">INJ</em>' : '', p.ban > 0 ? '<em class="tag bad">SUS</em>' : '', p.listed ? '<em class="tag warn">LIST</em>' : '', G.shortlist.includes(p.id) && !mine ? '<em class="tag">★</em>' : ''].join('');
   return `<div class="row act prow linked-prow">
     ${opts.noBadge ? '' : clubLink(p.club, badge(p.club, 20), 'rb')}
@@ -232,7 +232,7 @@ function playerRow(p, extra = '', opts = {}) {
     ${opts.noBadge ? `<span class="no">${p.no || ''}</span>` : ''}
     <span class="pos">${p.pos}</span>
     <span class="grow"><b>${esc(pname(p))}</b> ${tags}<small>${p.age} yrs · ${opts.sub ?? (mine ? morLabel(p.mor) : esc(clubName(p.club)))}</small></span>
-    ${extra}${ovrPill(so.v, so.txt)}</button></div>`;
+    ${extra}</button></div>`;
 }
 
 /* ---------- dispatch ---------- */
