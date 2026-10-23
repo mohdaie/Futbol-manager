@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.23.20';
+const GAME_VERSION = '2026.10.23.22';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -65,6 +65,7 @@ const FOREIGN = [
 const NATIONS = {
   ENG: { n: 'England', r: 'Britain & Ireland', f: ['Harry', 'Jack', 'Oliver', 'George', 'Charlie', 'Alfie', 'Callum', 'Mason', 'Reece', 'Jordan', 'Tyler', 'Kieran', 'Ben', 'Lewis', 'Jamie', 'Connor', 'Ryan', 'Ethan', 'Noah', 'Josh'], l: ['Walker', 'Hughes', 'Bennett', 'Clarke', 'Turner', 'Wright', 'Barnes', 'Foster', 'Palmer', 'Mitchell', 'Hayes', 'Shaw', 'Cole', 'Ward', 'Holt', 'Rowe', 'Gibbs', 'Marsh', 'Doyle', 'Fletcher', 'Ashworth', 'Pickering', 'Lowe', 'Kirby'] },
   SCO: { n: 'Scotland', r: 'Britain & Ireland', f: ['Callum', 'Ross', 'Scott', 'Andrew', 'Kenny', 'Billy', 'Lewis', 'Fraser', 'Euan', 'Calum'], l: ['MacLeod', 'Fraser', 'Campbell', 'Murray', 'Stewart', 'Ferguson', 'McKenzie', 'Paterson', 'Gilchrist', 'Drummond'] },
+  WAL: { n: 'Wales', r: 'Britain & Ireland', f: ['Dylan', 'Rhys', 'Gareth', 'Owain', 'Dafydd', 'Morgan', 'Iwan', 'Gethin'], l: ['Davies', 'Williams', 'Jones', 'Evans', 'Thomas', 'Lloyd', 'Griffiths', 'Price'] },
   IRL: { n: 'Ireland', r: 'Britain & Ireland', f: ['Sean', 'Cian', 'Darragh', 'Conor', 'Oisin', 'Evan', 'Niall', 'Ronan'], l: ['Byrne', 'Kelly', "O'Brien", 'Walsh', 'Ryan', 'Doherty', 'Moran', 'Keane'] },
   ESP: { n: 'Spain', r: 'Europe', f: ['Pablo', 'Alvaro', 'Sergio', 'Iker', 'Dani', 'Marc', 'Pedro', 'Adrian', 'Hugo', 'Raul', 'Unai', 'Mikel'], l: ['Garcia', 'Navarro', 'Ortega', 'Romero', 'Iglesias', 'Serrano', 'Molina', 'Castro', 'Vidal', 'Ruiz', 'Herrera', 'Dominguez'] },
   FRA: { n: 'France', r: 'Europe', f: ['Lucas', 'Theo', 'Hugo', 'Antoine', 'Jules', 'Mathis', 'Enzo', 'Maxime', 'Rayan', 'Yanis', 'Bastien', 'Noam'], l: ['Martin', 'Bernard', 'Dubois', 'Moreau', 'Laurent', 'Lefevre', 'Fontaine', 'Girard', 'Mercier', 'Blanc', 'Garnier', 'Kone'] },
@@ -73,6 +74,9 @@ const NATIONS = {
   ITA: { n: 'Italy', r: 'Europe', f: ['Lorenzo', 'Federico', 'Nicolo', 'Alessandro', 'Matteo', 'Davide', 'Gianluca', 'Sandro', 'Riccardo', 'Giacomo'], l: ['Rossi', 'Bianchi', 'Romano', 'Ricci', 'Esposito', 'Conti', 'Marino', 'Greco', 'Gallo', 'Colombo'] },
   NED: { n: 'Netherlands', r: 'Europe', f: ['Daan', 'Sem', 'Luuk', 'Bram', 'Jurrien', 'Xavi', 'Cody', 'Teun', 'Joey', 'Milan'], l: ['de Jong', 'Bakker', 'Visser', 'de Vries', 'Smit', 'Janssen', 'Mulder', 'van der Berg', 'Kuipers', 'Dekker'] },
   BEL: { n: 'Belgium', r: 'Europe', f: ['Arthur', 'Romeo', 'Youri', 'Jeremy', 'Leandro', 'Charles', 'Maxim', 'Zeno'], l: ['Peeters', 'Janssens', 'Maes', 'Claes', 'Wouters', 'Lambert', 'Dupont', 'Goossens'] },
+  BIH: { n: 'Bosnia and Herzegovina', r: 'Europe', f: ['Amar', 'Adnan', 'Dario', 'Emir', 'Mirza', 'Nermin', 'Tarik', 'Vedran'], l: ['Hadžić', 'Kovačević', 'Marković', 'Begić', 'Delić', 'Jukić', 'Petrović', 'Šarić'] },
+  AUT: { n: 'Austria', r: 'Europe', f: ['Florian', 'Matthias', 'Stefan', 'Markus', 'Andreas', 'Thomas', 'Dominik', 'Bernhard'], l: ['Gruber', 'Huber', 'Wagner', 'Mayer', 'Leitner', 'Hofer', 'Bauer', 'Pichler'] },
+  SWE: { n: 'Sweden', r: 'Europe', f: ['Erik', 'Johan', 'Henrik', 'Anders', 'Magnus', 'Fredrik', 'Lars', 'Jonas'], l: ['Andersson', 'Johansson', 'Karlsson', 'Nilsson', 'Eriksson', 'Larsson', 'Olsson', 'Persson'] },
   NOR: { n: 'Norway', r: 'Europe', f: ['Erik', 'Martin', 'Sander', 'Jonas', 'Kristian', 'Oscar', 'Andreas', 'Tobias'], l: ['Hansen', 'Johansen', 'Olsen', 'Larsen', 'Berg', 'Strand', 'Haugen', 'Nygaard'] },
   DEN: { n: 'Denmark', r: 'Europe', f: ['Rasmus', 'Mikkel', 'Kasper', 'Emil', 'Mathias', 'Jesper', 'Viktor', 'Magnus'], l: ['Jensen', 'Nielsen', 'Christensen', 'Poulsen', 'Mikkelsen', 'Dalsgaard', 'Lindholm', 'Bach'] },
   BRA: { n: 'Brazil', r: 'South America', f: ['Gabriel', 'Vinicius', 'Lucas', 'Matheus', 'Thiago', 'Eder', 'Caio', 'Igor', 'Wesley', 'Murilo', 'Danilo', 'Rafinha'], l: ['Oliveira', 'Souza', 'Lima', 'Alves', 'Barbosa', 'Ribeiro', 'Martins', 'Rocha', 'Andrade', 'Cardoso', 'Moraes', 'Pires'] },

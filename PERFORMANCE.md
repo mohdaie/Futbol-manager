@@ -252,3 +252,11 @@ A completed through ball now reaches the striker under the normal attribute- and
 ## Release 2026.10.23.20: add foot volleys to aerial crosses
 
 Attackers can strike a cross as a volley before it lands when they reach a viable ball height. First Touch, Finishing, Composure, agility, delivery quality, and pressure affect contact; volleys use a lower expected-goal rate than settled shots. Blocked volleys also show their flight. The live-animation suite checks that a clean cross contact produces a volley.
+
+## Release 2026.10.23.21: make manager inspiration a compact profile detail
+
+Manager profiles now show the real-world inspirational figure as a small label and value in the details grid, matching player profiles. Removed the oversized inspiration card and descriptive paragraph. Navigation coverage verifies the compact row and profile sections.
+
+## Release 2026.10.23.22: seed manager profiles from 2026/27 references
+
+All 44 English clubs now have records from the supplied 2026/27 reference list. AI managers use fictional sound-alike game names while their saved profiles retain the real reference manager(s), nationality and age; the game identity uses the listed nationality and age. The player-controlled manager keeps their own identity. Existing careers migrate their current AI managers in place, and Welsh, Bosnian, Austrian and Swedish name pools support these identities. Lincoln City records both co-managers and their individual reference details. Navigation coverage checks full club coverage and migration.

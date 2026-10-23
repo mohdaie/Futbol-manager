@@ -33,18 +33,24 @@ const assert = require('node:assert/strict');
     await page.locator('[data-a="startGame"]').click();
     check('New career starts on dashboard', (await state()).screen, 'home');
     check('Every club receives a manager profile', await page.evaluate(() => Object.keys(G.managerProfiles).length >= Object.keys(G.clubs).filter(id => !G.clubs[id].fa).length), true);
-    check('AI manager names and nationalities match each club country', await page.evaluate(() => Object.values(G.clubs).filter(c => !c.fa && c.id !== G.club).every(c => {
-      const p = G.managerProfiles[c.managerId], n = NATIONS[managerCountry(c)], [first, ...last] = (p?.name || '').split(' ');
-      return p?.nationality === managerCountry(c) && !!n?.f.includes(first) && !!n?.l.includes(last.join(' '));
-    })), true);
-    check('Existing mismatched manager profiles migrate to their club country', await page.evaluate(() => {
-      const c = Object.values(G.clubs).find(x => x.nat === 'ESP'), p = G.managerProfiles[c.managerId];
-      p.name = c.mgr = 'Wrong Locale'; p.nationality = 'ENG'; p.identityVersion = 1; ensureManagerProfiles();
-      const [first, ...last] = p.name.split(' '), n = NATIONS.ESP;
-      return p.nationality === 'ESP' && n.f.includes(first) && n.l.includes(last.join(' ')) && c.mgr === p.name;
+    check('AI manager profiles use club reference nationality, age and fictional names', await page.evaluate(() => {
+      const clubs = Object.values(G.clubs).filter(c => c.pl && !c.fa && c.id !== G.club);
+      return clubs.length === 43 && clubs.every(c => {
+        const p = G.managerProfiles[c.managerId], ref = MANAGER_REAL_WORLD[c.id];
+        return !!ref && p?.nationality === ref.nationality && p.age === ref.age && p.name === ref.fictionalName && p.name !== ref.name && p.inspiration === ref.name && p.inspirationalFigures?.length === ref.figures.length;
+      }) && Object.keys(MANAGER_REAL_WORLD).length === 44;
+    }), true);
+    check('Existing manager profiles migrate to their real-world reference', await page.evaluate(() => {
+      const c = Object.values(G.clubs).find(x => x.id !== G.club && MANAGER_REAL_WORLD[x.id]), p = G.managerProfiles[c.managerId], ref = MANAGER_REAL_WORLD[c.id];
+      p.name = c.mgr = 'Wrong Locale'; p.nationality = 'ENG'; p.age = 50; p.inspiration = 'Wrong'; p.identityVersion = 2; ensureManagerProfiles();
+      return p.nationality === ref.nationality && p.age === ref.age && p.name === ref.fictionalName && p.inspiration === ref.name && c.mgr === p.name;
     }), true);
     await act('go', { s: 'manager' });
-    check('Manager profile shows personal bank and career sections', await page.evaluate(() => ['Personal bank', 'Career history', 'Inspired by'].every(x => document.querySelector('.main').innerText.toLowerCase().includes(x.toLowerCase()))), true);
+    check('Manager profile shows compact inspirational figure with personal bank and career sections', await page.evaluate(() => {
+      const main = document.querySelector('.main'), label = [...main.querySelectorAll('.kv small')].find(x => x.textContent === 'Inspirational figure');
+      const text = main.innerText.toLowerCase();
+      return ['personal bank', 'career history'].every(x => text.includes(x)) && !!label?.parentElement.querySelector('b')?.textContent.trim() && !text.includes('inspired by');
+    }), true);
     await page.evaluate(() => weeklyFinance());
     check('Weekly manager wage is recorded in club ledger', await page.evaluate(() => G.ledger.manager === G.managerProfiles[G.managerProfileId].weeklySalary), true);
     check('Weekly manager salary reaches personal bank', await page.evaluate(() => G.managerProfiles[G.managerProfileId].bank >= G.managerProfiles[G.managerProfileId].weeklySalary), true);
