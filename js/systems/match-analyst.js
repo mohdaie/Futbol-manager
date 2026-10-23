@@ -198,11 +198,28 @@ function matchAnalystPanel() {
       <div class="btns"><button class="btn pri" data-a="matchAnalystRun" ${job?.busy ? 'disabled' : ready ? '' : 'disabled'}>${job?.busy ? esc(job.phase) : 'Analyze match'}</button><button class="btn" data-a="tab" data-key="adm" data-v="ds">DeepSeek settings</button></div>
       ${!ready ? '<p class="muted">Enable DeepSeek, save your key/connection, and turn on “Match analysis officer” in DeepSeek settings.</p>' : ''}
       ${job?.error ? `<p class="bad">${esc(job.error)}</p>` : ''}</div>
-    ${report ? `<div class="card"><h3>Officer's report <small>${esc(report.model || '')} · ${fmtDate(report.at)}</small></h3>${report.auditVersion !== 2 ? '<p class="note">This report used older analysis inputs. Analyze again for corrected possession, match saves and evidence limits.</p>' : ''}${report.truncated ? '<p class="note">The AI reached its reply limit. This report is incomplete.</p>' : ''}<p class="muted">Reviewed excerpts from ${report.sourceCount} source files in the ${report.indexCount}-file JavaScript index · ${report.tracePoints} 2D samples.</p><div class="match-analysis-text">${esc(report.text)}</div></div>` : ''}
+    ${report ? `<div class="card"><div class="btns" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Officer's report <small>${esc(report.model || '')} · ${fmtDate(report.at)}</small></h3><button class="btn sm" data-a="matchAnalystCopy" data-id="${report.fid}">Copy report</button></div>${report.auditVersion !== 2 ? '<p class="note">This report used older analysis inputs. Analyze again for corrected possession, match saves and evidence limits.</p>' : ''}${report.truncated ? '<p class="note">The AI reached its reply limit. This report is incomplete.</p>' : ''}<p class="muted">Reviewed excerpts from ${report.sourceCount} source files in the ${report.indexCount}-file JavaScript index · ${report.tracePoints} 2D samples.</p><div class="match-analysis-text">${esc(report.text)}</div></div>` : ''}
     <div class="card"><h3>Reference library</h3><div class="list">${MATCH_ANALYST_REFERENCES.map(([n, u]) => `<div class="row"><span class="grow"><b>${esc(n)}</b><small>${esc(u)}</small></span><a class="btn sm" href="${esc(u)}" target="_blank" rel="noopener">Open</a></div>`).join('')}</div><p class="muted">These links are provided for follow-up. DeepSeek's API cannot browse them during analysis, so reports do not pretend to have live-searched the web.</p></div>`;
 }
 ADMIN_TABS.match = matchAnalystPanel;
 CHG.matchAnalystFixture = v => { ADM.matchAnalystFid = +v; render(); };
+ACT.matchAnalystCopy = async ds => {
+  const report = (G.matchAnalyses || []).find(r => r.fid === +ds.id);
+  if (!report?.text) return toast('Report text is unavailable.');
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(report.text);
+    else throw new Error('Clipboard API unavailable');
+    toast('Report copied.');
+  } catch (_) {
+    const box = document.createElement('textarea');
+    box.value = report.text; box.setAttribute('readonly', '');
+    box.style.position = 'fixed'; box.style.opacity = '0'; document.body.appendChild(box);
+    box.select();
+    const copied = document.execCommand('copy');
+    box.remove();
+    toast(copied ? 'Report copied.' : 'Could not copy automatically. Select the report text and copy it.');
+  }
+};
 ACT.matchAnalystRun = async () => {
   const fx = matchAnalystFixtures().find(f => f.id === +(document.getElementById('maFixture')?.value || ADM.matchAnalystFid || G.lastMatch));
   if (!fx) return toast('Choose a completed match first.');
