@@ -17,8 +17,9 @@ const TR_TABS = {
   advice() { return scoutCard(); },
   search() {
     const S = UI.search, submitted = UI.tab.transferQuery, searching = hasTransferSearch(submitted);
-    const sortBy = UI.tab.transferSort || 'price', sortDirection = UI.tab.transferSortDirection || 'desc';
-    const trends = searching ? [] : trendingTransferPlayers(), res = searching ? searchTransferPlayers(submitted, { by: sortBy, direction: sortDirection }) : trends.map(row => row.p);
+    const sortBy = UI.tab.transferSort || (searching ? 'price' : 'recommended'), sortDirection = UI.tab.transferSortDirection || 'desc';
+    const trends = searching ? [] : trendingTransferPlayers(), base = searching ? searchTransferPlayers(submitted) : trends.map(row => row.p);
+    const res = sortTransferPlayers(base, { by: sortBy, direction: sortDirection });
     const pages = Math.max(1, Math.ceil(res.length / TRANSFER_SEARCH_PAGE));
     const page = clamp(Math.floor(+UI.tab.transferPage || 0), 0, pages - 1), first = page * TRANSFER_SEARCH_PAGE;
     const list = res.slice(first, first + TRANSFER_SEARCH_PAGE);
@@ -30,11 +31,11 @@ const TR_TABS = {
         <div class="field"><label for="sFee">Max value</label>${selectHtml('sFee', [[0, 'Any'], [1e6, '£1m'], [5e6, '£5m'], [10e6, '£10m'], [20e6, '£20m'], [40e6, '£40m'], [70e6, '£70m'], [100e6, '£100m']], S.maxFee, 'sf', 'data-k="maxFee" data-n="1"')}</div>
         <div class="field"><label for="sOvr">Min rating</label>${selectHtml('sOvr', [[0, 'Any'], 50, 55, 60, 65, 70, 75, 80, 85], S.minOvr, 'sf', 'data-k="minOvr" data-n="1"')}</div>
         <div class="field"><label for="sMaxOvr">Max rating</label>${selectHtml('sMaxOvr', [[100, 'Any'], 60, 65, 70, 75, 80, 85, 90, 95], S.maxOvr, 'sf', 'data-k="maxOvr" data-n="1"')}</div>
-        <div class="field"><label for="sSort">Sort by</label>${selectHtml('sSort', [['age', 'Age'], ['ca', 'Current ability (CA)'], ['pa', 'Potential (PA)'], ['price', 'Price']], sortBy, 'transferSort', 'data-k="transferSort"')}</div>
-        <div class="field"><label for="sSortDirection">Order</label>${selectHtml('sSortDirection', [['desc', 'High to low'], ['asc', 'Low to high']], sortDirection, 'transferSort', 'data-k="transferSortDirection"')}</div>
         <div class="field"><label for="sName">Name or inspirational figure</label><input id="sName" type="search" value="${esc(S.name)}" placeholder="Player name" data-c="sf" data-k="name"></div>
         <div class="btns"><button type="submit" class="btn pri" data-a="transferSearch">Search players</button><button type="button" class="btn" data-a="transferTrending">Trending</button></div>
       </form>${status}
+      <div class="two transfer-result-sort"><div class="field"><label for="sSort">Sort results by</label>${selectHtml('sSort', [['recommended', 'Recommended'], ['age', 'Age'], ['ca', 'Current ability (CA)'], ['pa', 'Potential (PA)'], ['price', 'Price']], sortBy, 'transferSort', 'data-k="transferSort"')}</div>
+        <div class="field"><label for="sSortDirection">Order</label>${selectHtml('sSortDirection', [['desc', 'High to low'], ['asc', 'Low to high']], sortDirection, 'transferSort', 'data-k="transferSortDirection"')}</div></div>
       <div id="transferSearchResults" class="list">${list.map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`, searching ? {} : { sub: clubName(p.club) + ' · ' + trends.find(row => row.p.id === p.id).label })).join('') || (searching ? empty('No players found', 'Try another name or adjust the filters.') : empty('No transfer stories yet', 'Trending players will appear here as transfer news and rumours develop.'))}</div>
       ${searching && pages > 1 ? `<div class="btns"><button class="btn" data-a="transferPage" data-page="${page - 1}" ${page === 0 ? 'disabled' : ''}>Previous</button><span class="muted">Page ${page + 1} of ${pages}</span><button class="btn" data-a="transferPage" data-page="${page + 1}" ${page + 1 === pages ? 'disabled' : ''}>Next</button></div>` : ''}`;
   },

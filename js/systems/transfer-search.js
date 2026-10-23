@@ -34,6 +34,13 @@ function trendingTransferPlayers() {
   return [...candidates.values()].sort((a, b) => b.score - a.score || b.latest - a.latest || a.p.id - b.p.id).slice(0, TRANSFER_SEARCH_PAGE);
 }
 
+function sortTransferPlayers(players, order = {}) {
+  const dir = order.direction === 'asc' ? 1 : -1;
+  const value = p => order.by === 'age' ? p.age : order.by === 'ca' ? seenOvr(p).v : order.by === 'pa' ? seenPot(p) : pValue(p);
+  return players.map((p, i) => ({ p, i })).sort((a, b) => (order.by === 'recommended' ? a.i - b.i : dir * (value(a.p) - value(b.p))) ||
+    transferSearchText(a.p.ln).localeCompare(transferSearchText(b.p.ln)) || transferSearchText(a.p.fn).localeCompare(transferSearchText(b.p.fn)) || a.p.id - b.p.id).map(row => row.p);
+}
+
 // Called only for submitted criteria. Names are ordered alphabetically, without
 // repeatedly calculating scouting ratings inside a comparison function.
 function searchTransferPlayers(criteria, order = {}) {
@@ -48,7 +55,5 @@ function searchTransferPlayers(criteria, order = {}) {
     if (name && !transferSearchText(fullName(p)).includes(name) && !transferSearchText(p.insp).includes(name)) continue;
     matches.push({ p, key: transferSearchText(p.ln) + ' ' + transferSearchText(p.fn) });
   }
-  const dir = order.direction === 'asc' ? 1 : -1;
-  const value = p => order.by === 'age' ? p.age : order.by === 'ca' ? seenOvr(p).v : order.by === 'pa' ? seenPot(p) : pValue(p);
-  return matches.sort((a, b) => dir * (value(a.p) - value(b.p)) || a.key.localeCompare(b.key) || a.p.id - b.p.id).map(row => row.p);
+  return sortTransferPlayers(matches.map(row => row.p), order);
 }
