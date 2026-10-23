@@ -1,0 +1,61 @@
+const{chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http');
+(async()=>{
+ const root=path.resolve(__dirname,'..'),checks=[],errors=[];const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://x').pathname.replace(/\/$/,'/index.html'));if(!file.startsWith(root+path.sep))return res.writeHead(403).end();try{res.setHeader('Content-Type',({'.js':'application/javascript','.html':'text/html','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});let b;
+ const check=(n,v)=>{assert.ok(v,n);checks.push(n);};
+ try{
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));b=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']}:{})});const p=await b.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});p.on('pageerror',e=>errors.push(e.message));await p.route('https://fonts.googleapis.com/**',r=>r.abort());await p.goto('http://127.0.0.1:'+server.address().port);await p.locator('[data-a=titleNew]').click();await p.locator('[data-a=startGame]').click();await p.evaluate(()=>{G.settings.hl='key';G.settings.speed=4;startLive(G.fixtures.find(f=>isUserFx(f)&&!played(f)));});await p.waitForFunction(()=>LIVE?.mq?.fr.length>0);await p.evaluate(()=>{LIVE.paused=true;window.originalCanvas=document.querySelector('#pitch');});
+ const tab=v=>p.locator(`[data-a=matchView][data-v="${v}"]`);
+ check('Four match views appear above the 2D viewport',await p.locator('.match-tabs [role=tab]').count()===4&&await p.locator('#matchPanel-2d').isVisible());
+ check('2D has no health panel beneath the pitch',await p.locator('.mscr>.live-watch').count()===0&&await p.locator('#matchPanel-2d [data-health-id]').count()===0);
+ await tab('lineup').click();check('Both starting elevens appear in Line up',await p.locator('#liveWatchPlayers .live-watch-player').count()===11&&await p.locator('#liveOppositionPlayers .live-watch-player').count()===11);
+ const ids=await p.evaluate(()=>{const[H,A]=LIVE.M.sides;H.cond[H.on[1]]=62;A.cond[A.on[1]]=77;A.injuries.push([A.on[1],2,'Test knock']);updateBoard(LIVE);return{home:H.on[1],away:A.on[1],own:liveSide().on[1],other:LIVE.M.sides[1-LIVE.bottom].cid};});
+ check('Home condition uses its own live data',await p.locator(`#matchPanel-lineup [data-health-id="${ids.home}"]`).getAttribute('aria-label')==='Fit · Condition 62% · Tired');
+ check('Opposition condition and injury use their own live data',await p.locator(`#matchPanel-lineup [data-health-id="${ids.away}"]`).getAttribute('aria-label')==='Injured · Condition 77% · Tiring');
+ await p.locator(`#matchPanel-lineup [data-id="${ids.home}"]`).focus();await p.evaluate(id=>{window.focusRow=document.activeElement;LIVE.M.sides[0].cond[id]=61;updateBoard(LIVE);},ids.home);
+ check('Health refresh preserves the focused lineup control',await p.evaluate(()=>document.activeElement===window.focusRow));
+ await p.locator(`#matchPanel-lineup [data-id="${ids.away}"]`).click();check('Opposition player opens a live card',await p.evaluate(()=>UI.popup.key==='live:pl'&&LIVE.selId!==null)&&await p.locator('#layer .phead').count()===1);await p.evaluate(()=>closeSheet(true));
+ const benchId=await p.evaluate(()=>LIVE.M.sides[1].bench[0]);await p.locator(`#matchPanel-lineup [data-id="${benchId}"]`).click();check('Available substitutes also have working live cards',/available substitute/.test(await p.locator('#layer').textContent()));await p.evaluate(()=>closeSheet(true));
+ const substitutions=await p.evaluate(()=>LIVE.M.sides.map(S=>{const out=S.on[3],incoming=S.bench.find(id=>G.players[id].pos!=='GK');makeSub(LIVE.M,S,out,incoming);updateBoard(LIVE);return{side:S.idx,out,incoming};}));
+ for(const s of substitutions)check('Live substitution updates side '+s.side,await p.locator(`[data-lineup-side="${s.side}"] .live-watch-player[data-id="${s.incoming}"]`).count()===1&&await p.locator(`[data-lineup-side="${s.side}"] .live-watch-player[data-id="${s.out}"]`).count()===0);
+ const red=await p.evaluate(()=>{const S=LIVE.M.sides[1],id=S.on[2];S.on[2]=null;S.reds.push(id);S.st.rc++;updateBoard(LIVE);return id;});check('Opposition dismissal shows an empty position and sent-off player',await p.locator('[data-lineup-side="1"] .live-watch-player').count()===10&&await p.locator(`[data-lineup-side="1"] [data-id="${red}"]`).textContent().then(t=>t.includes('Sent off')));
+ await tab('formation').click();check('Formation shows both current teams including the dismissal gap',await p.locator('[data-formation-side]').count()===2&&await p.locator('[data-formation-side="1"] .live-gap-token').count()===1);
+ await p.evaluate(()=>{const S=LIVE.M.sides[1];S.ip='4-4-2';S.oop='5-3-2';S.map=shapeMap(S.ip,S.oop);S.roles=Array(11).fill(0);S._shape=null;LIVE.M.dirty=true;updateBoard(LIVE);});
+ check('Opposition tactical changes update the formation tab',/4-4-2 with the ball · 5-3-2 without it/.test(await p.locator('[data-formation-side="1"]').textContent()));
+ await p.evaluate(()=>ACT.liveSheet({k:'tactics'}));await p.selectOption('#lt-ip','4-4-2');await p.waitForFunction(()=>liveSide().ip==='4-4-2');
+ check('Manager shape changes refresh both the tactics sheet and live Formation immediately',await p.locator('#matchPanel-formation [data-formation-side="0"]').textContent().then(t=>t.includes('4-4-2 with the ball'))&&await p.locator('#layer #lt-ip').inputValue()==='4-4-2');await p.evaluate(()=>closeSheet(true));
+ await tab('lineup').click();await p.evaluate(()=>ACT.liveSheet({k:'tactics'}));const captain=await p.evaluate(()=>liveSide().on[4]);await p.selectOption('#lsp-cap',String(captain));await p.waitForFunction(id=>liveSide().cap===id,captain);check('Captain changes update Line up without advancing the match',await p.locator(`#liveWatchPlayers [data-id="${captain}"]`).textContent().then(t=>t.includes('Captain')));await p.evaluate(()=>closeSheet(true));await tab('formation').click();
+ await p.locator('[data-a=matchFormationPhase][data-v=oop]').click();check('Both out-of-possession shapes can be viewed',await p.locator('.match-team-pitch.oop').count()===2);
+ await tab('stats').click();await p.evaluate(()=>{LIVE.M.sides[0].st.sh=12;LIVE.M.sides[1].st.sh=7;LIVE.M.sides[1].st.xg=1.23;LIVE.disp=[2,1];updateBoard(LIVE);});
+ check('Stats update both sides together',JSON.stringify(await p.locator('[data-match-stat="Shots"] b').allTextContents())===JSON.stringify(['12','7'])&&await p.locator('[data-match-stat="Expected goals"] b').last().textContent()==='1.23');
+ check('Stats score follows the displayed score',JSON.stringify(await p.locator('[data-match-stat="Score"] b').allTextContents())===JSON.stringify(['2','1']));
+ const minute=await p.evaluate(()=>{LIVE.paused=false;LIVE.overlay=null;LIVE.hold=0;return LIVE.M.min;});await p.waitForFunction(min=>LIVE.M.min>min,minute,{timeout:30000});await p.evaluate(()=>{LIVE.paused=true;});check('Match advances while the 2D canvas is hidden',await p.locator('#matchPanel-stats').isVisible()&&await p.evaluate(min=>LIVE.M.min>min,minute));
+ await tab('2d').click();
+ const hiddenUpdate=await p.evaluate(()=>{const S=LIVE.M.sides[1],out=S.on[4],incoming=S.bench.find(id=>G.players[id].pos!=='GK');S.cond[out]-=10;const e=makeSub(LIVE.M,S,out,incoming);updateBoard(LIVE);return{out,incoming,ok:!!e};});check('Opposition can substitute while Line up is hidden without stale-row errors',hiddenUpdate.ok);
+ await tab('lineup').click();check('Reopening Line up shows changes made while hidden',await p.locator(`#liveOppositionPlayers [data-id="${hiddenUpdate.incoming}"]`).count()===1&&await p.locator(`#liveOppositionPlayers [data-id="${hiddenUpdate.out}"]`).count()===0);
+ await tab('2d').click();check('Returning to 2D reuses its canvas and animation loop',await p.evaluate(()=>document.querySelector('#pitch')===window.originalCanvas&&!!LIVE.raf&&LIVE.W>0&&LIVE.H>0));
+ // Run the actual half-time event and following worker minute without simulating 44 earlier minutes.
+ const orientation=await p.evaluate(async()=>{
+  const L=LIVE;L.paused=true;L.overlay=null;L.hold=0;closeSheet(true);L.M.min=44;L.M.sim.half=1;L.mq=null;L.previousMinute=null;L.M.ended=false;
+  await liveStep(L);const before=view(L,10,20),manager=L.bottom,club=liveSide().cid,firstQ=L.mq.min;endMinute(L);const half=view(L,10,20),hasTalk=UI.popup?.key==='live:halftime';
+  applyTalk(TEAM_TALKS[0].k);L.paused=true;await liveStep(L);const after=view(L,10,20);return{before,half,after,manager,club,nowManager:L.bottom,nowClub:liveSide().cid,firstQ,nextQ:L.mq.min,hasTalk,width:PW,length:PL};
+ });
+ check('Actual minute 45 still opens the half-time team talk',orientation.hasTalk&&orientation.firstQ===45&&orientation.nextQ===46);
+ check('Teams change ends for minute 46',orientation.before[0]+orientation.after[0]===orientation.width&&orientation.before[1]+orientation.after[1]===orientation.length&&JSON.stringify(orientation.before)===JSON.stringify(orientation.half));
+ check('Changing ends does not change which team the manager controls',orientation.manager===orientation.nowManager&&orientation.club===orientation.nowClub);
+ check('Mini-map and click projection share the same end-switch transform',await p.evaluate(()=>{const L=LIVE,a=view(L,15,25),b=view(L,PW-15,PL-25);return a[0]+b[0]===PW&&a[1]+b[1]===PL&&L.displayFlip===liveViewFlipped(L);}));
+ const away=await p.evaluate(()=>{const L={M:{min:1},bottom:1};const first=view(L,10,20);L.M.min=46;const second=view(L,10,20);L.M={min:96,extra:true,extraStart:95};const et=view(L,10,20);L.M.min=111;const et2=view(L,10,20);return{first,second,et,et2};});
+ check('Away managers also see an end change without changing team identity',JSON.stringify(away.first)!==JSON.stringify(away.second)&&JSON.stringify(away.first)===JSON.stringify(away.et)&&JSON.stringify(away.second)===JSON.stringify(away.et2));
+ await p.waitForFunction(()=>document.getElementById('layer').hidden);
+ const hit=await p.evaluate(()=>{const L=LIVE;G.settings.cam='full';setFrame(L,1,true);moveCam(L,0,true);const si=L.bottom,d=L.dots[si][0],v=view(L,d.x,d.y),r=L.cv.getBoundingClientRect();L.cv.onclick({clientX:r.left+sx(L,v[0]),clientY:r.top+sy(L,v[1])});return L.selId===L.M.sides[si].on[0]&&UI.popup?.key==='live:pl';});check('Canvas hit testing selects the correct player after changing ends',hit);await p.evaluate(()=>closeSheet(true));
+ await tab('formation').click();await p.screenshot({path:'/tmp/futbol-match-formation.png',animations:'disabled'});await tab('lineup').click();await p.screenshot({path:'/tmp/futbol-match-lineup.png',animations:'disabled'});
+
+ await p.evaluate(async()=>{liveKeep();await SaveStorage.flush();});await p.reload();await p.waitForFunction(()=>G?.live);await p.evaluate(()=>{const fx=G.fixtures.find(f=>f.id===G.live.fid);liveFromSave(fx);go('match');});await p.waitForFunction(()=>LIVE&&document.querySelector('#matchPanel-lineup')&&!document.querySelector('#matchPanel-lineup').hidden);
+ check('Reload retains the live tab and second-half ends',await p.evaluate(()=>LIVE.matchView==='lineup'&&livePeriod(LIVE)===1&&liveViewFlipped(LIVE)===(LIVE.bottom===0)));
+ for(const size of [{width:390,height:844},{width:320,height:568},{width:844,height:390}]){
+  await p.setViewportSize(size);for(const key of ['2d','formation','lineup','stats']){await tab(key).click();check(key+' fits '+size.width+'×'+size.height,await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.querySelector('.mctl').getBoundingClientRect().bottom<=innerHeight+1&&document.querySelector('.match-viewport').getBoundingClientRect().height>0));}
+ }
+ await p.locator('#matchTab-2d').focus();await p.locator('#matchTab-2d').press('ArrowRight');check('Keyboard navigation selects the next tab',await p.locator('#matchTab-formation').getAttribute('aria-selected')==='true'&&await p.locator('#matchTab-formation').evaluate(el=>document.activeElement===el));
+ check('No nested controls or browser errors',await p.locator('button button,button a').count()===0&&errors.length===0);
+ console.log(JSON.stringify({passed:checks.length,checks,errors},null,2));
+ }finally{if(b)await b.close();server.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -28,7 +28,8 @@ const assert = require('node:assert/strict');
     await act('kickoff');
     await page.waitForFunction(() => LIVE && LIVE.M.min >= 1, null, { timeout: 30000 });
 
-    check('condition and fatigue are visible for all eleven players without opening Subs', await page.locator('#liveWatchPlayers .live-watch-player').count(), 11);
+    await page.locator('[data-a=matchView][data-v=lineup]').click();
+    check('condition and fatigue are visible for all eleven players in Line up without opening Subs', await page.locator('#liveWatchPlayers .live-watch-player').count(), 11);
     await page.evaluate(() => { LIVE.paused = true; const S = liveSide(); S.cond[S.on[1]] = 64; S.cond[S.on[2]] = 78; S.injuries.push([S.on[1], 'Test injury', 1]); updateBoard(LIVE); });
     const tiredId = await page.evaluate(() => liveSide().on[1]);
     const tiringId = await page.evaluate(() => liveSide().on[2]);
@@ -47,7 +48,7 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => { const S = liveSide(); S.cond[S.on[1]] = 60; updateBoard(LIVE); });
     check('condition refresh keeps focus in the tactics list', await page.evaluate(() => document.activeElement.classList.contains('live-xi-player')), true);
     check('open tactics displays refreshed condition', await page.locator(`#liveXiPanel [data-health-id="${tiredId}"] > b`).innerText(), '60%');
-    await page.getByRole('tab', { name: 'Formation', exact: true }).click();
+    await page.locator('#layer').getByRole('tab', { name: 'Formation', exact: true }).click();
     check('Formation still provides the pitch view', await page.locator('#livePitchPanel').isVisible(), true);
     const toks = await page.locator('.tpitch .tok').count();
     check('the tactics page shows every player on the pitch', toks, await page.evaluate(() => LIVE.M.sides[LIVE.bottom].on.filter(Boolean).length));
@@ -68,7 +69,7 @@ const assert = require('node:assert/strict');
     check('a role can be set during the match', await page.evaluate(() => liveSide().roles[3]), roleTo);
     check('the role change clears the cached shape', await page.evaluate(() => liveSide()._shape), null);
 
-    await page.getByRole('tab', { name: 'First XI', exact: true }).click();
+    await page.locator('#layer').getByRole('tab', { name: 'First XI', exact: true }).click();
     await page.locator('.live-xi-player[data-i="3"]').click();
     check('First XI rows use the same role selection as the pitch', await page.evaluate(() => LIVE.roleSlot), null);
 
@@ -111,6 +112,8 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => { LIVE.mq.marks.push({ t: LIVE.gt + 1, k: 'sfx', s: 0, kind: 'penalty', who: 9, x0: 34, y0: 92, ax: 0, az: 0, res: 'goal', flight: 0.8 }); LIVE.paused = false; });
     await page.waitForTimeout(700);
     check('the match carries on after a penalty run-up is drawn', await page.evaluate(() => !!LIVE && !LIVE.done), true);
+    await page.evaluate(()=>closeSheet(true));
+    await page.locator('[data-a=matchView][data-v="2d"]').click();
     await page.setViewportSize({ width: 320, height: 568 });
     await page.waitForFunction(() => Math.abs(LIVE.H - LIVE.cv.parentElement.clientHeight) < 2);
     check('small phones keep match controls visible beside the condition panel', await page.evaluate(() => document.querySelector('.mctl').getBoundingClientRect().bottom <= innerHeight && document.documentElement.scrollWidth <= innerWidth), true);

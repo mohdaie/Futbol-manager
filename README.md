@@ -22,7 +22,7 @@ Unwatched computer fixtures use an event-based engine. Your watched matches and 
 - Squad, tactics with separate in-possession and out-of-possession shapes, roles and instructions.
 - Transfers with scouting fog of war, agent pitches, bids and contract talks. Negotiate instalments, valued player exchanges, sell-on shares and fixed buy-back rights; Finance tracks future payments. See [TRANSFER_PACKAGES.md](TRANSFER_PACKAGES.md) for the game rules. Search opens with up to 20 players linked to recent in-game transfer stories; submit a name or filters to browse the database in pages of 20.
 - Training, medical centre, youth academy, finances, staff, board and fans, news and inbox.
-- A live 2D match with commentary, substitutions, shouts and half-time team talks, plus instant results.
+- A live match with 2D, Formation, Line up and Match stats tabs for both teams, commentary, substitutions, shouts and half-time team talks, plus instant results. Teams change ends at half-time; live condition and fatigue are in Line up.
 - A real fixture calendar: Friday to Monday and midweek kick-off times, TV games, cup weekends and international breaks. Rest days, weather and kick-off time affect fitness, injuries and results.
 - **Admin page** (More → Admin): edit clubs and players, move time forward, tune the match engine, connect Jev and DeepSeek, and the **AI Brain**, a learning engine for computer managers with versions you approve.
 

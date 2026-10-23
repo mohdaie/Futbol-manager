@@ -795,3 +795,29 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
   .ui-enter, .sheet, .scrim, .feed li, .dr-cal.flip { animation: none; }
   .btn:not(:disabled):active, .cta:not(:disabled):active, .chip:not(:disabled):active, .iconbtn:not(:disabled):active, .sh-x:not(:disabled):active { transform: none; }
 }
+
+/* Live match views share one viewport; changing tabs never replaces the canvas. */
+.match-tabs { flex: none; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 3px; }
+.match-tabs button { min-width: 0; min-height: 36px; border: 1px solid var(--line); border-radius: 7px; background: var(--stand); padding: 6px 2px; font-size: 11px; font-weight: 700; }
+.match-tabs button.on { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+.match-ends { flex: none; margin: 0; text-align: center; font-size: 10px; color: var(--mute); }
+.match-viewport { flex: 1; min-height: 0; min-width: 0; position: relative; display: flex; overflow: hidden; }
+.match-view-panel { flex: 1; min-width: 0; min-height: 0; width: 100%; }
+.match-view-panel[hidden] { display: none !important; }
+.match-data-panel { overflow: auto; overscroll-behavior: contain; padding: 4px 2px 8px; }
+.match-team { margin-bottom: 14px; min-width: 0; }
+.match-team h3 { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin: 8px 0 4px; font-size: 13px; }
+.match-team h3 small { color: var(--mute); font-size: 10px; font-weight: 500; }
+.match-team .muted { font-size: 10px; }
+.match-lineup-player { width: 100%; padding: 9px 7px; min-height: 55px; display: flex; align-items: center; gap: 7px; text-align: left; border-radius: 6px; }
+.match-lineup-player .grow { min-width: 0; }
+.match-lineup-player .grow b { display: block; overflow-wrap: anywhere; font-size: 12px; }
+.match-lineup-player .grow small { display: block; font-size: 9px; color: var(--mute); line-height: 1.5; }
+.match-lineup-player .live-health { min-width: 53px; text-align: right; margin: 0; }
+.match-lineup-player .live-health>b { font-size: 11px; }
+.match-lineup-player .live-fatigue { font-size: 9px; }
+.match-team-pitch { height: 330px; aspect-ratio: auto; margin: 4px 0; }
+.match-team-pitch .tk-c { background: var(--team-color) !important; color: var(--team-ink); font-size: 11px; }
+.match-stats { background: var(--stand); border: 1px solid var(--line); border-radius: 8px; padding: 9px; }
+.mscr .mctl { grid-template-columns: repeat(4,minmax(0,1fr)); }
+@media(min-width:700px){ .match-formations { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }

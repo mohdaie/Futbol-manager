@@ -184,3 +184,17 @@ Both runs completed without browser errors. Raw measurements are in [data/world/
 Integration checks pass for foreign squads (22), registry (18), mobile directory/friendlies and three rollovers (27), transfers including Premier League/Championship package simulations (69), deals (20), storage (19), player links (51), navigation (47), update handling (13), friendlies (9), English identities (8), profiles (16), and competition rules (15). The player-link test now expects the selected clubs' explicit inactive-league/friendly/transfer message rather than their old placeholder-era wording.
 
 The final integration was rebased onto release 2026.10.23.5 before publication. Its defending and attacking-movement engine changes are retained unchanged. After that rebase, foreign squads (22), the 69-case transfer package suite, mobile directory/three rollovers (27), player links (51), updates (13) and the updated defending suite (20) passed again. The timing table above remains the explicitly labelled pre-engine-merge squad comparison.
+
+## Release 2026.10.23.7: live match views and changes of ends
+
+The match screen has four persistent views: 2D, Formation, Line up and Match stats. Both sides' formations, roles, lineups, substitutes, substitutions, dismissals, condition, injury, fatigue, morale and team statistics use the current live match state. With-ball/without-ball formation views are available for both teams. Health information is in Line up, replacing the strip under the canvas. Player cards work for the opposition and unused substitutes as well as the managed side.
+
+The canvas, mini-map, camera, player-facing markers and click projection change ends when the second half begins. The manager's team identity remains fixed, so swaps, substitutions and tactical instructions continue to affect the correct side. The transform also handles the dynamically timed extra-time periods. Half-time breaks clear the previous-minute interpolation samples, and saved matches restore their selected view, formation phase and correct period orientation without altering engine coordinates or results.
+
+Tab changes do not recreate the canvas or start another animation loop. The match continues while data views are open. Hidden data panes wait until shown before rebuilding, visible lineups retain their controls during ordinary health updates, and hidden 2D drawing is skipped while the simulation and commentary continue. Stale hidden lineup rows are excluded from health updates, including when an opponent substitutes while another pane is visible. No extra players, fixtures or background match work are introduced.
+
+The focused match-view suite passes 43 checks covering both sides, actual half-time and the following worker minute, away-manager orientation, extra-time orientation, canvas hit testing after the end change, live substitutions/dismissals/shapes/stats, immediate manager shape/captain changes, health focus preservation, continued simulation with 2D hidden, hidden-pane roster updates, durable save/reload, keyboard tabs and 390×844 / 320×568 / 844×390 layouts. Existing full live matches (23), live tactics (28), dismissal reorganization (16), animation (9), navigation (47) and update handling (13) also pass. Viewport tests use headless Chromium rather than physical Android/iPhone hardware.
+
+```sh
+NODE_PATH=/opt/codex/cua_node/lib/node_modules CHROMIUM_PATH=/usr/bin/chromium node tests/match-views.cjs
+```

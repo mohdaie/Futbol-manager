@@ -260,8 +260,7 @@ SCREENS.match = {
       </div>
       <div class="poss"><span class="pbar"><i id="sbPoss" style="width:50%"></i></span><small id="sbPossTxt"></small></div>
       ${(() => { const f = G.fixtures.find(x => x.id === LIVE.fid); return f && f.wx ? `<div class="mcond">${fxWhen(f)} · ${wxLabel(f.wx)}${f.tv ? ' · TV' : ''}</div>` : ''; })()}
-      <div class="pitchwrap"><canvas id="pitch" aria-label="Live match view"></canvas></div>
-      <section class="live-watch" aria-label="Your players' condition and fatigue"><div class="live-watch-heading"><b>On pitch</b><span>Condition · fatigue <em class="bad">INJ = injured</em></span></div><div id="liveWatchPlayers" class="live-watch-players"></div></section>
+      ${matchViewsHtml(LIVE)}
       <ol id="feed" class="feed" aria-live="polite"></ol>
       <div id="ftBar" class="ftbar" hidden><button class="btn pri wide" data-a="toPost">Match report</button></div>
       <div class="mctl">
@@ -272,7 +271,6 @@ SCREENS.match = {
         <button data-a="liveSheet" data-k="tactics">Tactics</button>
         <button data-a="liveSheet" data-k="subs">Subs</button>
         <button data-a="liveSheet" data-k="shouts">Shouts</button>
-        <button data-a="liveSheet" data-k="stats">Stats</button>
         <button data-a="instant2">Skip</button>
       </div></div>`;
   },
@@ -366,14 +364,16 @@ ACT.livePiSet = ds => {
 };
 ACT.liveIns = ds => { const S = liveSide(); S[ds.k] = +ds.v; LIVE.M.dirty = true; reopenLive('tactics'); };
 // Set pieces and captain for this match: the taker is chosen by player id; '' means the automatic choice.
-CHG.liveSp = (v, ds) => { const S = liveSide(); S[ds.k] = v === '' ? null : +v; LIVE.M.dirty = true; };
+CHG.liveSp = (v, ds) => { const S = liveSide(); S[ds.k] = v === '' ? null : +v; LIVE.M.dirty = true; updateBoard(LIVE); };
 CHG.liveShape = (v, ds, el) => {
   const S = liveSide(), k = el.id === 'lt-ip' ? 'ip' : 'oop';
   S[k] = v;
   if (k === 'ip') S.roles = Array(11).fill(0);
   S.map = shapeMap(S.ip, S.oop);
+  S._shape = null; S._bh = null; S._attC = null;
   LIVE.M.dirty = true;
   pushFeed(LIVE, 'info', `${clubName(S.cid)} switch to ${S.ip} with the ball, ${S.oop} without it.`, LIVE.bottom);
+  reopenLive('tactics');
 };
 
 /* ---------- match report ---------- */

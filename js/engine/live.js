@@ -32,7 +32,7 @@ function startLive(fx) {
 function liveKeep(L = LIVE) {
   if (!L || L.done || L.G !== G || !G) return;
   // Freeze this checkpoint before the next worker minute changes the live match.
-  G.live = { fid: L.fid, M: structuredClone(cleanMatch(L.M)), feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
+  G.live = { fid: L.fid, matchView:L.matchView||'2d', formationPhase:L.formationPhase||'ip', M: structuredClone(cleanMatch(L.M)), feed: L.feed.slice(0, 8).map(f => ({ k: f.k, txt: f.txt, min: f.min, side: f.side, at: 0 })) };
   saveGame();
 }
 // Pick the match up from the save at the minute it reached. It waits paused until Play.
@@ -43,6 +43,7 @@ function liveFromSave(fx) {
   if (liveOn(fx)) return true;
   const L = newLive(K.M, fx.id), M = L.M;
   L.disp = [M.sides[0].st.g, M.sides[1].st.g];
+  L.matchView=MATCH_VIEWS.some(([key])=>key===K.matchView)?K.matchView:'2d';L.formationPhase=K.formationPhase==='oop'?'oop':'ip';
   L.feed = K.feed || []; L.paused = !M.ended;
   pushFeed(L, 'info', `Match resumed at ${M.min}'. Press Play to carry on.`);
   return true;
@@ -72,9 +73,9 @@ function kitColors(uid, oid) {
 }
 
 /* ---------- screen and camera ----------
-   Your side always attacks upwards. The camera follows the ball (G.settings.cam 'follow', about 60 m of the
+   The camera keeps one stadium orientation; teams change ends between halves. The camera follows the ball (G.settings.cam 'follow', about 60 m of the
    pitch in view, with a mini-map) or shows the whole pitch ('full'). */
-const view = (L, X, Y) => (L.bottom === 0 ? [X, Y] : [PW - X, PL - Y]);
+const view = (L, X, Y) => (liveViewFlipped(L) ? [PW - X, PL - Y] : [X, Y]);
 function camScale(L) { return (G.settings.cam || 'follow') === 'full' ? Math.min((L.W - 16) / PW, (L.H - 16) / PL) : L.H / 60; }
 const sx = (L, vx) => L.W / 2 + (vx - L.cam.x) * L.cam.s;
 const sy = (L, vy) => L.H / 2 + (vy - L.cam.y) * L.cam.s;
@@ -95,7 +96,8 @@ function bindLive() {
   if (!cv || UI.s !== 'match') return;
   updateBoard(L); // populate clock, possession and fitness before measuring pitch space
   const wrap = cv.parentElement, dpr = window.devicePixelRatio || 1;
-  const W = wrap.clientWidth, H = Math.max(168, wrap.clientHeight);
+  const viewport=cv.closest('.match-viewport');
+  const W = wrap.clientWidth || viewport?.clientWidth || L.W, H = Math.max(1, wrap.clientHeight || viewport?.clientHeight || L.H);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   cv.onclick = e => {
@@ -135,7 +137,7 @@ function liveFrame(ts) {
   if (L.overlay) { L.overlay.t -= dt; if (L.overlay.t <= 0 && !L.overlay.stay) L.overlay = null; }
   if (L.fade > 0) L.fade = Math.max(0, L.fade - dt / 260);
   moveCam(L, dt);
-  draw(L);
+  if(!L.matchView||L.matchView==='2d')draw(L);
   L.raf = requestAnimationFrame(liveFrame);
 }
 
@@ -323,7 +325,7 @@ function endMinute(L) {
   if (inj) { L.paused = true; updateBoard(L); toast(`${pname(G.players[inj.pid])} is injured. Make a substitution.`); openLiveSheet('subs'); }
   const red = q.ev.concat(main ? [main] : []).find(e => e.t === 'red' && M.sides[e.off].user);
   if (red && !inj) { L.paused = true; L.gapSlot = red.slot; updateBoard(L); toast(`${pname(G.players[red.pid])} is sent off. Move a player into the gap.`); openLiveSheet('gap'); }
-  if (main && (main.ht || main.etBreak)) { L.overlay = { big: main.etBreak ? 'EXTRA TIME' : 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
+  if (main && (main.ht || main.etBreak)) { L.previousMinute=null; L.overlay = { big: main.etBreak ? 'EXTRA TIME' : 'HALF TIME', small: L.disp.join(' - '), t: 1, stay: true }; L.paused = true; updateBoard(L); openTeamTalk(L); }
 }
 // Injury events from the engine have no time in the minute: shown at once.
 
@@ -399,7 +401,7 @@ function draw(L) {
       // Small alternating boots give runners weight without moving the body away
       // from its real pitch position. Their shadows stay planted on the grass.
       if (d.v > 0.15 && d.fa != null) {
-        const fa = d.fa + (L.bottom === 0 ? 0 : Math.PI), cx = Math.cos(fa), cy = Math.sin(fa);
+        const fa = d.fa + (liveViewFlipped(L) ? Math.PI : 0), cx = Math.cos(fa), cy = Math.sin(fa);
         const step = Math.sin(d.stride || 0) * Math.min(1, d.v / 4) * br * 1.25;
         g.strokeStyle = '#16251E'; g.lineWidth = Math.max(1.2, br * 0.4); g.lineCap = 'round';
         for (const side of [-1, 1]) {
@@ -410,7 +412,7 @@ function draw(L) {
       g.fillStyle = gk ? col.gk : col.f; g.strokeStyle = gk ? '#1B1B1B' : col.s; g.lineWidth = Math.max(1, br * 0.3);
       g.beginPath(); g.arc(x, y, br, 0, Math.PI * 2); g.fill(); g.stroke();
       if (d.fa != null) { // where he faces: a small pointer on the edge of the circle
-        const fa = L.bottom === 0 ? d.fa : d.fa + Math.PI, cx = Math.cos(fa), cy = Math.sin(fa);
+        const fa = liveViewFlipped(L) ? d.fa + Math.PI : d.fa, cx = Math.cos(fa), cy = Math.sin(fa);
         g.fillStyle = gk ? '#1B1B1B' : col.s; g.beginPath();
         g.moveTo(x + cx * (br + 3), y + cy * (br + 3)); g.lineTo(x + cx * br * 0.7 - cy * br * 0.55, y + cy * br * 0.7 + cx * br * 0.55); g.lineTo(x + cx * br * 0.7 + cy * br * 0.55, y + cy * br * 0.7 - cx * br * 0.55); g.closePath(); g.fill();
       }
@@ -526,28 +528,19 @@ function liveFitness(S, id) {
 }
 function liveFitnessHtml(S, id) {
   const f = liveFitness(S, id);
-  return `<span class="live-health ${f.color}" data-health-id="${id}" aria-label="${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><b>${f.condition}%</b><span class="live-fatigue">${f.injured ? '<strong class="bad">INJ</strong> · ' : ''}${f.fatigue}</span><span class="live-condition-bar" aria-hidden="true"><i style="width:${f.condition}%"></i></span></span>`;
-}
-function liveWatchHtml(S) {
-  return S.on.map((id, i) => {
-    if (!id || !G.players[id]) return '';
-    const p = G.players[id], f = liveFitness(S, id);
-    return `<button class="live-watch-player" data-a="livePl" data-id="${id}" aria-label="${esc(fullName(p))} · ${FORMATIONS[S.ip][i][0]} · ${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><span class="live-watch-name"><b>${FORMATIONS[S.ip][i][0]}</b> ${esc(p.ln)}</span>${liveFitnessHtml(S, id)}</button>`;
-  }).join('');
+  return `<span class="live-health ${f.color}" data-health-id="${id}" data-health-side="${S.idx}" aria-label="${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><b>${f.condition}%</b><span class="live-fatigue">${f.injured ? '<strong class="bad">INJ</strong> · ' : ''}${f.fatigue}</span><span class="live-condition-bar" aria-hidden="true"><i style="width:${f.condition}%"></i></span></span>`;
 }
 function updateLiveFitness(L) {
-  const S = L.M.sides[L.bottom], watch = document.getElementById('liveWatchPlayers');
-  // Rebuild only when the team changes; condition updates keep controls and focus.
-  const roster = S.ip + ':' + S.on.join(',');
-  if (watch && watch.dataset.roster !== roster) { watch.innerHTML = liveWatchHtml(S); watch.dataset.roster = roster; }
-  document.querySelectorAll('[data-health-id]').forEach(el => {
+  updateMatchPanels(L); // Render the active pane only; controls survive ordinary condition updates.
+  document.querySelectorAll('.match-view-panel:not([hidden]) [data-health-id], #layer:not([hidden]) [data-health-id]').forEach(el => {
     const id = +el.dataset.healthId;
-    if (!S.on.includes(id) || !G.players[id]) return;
+    const S=L.M.sides[+el.dataset.healthSide]||L.M.sides[L.bottom];
+    if (!G.players[id]) return;
     const f = liveFitness(S, id), label = `${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}`;
     if (el.getAttribute('aria-label') === label) return;
     el.className = 'live-health ' + f.color; el.setAttribute('aria-label', label);
     const button = el.closest('.live-watch-player');
-    if (button) button.setAttribute('aria-label', `${fullName(G.players[id])} · ${FORMATIONS[S.ip][S.on.indexOf(id)][0]} · ${label}`);
+    if (button) { const slot=S.on.indexOf(id),pos=slot>=0?FORMATIONS[S.ip][slot][0]:G.players[id].pos;button.setAttribute('aria-label', `${fullName(G.players[id])} · ${pos} · ${label}`); }
     el.querySelector('b').textContent = f.condition + '%';
     el.querySelector('.live-fatigue').innerHTML = (f.injured ? '<strong class="bad">INJ</strong> · ' : '') + f.fatigue;
     el.querySelector('i').style.width = f.condition + '%';
@@ -686,14 +679,14 @@ async function onFullTime(L) {
 
 // The live player card (tap a player on the pitch). Refreshed every minute while open.
 function plCardHtml(L) {
-  const id = L.selId, si = L.M.sides.findIndex(X => X.on.includes(id) || X.off.includes(id) || X.reds.includes(id));
+  const id = L.selId, si = L.M.sides.findIndex(X => X.on.includes(id) || X.off.includes(id) || X.reds.includes(id) || X.bench.includes(id));
   const X = L.M.sides[si], p = G.players[id];
   if (!p || !X) return '';
   const i = X.on.indexOf(id), pos = i >= 0 ? FORMATIONS[X.ip][i][0] : p.pos, s = X.ps[id] || {}, rt = X.rat[id] ?? 6.5, cond = Math.round(X.cond[id] ?? p.cond);
   const mor = Math.round(liveMor(X, p)), sw = Math.round((X.mo && X.mo[id]) || 0), mine = X.user;
   const row = (l, v) => `<div class="kvrow"><span>${l}</span><b>${v}</b></div>`;
   return `<div class="phead"><div class="pnum" style="--k1:${(L.colors[si === L.bottom ? 0 : 1] || {}).f}">${p.no || '-'}</div>
-      <div class="grow"><h3 class="sh-t">${esc(fullName(p))}</h3><p class="muted">${POS_NAME[pos]}${i >= 0 ? ' · ' + esc(roleName(X, i)) : X.off.includes(id) ? ' · substituted' : ' · sent off'} · ${esc(clubName(X.cid))}</p></div>
+      <div class="grow"><h3 class="sh-t">${esc(fullName(p))}</h3><p class="muted">${POS_NAME[pos]}${i >= 0 ? ' · ' + esc(roleName(X, i)) : X.off.includes(id) ? ' · substituted' : X.reds.includes(id) ? ' · sent off' : ' · available substitute'} · ${esc(clubName(X.cid))}</p></div>
       <div class="pov"><small>Match rating</small><span class="ovr ${rt >= 7.5 ? 'o4' : rt >= 6.8 ? 'o3' : rt >= 6 ? 'o2' : 'o1'}">${rt.toFixed(1)}</span></div></div>
     <div class="meters"><div><small>Condition ${cond}%</small>${bar(cond, condClass(cond))}</div><div><small>Morale · ${morLabel(mor)} ${sw > 1 ? '↑' : sw < -1 ? '↓' : ''}</small>${bar(mor, morClass(mor))}</div><div><small>Sharpness</small>${bar(p.shp)}</div></div>
     <div class="card">${row('Passes', s.pa ? `${s.pc || 0}/${s.pa} (${Math.round((s.pc || 0) / s.pa * 100)}%)` : '0')}${row('Key passes', s.kp || 0)}${row('Dribbles', `${s.dw || 0}/${s.da || 0}`)}${row('Crosses', s.cr || 0)}

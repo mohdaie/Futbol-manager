@@ -43,7 +43,7 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     const mover2 = await page.evaluate(() => liveSide().on[8]);
     await page.locator(`#layer [data-a=gapMove][data-id="${mover2}"]`).tap();
     await page.locator('#layer [data-a=liveSheet][data-k=tactics]').tap();
-    await page.getByRole('tab', { name: 'Formation', exact: true }).tap();
+    await page.locator('#layer').getByRole('tab', { name: 'Formation', exact: true }).tap();
     check('The formation shows the empty position as a selectable token', await page.locator('#livePitchPanel .live-gap-token[data-i="8"]').count() === 1);
     await page.locator('#livePitchPanel .live-gap-token').tap();
     check('Formation gap access targets the right position', await page.locator('#layer [data-a=gapMove]').first().getAttribute('data-i') === '8');
