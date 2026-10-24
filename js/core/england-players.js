@@ -16,7 +16,8 @@ function playerFromEnglandIdentity(row, cid, { level = 'A', academy = 0 } = {}) 
     return genPlayer({ pos, age, nat, club: cid, lvl: level, ca,
       pa: authored ? authored.pa : pa, profile: authored, profileKey: key });
   });
-  const parts = name.split(' ');
+  const displayName = ENGLAND_PLAYER_NAMES_BY_ID[sourceId] || name;
+  const parts = displayName.split(' ');
   p.fn = parts.length > 1 ? parts.shift() : '';
   p.ln = parts.join(' ');
   p.foot = foot === 'L' ? 'Left' : foot === 'B' ? 'Either' : 'Right';
@@ -27,6 +28,20 @@ function playerFromEnglandIdentity(row, cid, { level = 'A', academy = 0 } = {}) 
   if (!authored) p.originProfile = { kind: 'generated-identity', key: sourceId,
     at: p.at.slice(), ca: p.ca, pa: p.pa, ht: p.ht, wt: p.wt, alt: p.alt.slice() };
   return p;
+}
+
+function applyEnglandPlayerNameOverrides() {
+  if (!G?.players || typeof ENGLAND_PLAYER_NAMES_BY_INSPIRATION === 'undefined') return;
+  const identityKey = s => String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  Object.values(G.players).forEach(p => {
+    const byId = p.identity?.id && ENGLAND_PLAYER_NAMES_BY_ID[p.identity.id];
+    const byInspiration = G.clubs[p.club]?.pl && p.insp ? ENGLAND_PLAYER_NAMES_BY_INSPIRATION[identityKey(p.insp)] : null;
+    const name = byId || byInspiration;
+    if (!name) return;
+    const parts = name.split(' ');
+    p.fn = parts.length > 1 ? parts.shift() : '';
+    p.ln = parts.join(' ');
+  });
 }
 
 function fillEnglandFirstTeam(c, target) {

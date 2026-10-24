@@ -68,6 +68,7 @@ function ensureWorld(options = {}) {
     G.flags.insp = 1;
   }
   ensureForeignSquads(options);
+  if (typeof applyEnglandPlayerNameOverrides === 'function') applyEnglandPlayerNameOverrides();
   Object.values(G.clubs).forEach(c => { if (!c.fa && !c.backgroundOnly && !c.mgr) c.mgr = genManagerName(); if (c.tac && !c.tac.style && !c.fa) c.tac = aiTactic(c.rep); });
   if (G.tactics) { G.tactics.lost ??= 1; G.tactics.won ??= 1; G.tactics.pi ??= {}; }
   if (G.club && G.clubs[G.club]) G.clubs[G.club].mgr = G.manager;
