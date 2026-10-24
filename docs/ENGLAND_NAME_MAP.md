@@ -13,4 +13,4 @@ These 14 current identities do not appear in the supplied map and retain their e
 - Sunderland: Simon Adingra, Djiamgone Jocelin Ta Bi
 - Tottenham: Souza
 
-The attachment also contains 43 names whose inspirational figures are absent from the game's active first-team rows. They were not added as extra first-team players, preserving the game's 25-player starting squads. The map has 21 entries where its display name is identical to the inspirational figure; those names are kept as supplied.
+The attachment also contains 43 players whose inspirational figures were absent from the active first-team rows. They are now included as additional Premier League first-team players with the supplied ability profiles. Premier League squads register up to 25 senior players per season; eligible Under-21s are exempt from the list. The map has 21 entries where its display name is identical to the inspirational figure; those names are kept as supplied.

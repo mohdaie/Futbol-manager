@@ -766,6 +766,16 @@ free kicks, corners, captain), chosen from the players on the pitch and kept for
 Verified: 25 test suites, the strict audit, browser checks for the tactics page and the set-piece choice, and a gap check.
 The match-balance limits from earlier releases are unchanged and still open.
 
+## 2026.10.24.4 — Premier League squad registration, expansion players and shirt numbers
+
+The 43 supplemental Premier League identities from the supplied ability-profile document now join their listed clubs
+as first-team players in new careers, and are added idempotently to existing careers when still at their original
+Premier League club. Their supplied 1–20 attributes and potential are preserved in the game profile data. Premier
+League clubs keep a season-specific list of up to 25 senior players; eligible Under-21 players are exempt, and the
+match picker excludes unregistered senior players. Managers can edit their list from Squad; it renews at season rollover.
+The Squad page can sort players by kit number. Manual number changes require an open transfer window and enforce a
+unique club number from 1–99. JavaScript syntax checks passed; the full test suites and live browser checks were not run.
+
 ## 2026.10.22.38 — shot path drawn along its flight; role changes take effect at once (owner-requested release)
 
 A shot in flight is drawn along its real path, from the shooter to the target at shot speed. The frames are 0.5 s apart

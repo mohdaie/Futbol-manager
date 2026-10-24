@@ -23,7 +23,7 @@ const seasonLabel = (s = G.season) => s + '/' + String(s + 1).slice(2);
 function assignNumber(c, p) {
   const used = new Set(c.squad.map(id => G.players[id] && G.players[id].no));
   for (const n of SHIRT[p.pos] || []) if (!used.has(n)) { p.no = n; return; }
-  for (let n = 12; n < 99; n++) if (!used.has(n)) { p.no = n; return; }
+  for (let n = 12; n <= 99; n++) if (!used.has(n)) { p.no = n; return; }
 }
 
 function addToClub(p, c) {
@@ -222,10 +222,10 @@ const available = p => p && !p.inj && (!(p.ban > 0) || !!G?.flags?.friendlySelec
 // Greedy best XI for a formation, scarce positions first, plus a 9-man bench with a keeper.
 function autoPick(cid, formation, keep) {
   const slots = FORMATIONS[formation];
-  let pool = seniorSquad(cid).filter(available);
+  let pool = seniorSquad(cid).filter(p => availableForLeague(p, cid));
   // short of fit first-team players: call up the best reserves
   const poolTarget = G.clubs[cid].foreignSquad ? 20 : 16;
-  if (pool.length < poolTarget) pool = pool.concat(levelSquad(cid, 'R').filter(available).sort((a, b) => b.ca - a.ca).slice(0, poolTarget - pool.length));
+  if (pool.length < poolTarget) pool = pool.concat(levelSquad(cid, 'R').filter(p => availableForLeague(p, cid)).sort((a, b) => b.ca - a.ca).slice(0, poolTarget - pool.length));
   const xi = Array(11).fill(null);
   const used = new Set();
   if (keep) keep.forEach((id, i) => { if (id && pool.some(p => p.id === id)) { xi[i] = id; used.add(id); } });
@@ -251,7 +251,7 @@ function autoPick(cid, formation, keep) {
 
 // Keep the user's lineup valid: drop departed, injured or banned players and fill gaps.
 function ensureUserLineup() {
-  const T = G.tactics, ok = id => { const p = G.players[id]; return p && p.club === G.club && lvlOf(p) !== 'Y' && available(p); };
+  const T = G.tactics, ok = id => { const p = G.players[id]; return p && p.club === G.club && lvlOf(p) !== 'Y' && availableForLeague(p, G.club); };
   T.slots = T.slots.map(id => (ok(id) ? id : null));
   T.bench = T.bench.filter(ok).filter(id => !T.slots.includes(id));
   if (T.slots.some(x => !x) || T.bench.length < 7) {

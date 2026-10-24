@@ -3,7 +3,7 @@
 // profile where available; otherwise build a stable, original football type.
 function playerFromEnglandIdentity(row, cid, { level = 'A', academy = 0 } = {}) {
   const [name, pos, age, nat, foot, inspiration, dob, key, source, sourceId] = row;
-  const candidate = key && ROSTER_PROFILES[key];
+  const candidate = key && (ROSTER_PROFILES[key] || (typeof ENGLAND_EXPANSION_PROFILES !== 'undefined' && ENGLAND_EXPANSION_PROFILES[key]));
   const authored = candidate && candidate.insp === inspiration && candidate.pos === pos ? candidate : null;
   let seed = 2166136261;
   for (const c of sourceId) seed = Math.imul(seed ^ c.charCodeAt(0), 16777619) >>> 0;
@@ -47,10 +47,31 @@ function applyEnglandPlayerNameOverrides() {
 function fillEnglandFirstTeam(c, target) {
   const rows = ENGLAND_ROSTERS_2026[c.id] || [];
   rows.slice(0, target).forEach(row => addToClub(playerFromEnglandIdentity(row, c.id), c));
+  if (c.league === 'EPL') (ENGLAND_EXPANSION_ROSTERS[c.id] || []).forEach(row => addToClub(playerFromEnglandIdentity(row, c.id), c));
   const missing = SQUAD_TEMPLATE.slice(0, target);
   seniorSquad(c.id).forEach(p => { const i = missing.indexOf(p.pos); if (i >= 0) missing.splice(i, 1); });
   while (seniorSquad(c.id).length < target && squadSpace(c)) {
     const pos = missing.shift() || 'MC', ca = 60 + (c.rep - 50) * 0.6 + gauss() * 3;
     addToClub(genPlayer({ pos, ca, pa: ca + 4, age: ri(20, 29), nat: 'ENG', club: c.id, lvl: 'A' }), c);
+  }
+}
+
+// Add the supplemental 2026/27 identities to careers created before the data shipped.
+// The stable source ID prevents duplicates and avoids resurrecting a player who has moved.
+function addEnglandExpansionPlayers() {
+  if (typeof ENGLAND_EXPANSION_ROSTERS === 'undefined') return;
+  const owned = new Set(Object.values(G.players).map(p => p.identity?.id).filter(Boolean));
+  for (const [cid, rows] of Object.entries(ENGLAND_EXPANSION_ROSTERS)) {
+    const c = G.clubs[cid];
+    if (!c?.pl || c.league !== 'EPL') continue;
+    for (const row of rows) {
+      if (owned.has(row[9])) continue;
+      const p = playerFromEnglandIdentity(row, cid);
+      p.age += Math.max(0, G.season - START_SEASON);
+      p.con = G.season + 2;
+      addToClub(p, c);
+      G.know[p.id] = cid === G.club ? 100 : 45;
+      owned.add(row[9]);
+    }
   }
 }
