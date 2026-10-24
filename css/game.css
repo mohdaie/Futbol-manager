@@ -498,6 +498,15 @@ input[type=range] { width: 100%; accent-color: var(--amber); }
 .subbar > button, .subbar > span { display: flex; align-items: center; gap: 6.5px; min-width: 0; }
 .subbar b { color: var(--chalk); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .subbar svg.cal { width: 17px; height: 17px; fill: none; stroke: var(--mute); stroke-width: 1.8; flex: none; }
+.world-alert { position: fixed; z-index: 70; top: calc(env(safe-area-inset-top, 0px) + 7px); left: 50%; display: flex; align-items: center; gap: 8px; width: min(464px, calc(100% - 18px)); min-height: 46px; padding: 8px 11px; border: 1px solid rgba(45,226,238,.38); border-radius: 13px; background: linear-gradient(115deg, rgba(63,23,87,.98), rgba(34,8,47,.98)); box-shadow: 0 9px 28px rgba(0,0,0,.42), 0 0 18px rgba(45,226,238,.1); text-align: left; opacity: 0; transform: translate(-50%, -145%); transition: transform 260ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease; }
+.world-alert[hidden] { display: none; }
+.world-alert.world-alert-in { opacity: 1; transform: translate(-50%, 0); animation: world-alert-drop 280ms cubic-bezier(.2,.8,.2,1) both; }
+.world-alert.world-alert-out { opacity: 0; transform: translate(-50%, -145%); }
+@keyframes world-alert-drop { from { opacity: 0; transform: translate(-50%, -145%); } to { opacity: 1; transform: translate(-50%, 0); } }
+.world-alert b { flex: none; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 6px; border-radius: 6px; background: rgba(45,226,238,.13); color: var(--amber); font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+.world-alert span { flex: 1; min-width: 0; overflow: hidden; color: var(--chalk); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.world-alert i { flex: none; color: var(--mute); font-size: 17px; font-style: normal; line-height: 1; }
+@media (prefers-reduced-motion: reduce) { .world-alert { transition: none; animation: none !important; } }
 .bottombar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8.5px; margin: 5px max(10px, env(safe-area-inset-left, 0px)) calc(8.5px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-right, 0px)); padding: 8.5px 8.5px 8.5px 13.5px; border-radius: 18.5px; background: var(--stand); border: 1px solid rgba(255,255,255,.06); }
 .bb-sum { display: flex; align-items: center; gap: 8.5px; font-size: 12px; font-weight: 700; min-width: 0; }
 .bb-sum svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--chalk); stroke-width: 1.7; }

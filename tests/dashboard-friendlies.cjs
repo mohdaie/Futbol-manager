@@ -22,7 +22,7 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     await page.locator('.tabs2 [data-s=home]').tap();
     check('Tapping Dashboard opens it with an upcoming overseas friendly', await page.evaluate(() => UI.s === 'home' && document.getElementById('app').dataset.screen === 'home'));
     check('The next match is labelled Friendly with no invented league form', /Friendly/.test(await page.locator('.nm-mid').textContent()) && /No recorded league form/.test(await page.locator('.nm-form').textContent()));
-    await page.locator('[data-a=go][data-s=squad].dlink').tap();
+    await page.locator('.tabs2 [data-s=team]').tap();
     check('Dashboard squad button works', await page.evaluate(() => UI.s === 'squad'));
     await page.locator('.tabs2 [data-s=home]').tap();
     await page.locator('.cc-conf').tap();

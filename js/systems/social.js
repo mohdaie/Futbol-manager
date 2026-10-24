@@ -47,6 +47,7 @@ function post(acc, txt, o = {}) {
   const p = { id: G.nextId++, date: today().getTime() + Math.floor(hash01(G.nextId + 't') * 20) * 3600e3 / 2, acc, txt, pid: o.pid || null, clubs: o.clubs || [], kind: o.kind || 'post', likes, reposts: Math.round(likes * (0.08 + hash01(G.nextId + 'r') * 0.12)), replies: [], real: o.real !== false, deal: o.deal || null };
   G.social.unshift(p);
   if (G.social.length > 160) G.social.length = 160;
+  if (typeof worldAlertFromPost === 'function') worldAlertFromPost(p);
   if (o.react && p.clubs.length) fanReplies(p);
   if (typeof postWords === 'function' && ['rumour', 'here', 'agreed', 'talks', 'off'].includes(p.kind)) postWords(p);
   return p;

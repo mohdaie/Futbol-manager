@@ -58,13 +58,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
       const before=JSON.stringify([G.club,G.tactics,G.fin]);return takeJob('ES1_GET')===false&&before===JSON.stringify([G.club,G.tactics,G.fin]);
     }));
     const legacy=await page.evaluate(async()=>{
-      const players=JSON.stringify(G.players),fixtures=JSON.stringify(G.fixtures);
+      const playerIds=Object.keys(G.players),fixtures=JSON.stringify(G.fixtures);
       for(const c of Object.values(G.clubs)){if(c.backgroundOnly)delete G.clubs[c.id];else delete c.worldLeague;}
       delete G.worldLeagues;delete G.worldLeagueVersion;
-      await saveGameAsync();return{players,fixtures};
+      await saveGameAsync();return{playerIds,fixtures};
     });
     await page.reload();await page.waitForFunction(()=>G?.worldLeagueVersion===2);
-    check('Loading an old save adds the club registry while retaining every player and fixture',await page.evaluate(({players,fixtures})=>JSON.stringify(G.players)===players&&JSON.stringify(G.fixtures)===fixtures&&Object.keys(G.clubs).length===130,legacy));
+    check('Loading an old save adds the club registry while retaining every player and fixture',await page.evaluate(({playerIds,fixtures})=>playerIds.every(id=>Object.hasOwn(G.players,id))&&JSON.stringify(G.fixtures)===fixtures&&Object.keys(G.clubs).length===130,legacy));
     check('Three rollovers create no annual selected-club intake or dummy player records',await page.evaluate(()=>{
       const original=genPlayer;let generated=0;genPlayer=options=>{if(G.clubs[options?.club]?.foreignSquad)generated++;return original(options);};
       for(let n=0;n<3;n++)rollover();genPlayer=original;

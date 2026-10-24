@@ -81,21 +81,28 @@ async function simUpToAsync(fx, inclusive) {
 async function advanceWeekAsync() {
   const game = G;
   const fx = userFixture(); if (fx && !played(fx)) return 'match';
-  await simulateFixtures(G.fixtures.filter(f => f.w === G.week && !played(f)));
+  const playedOutside = G.fixtures.filter(f => f.w === G.week && !played(f));
+  await simulateFixtures(playedOutside);
   if (G !== game) throw new Error('Career changed during processing.');
+  if (typeof worldAlertForResults === 'function') worldAlertForResults(playedOutside);
   return advanceWeek();
 }
 async function advanceDayAsync() {
   const game = G;
   const fx = userFixtures().find(f => !played(f)); if (fx && (fx.d ?? 5) <= G.day) return 'match';
-  await simulateFixtures(G.fixtures.filter(f => f.w === G.week && (G.day >= 6 || (f.d ?? 5) === G.day) && !played(f) && !isUserFx(f)));
+  const playedOutside = G.fixtures.filter(f => f.w === G.week && (G.day >= 6 || (f.d ?? 5) === G.day) && !played(f) && !isUserFx(f));
+  await simulateFixtures(playedOutside);
   if (G !== game) throw new Error('Career changed during processing.');
+  if (typeof worldAlertForResults === 'function') worldAlertForResults(playedOutside);
   return advanceDay();
 }
 async function finishRoundAsync() {
   const game = G;
-  const fx = G.fixtures.find(f => f.id === G.lastMatch); if (fx) await simUpToAsync(fx, true);
+  const fx = G.fixtures.find(f => f.id === G.lastMatch);
+  const playedOutside = fx ? G.fixtures.filter(f => f.w === fx.w && !played(f) && f.id !== fx.id && !isUserFx(f)) : [];
+  if (fx) await simUpToAsync(fx, true);
   if (G !== game) return;
+  if (typeof worldAlertForResults === 'function') worldAlertForResults(playedOutside);
   await saveGameAsync();
 }
 async function playUserInstantAsync(fx) {

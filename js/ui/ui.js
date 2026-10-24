@@ -121,6 +121,7 @@ function shell(body) {
       <button data-a="go" data-s="manager" aria-label="Your manager profile">${avatarImg(G.avatar)}</button>
       </div>
     </header>
+    ${worldAlertMarkup()}
     <nav class="tabs2">${NAV.map(([k, n]) => `<button class="${cur === k ? 'on' : ''}" data-a="go" data-s="${k}">${n}</button>`).join('')}</nav>
     <div class="subbar"><button data-a="go" data-s="club">${badge(c.id, 20)}<b>${esc(c.name)}</b><span>· ${esc(phaseLabel())}</span></button><span>${ICON.cal}${fmtDate(today())}</span></div>
     <main class="main">${body}<div class="spacer"></div></main>

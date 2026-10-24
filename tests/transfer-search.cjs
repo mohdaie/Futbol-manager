@@ -33,7 +33,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
       out.sources=[ps[0],ps[1],ps[2],ps[3],ps[5],own].every(p=>ids.includes(p.id))&&ids.length===6;
       out.dates=!ids.includes(ps[6].id)&&!ids.includes(ps[7].id);
       const p=ps[0],orig={fn:p.fn,ln:p.ln,insp:p.insp};p.fn='José';p.ln='Álvarez';p.insp='Andrés Iniesta';
-      out.names=searchTransferPlayers({name:'jose alvarez'}).some(x=>x.id===p.id)&&searchTransferPlayers({name:'ANDRES INIESTA'}).some(x=>x.id===p.id);
+      out.names=searchTransferPlayers({name:'jose alvarez'}).some(x=>x.id===p.id)&&!searchTransferPlayers({name:'ANDRES INIESTA'}).some(x=>x.id===p.id);
       out.ownExcluded=!searchTransferPlayers({name:fullName(own)}).some(x=>x.id===own.id);
       out.filters=searchTransferPlayers({pos:'GK',maxAge:23,maxFee:5e6,minOvr:60}).every(x=>(x.pos==='GK'||x.alt?.includes('GK'))&&x.age<=23&&pValue(x)<=5e6&&seenOvr(x).v>=60);
       Object.assign(p,orig);Object.assign(G,before);return out;
@@ -69,7 +69,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('[data-a=transferPage]').first().click();
     check('Previous restores page one',await rows().evaluateAll(ns=>ns.map(n=>n.dataset.id).join(','))===first.join(','));
     await page.locator('#sName').fill(seed.inspiration);await page.locator('#sPos').selectOption('Any');await page.locator('[data-a=transferSearch]').click();
-    check('Inspirational figure names can find real player counterparts',await rows().count()>=1&&await page.evaluate(()=>UI.tab.transferPage===0));
+    check('Transfer search uses fictional display names, not inspirational figures',await rows().count()===0&&/No players found/.test(await page.locator('.main').textContent()));
     check('Phone layout has no horizontal overflow or nested controls',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)&&await page.locator('button button,button a').count()===0);
     check('No browser errors',errors.length===0);
     await page.screenshot({path:'/tmp/futbol-transfer-search.png'});
