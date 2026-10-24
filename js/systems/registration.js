@@ -53,7 +53,9 @@ function setPremierLeagueRegistration(cid, ids) {
 
 function premierLeagueEligible(p, cid = p?.club) {
   if (!p) return false;
-  if (leagueOf(cid) !== 'EPL' || under21Exempt(p)) return true;
+  // 14: List A is an EPL competition rule. Friendlies (including preseason
+  // fixtures against foreign clubs) can select the full available squad.
+  if (G?.flags?.friendlySelection || G?.clubs?.[cid]?.league !== 'EPL' || under21Exempt(p)) return true;
   ensurePLRegistration(cid);
   return registeredPLIds(G.clubs[cid]).has(p.id);
 }

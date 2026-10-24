@@ -23,7 +23,7 @@ function friendlyCandidates() {
 function friendlyPlay(cid) {
   const me = G.club, rec = { w: 0, d: 0, l: 0, gf: 0, ga: 0 };
   [[me, cid], [cid, me]].forEach(([h, a]) => {
-    const M = createMatch({ id: -1, h, a });
+    const M = createMatch({ id: -1, h, a, fr: true });
     M.noLog = true; M.camp = true;
     while (!M.ended) stepMatch(M, true);
     const [H, W] = M.sides, mine = h === me ? H : W, theirs = h === me ? W : H;
