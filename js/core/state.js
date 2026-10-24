@@ -282,6 +282,7 @@ const newsImportant = n => (n.cat === 'transfer' && !n.q) || n.cat === 'inbox' |
 function addNews(cat, title, body, action) {
   G.news.unshift({ id: G.nextId++, date: (typeof today === 'function' ? today() : weekDate(G.week)).getTime(), cat, title, body: body || '', action: action || null, read: false, done: false });
   if (G.news.length > 160) G.news.length = 160;
+  if (typeof worldAlertForNews === 'function') worldAlertForNews(G.news[0]);
 }
 
 function saveGame() {

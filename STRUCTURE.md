@@ -804,3 +804,12 @@ unique club number from 1–99. JavaScript syntax checks passed; the full test s
 
 Player display names remain fictional, while the bio shows the inspirational figure name. Transfer search matches
 fictional display names only. Inspiration metadata also remains part of roster identity and simulation linking.
+
+## 2026.10.24.6 — one-line outside-club notification bar
+
+A short phone-style alert slides from the top for notable events outside the player's club: a result with a named
+scorer, a completed transfer or loan, a manager vacancy or appointment, and a named transfer rumour. Alerts fit on
+one line, can be dismissed, and move through a small queue. The regular News screen remains the full event record.
+Verified: JavaScript syntax, strict engine audit (3,555 checks, 0 failures), and a mobile browser alert/dismiss smoke
+check. 49 of 53 release suites passed across the full run and reruns; remaining failures are in england-rosters,
+player-profiles, world-leagues and world-squads, outside this notification change.
