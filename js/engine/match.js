@@ -169,6 +169,7 @@ function drain(M, S) {
 const bumpRating = (S, id, d) => { if (id && S.rat[id] != null) S.rat[id] = clamp(S.rat[id] + d, 3, 10); };
 
 function simMinute(M) {
+  const managerEvents = typeof applyPendingManagerChanges === 'function' ? applyPendingManagerChanges(M) : [];
   M.min++;
   const [H, W] = M.sides, evs = [];
   if (M.min % 5 === 0 || M.dirty) { calcUnits(H); calcUnits(W); M.dirty = false; }
@@ -186,7 +187,7 @@ function simMinute(M) {
   if (M.extra && M.min === M.extraStart + 15) ev.etBreak = true;
   if (M.min >= (M.finishAt ?? 90 + M.added)) { const extra = M.extra; decideMatchEnd(M); if (M.ended) ev.ft = true; else if (!extra && M.extra) ev.etBreak = true; }
   evs.forEach(e => { if (e.t !== 'poss') M.log.push(e); });
-  return evs;
+  return [...managerEvents, ...evs];
 }
 
 // A deciding playoff leg uses aggregate goals; away goals never break a tie.

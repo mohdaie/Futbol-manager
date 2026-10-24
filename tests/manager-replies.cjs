@@ -1,0 +1,42 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {createMatchQaRuntime}=require('../scripts/match-qa-runtime.cjs');
+const rt=createMatchQaRuntime(20261024),checks=[];
+Object.assign(rt.ctx,{brainCloudEngine:()=>'',brainCloudUuid:()=> 'manager-test'});
+vm.runInContext(fs.readFileSync('js/systems/brain.js','utf8'),rt.ctx);
+rt.run(`newGame('GUL','Manager QA',1);G.flags.fixedTac=true;G.simSeed=20261024;let M,DEFER=[];
+aiReady=()=>true;askTeacher=()=>new Promise((resolve,reject)=>DEFER.push({resolve,reject}));
+function setup(){DEFER=[];brain().mode='teacher';M=createMatch({id:-42,h:'RED',a:'GUL'});M.live=true;M.min=70;M.sides[0].press=1;M.sides[0].ment=2;return M;}
+function drain(){return matchRandom(M,()=>applyPendingManagerChanges(M));}
+`);
+const check=(name,code)=>{assert.ok(rt.run(code),name);checks.push(name);};
+const deliver=async(index,reply)=>{rt.ctx.REPLY=reply;rt.run(`DEFER[${index}].resolve(REPLY)`);await Promise.resolve();await Promise.resolve();};
+const fail=async(index)=>{rt.run(`DEFER[${index}].reject(new Error('test offline'))`);await Promise.resolve();await Promise.resolve();await Promise.resolve();};
+(async()=>{
+ rt.run(`setup();const oldSide=M.sides[0];brainDecide(M,oldSide);Object.assign(M,JSON.parse(JSON.stringify(M)));`);
+ await deliver(0,{opt:'fresh',src:'jev',conf:.9});
+ check('A delayed answer queues without announcing or mutating any lineup',`M.log.length===0&&M.managerReplies.length===1&&M.sides[0].subs===0&&oldSide.subs===0`);
+ check('A reply survives worker replacement of both side and decision objects',`(()=>{const ev=drain();return ev.some(e=>e.t==='sub')&&M.sides[0].subs===2&&oldSide.subs===0&&M.dec[0][1].src==='jev'&&M.dec[0][1].changed;})()`);
+ check('Every announced substitution appears in the CURRENT lineup',`M.log.filter(e=>e.t==='sub').every(e=>M.sides[0].on.includes(e.pid)&&!M.sides[0].on.includes(e.out))`);
+ check('Queued replies apply once and do not duplicate timeline entries',`(()=>{const count=M.log.length;return drain().length===0&&M.log.length===count&&new Set(M.log.filter(e=>e.t==='sub').map(e=>e.pid)).size===2;})()`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);M.sides=JSON.parse(JSON.stringify(M.sides));`);await deliver(0,{opt:'press',src:'jev'});
+ check('Tactical replies update the active team rather than a detached reference',`drain().some(e=>e.t==='tac')&&M.sides[0].press===2&&M.dirty`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);brainDecide(M,M.sides[0]);`);await deliver(0,{opt:'attack',src:'jev'});await deliver(1,{opt:'press',src:'jev'});
+ check('A newer request supersedes an older response for the same side',`M.managerReplies.length===1&&drain().length===1&&M.sides[0].press===2&&M.sides[0].ment===2&&M.dec[0][1].src==='superseded'`);
+ rt.run(`setup();M.sides[0].subs=5;brainDecide(M,M.sides[0]);`);await deliver(0,{opt:'fresh',src:'jev'});
+ check('Exhausted substitution allowance produces no false change announcement',`drain().length===0&&M.log.length===0&&!M.dec[0][1].changed`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);M.ended=true;`);await deliver(0,{opt:'attack',src:'jev'});
+ check('Replies after full time cannot modify teams or commentary',`!M.managerReplies?.length&&M.log.length===0&&M.dec[0][1].src==='late'`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);M.min+=11;`);await deliver(0,{opt:'attack',src:'jev'});
+ check('Expired replies are discarded at application time',`drain().length===0&&M.log.length===0&&M.dec[0][1].src==='superseded'`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);M.sides[0].st.g++;`);await deliver(0,{opt:'attack',src:'jev'});
+ check('Score changes re-evaluate the CURRENT situation using the existing rules policy',`(()=>{drain();return M.dec[0][1].src==='rules-context-changed'&&M.dec[0][1].appliedAt===70;})()`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);M.sides=JSON.parse(JSON.stringify(M.sides));`);await fail(0);
+ check('Provider failure uses the current side for the existing fallback policy',`(()=>{drain();return ['rules','learned'].includes(M.dec[0][1].src)&&M.log.filter(e=>e.t==='sub').every(e=>M.sides[0].on.includes(e.pid));})()`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);G=JSON.parse(JSON.stringify(G));`);await deliver(0,{opt:'attack',src:'jev'});
+ check('Switching careers prevents the old match reply from applying',`!M.managerReplies?.length&&M.log.length===0`);
+ rt.run(`setup();brainDecide(M,M.sides[0]);`);await deliver(0,{opt:'invalid-option',src:'jev'});
+ check('Unrecognized provider choices cannot manufacture announcements',`drain().length===0&&M.log.length===0&&M.dec[0][1].src==='invalid'`);
+ rt.run(`setup();M.sides[0].press=2;`);
+ check('Already-active tactics are not announced as a new change',`applyMgrOption(M,M.sides[0],'press').length===0&&!M.dirty`);
+ console.log(JSON.stringify({passed:checks.length,checks},null,2));
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -475,7 +475,8 @@ function carrierDecide(M, s, i, o = {}) {
     }
     // The cut-back: from the byline area to the penalty spot or the edge, the best chance in open play (7.1).
     const cutback = !air && oy < 0.13 && Math.abs(ox - 0.5) > 0.12 && dGoal(s, tx, ty) > 7 && dGoal(s, tx, ty) < 20 && Math.abs(tx - PW / 2) < 12 && rpress < 0.5;
-    const val = threat(s, tx, ty) * (1 - rpress * 0.45) * esc * (cutback ? 1.5 : 1);
+    const receivingChance = dGoal(s,tx,ty)<22 ? chanceAt(M,s,tx,ty,{press:rpress}).xg : 0;
+    const val = Math.max(threat(s,tx,ty), receivingChance*.85) * (1-rpress*.45) * esc * (cutback?1.5:1);
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
     const style = (fwd > 0 ? [0.9, 1, 1.18][pass] * (1 + fwd * (vis - 10) * 0.25) : [1.12, 1, 0.85][pass]) * (1 + Math.max(0, fwd) * b('rk') * 0.4) * (trn === 'ctr' ? 1 + Math.max(0, fwd) * 2 : 1);
     if (offsideNow(M, s, j) && R() > ((q.y - offsideY(M, s)) * fwdY(s) < 1.2 ? 0.15 + (12 - vis) * 0.02 : (20 - vis) / 160)) return; // 4.7: a clear offside he sees; a tight one is easy to misjudge (Vision). He sees the flag coming (poor Vision misses it now and then)
@@ -536,6 +537,10 @@ function carrierDecide(M, s, i, o = {}) {
       opts.push({ k: 'round', v: pr * 0.5 * (1 + b('dr') * 0.3) - (1 - pr) * 0.1 });
     }
   }
+  if (!gk && !o.restart) {
+    const escape = pressureEscape(M,s,i,press,lossCost);
+    if (escape) opts.push(escape);
+  }
   // Under pressure deep in his own half: an aimed ball to the outlet (target man or a runner in the channel),
   // worth what winning it there brings, and a blind clearance only as a last resort in real danger.
   if (oy > 0.72 && press > 0.35) {
@@ -557,6 +562,29 @@ function carrierDecide(M, s, i, o = {}) {
   playOption(M, s, i, pick1, press);
   sim.last = { s, i, k: pick1.k };
 }
+// A short turn away from pressure buys a passing angle, not free possession.
+// The normal movement, turning and tackle simulation still resolves the action.
+function pressureEscape(M,s,i,press,lossCost) {
+  const sim=M.sim, S=M.sides[s], p=P_(M,s,i);
+  if (press<.45 || sim.t-(p.escapeAt??-99)<3) return null;
+  const opponents=sim.P[1-s].filter(Boolean), nearest=opponents.slice().sort((a,b)=>hyp(a.x-p.x,a.y-p.y)-hyp(b.x-p.x,b.y-p.y))[0];
+  if (!nearest) return null;
+  const angle=Math.atan2(p.y-nearest.y,p.x-nearest.x), fw=fwdY(s);
+  let best=null;
+  for (const offset of [0,-.7,.7]) {
+    const x=clamp(p.x+Math.cos(angle+offset)*3,1.5,PW-1.5), y=clamp(p.y+Math.sin(angle+offset)*3,2.5,PL-2.5);
+    const gap=hyp(x-nearest.x,y-nearest.y), current=hyp(p.x-nearest.x,p.y-nearest.y);
+    if (hyp(x-p.x,y-p.y)<1 || gap<current+.8) continue;
+    const blocked=opponents.some(q=>{const d=segD(q.x,q.y,p.x,p.y,x,y);return SD.u>.1 && d<1.2;});
+    const nextPress=recvPressure(M,s,x,y)[1];
+    if (blocked || nextPress>press-.1 || (y-p.y)*fw < -4) continue;
+    const risk=clamp(.16+press*.15+(12-(ac(S,i,'dri')+ac(S,i,'str')+ac(S,i,'cmp'))/3)*.012,.14,.4);
+    const v=(1-risk)*threat(s,x,y)*.8-risk*lossCost-.015;
+    if (!best || v>best.v) best={k:'escape',cx:x,cy:y,v,risk};
+  }
+  return best;
+}
+
 // A shot is more likely the better he is at finishing (a poor finisher passes instead).
 const shotNerve = (S, i) => 0.75 + ac(S, i, 'fin') * 0.02;
 function recvPressure(M, s, X, Y) {
@@ -625,6 +653,7 @@ function playOption(M, s, i, op, press) {
   const S = M.sides[s], sim = M.sim, B = sim.B, p = P_(M, s, i);
   if (op.k === 'shot') return shoot(M, s, i, { press });
   if (op.k === 'cross') return crossBall(M, s, i, {});
+  if (op.k === 'escape') { B.hx=op.cx; B.hy=op.cy; B.dt=.9; p.carry=1; p.takeOn=0; p.escapeAt=sim.t; return; }
   if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; p.takeOn = !!op.takeOn; return; }
   if (op.k === 'round') return roundKeeper(M, s, i);
   if (op.k === 'touch') return kick(M, s, i, 'clear', p.x < PW / 2 ? -3 : PW + 3, p.y + fwdY(s) * rf(2, 10), -1, { air: false, err: 1 });
@@ -1286,6 +1315,29 @@ function foul(M, s, i, o, j) {
 }
 
 /* ---------- off the ball ---------- */
+// Keep one nearby, goal-side passing angle when the attacker is crowded.
+// One screening midfielder may help; the back line and remaining screen stay.
+function closeSupport(M,s,carrier,box) {
+  const S=M.sides[s], P=M.sim.P[s], own=P[carrier];
+  if (!own || carrier<=0 || dGoal(s,own.x,own.y)>35 || pressureOn(M,s,carrier)[0]<.45) return null;
+  const rest=restSlots(S,toOwn(s,own.x,own.y)[0],carrier), fw=fwdY(s);
+  let best=null;
+  for (let i=1;i<P.length;i++) {
+    const p=P[i], pos=FORMATIONS[S.ip][i][0];
+    if (!p || i===carrier || !['DM','MC','AMC'].includes(pos) || rest.back.includes(i) || box?.has(i) || roleName(S,i)==='Anchor') continue;
+    if (rest.screen.includes(i) && !rest.screen.some(j=>j!==i && P[j] && ['DM','MC'].includes(FORMATIONS[S.ip][j][0]))) continue;
+    if (hyp(p.x-own.x,p.y-own.y)>30) continue;
+    for (const dx of [-6,6]) {
+      const x=clamp(own.x+dx,2,PW-2), y=clamp(own.y-fw*7,3,PL-3), distance=hyp(x-p.x,y-p.y);
+      const [gap,pressure]=recvPressure(M,s,x,y), risk=passRisk(M,s,own.x,own.y,x,y,false);
+      if (gap<2 || risk>.55 || distance>18) continue;
+      const value=(1-pressure)*2-risk*3-distance*.06+(ac(S,i,'tea')-10)*.02;
+      if (!best || value>best.value) best={i,x,y,value};
+    }
+  }
+  return best;
+}
+
 // Every second: where each player wants to be. In possession: the shape, support near the ball, runs in behind,
 // width and late runs into the box. Without it: the shape, pressing the ball, marking and a back line that holds.
 // A forward who drops back to receive. Position-based drops need him actually moving back; the deep-lying roles
@@ -1305,6 +1357,7 @@ function targets(M, all) {
     const reserves = new Set([...(S._teamPlan?.rest.back || []), ...(S._teamPlan?.rest.screen || [])]);
     const box = has && own ? boxPlan(M, s, ip, bx, by, carrier, reserves, line) : null;
     if (has) S._box = box;
+    const support = has && own ? closeSupport(M,s,carrier,box) : null;
     const gx = PW / 2, gy = goalY(1 - s); // their own goal
     const unitStep = !has && own ? defensiveLineStep(M, s) : 0;
     S._defStep = unitStep;
@@ -1354,6 +1407,7 @@ function targets(M, all) {
         const dep = Math.abs(ky - gy), kx = PW / 2 + (B.x - PW / 2) * dep / Math.max(dep + 0.1, Math.abs(B.y - gy));
         p.tx = has ? X : clamp(kx, PW / 2 - 3.2, PW / 2 + 3.2); p.ty = has ? Y : ky; continue;
       }
+      if (support?.i===i) { p.tx=support.x; p.ty=support.y; p.run=hyp(p.tx-p.x,p.ty-p.y)>2?sim.t+1:0; continue; }
       if (reserves.has(i)) p.run = 0; // the chosen cover cannot join an attacking run
       // Counter breakout: on the turnover tick a wide attacker goes at once, diagonally inward (see the run geometry).
       if (has && own && !reserves.has(i) && i === thirdRunner) p.run = sim.t + 2.8;

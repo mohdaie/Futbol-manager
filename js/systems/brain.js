@@ -144,6 +144,8 @@ function bestBenchFor(S, pred, pos) {
   return S.bench.map(id => G.players[id]).filter(p => p && pred(p)).sort((a, b) => (pos ? ovrAt(b, pos) - ovrAt(a, pos) : b.ca - a.ca))[0];
 }
 function applyMgrOption(M, S, opt) {
+  const state = () => JSON.stringify([S.on,S.roles,S.pi,S.ment,S.press,S.line,S.won,S.lost,S.width,S.tempo,S.pass]);
+  const before = state();
   const evs = [], tired = () => onPitch(S).filter(x => x.pos !== 'GK').sort((a, b) => S.cond[a.p.id] - S.cond[b.p.id]);
   const sub = (out, inn) => { if (out && inn && canSub(M, S)) { const e = makeSub(M, S, out.p.id, inn.id); if (e) evs.push(e); } };
   if (opt === 'attack') {
@@ -180,7 +182,7 @@ function applyMgrOption(M, S, opt) {
       if (LINE[pos] <= 2) { const pi = S.pi[i] || (S.pi[i] = {}); pi.mk = 2; pi.tk = 0; }
     });
   }
-  if (opt !== 'hold') { M.dirty = true; evs.unshift({ min: M.min, side: S.idx, t: 'tac', opt }); }
+  if (opt !== 'hold' && state() !== before) { M.dirty = true; evs.unshift({ min: M.min, side: S.idx, t: 'tac', opt }); }
   return evs;
 }
 
@@ -210,6 +212,34 @@ function logDecision(M, S, f, opt, src, extra = {}) {
   return e;
 }
 
+// Called under the match random stream before advancing a minute, on main or
+// worker. Returning only applied events keeps commentary and the active XI aligned.
+function applyPendingManagerChanges(M) {
+  const replies = M.managerReplies || [];
+  if (!replies.length) return [];
+  M.managerReplies = [];
+  const events = [];
+  for (const r of replies) {
+    const row = (M.dec || []).find(([, e]) => e.requestId === r.id)?.[1];
+    const S = M.sides[r.side];
+    if (M.ended || M.fid !== r.fid || !S || S.cid !== r.cid || M.managerRequests?.[r.side] !== r.id || M.min-r.requestedMin > 10) {
+      if (row) row.src = M.ended ? 'late' : 'superseded';
+      if (M.managerRequests?.[r.side] === r.id) delete M.managerRequests[r.side];
+      continue;
+    }
+    const changed = M.sides.some((S,i) => S.st.g !== r.score[i] || S.reds.length !== r.reds[i]);
+    const opt = r.fallback || changed ? (!changed && r.learned || rulesDecision(M,S)) : r.opt;
+    if (!Object.prototype.hasOwnProperty.call(MGR_OPTIONS,opt)) { if(row)row.src='invalid'; delete M.managerRequests[r.side]; continue; }
+    const appliedContext = situation(M,S);
+    const applied = applyMgrOption(M,S,opt);
+    if (row) { row.requestedF = row.f; row.f = appliedContext; row.key = sitKey(appliedContext); }
+    if (row) Object.assign(row,{opt,src:changed?'rules-context-changed':r.fallback?(r.learned?'learned':'rules'):r.src,conf:r.conf,second:r.second||null,jev:r.jev||null,appliedAt:M.min,changed:applied.length>0});
+    delete M.managerRequests[r.side];
+    for (const ev of applied) { if (!M.log.includes(ev)) M.log.push(ev); events.push(ev); }
+  }
+  return events;
+}
+
 // Decision for a computer-managed side in a normal league match (synchronous).
 function brainDecide(M, S) {
   const B = brain(), f = situation(M, S), key = sitKey(f), V = activeVersion();
@@ -219,21 +249,24 @@ function brainDecide(M, S) {
   const wantTeacher = M.live && teacherReady() && (B.mode === 'teacher' || (B.mode === 'hybrid' && !learned));
   if (B.mode === 'hybrid' && learned && M.live && teacherReady()) B.saved.skipped++;
   if (!wantTeacher) { const [o, src] = fallback(); logDecision(M, S, f, o, src); return applyMgrOption(M, S, o); }
-  // Live match: ask the teacher in the background, keep playing, apply the answer when it arrives.
-  const e = logDecision(M, S, f, 'hold', 'pending');
+  // Answers are serializable commands, applied to the CURRENT side at the next
+  // simulation boundary. Worker snapshots can replace S and the decision record.
+  const side = S.idx, cid = S.cid, game = G, requestedMin = M.min;
+  const id = M.managerRequestSeq = (M.managerRequestSeq || 0) + 1;
+  (M.managerRequests || (M.managerRequests = {}))[side] = id;
+  logDecision(M, S, f, 'hold', 'pending', { requestId: id });
+  const score = M.sides.map(x => x.st.g), reds = M.sides.map(x => x.reds.length);
+  const queue = reply => {
+    const current = (M.dec || []).find(([, row]) => row.requestId === id)?.[1];
+    if (G !== game || M.ended || M.managerRequests?.[side] !== id) {
+      if (current) current.src = M.ended ? 'late' : 'superseded';
+      return;
+    }
+    (M.managerReplies || (M.managerReplies = [])).push({ id, fid:M.fid, side, cid, requestedMin, score, reds, ...reply });
+  };
   B.saved.calls++;
-  askTeacher(M, S, f).then(r => {
-    if (M.ended) { e.src = 'late'; return; }
-    Object.assign(e, { opt: r.opt, src: r.src, conf: r.conf, second: r.second || null, jev: r.jev || null });
-    const evs = applyMgrOption(M, S, r.opt);
-    if (M.onAsync) M.onAsync(evs);
-  }).catch(() => {
-    if (M.ended) return;
-    const [o, src] = fallback();
-    Object.assign(e, { opt: o, src });
-    const evs = applyMgrOption(M, S, o);
-    if (M.onAsync) M.onAsync(evs);
-  });
+  askTeacher(M, S, f).then(r => queue({ opt:r.opt,src:r.src,conf:r.conf,second:r.second||null,jev:r.jev||null }))
+    .catch(() => queue({ fallback:true, learned }));
   return [];
 }
 
@@ -241,8 +274,8 @@ const teacherReady = () => aiReady('jev', 'manager');
 const brainModeAvailable = mode => mode === 'rules' || (mode === 'learned' ? !!activeVersion() : mode === 'teacher' ? teacherReady() : mode === 'hybrid' && (!!activeVersion() || teacherReady()));
 
 async function askTeacher(M, S, f) {
-  const B = brain();
-  const res = await jevAsk(sitText(M, S, f), { decision: { type: 'choice', instructions: 'The single best change this manager should make right now to get the best result', criteria: MGR_OPTIONS } }, 'Manager decision');
+  const B = brain(), prompt = sitText(M,S,f);
+  const res = await jevAsk(prompt, { decision: { type: 'choice', instructions: 'The single best change this manager should make right now to get the best result', criteria: MGR_OPTIONS } }, 'Manager decision');
   const a = res.answers && res.answers.decision;
   if (!a || !MGR_OPTIONS[a.choice]) throw new Error('Unexpected Jev answer');
   const out = { opt: a.choice, conf: a.confidence ?? 1, src: 'jev', jev: a.choice };
@@ -250,7 +283,7 @@ async function askTeacher(M, S, f) {
     try {
       const r = await dsChat([
         { role: 'system', content: 'You are an experienced football manager. Pick exactly one option. Reply only with JSON like {"choice":"attack"}. Options: ' + Object.entries(MGR_OPTIONS).map(([k, v]) => `${k} = ${v}`).join('; ') + '.' },
-        { role: 'user', content: sitText(M, S, f) },
+        { role: 'user', content: prompt },
       ], 'Second opinion', { json: true, maxTokens: 30 });
       const c = JSON.parse(r.text).choice;
       if (MGR_OPTIONS[c]) { out.second = c; out.opt = c; out.src = 'deepseek'; }

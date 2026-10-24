@@ -19,7 +19,8 @@ checks.push('Every 0.5-second tick, including restarts and celebrations, survive
 assert(rt.run(`(()=>{const unique=rawFrames.filter((f,i)=>!i||JSON.stringify(f)!==JSON.stringify(rawFrames[i-1]));return unique.length===decoded.length&&unique.every((f,i)=>{const r=decoded[i];return Math.round(f[0]*10)===r[0]&&Math.round(f[1]*100)===r[1]&&Math.round(f[2]*100)===r[2]&&Array.from({length:22},(_,k)=>k).every(k=>f[7+k*2]==null?r[8+k*7]===EVIDENCE_NULL:Math.abs(Math.round(f[7+k*2]*100)-r[8+k*7])===0);});})()`));
 checks.push('All 22 players and ball exactly match the shipped playback positions at centimetre precision');
 rt.run(`G=JSON.parse(rawG);const unrecorded=JSON.parse(original);delete unrecorded.evidence;while(!unrecorded.ended)matchRandom(unrecorded,()=>simMinute(unrecorded));`);
-assert(rt.run('recorded.rng===unrecorded.rng && JSON.stringify(recorded.sides)===JSON.stringify(unrecorded.sides) && JSON.stringify(recorded.log)===JSON.stringify(unrecorded.log)'));
+// Observation can warm unused attribute cache entries without changing gameplay.
+assert(rt.run('recorded.rng===unrecorded.rng && JSON.stringify(recorded.sides,(k,v)=>k==="_ac"?undefined:v)===JSON.stringify(unrecorded.sides,(k,v)=>k==="_ac"?undefined:v) && JSON.stringify(recorded.log)===JSON.stringify(unrecorded.log)'));
 checks.push('Capture preserves random state, results, player statistics and event timeline');
 assert(rt.run("archive.actions.every(a=>Number.isFinite(a.t))"));
 assert(rt.run("['decision','flight','receive','shotRelease','shotArrival','defence','duelResult','restartPlan'].every(t=>archive.actions.some(a=>a.type===t))"));
