@@ -52,7 +52,7 @@ function searchTransferPlayers(criteria, order = {}) {
     if (s.region !== 'Everywhere' && regionOf(p) !== s.region) continue;
     const ca = seenOvr(p).v;
     if (p.age > +s.maxAge || +s.maxFee && pValue(p) > +s.maxFee || ca < +s.minOvr || ca > +s.maxOvr) continue;
-    if (name && !transferSearchText(fullName(p)).includes(name) && !transferSearchText(p.insp).includes(name)) continue;
+    if (name && !transferSearchText(fullName(p)).includes(name)) continue;
     matches.push({ p, key: transferSearchText(p.ln) + ' ' + transferSearchText(p.fn) });
   }
   return sortTransferPlayers(matches.map(row => row.p), order);
