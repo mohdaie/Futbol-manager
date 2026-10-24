@@ -3,13 +3,14 @@
    Squad list, player profile sheet (talks, status, contract, listing),
    tactics with the in/out-of-possession visualiser, training, medical, youth academy. */
 
-const SORTS = { pos: (a, b) => POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || b.ca - a.ca, ovr: (a, b) => b.ca - a.ca, age: (a, b) => a.age - b.age, cond: (a, b) => a.cond - b.cond, mor: (a, b) => b.mor - a.mor, val: (a, b) => pValue(b) - pValue(a) };
+const SORTS = { pos: (a, b) => POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || b.ca - a.ca, no: (a, b) => (a.no || 100) - (b.no || 100), ovr: (a, b) => b.ca - a.ca, age: (a, b) => a.age - b.age, cond: (a, b) => a.cond - b.cond, mor: (a, b) => b.mor - a.mor, val: (a, b) => pValue(b) - pValue(a) };
 const pitchPosLabel = pos => ({ AMR: 'RW', AML: 'LW', MR: 'RM', ML: 'LM', MC: 'CM', AMC: 'AM', DC: 'CB', DL: 'LB', DR: 'RB' }[pos] || pos);
 function squadMetric(p, sort) {
   if (sort === 'pos') {
     const alternatives = p.alt?.length ? p.alt : p.pos === 'GK' ? [] : POSITIONS.filter(pos => pos !== 'GK' && pos !== p.pos).sort((a, b) => ovrAt(p, b) - ovrAt(p, a)).slice(0, 1);
     return `<span class="squad-metric alt"><small>Best fit</small>${alternatives.length ? alternatives.map(pos => { const fit = ovrAt(p, pos); return `<b class="${fit >= 80 ? 'good' : 'warn'}" title="${pitchPosLabel(pos)} fit: ${fit}">${pitchPosLabel(pos)} ${fit}</b>`; }).join('') : '<b>—</b>'}</span>`;
   }
+  if (sort === 'no') return `<span class="stat squad-metric"><b>${p.no ? '#' + p.no : '—'}</b><small>kit number</small></span>`;
   if (sort === 'ovr') return ovrPill(p.ca, p.ca);
   if (sort === 'age') return `<span class="stat squad-metric"><b>${p.age}</b><small>years</small></span>`;
   if (sort === 'cond') return `<span class="squad-metric condition"><b>${Math.round(p.cond)}%</b>${condBar(p.cond)}</span>`;
@@ -26,9 +27,10 @@ SCREENS.squad = {
     const note = { A: 'Picked for league matches. Reserves fill in only when fewer than 16 are fit.', R: userClub().league === 'ECH' ? 'Reserve squad within the combined 36-player limit. Move a player up when he is ready for minutes.' : 'Under-21 squad. Move a player up when he is ready for minutes.', Y: 'Academy players aged 15 to 18. At 19 they move up to the reserves.' }[l];
     return `<h1 class="h1">Squad <small>${squadOf(G.club).length}${Number.isFinite(clubSquadMax(userClub())) ? ' / ' + clubSquadMax(userClub()) : ''} players</small></h1>
       <div class="seg wide">${Object.entries(levels).map(([k, n]) => `<button class="${l === k ? 'on' : ''}" data-a="sqL" data-v="${k}">${n} <small>${levelSquad(G.club, k).length}</small></button>`).join('')}</div>
+      ${userClub().league === 'EPL' ? `<div class="card"><div class="sec-h"><div><h3>Premier League registration</h3><span class="muted">${registeredPLIds(userClub()).size} / ${premierLeagueRegistrationLimit()} senior places used</span></div><button class="btn sm" data-a="go" data-s="registration">Manage</button></div><p class="muted">Choose your season list. Eligible Under-21 players do not use a place.</p></div>` : ''}
       <p class="muted">${note}</p>
       <div class="chips">${[['ALL', 'All'], ['GK', 'Keepers'], ['DEF', 'Defence'], ['MID', 'Midfield'], ['ATT', 'Attack']].map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="sqF" data-v="${k}">${n}</button>`).join('')}</div>
-      <div class="sortbar"><span class="muted">Sort</span>${[['pos', 'Position'], ['ovr', 'Rating'], ['age', 'Age'], ['cond', 'Condition'], ['mor', 'Morale'], ['val', 'Value']].map(([k, n]) => `<button class="${s === k ? 'on' : ''}" data-a="sqS" data-v="${k}">${n}</button>`).join('')}</div>
+      <div class="sortbar"><span class="muted">Sort</span>${[['pos', 'Position'], ['no', 'Kit number'], ['ovr', 'Rating'], ['age', 'Age'], ['cond', 'Condition'], ['mor', 'Morale'], ['val', 'Value']].map(([k, n]) => `<button class="${s === k ? 'on' : ''}" data-a="sqS" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="list">${list.map(p => playerRow(p, squadMetric(p, s), { noBadge: true, hideAge: true, positionExtra: s === 'pos' ? `<span class="season-avg" title="Season average rating" aria-label="Season average rating ${p.st.a ? (p.st.rt / p.st.a).toFixed(1) : 'not rated'}">${p.st.a ? (p.st.rt / p.st.a).toFixed(1) : '—'}</span>` : '', sub: `${Math.round(p.cond)}% condition · ${morLabel(p.mor)}` })).join('') || empty('Nobody here', 'No players in this group for that position.')}</div>`;
   },
 };
@@ -105,6 +107,8 @@ const PLAYER_ACTIONS = [
       ...Object.keys(clubLevels(userClub())).filter(k => k !== lvlOf(p)).map(k => ({ n: k === 'A' ? 'Promote to first team' : 'Move to ' + (k === 'Y' ? 'U18s' : 'reserves'), d: k === 'Y' && p.age > 18 ? '' : k === 'A' ? 'He can be picked for league matches' : 'He will not be picked for league matches', off: k === 'Y' && p.age > 18 ? 'Only players aged 18 or under' : '', run: () => ACT.setLvl({ id: p.id, v: k }) })),
       ...SQUAD_STATUSES.map(s => ({ n: 'Status: ' + s, d: 'Sets how much playing time he expects', on: p.status === s, run: () => { CHG.pStatus(s, { id: p.id }); actionsSheet(p.id, 'squad'); } })),
     ] },
+  { k: 'kit', n: 'Kit number', d: 'Change his squad number', mine: true,
+    items: p => [{ n: `Change kit number (#${p.no || '—'})`, d: 'Unique number from 1 to 99; changes are allowed during transfer windows', off: !inWindow() ? 'The transfer window is closed' : '', run: () => kitNumberSheet(p.id) }] },
   { k: 'training', n: 'Training', d: 'Individual training focus', mine: true,
     items: p => Object.entries(INDIV_FOCUS).map(([k, n]) => ({ n, d: k === 'none' ? 'Follows the team plan only' : 'Extra work on ' + n.toLowerCase() + ' attributes', on: (G.training.indiv[p.id] || 'none') === k, run: () => { CHG.indiv(k, { id: p.id }); actionsSheet(p.id, 'training'); } })) },
   { k: 'contract', n: 'Contract', d: 'New deal, transfer list or release', mine: true,
@@ -146,6 +150,24 @@ function actionsSheet(pid, cat) {
     : cats.map(x => `<button class="row act" data-a="pActions" data-id="${p.id}" data-k="${x.k}"><span class="grow"><b>${x.n}</b><small>${x.d}</small></span><span class="chev">›</span></button>`).join('');
   sheet(`${head}<div class="list">${rows}</div>`, { key: 'actions:' + pid + ':' + (cat || ''), restore: () => actionsSheet(pid, cat), valid: () => !!G?.players[pid], onClose: () => render() });
 }
+function kitNumberSheet(pid) {
+  const p = G.players[pid];
+  if (!p || p.club !== G.club) return;
+  const taken = squadOf(G.club).filter(q => q.id !== pid).map(q => q.no).filter(Boolean).sort((a, b) => a - b);
+  sheet(`<button class="link back" data-a="back">‹ Player actions</button><h3 class="sh-t">Kit number <small>${esc(fullName(p))}</small></h3>
+    <p class="muted">Select an unused number from 1 to 99. The league permits changes during transfer windows only.</p>
+    <div class="field"><label for="kitNumberInput">Shirt number</label><input id="kitNumberInput" type="number" inputmode="numeric" min="1" max="99" step="1" value="${p.no || ''}"></div>
+    <p class="note">Numbers in use: ${taken.join(', ') || 'none'}</p><button class="btn pri wide" data-a="saveKitNumber" data-id="${pid}">Save kit number</button>`, {
+      key: 'kit-number:' + pid, restore: () => kitNumberSheet(pid), valid: () => !!G?.players[pid], onClose: () => render(),
+    });
+}
+ACT.saveKitNumber = ds => {
+  const p = G.players[+ds.id], input = document.getElementById('kitNumberInput');
+  if (!p || !input) return;
+  const result = changeClubKitNumber(G.club, p.id, input.value);
+  if (!result.ok) return toast(result.reason);
+  saveGame(); closeSheet(true); toast(`${pname(p)} is now number ${p.no}.`); render();
+};
 ACT.pActions = ds => { UI.tab.pconf = null; actionsSheet(+ds.id, ds.k); };
 ACT.pAct = ds => {
   const p = G.players[+ds.id], c = actionCats(p).find(x => x.k === ds.k), it = c && c.items(p)[+ds.i];
@@ -280,7 +302,8 @@ ACT.slot = ds => {
   const bench = cands.filter(p => !starter(p) && T.bench.includes(p.id)), others = cands.filter(p => !starter(p) && !T.bench.includes(p.id));
   const row = (p, swap) => {
     const current = starter(p) ? FORMATIONS[T.ip][T.slots.indexOf(p.id)][0] : p.pos;
-    return `<button class="row act" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${available(p) ? '' : 'disabled'}><span class="pos">${pitchPosLabel(current)}</span><span class="grow"><b>${esc(pname(p))}</b><small>${!available(p) ? p.inj ? 'Injured' : 'Suspended' : swap ? `Swap ${pitchPosLabel(current)} ↔ ${pitchPosLabel(pos)}` : 'Select at ' + pitchPosLabel(pos)}</small></span>${condBar(p.cond)}</button>`;
+    const selectable = availableForLeague(p, G.club);
+    return `<button class="row act" data-a="pickSlot" data-i="${i}" data-id="${p.id}" ${selectable ? '' : 'disabled'}><span class="pos">${pitchPosLabel(current)}</span><span class="grow"><b>${esc(pname(p))}</b><small>${!selectable ? !available(p) ? p.inj ? 'Injured' : 'Suspended' : 'Not registered for the Premier League' : swap ? `Swap ${pitchPosLabel(current)} ↔ ${pitchPosLabel(pos)}` : 'Select at ' + pitchPosLabel(pos)}</small></span>${condBar(p.cond)}</button>`;
   };
   const group = (name, list, swap = false) => list.length ? `<h4 class="lbl">${name}</h4><div class="list">${list.map(p => row(p, swap)).join('')}</div>` : '';
   sheet(`<h3 class="sh-t">${POS_NAME[pos]}</h3>
@@ -290,10 +313,10 @@ ACT.slot = ds => {
     ${group('Starting XI — swap positions', starters, true)}${group('Substitutes', bench)}${group('Other squad players', others)}`, { key: 'slot:' + i, restore: () => ACT.slot({ i }), onClose: () => render() });
 };
 ACT.role = ds => { G.tactics.roles[+ds.i] = +ds.k; ACT.slot(ds); };
-ACT.pickSlot = ds => { const p = G.players[+ds.id]; if (!p || p.club !== G.club || !available(p)) return; assignSlot(+ds.i, p.id); UI.swapFrom = null; saveGame(); closeSheet(true); render(); };
+ACT.pickSlot = ds => { const p = G.players[+ds.id]; if (!p || p.club !== G.club || !availableForLeague(p, G.club)) return; assignSlot(+ds.i, p.id); UI.swapFrom = null; saveGame(); closeSheet(true); render(); };
 ACT.benchSlot = ds => {
   const T = G.tactics, i = +ds.i;
-  const cands = seniorSquad(G.club).filter(p => available(p) && !T.slots.includes(p.id) && !T.bench.includes(p.id)).sort((a, b) => b.ca - a.ca);
+  const cands = seniorSquad(G.club).filter(p => availableForLeague(p, G.club) && !T.slots.includes(p.id) && !T.bench.includes(p.id)).sort((a, b) => b.ca - a.ca);
   sheet(`<h3 class="sh-t">${i >= 0 ? 'Replace ' + esc(pname(G.players[T.bench[i]])) : 'Add a substitute'}</h3>
     ${i >= 0 ? `<button class="btn ghost wide" data-a="benchDrop" data-i="${i}">Remove from the bench</button>` : ''}
     <div class="list">${cands.map(p => `<button class="row act" data-a="benchPick" data-i="${i}" data-id="${p.id}"><span class="pos">${p.pos}</span><span class="grow"><b>${esc(pname(p))}</b><small>${p.status}</small></span>${condBar(p.cond)}</button>`).join('') || empty('Nobody available', 'Every fit player is already in the matchday squad.')}</div>`, { key: 'bench:' + i, restore: () => ACT.benchSlot({ i }), onClose: () => render() });

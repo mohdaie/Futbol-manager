@@ -53,8 +53,11 @@ function linkBio(p, pool) {
 
 // Makes sure every club has a manager and every player has personal details (new games and older saves).
 function ensureWorld(options = {}) {
+  G.know ||= {};
   ensureCompetitions();
   ensureWorldLeagues();
+  if (typeof addEnglandExpansionPlayers === 'function') addEnglandExpansionPlayers();
+  if (typeof ensurePremierLeagueRegistrations === 'function') ensurePremierLeagueRegistrations();
   // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.
   if (!G.flags.insp && typeof ROSTERS !== 'undefined') {
     const by = {};
@@ -82,6 +85,7 @@ function ensureWorld(options = {}) {
   pool.all.forEach(p => { (pool.byNat[p.nat] ||= []).push(p); (pool.byClub[p.club] ||= []).push(p); if (p.ca >= 84) pool.stars.push(p); });
   Object.values(G.players).forEach(p => { if (p.fpn == null) linkBio(p, pool); });
   if (typeof migrateRosterProfiles === 'function') migrateRosterProfiles();
+  if (G.tactics && G.club && typeof ensureUserLineup === 'function') ensureUserLineup();
 }
 
 /* ---------- effects ---------- */
