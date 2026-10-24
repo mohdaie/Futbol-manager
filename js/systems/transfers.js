@@ -41,6 +41,7 @@ function wageDemand(p, renew) {
 function makeBid(pid, fee) {
   if (!squadSpace(userClub())) return { r: 'reject', msg: squadLimitMessage(userClub()) };
   const p = G.players[pid];
+  if (p?.loan) return { r: 'reject', msg: 'A player cannot be transferred while a temporary loan registration is active.' };
   if (!p || G.clubs[p.club]?.backgroundOnly) return { r: 'reject', msg: 'This player is unavailable for transfer.' };
   const c = G.clubs[p.club];
   if (!c.fa && !inWindow()) return { r: 'reject', msg: 'The transfer window is closed. You can still sign free agents.' };
@@ -179,7 +180,7 @@ function aiMarket() {
     const pos = FORMATIONS[c.tac.ip][worst][0];
     const pool = Object.values(G.players).filter(p => {
       const sc = G.clubs[p.club];
-      return p.pos === pos && lvlOf(p) !== 'Y' && p.club !== G.club && p.club !== c.id && p.ca > wv + 2 && p.age <= 30 && sc && sc.rep <= c.rep + 4 && (sc.fa || askingPrice(p) <= c.bal * 0.4) && !activeDeal(p.id, 'ai');
+      return p.pos === pos && !p.loan && lvlOf(p) !== 'Y' && p.club !== G.club && p.club !== c.id && p.ca > wv + 2 && p.age <= 30 && sc && sc.rep <= c.rep + 4 && (sc.fa || askingPrice(p) <= c.bal * 0.4) && !activeDeal(p.id, 'ai');
     });
     if (!pool.length) continue;
     const p = wpick(pool, x => Math.pow(1.1, x.ca - 60));

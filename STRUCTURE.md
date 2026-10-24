@@ -322,7 +322,7 @@ Brain data uses its own browser key (`futbol-manager:brain`) and is kept across 
 
 1. **Cup competitions.** Add a domestic knockout cup and a European competition for the top-four clubs. Fixtures already carry a round and week, so add a `comp` field.
 2. **Promotion and relegation.** Add a second division generated the same way as the top flight. The bottom three are already highlighted in the table.
-3. **Loans.** Use the same flow as transfers with a `loan` flag, a return date and wage sharing.
+3. **Loans.** Implemented in Transfers → Loans and player actions: a temporary registration with a fixed return date, loan fee, wage sharing, parent-club recall, purchase option or appearance-triggered obligation. Terms are stored on the player and survive save/load.
 4. **Player promises and dynamics.** `p.promise` is already stored. Check it after 8 weeks and add squad hierarchy and happiness events.
 5. **Set-piece routines and opposition instructions.**
 6. **Match highlights mode** that only animates key chances.

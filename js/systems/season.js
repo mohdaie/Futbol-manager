@@ -52,6 +52,7 @@ function advanceDay() {
   DAY_JOBS.forEach(([d, k, fn]) => { if (d === G.day) dayJob(k, fn); });
   scoutDay();
   dealsDay();
+  if (typeof processLoans === 'function') processLoans();
   socialDay();
   if (G.day >= 6) return advanceWeek();
   G.day++;

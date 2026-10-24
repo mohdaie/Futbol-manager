@@ -8,7 +8,7 @@ SCREENS.transfers = {
     const t = UI.tab.tr || 'deals', win = windowState();
     const head = `<h1 class="h1">Transfers</h1>
       <div class="banner ${win.open ? 'open' : ''} ${win.open && win.left <= 3 ? 'dl' : ''}"><b>${win.label}${win.open ? (win.left === 0 ? ' · DEADLINE DAY, shuts 23:00' : ' · closes ' + win.closes + ' · ' + win.left + ' days left') : ' · opens ' + win.opens}</b><span>Budget ${money(G.fin.tb)} · Wages ${wageFmt(clubWageBill(userClub()))} of ${wageFmt(G.fin.wb)}</span></div>
-      ${tabs('tr', [['deals', 'Deals'], ['advice', 'Scout advice'], ['search', 'Search'], ['short', 'Shortlist'], ['scout', 'Scouting'], ['pitch', 'Pitches'], ['bids', 'Selling'], ['agents', 'Agents'], ['hist', 'History']], t)}`;
+      ${tabs('tr', [['deals', 'Deals'], ['loans', 'Loans'], ['advice', 'Scout advice'], ['search', 'Search'], ['short', 'Shortlist'], ['scout', 'Scouting'], ['pitch', 'Pitches'], ['bids', 'Selling'], ['agents', 'Agents'], ['hist', 'History']], t)}`;
     return head + TR_TABS[t]();
   },
 };
@@ -80,7 +80,7 @@ const TR_TABS = {
       <div class="list">${listed.map(p => playerRow(p, `<span class="stat"><b>${money(pValue(p))}</b><small>value</small></span>`, { noBadge: true })).join('') || empty('Nobody listed', 'List players from their profile to invite bids.')}</div>`;
   },
   hist() {
-    return `<div class="list">${G.tHist.slice(0, 60).map(t => `<div class="row tx ${t.to === G.club || t.from === G.club ? 'me' : ''}"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><span class="stat"><b>${t.fee ? money(t.fee) : 'Free'}</b></span></div>`).join('') || empty('No transfers yet', 'Completed deals across the league appear here.')}</div>`;
+    return `<div class="list">${G.tHist.slice(0, 60).map(t => `<div class="row tx ${t.to === G.club || t.from === G.club ? 'me' : ''}"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${t.loan?'Loan · ':''}${clubLink(t.from)} → ${clubLink(t.to)}</small></span><span class="stat"><b>${t.fee ? money(t.fee) : 'Free'}</b></span></div>`).join('') || empty('No transfers yet', 'Completed deals across the league appear here.')}</div>`;
   },
 };
 CHG.sf = (v, ds) => { UI.search[ds.k] = ds.n ? +v : v; };

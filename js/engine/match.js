@@ -368,7 +368,7 @@ function finishMatch(M) {
       if (O.st.g === 0 && defensive) { rt += 0.5; p.st.cs++; }
       rt = clamp(Math.round(rt * 10) / 10, 3, 10);
       S.rat[id] = rt;
-      p.st.a++; p.st.rt += rt; p.car.a++;
+      p.st.a++; p.st.rt += rt; p.car.a++; if (p.loan) p.loan.apps = (p.loan.apps || 0) + 1;
       const ps = S.ps[id] || {};
       PSTAT_KEYS.forEach(k => { if (ps[k]) p.st[k] = (p.st[k] || 0) + ps[k]; });
       (G.flags.pw = G.flags.pw || []).push(id);

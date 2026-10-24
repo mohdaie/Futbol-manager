@@ -87,7 +87,8 @@ function playerSheet(pid) {
       <div class="pov"><small>Rating</small>${ovrPill(so.v, so.txt)}<em>${so.txt === '??' ? 'Unknown' : ratingRemark(so.v)}</em><small>Potential</small>${mine || potKnown(p) ? `${starHtml(pot)}<em>${potRemark(pot)}</em>` : '<b class="unk">?</b><em>Not scouted</em>'}</div></div>
     ${mine ? `<div class="meters"><div><small>Condition</small>${bar(p.cond, condClass(p.cond))}</div><div><small>Morale · ${morLabel(p.mor)}</small>${bar(p.mor, morClass(p.mor))}</div><div><small>Match sharpness</small>${bar(p.shp)}</div></div>` : ''}
     ${tabs('ps', [['attr', 'Attributes'], ['bio', 'Personal'], ['stats', 'Stats'], ['con', 'Contract']], t).replace(/data-a="tab"/g, `data-a="psTab" data-id="${p.id}"`)}
-    ${body}${actions}${activeBuyBack(p) ? `<button class="btn pri wide" data-a="buyBack" data-id="${p.id}">Activate buy-back · ${money(p.buyBack.price)}</button>` : ''}<div class="btns">${clubLink(p.club, 'View ' + esc(clubName(p.club)), 'btn sm')}${mine ? `<button class="btn sm" data-a="go" data-s="${p.inj ? 'medical' : 'training'}">${p.inj ? 'Medical center' : 'Training'}</button>` : `<button class="btn sm" data-a="offer" data-id="${p.id}">${p.club === 'FA' ? 'Offer contract' : 'Make an offer'}</button><button class="btn sm" data-a="trackPlayer" data-id="${p.id}">${G.shortlist.includes(p.id) ? 'Open shortlist' : 'Add to shortlist'}</button>`}</div>`, { key: 'player:' + pid, restore: () => playerSheet(pid), valid: () => !!G?.players[pid], onClose: () => render() });
+    ${p.loan ? `<div class="card"><b>On loan ${p.loan.host===p.club?'from':'to'} ${esc(clubName(p.loan.host===p.club?p.loan.parent:p.loan.host))}</b><p class="muted">Returns ${fmtDate(p.loan.end,false)} · fee ${money(p.loan.fee)} · host pays ${p.loan.wageShare}% of wages${p.loan.optionFee?` · ${p.loan.obligationApps?'Obligation':'Option'} to buy for ${money(p.loan.optionFee)}`:''}${p.loan.recall?' · recall clause':''}</p></div>` : ''}
+    ${body}${actions}${activeBuyBack(p) ? `<button class="btn pri wide" data-a="buyBack" data-id="${p.id}">Activate buy-back · ${money(p.buyBack.price)}</button>` : ''}${activeLoan(p)&&p.loan.host===G.club&&p.loan.optionFee&&!p.loan.obligationApps?`<button class="btn pri wide" data-a="loanBuy" data-id="${p.id}">Exercise loan purchase option · ${money(p.loan.optionFee)}</button>`:''}<div class="btns">${clubLink(p.club, 'View ' + esc(clubName(p.club)), 'btn sm')}${mine ? `<button class="btn sm" data-a="go" data-s="${p.inj ? 'medical' : 'training'}">${p.inj ? 'Medical center' : 'Training'}</button>` : `<button class="btn sm" data-a="offer" data-id="${p.id}">${p.club === 'FA' ? 'Offer contract' : 'Make an offer'}</button>${p.club!=='FA'?`<button class="btn sm" data-a="loan" data-id="${p.id}">Loan offer</button>`:''}<button class="btn sm" data-a="trackPlayer" data-id="${p.id}">${G.shortlist.includes(p.id) ? 'Open shortlist' : 'Add to shortlist'}</button>`}</div>`, { key: 'player:' + pid, restore: () => playerSheet(pid), valid: () => !!G?.players[pid], onClose: () => render() });
 }
 ACT.psTab = ds => { UI.tab.ps = ds.v; playerSheet(+ds.id); };
 
@@ -109,12 +110,14 @@ const PLAYER_ACTIONS = [
   { k: 'contract', n: 'Contract', d: 'New deal, transfer list or release', mine: true,
     items: p => [
       { n: 'Offer a new contract', d: 'Contract ends June ' + p.con, run: () => ACT.contract({ id: p.id, mode: 'renew' }) },
+      { n: 'Offer out on loan', d: 'Set a fee, wage share, duration and clauses', off: activeLoan(p) ? 'Already on loan' : !inWindow() ? 'Transfer window is closed' : '', run: () => ACT.loan({ id: p.id }) },
       { n: p.listed ? 'Remove from transfer list' : 'Add to transfer list', d: p.listed ? 'Clubs stop bidding' : 'Clubs are told he is available (lowers his morale)', run: () => ACT.listToggle({ id: p.id }) },
       { n: 'Release', d: 'Pays up his contract', confirm: true, run: () => { const comp = releasePlayer(p); closeSheet(true); toast(`${pname(p)} released. Paid ${money(comp)} in compensation.`); render(); } },
     ] },
   { k: 'transfer', n: 'Transfer', d: 'Make an offer or track him', mine: false,
     items: p => [
       { n: p.club === 'FA' ? 'Offer contract' : 'Make an offer', d: p.club === 'FA' ? 'He is a free agent' : 'Bid for him', run: () => ACT.offer({ id: p.id }) },
+      ...(p.club !== 'FA' ? [{ n: 'Make a loan offer', d: 'Set fee, wage share and purchase clauses', off: activeLoan(p) ? 'Already on loan' : !inWindow() ? 'Transfer window is closed' : '', run: () => ACT.loan({ id: p.id }) }] : []),
       { n: G.shortlist.includes(p.id) ? 'Remove from shortlist' : 'Add to shortlist', d: 'Keep track of him in Transfers', run: () => ACT.shortlist({ id: p.id }) },
     ] },
   { k: 'scouting', n: 'Scouting', d: 'Learn more about him', mine: false,

@@ -17,7 +17,7 @@ const plClubs = () => leagueClubs('EPL');
 const squadOf = id => G.clubs[id].squad.map(pid => G.players[pid]).filter(Boolean);
 const seniorSquad = id => squadOf(id).filter(p => lvlOf(p) === 'A');
 const levelSquad = (id, l) => squadOf(id).filter(p => lvlOf(p) === l);
-const clubWageBill = c => sum(c.squad, id => (G.players[id] ? G.players[id].wage : 0));
+const clubWageBill = c => sum(c.squad, id => { const p = G.players[id]; return p && !p.loan ? p.wage : 0; }) + (typeof loanWageForClub === 'function' ? loanWageForClub(c.id) : 0);
 const seasonLabel = (s = G.season) => s + '/' + String(s + 1).slice(2);
 
 function assignNumber(c, p) {
