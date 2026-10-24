@@ -10,12 +10,12 @@ const MATCH_ANALYST_REFERENCES = [
 const MATCH_ANALYST_CORE = ['js/engine/match.js', 'js/engine/sim.js', 'js/engine/live.js'];
 const MATCH_ANALYST_CORE_FUNCTIONS = {
   'js/engine/match.js': ['createMatchState', 'simMinute', 'quickSim', 'finishMatch'],
-  'js/engine/sim.js': ['pressureEscape', 'closeSupport', 'aerialContactReach', 'readKeeperCross', 'playKnockdown', 'engage', 'chanceAt', 'carrierDecide', 'kick', 'roundKeeper', 'shoot', 'shotArrives', 'crossBall', 'tryCrossVolley', 'receive', 'challenges', 'tickSim', 'recordFrame'],
+  'js/engine/sim.js': ['refineShotChoice', 'shotExecution', 'shotResolution', 'shotGoalTarget', 'pressureEscape', 'closeSupport', 'aerialContactReach', 'readKeeperCross', 'playKnockdown', 'engage', 'chanceAt', 'carrierDecide', 'kick', 'roundKeeper', 'shoot', 'shotArrives', 'crossBall', 'tryCrossVolley', 'receive', 'challenges', 'tickSim', 'recordFrame'],
   'js/engine/live.js': ['playMinuteView', 'setFrame', 'liveEvent', 'liveMark', 'shotPathPoint', 'draw'],
 };
 const MATCH_ANALYST_FUNCTION_LIMITS = {
   'js/engine/match.js': { createMatchState: 650, simMinute: 450, quickSim: 200, finishMatch: 850 },
-  'js/engine/sim.js': { pressureEscape: 450, closeSupport: 450, aerialContactReach: 250, readKeeperCross: 550, playKnockdown: 650, engage: 850, chanceAt: 350, carrierDecide: 850, kick: 500, roundKeeper: 380, shoot: 800, shotArrives: 520, crossBall: 400, tryCrossVolley: 350, receive: 350, challenges: 450, tickSim: 300, recordFrame: 300 },
+  'js/engine/sim.js': { refineShotChoice: 350, shotExecution: 550, shotResolution: 250, shotGoalTarget: 300, pressureEscape: 450, closeSupport: 450, aerialContactReach: 250, readKeeperCross: 550, playKnockdown: 650, engage: 850, chanceAt: 350, carrierDecide: 850, kick: 500, roundKeeper: 380, shoot: 800, shotArrives: 520, crossBall: 400, tryCrossVolley: 350, receive: 350, challenges: 450, tickSim: 300, recordFrame: 300 },
   'js/engine/live.js': { playMinuteView: 300, setFrame: 500, liveEvent: 400, liveMark: 200, shotPathPoint: 250, draw: 450 },
 };
 const MATCH_ANALYST_RULE_HEADINGS = [/^## 1\./, /^## 1b\./, /^## 1c\./, /^## 2\./, /^## 3\./, /^## 4\./, /^## 5\./, /^## 6\./, /^## 7\./, /^## 8\./, /^## 11b\./];
@@ -52,7 +52,7 @@ function matchAnalystSnapshot(f, recording = f.evidence) {
   const eligible = (f.timeline || []).filter(e => /shot|goal|save|block|wide|miss|cross|corner|free|tackle|duel|offside|injur|card|sub|pen|foul|restart|volley|header|red|yellow/i.test(e.t || ''));
   const timeline = matchAnalystSampleEvents(eligible, 36).map(e => {
     const extra = {};
-    ['xg', 'pen', 'sp', 'volley', 'ck', 'fk', 'key', 'inj', 'wk', 'second', 'aim', 'over', 'block', 'line'].forEach(k => { if (e[k] != null) extra[k] = e[k]; });
+    ['xg', 'pressure', 'accuracy', 'goalProbability', 'goalGivenTarget', 'pen', 'sp', 'volley', 'ck', 'fk', 'key', 'inj', 'wk', 'second', 'aim', 'over', 'block', 'line'].forEach(k => { if (e[k] != null) extra[k] = e[k]; });
     return [e.min, e.tt, e.t, e.side == null ? null : clubName(teams[e.side]), e.pid != null && G.players[e.pid] ? fullName(G.players[e.pid]) : null, e.aid != null && G.players[e.aid] ? fullName(G.players[e.aid]) : null, extra];
   });
   return {

@@ -43,7 +43,7 @@ function evidenceDecision(M, s, i, options, pick, pressure, distance, through) {
   evidenceAction(M, 'decision', s, { slot: i, player: S.on[i], xy: [evidenceRound(p.x), evidenceRound(p.y)],
     pressure: evidenceRound(pressure), condition: evidenceRound(S.cond[S.on[i]]), form: evidenceRound(S.form[i]), distance: evidenceRound(distance), through, selected: pick.k, selectedReceiver: pick.j ?? null, selectedUtility: evidenceRound(pick.v, 10000),
     transition: transition(M, s), mental: ['vis', 'fla', 'dec', 'cmp', 'tea'].map(k => evidenceRound(ac(S, i, k))),
-    options: options.map(o => [o.k, o.j ?? null, evidenceRound(o.v, 10000), evidenceRound(o.risk, 1000), evidenceRound(o.tx ?? o.cx), evidenceRound(o.ty ?? o.cy)]) });
+    options: options.map(o => [o.k, o.j ?? null, evidenceRound(o.v, 10000), evidenceRound(o.risk, 1000), evidenceRound(o.tx ?? o.cx), evidenceRound(o.ty ?? o.cy), evidenceRound(o.xg,10000)]) });
 }
 function evidenceShot(M, s, i, xg, o, oneOnOne) {
   if (!M.evidence) return;
@@ -173,7 +173,7 @@ function evidenceSample(rows, max) {
 }
 function evidenceSummary(e) {
   if (!e) return null;
-  const actions = e.actions, samples = {}, categories = ['decision', 'kick', 'flight', 'receive', 'duel', 'duelResult', 'shotRelease', 'shotArrival', 'sfx', 'keeperApproach', 'restart', 'possession', 'defence', 'restartPlan', 'knockdown'];
+  const actions = e.actions, samples = {}, categories = ['decision', 'kick', 'flight', 'receive', 'duel', 'duelResult', 'shotRelease', 'shotArrival', 'shotAccuracy', 'sfx', 'keeperApproach', 'restart', 'possession', 'defence', 'restartPlan', 'knockdown'];
   // Each side and category is represented; raw actions remain in the download.
   for (const type of categories) samples[type] = [0, 1].flatMap(s => {
     const rows = actions.filter(a => a.type === type && a.side === s);
@@ -235,7 +235,7 @@ function evidenceSummary(e) {
   });
   return { version: e.version, gameVersion: e.gameVersion, tickSeconds: e.tick, precisionMetres: e.precisionMetres, recordedFrames: e.frameCount,
     recordedActions: actions.length, start: e.start, end: e.end, bySide, samples, clips,
-    guide: 'Metrics use all recorded ticks/actions; clips and action samples are selected excerpts, not the entire archive. Clip row [time,ballX,ballY,height,ownerSide,ownerSlot, then home and away x,y pairs for listed slots]. Decision mental=[effective vision,flair,decisions,composure,teamwork]; options=[kind,receiverSlot,engineUtility,risk,targetX,targetY], top 3 in report only. Engine utility is not real-world probability. Escape means a short physical turn/carry away from pressure with a cooldown; it is not guaranteed safe possession. Keeper stationary means speed<0.5m/s with attacker 20-30m from goal; never automatically a defect or instruction to rush. Compare closing target, ball control, angle, cover and shot timing. Runner-gap metrics count attackers within 30m of the goal they attack and distance to nearest outfield defender; >5m is a diagnostic bin, not proof of a marking error. Block depth excludes keepers. Mental values model attributes, NOT human consciousness.',
+    guide: 'Metrics use all recorded ticks/actions; clips and action samples are selected excerpts, not the entire archive. Clip row [time,ballX,ballY,height,ownerSide,ownerSlot, then home and away x,y pairs for listed slots]. Decision mental=[effective vision,flair,decisions,composure,teamwork]; options=[kind,receiverSlot,engineUtility,risk,targetX,targetY,perceivedShotXg], top 3 in report only. ShotAccuracy.onTarget is conditional on avoiding a block; goalGivenTarget is conditional conversion, not overall goal probability. Goal-plane paths honor those classifications. Engine utility is not real-world probability. Escape means a short physical turn/carry away from pressure with a cooldown; it is not guaranteed safe possession. Keeper stationary means speed<0.5m/s with attacker 20-30m from goal; never automatically a defect or instruction to rush. Compare closing target, ball control, angle, cover and shot timing. Runner-gap metrics count attackers within 30m of the goal they attack and distance to nearest outfield defender; >5m is a diagnostic bin, not proof of a marking error. Block depth excludes keepers. Mental values model attributes, NOT human consciousness.',
     throughPassChains: passChains, throughPassCount: passChains.length, mentalBehavior, contextCount: e.contexts.length, contexts: evidenceSample(e.contexts, 3), players: Object.fromEntries(Object.entries(e.roster).map(([id, p]) => [id, p.name])) };
 }
 // Lossless background compression keeps complete season recordings practical on phones.

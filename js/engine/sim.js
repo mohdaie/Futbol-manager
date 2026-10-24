@@ -453,7 +453,7 @@ function carrierDecide(M, s, i, o = {}) {
     // A miss costs the possession we actually have here, not a fixed premium
     // larger than most shooting chances. Poor angles/pressure still lower xG.
     const missCost = Math.min(ENG.keepShot, lossCost * 0.25);
-    opts.push({ k: 'shot', v: xg * 1.15 * will - (1 - xg) * missCost, w: will });
+    opts.push({ k: 'shot', xg, v: xg * 1.15 * will - (1 - xg) * missCost, w: will });
   }
   // Passes to team-mates (and through balls into space ahead of runners).
   const range = 20 + vis * 1.1 + [-4, 0, 14][pass] + (gk ? 25 : 0), longOk = gk || pass === 2 || vis >= 13 || bh(S, i, 'rk') > 0.2;
@@ -551,6 +551,7 @@ function carrierDecide(M, s, i, o = {}) {
   // Cornered on the touchline under pressure in his own half: put it out for a throw-in.
   if (!gk && oy > 0.5 && press > 0.6 && (p.x < 4 || p.x > PW - 4)) opts.push({ k: 'touch', v: 0.004 + press * 0.012 });
   if (!opts.length) { B.dt = 0.5; return; }
+  refineShotChoice(M,s,i,opts,press);
   sim.intent = applyTeamIntent(M, s, i, opts, press, o);
   // He weighs the few best passes he sees (Vision finds them), not every team-mate equally.
   const PK = { pass: 1, long: 1, thru: 1 }, passes = opts.filter(x => PK[x.k]);
@@ -562,6 +563,25 @@ function carrierDecide(M, s, i, o = {}) {
   playOption(M, s, i, pick1, press);
   sim.last = { s, i, k: pick1.k };
 }
+// A difficult shot remains available, but a player who sees a safer route
+// to a better opportunity need not treat shooting as the default escape.
+function refineShotChoice(M,s,i,options,pressure) {
+  const shot=options.find(o=>o.k==='shot');
+  if (!shot || shot.xg>=.08) return;
+  const S=M.sides[s], p=P_(M,s,i);
+  const alternatives=options.filter(o=>{
+    if (o.k==='escape') return o.risk<.3 && o.v>shot.v;
+    if (!['pass','thru'].includes(o.k) || o.risk>.4 || (o.rpress??1)>.5) return false;
+    const chance=chanceAt(M,s,o.tx,o.ty,{press:o.rpress}).xg;
+    return chance>shot.xg+.035 || o.risk<.25 && o.v>=shot.v-.025;
+  });
+  if (!alternatives.length) return;
+  const awareness=clamp((ac(S,i,'dec')+ac(S,i,'vis')+ac(S,i,'cmp')-24)/24,.25,1.3);
+  const difficulty=clamp((.08-shot.xg)/.08,0,1)*(pressure>.6 || dGoal(s,p.x,p.y)>20 ? 1 : .65);
+  shot.v-=.025*awareness*difficulty;
+  alternatives.forEach(o=>{o.v+=.012*awareness*difficulty;});
+}
+
 // A short turn away from pressure buys a passing angle, not free possession.
 // The normal movement, turning and tackle simulation still resolves the action.
 function pressureEscape(M,s,i,press,lossCost) {
@@ -801,7 +821,7 @@ function shotType(M, s, i, p, o, oneOnOne, press) {
   const S = M.sides[s], g = P_(M, 1 - s, 0), d = dGoal(s, p.x, p.y), cmp = ac(S, i, 'cmp'), fla = ac(S, i, 'fla'), fin = ac(S, i, 'fin');
   const gOff = g ? g.x - PW / 2 : 0, far = p.x < PW / 2 ? 1 : -1, away = Math.abs(gOff) > 0.6 ? -Math.sign(gOff) : far;
   if (o.pen) return { kind: 'penalty', ax: (R() < 0.5 ? -1 : 1) * rf(1.4, 3.3), az: rf(0, 1.9) };
-  if (o.fk) return { kind: 'free kick', ax: away * rf(2, 3.4), az: rf(1.4, 2.35) };
+  if (o.fk && !o.head && !o.volley) return { kind: 'free kick', ax: away * rf(2, 3.4), az: rf(1.4, 2.35) };
   if (o.volley) return { kind: 'volley', ax: away * rf(1.2, 3.4), az: rf(0.35, 1.9) };
   if (o.head) return { kind: 'header', ax: away * rf(0.8, 3.3), az: rf(0.1, 1.6) };
   if (o.open) return { kind: 'open goal', ax: rf(-1.5, 1.5), az: rf(0, 0.6) };
@@ -812,42 +832,77 @@ function shotType(M, s, i, p, o, oneOnOne, press) {
   if (R() < clamp(0.3 + (cmp - 10) * 0.04 + (fin - 10) * 0.02 - press * 0.3, 0.1, 0.8)) return { kind: 'placed', ax: far * rf(2.3, 3.3), az: rf(0.1, 0.8) };
   return { kind: 'driven', ax: away * rf(1.4, 3.3), az: rf(0, 0.5) };
 }
+// Hit-the-frame skill is independent of keeper ability and the xG calculation.
+// Contact, strike preparation and geometry explain errors before goal/save is settled.
+function shotExecution(M,s,i,o={},kind='driven') {
+  const S=M.sides[s],p=P_(M,s,i),distance=dGoal(s,p.x,p.y),angle=goalAngle(s,p.x,p.y);
+  const directFK=!!o.fk&&!o.head&&!o.volley;
+  const technique=o.head?ac(S,i,'hea'):directFK?fkSkill(G.players[S.on[i]]):ac(S,i,'fin');
+  const composure=ac(S,i,'cmp'),control=ac(S,i,'fir'),speed=hyp(p.vx,p.vy),facing=o.head?0:faceOff(p,34,goalY(s)),pressure=o.press??0;
+  let onTarget=(o.head ? .58 : o.volley ? .54 : directFK ? .57 : .67)+(technique-12)*.012+(composure-12)*.006;
+  onTarget-=clamp((distance-10)*.006,0,.18)+Math.max(0,.55-angle)*.18+pressure*.12;
+  onTarget-=Math.min(.13,Math.max(0,facing-.8)*.065)+clamp((speed-2)/6,0,1)*.05;
+  if (o.volley) onTarget+=(control-12)*.006;
+  if (o.weak) onTarget-=.06;
+  if (kind==='placed') onTarget+=.035;
+  if (kind==='power'||kind==='chip') onTarget-=.025;
+  if (o.open) onTarget=Math.max(onTarget,.88+(technique-12)*.006);
+  if (o.pen) onTarget=.9+(technique-12)*.004+(composure-12)*.002;
+  const overBar=clamp(.22+(['power','long','curler','free kick'].includes(kind)?.1:0)+(o.volley ? .07 : 0)+clamp(speed/8,0,1)*.08+pressure*.06-(technique-12)*.006,.1,.55);
+  return {onTarget:clamp(onTarget,.15,.97),overBar,distance,angle,pressure,facing,speed,technique,composure,weak:!!o.weak,contact:o.head?'header':o.volley?'volley':directFK?'direct-free-kick':'foot'};
+}
+// Aim at the goal plane, not the back of the net. Otherwise a net endpoint
+// inside the posts can still cross outside a post (or above the bar) on the way.
+function shotGoalTarget(x,y,side,ax,height,curve,kind,z0=0) {
+  const gy=goalY(side),ty=gy+fwdY(side)*1.5,u=clamp((gy-y)/(ty-y),.01,1);
+  const arc=kind==='chip'?2.2:kind==='free kick'?.9:.15;
+  return {tx:x+(34+ax-x-curve*Math.sin(Math.PI*u))/u,ty,az:Math.max(0,(height-z0*(1-u)-arc*4*u*(1-u))/u)};
+}
+function shotResolution(goalChance,accuracy) {
+  const goal=clamp(goalChance,0,.98),onTarget=Math.max(goal,clamp(accuracy,.01,.99));
+  return {goal,onTarget,goalGivenTarget:goal/onTarget};
+}
+
 function shoot(M, s, i, o = {}) {
   const S = M.sides[s], O = M.sides[1 - s], sim = M.sim, p = P_(M, s, i), pl = G.players[S.on[i]];
   if (!p || !pl) return looseBall(M);
-  const press = o.press || 0;
+  const directFK=!!o.fk && !o.head && !o.volley;
+  const press = o.pen ? 0 : (o.press ?? pressureOn(M,s,i)[0]);
   let xg = o.pen ? 0.76 : chanceAt(M, s, p.x, p.y, { press, head: o.head, fo: o.head ? 0 : faceOff(p, PW / 2, goalY(s)) }).xg; // 7.5, 1c
   if (o.head && o.del) xg *= 0.8 + o.del / 50;
   if (o.volley) {
     const skill = avg2(S, i, [['fir', 0.3], ['fin', 0.3], ['cmp', 0.2], ['agi', 0.2]]);
     xg *= clamp(0.62 + (skill - 10) * 0.022 + ((o.del || 10) - 10) * 0.008, 0.42, 0.84);
   }
-  if (o.fk) xg = clamp(0.06 * Math.exp(-(dGoal(s, p.x, p.y) - 18) / 12), 0.02, 0.1);
+  if (directFK) xg = clamp(0.06 * Math.exp(-(dGoal(s, p.x, p.y) - 18) / 12), 0.02, 0.1);
   // A one-on-one: nobody between him and the keeper.
-  const oneOnOne = !o.pen && !o.head && !o.fk && oneOnOneAt(M, s, p.x, p.y);
+  const oneOnOne = !o.pen && !o.head && !directFK && oneOnOneAt(M, s, p.x, p.y);
   const weak = !o.head && !o.pen && pl.foot !== 'Either' && R() < 0.25;
   if (weak) xg *= 0.8;
   if (!o.pen) xg = clamp(xg * ENG.xg * tune('xgScale') * M.mod.xg * (s === 0 ? tune('homeShot') * M.mod.home : 1) * (1 + S.boost - O.guard), 0.01, 0.85);
-  if (M.evidence) evidenceShot(M, s, i, xg, o, oneOnOne);
+  if (M.evidence) evidenceShot(M, s, i, xg, { ...o, press }, oneOnOne);
   S.st.sh++; S.st.xg += xg; pstat(S, i, 'sh');
   if (o.pen) S.st.pk++;
   const aid = o.aid != null ? o.aid : (sim.lastPass && sim.lastPass.s === s && sim.t - sim.lastPass.t < 6 && sim.lastPass.id !== pl.id ? sim.lastPass.id : null);
   if (aid && S.on.includes(aid)) { pstat(S, S.on.indexOf(aid), 'kp'); bumpRating(S, aid, 0.08); }
   noteThreat(O, pl.id, aid, xg);
   // Outcome: blocked, goal, saved or off target. Finishing, Composure and the keeper decide.
-  const ev = evt(M, { side: s, t: 'shot', pid: pl.id, xg, pen: !!o.pen, sp: !!o.head, volley: !!o.volley, ck: !!o.ck, fk: !!o.fk, aid: aid || null, key: true });
+  const ev = evt(M, { side: s, t: 'shot', pid: pl.id, xg, pressure:press, pen: !!o.pen, sp: !!o.head, volley: !!o.volley, ck: !!o.ck, fk: !!o.fk, aid: aid || null, key: true });
   mark(M, 'shot', s, { xg });
   const gk = P_(M, 1 - s, 0), gkp = G.players[O.on[0]];
+  const launchX=owner(M)===p?sim.B.x:p.x, launchY=owner(M)===p?sim.B.y:p.y;
   const gy = goalY(s), shot = shotType(M, s, i, p, o, oneOnOne, press);
-  const curve = ['curler', 'free kick'].includes(shot.kind) ? (shot.ax >= 0 ? -1 : 1) * (o.fk ? 1.7 : 1.1) : 0;
+  const execution=shotExecution(M,s,i,{...o,press,weak,directFK},shot.kind);
+  ev.accuracy=execution.onTarget;
+  const curve = ['curler', 'free kick'].includes(shot.kind) ? (shot.ax >= 0 ? -1 : 1) * (directFK ? 1.7 : 1.1) : 0;
   let blk = -1;
   let blockU = 1;
   if (!o.pen) M.sim.P[1 - s].forEach((q, j) => {
     if (!q || !j) return;
     const [, u] = segDist(q.x, q.y, p.x, p.y, PW / 2 + shot.ax, gy);
     const d = hyp(q.x - (p.x + (PW / 2 + shot.ax - p.x) * u + curve * Math.sin(Math.PI * u)), q.y - (p.y + (gy - p.y) * u));
-    const height = shot.az * u + (o.fk ? 0.9 : 0.15) * 4 * u * (1 - u);
-    if (u > 0.05 && u < blockU && d < 1.2 && height < 2.1 && R() < (o.fk ? 0.28 : 0.55) * (ac(O, j, 'pos') + ac(O, j, 'ant')) / 24) { blk = j; blockU = u; }
+    const height = shot.az * u + (directFK ? 0.9 : 0.15) * 4 * u * (1 - u);
+    if (u > 0.05 && u < blockU && d < 1.2 && height < 2.1 && R() < (directFK ? 0.28 : 0.55) * (ac(O, j, 'pos') + ac(O, j, 'ant')) / 24) { blk = j; blockU = u; }
   });
   ev.kind = shot.kind;
   if (blk > 0) {
@@ -858,33 +913,37 @@ function shoot(M, s, i, o = {}) {
     mark(M, 'sfx', s, { kind: shot.kind, ax: 0, az: 0, z0: M.sim.B.fl.z0, res: 'block', x0: M.sim.B.fl.x0, y0: M.sim.B.fl.y0, tx: M.sim.B.fl.tx, ty: M.sim.B.fl.ty, who: i, flight: M.sim.B.fl.arr - M.sim.t, aim: 'central' });
     return;
   }
-  const fin = o.head ? (aerialAt(S, i) + ac(S, i, 'fin')) / 2 : o.fk ? fkSkill(pl) : ac(S, i, 'fin');
+  const fin = o.head ? (aerialAt(S, i) + ac(S, i, 'fin')) / 2 : directFK ? fkSkill(pl) : ac(S, i, 'fin');
   const gkv = o.open ? 30 : oneOnOne ? ac(O, 0, 'one') * 5 : O.u.gk;
   const pg = xg * ENG.fin * (1 + (fin - 12) / 50) * // rule 11: finishing is worth about +/-12% across the range
      (1.25 - gkv / 250) * (0.92 + 0.08 * ac(S, i, 'cmp') / 10) * (o.open ? 1 : 1 - gkReach(gkp));
-  let res;
-  if (R() < pg) res = 'goal';
-  else if (R() < clamp(0.25 + xg * 0.6, 0, 0.95)) res = 'save';
-  else res = 'miss';
-  // 7.6: where the ball goes matches what happened: inside the frame for a goal or a save, wide of a post or over the
-  // bar for a miss.
+  // Accuracy answers whether he hits the frame. Conditional conversion keeps
+  // the existing nominal goal chance instead of turning extra accuracy into goals.
+  const resolution=shotResolution(pg,execution.onTarget);
+  ev.goalProbability=resolution.goal; ev.accuracy=resolution.onTarget; ev.goalGivenTarget=resolution.goalGivenTarget;
+  if (M.evidence) evidenceAction(M,'shotAccuracy',s,{player:pl.id,slot:i,...execution,...resolution});
+  let res=R()<resolution.onTarget ? (R()<resolution.goalGivenTarget?'goal':'save') : 'miss';
   let { ax, az } = shot;
-  if (res === 'miss') { if (['power', 'long', 'curler', 'free kick', 'chip'].includes(shot.kind) && R() < 0.5) { az = rf(2.6, 4.5); ev.over = true; } else ax = (Math.sign(ax) || (R() < 0.5 ? -1 : 1)) * rf(3.9, 7.5); }
+  if (res==='miss') {
+    if (R()<execution.overBar) { az=rf(2.6,4.5); ev.over=true; }
+    else ax=(Math.sign(ax)||(R()<.5?-1:1))*rf(3.9,7.5);
+  }
   const speed = ({ header: 18, volley: 28, chip: 17, placed: 22, power: 31, driven: 28, long: 29, curler: 24, 'free kick': 25 })[shot.kind] || 26;
   let tx = PW / 2 + ax, ty = gy + fwdY(s) * 1.5;
   if (res === 'save' && gk) {
-    const contactD = Math.min(Math.max(0.8, Math.abs(gk.y - gy)), Math.max(0.8, Math.abs(p.y - gy) - 0.8));
-    const cy = gy - fwdY(s) * contactD, u = clamp(Math.abs(p.y - cy) / Math.max(0.1, Math.abs(p.y - gy)), 0, 1);
-    const cx = p.x + (PW / 2 + ax - p.x) * u, seconds = hyp(cx - sim.B.x, cy - sim.B.y) / speed;
+    const contactD = Math.min(Math.max(0.8, Math.abs(gk.y - gy)), Math.max(0.8, Math.abs(launchY - gy) - 0.8));
+    const cy = gy - fwdY(s) * contactD, u = clamp(Math.abs(launchY - cy) / Math.max(0.1, Math.abs(launchY - gy)), 0, 1);
+    const cx = launchX + (PW / 2 + ax - launchX) * u, seconds = hyp(cx - launchX, cy - launchY) / speed;
     const reach = 1.05 + Math.max(0, seconds - (0.3 - ac(O, 0, 'ref') * 0.006)) * (3.2 + ac(O, 0, 'agi') * 0.12);
     // Saved attempts include imperfect placement, rather than every saved shot
     // being aimed at the far corner. Sample within the real shooting cone;
     // an out-of-position keeper still cannot save a ball outside his reach.
-    const left = p.x + (PW / 2 - 3.5 - p.x) * u, right = p.x + (PW / 2 + 3.5 - p.x) * u;
+    const left = launchX + (PW / 2 - 3.5 - launchX) * u, right = launchX + (PW / 2 + 3.5 - launchX) * u;
     const contactX = hyp(cx - gk.x, cy - gk.y) <= reach ? cx : clamp(gk.x, Math.min(left, right), Math.max(left, right));
     if (hyp(contactX - gk.x, cy - gk.y) > reach || az * u > (gkp?.ht || 185) / 100 + 0.7) { res = 'goal'; ev.unreachable = true; }
-    else { tx = contactX; ty = cy; ax = p.x + (contactX - p.x) / Math.max(0.01, u) - PW / 2; az *= u; }
+    else { tx = contactX; ty = cy; ax = launchX + (contactX - launchX) / Math.max(0.01, u) - PW / 2; az *= u; }
   }
+  if (res!=='save') { const end=shotGoalTarget(launchX,launchY,s,ax,az,curve,shot.kind,o.head?1.8:o.volley ? .9 : 0); tx=end.tx; ty=end.ty; az=end.az; }
   ev.aim = Math.abs(ax) < 1.2 ? 'central' : ((ax > 0) === (p.x > PW / 2) ? 'near post' : 'far post');
   kick(M, s, i, 'shot', tx, ty, -1, { speed, curve, kind: shot.kind, z0: o.head ? 1.8 : o.volley ? 0.9 : 0 });
   Object.assign(M.sim.B.fl, { res, ev, xg, aid, ax, az, kind: shot.kind });
