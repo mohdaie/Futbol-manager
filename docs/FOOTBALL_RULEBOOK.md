@@ -636,3 +636,9 @@ pass", "players in the box on a wide attack", "block depth").
 5. Set pieces: **standard routines each style uses** (sections 9 and 11b).
 6. Sections 4-8 confirmed; keep deepening them with study (attacking and defending notes per style are in the
    research folder and should be read before building each layer).
+
+## 14. Competition-specific player eligibility
+
+Premier League registration limits apply to Premier League competition matches only. They do not restrict
+selection for friendlies, including preseason friendlies against clubs from other countries. A friendly may use
+the club's available squad without requiring Premier League List A registration.

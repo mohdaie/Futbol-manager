@@ -813,3 +813,9 @@ one line, can be dismissed, and move through a small queue. The regular News scr
 Verified: JavaScript syntax, strict engine audit (3,555 checks, 0 failures), and a mobile browser alert/dismiss smoke
 check. 49 of 53 release suites passed across the full run and reruns; remaining failures are in england-rosters,
 player-profiles, world-leagues and world-squads, outside this notification change.
+
+## 2026.10.24.7 — friendly squad eligibility
+
+Premier League registration limits no longer restrict preseason or other friendly selection. Foreign clubs are
+not treated as Premier League clubs when their club record has no domestic league field. The assistant coach's
+friendly analysis now uses the same friendly eligibility rules as arranged friendlies.
