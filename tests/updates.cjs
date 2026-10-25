@@ -27,6 +27,9 @@ const assert = require('node:assert/strict');
   const appBack = async () => { await act('back'); await page.waitForTimeout(100); };
   try {
     const VER = fs.readFileSync(path.join(root, 'js/core/data.js'), 'utf8').match(/GAME_VERSION = '([^']+)'/)[1];
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const assetVersions = [...html.matchAll(/(?:src|href)="(?:js\/[^"]+\.js|css\/[^"]+\.css)\?v=([^"]+)"/g)].map(m => m[1]);
+    check('Displayed release and all script/style versions stay in sync', assetVersions.length > 0 && assetVersions.every(v => v === VER), true);
     let remote = VER, refetched = [];
     await page.route('**/js/core/data.js*', async route => {
       const req = route.request();
