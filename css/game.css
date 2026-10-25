@@ -876,3 +876,14 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 .match-stats { background: var(--stand); border: 1px solid var(--line); border-radius: 8px; padding: 9px; }
 .mscr .mctl { grid-template-columns: repeat(4,minmax(0,1fr)); }
 @media(min-width:700px){ .match-formations { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
+
+/* Substitution decisions show live condition and mood for starters and bench. */
+.live-sub-player { gap: 7px; min-height: 48px; }
+.live-sub-info { min-width: 0; }
+.live-sub-info > b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.live-sub-info > small { display: block; color: var(--mute); font-size: 10px; line-height: 1.5; }
+.live-morale { white-space: nowrap; }
+.match-lineup-player > .live-morale { flex: none; font-size: 11px; line-height: 1; }
+.live-sub-out { margin: 8px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--stand); }
+.live-sub-player .live-health { flex: none; }
+.live-sub-player:disabled { opacity: 1; }

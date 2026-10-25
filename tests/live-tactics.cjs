@@ -39,6 +39,30 @@ const assert = require('node:assert/strict');
     check('the live panel opens the replacement picker directly', await page.evaluate(() => UI.popup.key), 'live:lineupSub');
     await act('closeSheet');
 
+    const moraleIds = await page.evaluate(() => {
+      const S=liveSide(),out=S.on[1],bench=S.bench[0];
+      window.subInfoBackup = {out,bench,om:G.players[out].mor,bm:G.players[bench].mor,mo:structuredClone(S.mo||{}),bc:S.cond[bench]};
+      G.players[out].mor=80;G.players[bench].mor=30;S.mo||={};S.mo[out]=-65;S.mo[bench]=45;S.cond[bench]=58;updateBoard(LIVE);
+      return {out,bench};
+    });
+    check('Compact lineup shows live morale emoji', await page.locator(`#liveWatchPlayers [data-live-morale="${moraleIds.out}"]`).textContent(), '😞');
+    await act('liveSheet', {k:'subs'});
+    check('Subs displays exact match condition for the starting player', await page.locator(`#layer [data-a=subOut][data-id="${moraleIds.out}"] [data-health-id] b`).textContent(), '64%');
+    check('Subs displays bench condition as a number', await page.locator(`#layer [data-a=subIn][data-id="${moraleIds.bench}"] [data-health-id] b`).textContent(), '58%');
+    check('Subs keeps injury and fatigue visible', await page.locator(`#layer [data-a=subOut][data-id="${moraleIds.out}"] .live-fatigue`).innerText(), 'INJ · Tired');
+    check('Starter morale uses live match changes', await page.locator(`#layer [data-live-morale="${moraleIds.out}"]`).textContent(), '😞 Very poor');
+    check('Bench morale uses live match changes', await page.locator(`#layer [data-live-morale="${moraleIds.bench}"]`).textContent(), '🙂 Very good');
+    check('Bench displays sharpness for choosing a replacement', (await page.locator(`#layer [data-a=subIn][data-id="${moraleIds.bench}"] small`).textContent()).includes('Sharpness'), true);
+    await page.evaluate(id=>{const S=liveSide();G.players[id].mor=95;S.mo[id]=0;S.cond[id]=71;updateBoard(LIVE);},moraleIds.bench);
+    check('Open Subs refreshes changing condition and morale', await page.locator(`#layer [data-a=subIn][data-id="${moraleIds.bench}"]`).innerText().then(t=>t.includes('71%')&&t.includes('😄 Superb')), true);
+    await page.setViewportSize({width:320,height:568});
+    check('Substitution information fits a small phone', await page.evaluate(()=>document.querySelector('#layer .sheet').scrollWidth<=document.querySelector('#layer .sheet').clientWidth+1), true);
+    await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/futbol-subs-info.png'});
+    await page.evaluate(()=>closeSheet(true));await act('lineupReplace',{id:String(moraleIds.out)});
+    check('Quick replacement compares outgoing condition and morale', await page.locator('#layer .live-sub-out').innerText().then(t=>t.includes('64%')&&t.includes('😞 Very poor')), true);
+    check('Quick replacement shows bench condition and morale', await page.locator(`#layer [data-a=lineupSubIn][data-id="${moraleIds.bench}"]`).innerText().then(t=>t.includes('71%')&&t.includes('😄 Superb')), true);
+    await page.evaluate(()=>{closeSheet(true);const B=subInfoBackup,S=liveSide();G.players[B.out].mor=B.om;G.players[B.bench].mor=B.bm;S.mo=B.mo;if(B.bc==null)delete S.cond[B.bench];else S.cond[B.bench]=B.bc;updateBoard(LIVE);});
+
     await act('liveSheet', { k: 'tactics' });
     check('First XI is the default tactics view', await page.locator('#liveXiPanel').isVisible(), true);
     check('First XI lists every current player', await page.locator('.live-xi-player').count(), 11);

@@ -567,12 +567,27 @@ function liveFitness(S, id) {
   const injured = !!p.inj || S.injuries.some(x => x[0] === id);
   return { condition, fatigue, injured, color: condClass(condition) };
 }
+const liveMoraleEmoji = value => value > 85 ? '😄' : value > 70 ? '🙂' : value > 55 ? '😊' : value > 40 ? '😐' : value > 25 ? '🙁' : '😞';
+function liveMoraleHtml(S, id, showLabel = false) {
+  const value=liveMor(S,G.players[id]),label=morLabel(value);
+  return `<span class="live-morale" data-live-morale="${id}" data-morale-side="${S.idx}" data-morale-label="${showLabel}" role="img" aria-label="Morale: ${label}" title="Morale: ${label}">${liveMoraleEmoji(value)}${showLabel?' '+label:''}</span>`;
+}
+function liveSubPlayerInfo(S, id) {
+  const p=G.players[id],on=S.on.includes(id),rating=Number.isFinite(S.rat[id])?S.rat[id].toFixed(1):'—';
+  return `<span class="grow live-sub-info"><b>${esc(pname(p))}</b><small>${on?'Rating '+rating:'Sharpness '+Math.round(p.shp)+'%'} · ${liveMoraleHtml(S,id,true)}</small></span>`;
+}
 function liveFitnessHtml(S, id) {
   const f = liveFitness(S, id);
   return `<span class="live-health ${f.color}" data-health-id="${id}" data-health-side="${S.idx}" aria-label="${f.injured ? 'Injured' : 'Fit'} · Condition ${f.condition}% · ${f.fatigue}"><b>${f.condition}%</b><span class="live-fatigue">${f.injured ? '<strong class="bad">INJ</strong> · ' : ''}${f.fatigue}</span><span class="live-condition-bar" aria-hidden="true"><i style="width:${f.condition}%"></i></span></span>`;
 }
 function updateLiveFitness(L) {
   updateMatchPanels(L); // Render the active pane only; controls survive ordinary condition updates.
+  document.querySelectorAll('.match-view-panel:not([hidden]) [data-live-morale], #layer:not([hidden]) [data-live-morale]').forEach(el => {
+    const S=L.M.sides[+el.dataset.moraleSide],p=G.players[+el.dataset.liveMorale];if(!S||!p)return;
+    const value=liveMor(S,p),label=morLabel(value);
+    el.textContent=liveMoraleEmoji(value)+(el.dataset.moraleLabel==='true'?' '+label:'');
+    el.setAttribute('aria-label','Morale: '+label);el.title='Morale: '+label;
+  });
   document.querySelectorAll('.match-view-panel:not([hidden]) [data-health-id], #layer:not([hidden]) [data-health-id]').forEach(el => {
     const id = +el.dataset.healthId;
     const S=L.M.sides[+el.dataset.healthSide]||L.M.sides[L.bottom];
@@ -834,8 +849,8 @@ function openLiveSheet(kind) {
   }
   if (kind === 'subs') {
     const ip = FORMATIONS[S.ip];
-    const on = S.on.map((id, i) => (id ? `<button class="row act ${L.subSel === id ? 'sel' : ''}" data-a="subOut" data-id="${id}"><span class="pos">${ip[i][0]}</span><span class="grow">${esc(pname(G.players[id]))}${S.injuries.some(x => x[0] === id) ? ' <em class="tag bad">INJ</em>' : ''}<small>Rating ${S.rat[id].toFixed(1)}</small></span>${condBar(S.cond[id])}</button>` : '')).join('');
-    const bench = S.bench.map(id => { const p = G.players[id]; return `<button class="row act" data-a="subIn" data-id="${id}" ${L.subSel && canSub(M, S) ? '' : 'disabled'}><span class="pos">${p.pos}</span><span class="grow">${esc(pname(p))}</span>${condBar(S.cond[id] ?? p.cond)}</button>`; }).join('');
+    const on = S.on.map((id, i) => (id ? `<button class="row act live-sub-player ${L.subSel === id ? 'sel' : ''}" data-a="subOut" data-id="${id}"><span class="pos">${pitchPosLabel(ip[i][0])}</span>${liveSubPlayerInfo(S,id)}${liveFitnessHtml(S,id)}</button>` : '')).join('');
+    const bench = S.bench.map(id => { const p = G.players[id]; return `<button class="row act live-sub-player" data-a="subIn" data-id="${id}" ${L.subSel && canSub(M, S) ? '' : 'disabled'}><span class="pos">${pitchPosLabel(p.pos)}</span>${liveSubPlayerInfo(S,id)}${liveFitnessHtml(S,id)}</button>`; }).join('');
     sheet(`<h3 class="sh-t">Substitutions <small>${(M.extra ? 6 : 5) - S.subs} left · ${Math.max(0, (M.extra ? 4 : 3) - S.wins)} windows</small></h3>
       ${liveGapAccess(S)}
       <p class="muted">${L.subSel ? 'Now pick a replacement from the bench.' : 'Pick a player to take off.'}</p>
