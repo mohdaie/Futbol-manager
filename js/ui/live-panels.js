@@ -18,16 +18,38 @@ function matchViewsHtml(L) {
 }
 function matchLineupRow(L, S, id, i, status) {
   const p=G.players[id];if(!p)return '';
-  const pos=i>=0?FORMATIONS[S.ip][i][0]:p.pos;
-  return `<button class="row act match-lineup-player ${status==='On pitch'?'live-watch-player':''}" data-a="livePl" data-id="${id}" data-player-id="${id}"><span class="pos">${pitchPosLabel(pos)}</span><span class="grow"><b>${esc(pname(p))}</b><small>${status}${i>=0?' · '+esc(roleName(S,i)):''}${S.cap===id?' · Captain':''} <span data-match-cards="${id}" data-match-side="${S.idx}"></span></small><small>Morale: <span data-match-morale="${id}" data-match-side="${S.idx}">${morLabel(liveMor(S,p))}</span></small></span>${liveFitnessHtml(S,id)}</button>`;
+  const pos=i>=0?FORMATIONS[S.ip][i][0]:p.pos, replace=S.user && i>=0 && !L.done;
+  const detail=`${fullName(p)} · ${status}${i>=0?' · '+roleName(S,i):''} · Morale: ${morLabel(liveMor(S,p))}`;
+  return `<button class="row act match-lineup-player ${status==='On pitch'?'live-watch-player':''}" data-a="${replace?'lineupReplace':'livePl'}" data-id="${id}" data-player-id="${id}" title="${esc(detail)}" aria-label="${esc(detail + (replace?' · Choose substitute':' · View player'))}"><span class="pos">${pitchPosLabel(pos)}</span><span class="match-player-name">${esc(pname(p))}</span>${S.cap===id?'<abbr class="match-player-captain" title="Captain">C</abbr>':''}<span class="match-player-cards" data-match-cards="${id}" data-match-side="${S.idx}"></span><span class="match-player-injury bad" data-match-injury="${id}" data-match-side="${S.idx}">${liveFitness(S,id).injured?'INJ':''}</span>${status==='Sent off'?'<span class="match-player-state bad">Sent off</span>':status==='Substituted'?'<span class="match-player-state">Off</span>':''}${liveFitnessHtml(S,id)}</button>`;
 }
 function matchLineupsHtml(L) {
-  return L.M.sides.map(S=>`<section class="match-team" data-lineup-side="${S.idx}"><h3>${badge(S.cid,20)} ${esc(clubName(S.cid))} <small>${S.user?'Your team':S.idx===0?'Home':'Away'} · ${S.on.filter(Boolean).length} on pitch</small></h3><p class="muted">${S.ip} with the ball · ${S.oop} without it</p>
-    <h4 class="lbl">On pitch · Condition & fatigue</h4><div id="${S.user?'liveWatchPlayers':'liveOppositionPlayers'}" class="list">${S.on.map((id,i)=>id?matchLineupRow(L,S,id,i,'On pitch'):`<div class="row match-empty"><span class="pos">${pitchPosLabel(FORMATIONS[S.ip][i][0])}</span><span class="muted">Empty position</span></div>`).join('')}</div>
-    <h4 class="lbl">Substitutes</h4><div class="list">${S.bench.map(id=>matchLineupRow(L,S,id,-1,'Available substitute')).join('')||'<p class="muted">No substitutes available.</p>'}</div>
+  return `<p class="match-lineup-hint">Tap your player to choose a substitute.</p><div class="match-lineups">${L.M.sides.map(S=>`<section class="match-team" data-lineup-side="${S.idx}"><h3>${badge(S.cid,16)} <span>${esc(clubName(S.cid))}</span></h3><p class="muted">${S.user?'Your team':S.idx===0?'Home':'Away'} · ${S.ip}</p>
+    <h4 class="lbl">On pitch</h4><div id="${S.user?'liveWatchPlayers':'liveOppositionPlayers'}" class="list">${S.on.map((id,i)=>id?matchLineupRow(L,S,id,i,'On pitch'):`<div class="row match-empty"><span class="pos">${pitchPosLabel(FORMATIONS[S.ip][i][0])}</span><span class="muted">Empty</span></div>`).join('')}</div>
+    <h4 class="lbl">Bench</h4><div class="list">${S.bench.map(id=>matchLineupRow(L,S,id,-1,'Available substitute')).join('')||'<p class="muted">No substitutes available.</p>'}</div>
     ${S.off.length?`<h4 class="lbl">Substituted</h4><div class="list">${S.off.map(id=>matchLineupRow(L,S,id,-1,'Substituted')).join('')}</div>`:''}
-    ${S.reds.length?`<h4 class="lbl bad">Sent off</h4><div class="list">${S.reds.map(id=>matchLineupRow(L,S,id,-1,'Sent off')).join('')}</div>`:''}</section>`).join('');
+    ${S.reds.length?`<h4 class="lbl bad">Sent off</h4><div class="list">${S.reds.map(id=>matchLineupRow(L,S,id,-1,'Sent off')).join('')}</div>`:''}</section>`).join('')}</div>`;
 }
+function lineupReplacementSheet(L) {
+  const S=L.M.sides[L.bottom], out=G.players[L.lineupOut];
+  if(!out || !S.on.includes(out.id))return;
+  const allowed=canSub(L.M,S), left=Math.max(0,(L.M.extra?6:5)-S.subs);
+  sheet(`<h3 class="sh-t">Replace ${esc(pname(out))}</h3><p class="muted">${allowed?'Choose a player from the bench.':left?'No substitution windows left.':'No substitutions left.'} · ${left} subs left</p>
+    <div class="list">${S.bench.map(id=>{const p=G.players[id];return `<button class="row act" data-a="lineupSubIn" data-id="${id}" ${allowed?'':'disabled'}><span class="pos">${pitchPosLabel(p.pos)}</span><span class="grow">${esc(pname(p))}</span>${liveFitnessHtml(S,id)}</button>`;}).join('')||'<p class="muted">No substitutes available.</p>'}</div>
+    <div class="btns"><button class="btn" data-a="livePl" data-id="${out.id}">Player details</button><button class="btn ghost" data-a="closeSheet">Cancel</button></div>`,
+    {key:'live:lineupSub',restore:()=>lineupReplacementSheet(L),valid:()=>LIVE===L&&!L.done&&S.on.includes(out.id),onClose:()=>{L.lineupOut=null;L.paused=true;updateBoard(L);}});
+}
+ACT.lineupReplace=ds=>{
+  const L=LIVE,id=+ds.id;if(!L||L.done||!L.M.sides[L.bottom].on.includes(id))return;
+  L.lineupOut=id;L.paused=true;updateBoard(L);lineupReplacementSheet(L);
+};
+ACT.lineupSubIn=ds=>{
+  const L=LIVE;if(!L||L.done)return;
+  const S=L.M.sides[L.bottom],id=+ds.id,e=makeSub(L.M,S,L.lineupOut,id);
+  if(!e)return toast('This substitution is no longer available.');
+  pushFeed(L,'info',commLine(L,e),L.bottom);L.lineupOut=null;L.paused=true;
+  closeSheet(true);updateBoard(L);liveKeep(L);
+  document.querySelector(`#liveWatchPlayers [data-id="${id}"]`)?.focus({preventScroll:true});
+};
 function matchFormationsHtml(L) {
   const phase=L.formationPhase==='oop'?'oop':'ip';
   return `<div class="seg" aria-label="Formation phase"><button class="${phase==='ip'?'on':''}" data-a="matchFormationPhase" data-v="ip">With the ball</button><button class="${phase==='oop'?'on':''}" data-a="matchFormationPhase" data-v="oop">Without the ball</button></div><div class="match-formations">${L.M.sides.map((S,side)=>{
@@ -52,13 +74,14 @@ function updateMatchPanels(L) {
   const active=L.matchView||'2d',panel=document.getElementById('matchPanel-'+active);if(!panel||active==='2d')return;
   let key,html;
   if(active==='lineup'){
-    key=JSON.stringify(L.M.sides.map(S=>[S.ip,S.oop,S.on,S.bench,S.off,S.reds,S.roles,S.cap]));html=()=>matchLineupsHtml(L);
+    key=JSON.stringify(L.M.sides.map(S=>[S.ip,S.oop,S.on,S.bench,S.off,S.reds,S.roles,S.cap,L.done]));html=()=>matchLineupsHtml(L);
   }else if(active==='formation'){
     key=JSON.stringify([period,L.formationPhase,L.M.sides.map(S=>[S.ip,S.oop,S.on,S.roles,INSTRUCTIONS.map(x=>S[x.k]),S.lost,S.won])]);html=()=>matchFormationsHtml(L);
   }else{key=JSON.stringify([L.disp,L.M.sides.map(S=>S.st)]);html=()=>matchStatsHtml(L);}
   if(panel.dataset.state!==key){panel.innerHTML=html();panel.dataset.state=key;}
   panel.querySelectorAll('[data-match-morale]').forEach(el=>{const S=L.M.sides[+el.dataset.matchSide],p=G.players[+el.dataset.matchMorale];if(p)el.textContent=morLabel(liveMor(S,p));});
-  panel.querySelectorAll('[data-match-cards]').forEach(el=>{const S=L.M.sides[+el.dataset.matchSide],id=+el.dataset.matchCards;el.textContent=S.reds.includes(id)?' · RED':S.yc[id]?' · YC '+S.yc[id]:'';});
+  panel.querySelectorAll('[data-match-injury]').forEach(el=>{const S=L.M.sides[+el.dataset.matchSide];el.textContent=liveFitness(S,+el.dataset.matchInjury).injured?'INJ':'';});
+  panel.querySelectorAll('[data-match-cards]').forEach(el=>{const S=L.M.sides[+el.dataset.matchSide],id=+el.dataset.matchCards;el.textContent=S.reds.includes(id)?'■':S.yc[id]?'▪':'';el.classList.toggle('bad',S.reds.includes(id));el.classList.toggle('warn',!S.reds.includes(id)&&!!S.yc[id]);el.setAttribute('aria-label',S.reds.includes(id)?'Red card':S.yc[id]?'Yellow cards: '+S.yc[id]:'No cards');});
 }
 ACT.matchView=ds=>{
   const L=LIVE;if(!L||!MATCH_VIEWS.some(([k])=>k===ds.v))return;L.matchView=ds.v;

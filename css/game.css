@@ -853,13 +853,24 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 .match-team h3 { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin: 8px 0 4px; font-size: 13px; }
 .match-team h3 small { color: var(--mute); font-size: 10px; font-weight: 500; }
 .match-team .muted { font-size: 10px; }
-.match-lineup-player { width: 100%; padding: 9px 7px; min-height: 55px; display: flex; align-items: center; gap: 7px; text-align: left; border-radius: 6px; }
-.match-lineup-player .grow { min-width: 0; }
-.match-lineup-player .grow b { display: block; overflow-wrap: anywhere; font-size: 12px; }
-.match-lineup-player .grow small { display: block; font-size: 9px; color: var(--mute); line-height: 1.5; }
-.match-lineup-player .live-health { min-width: 53px; text-align: right; margin: 0; }
-.match-lineup-player .live-health>b { font-size: 11px; }
-.match-lineup-player .live-fatigue { font-size: 9px; }
+/* Both teams stay alongside each other even on phones. */
+.match-lineup-hint { margin: 0 0 5px; color: var(--mute); font-size: 10px; }
+.match-lineups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start; }
+.match-lineups .match-team h3 { flex-wrap: nowrap; font-size: 11px; margin: 3px 0; }
+.match-lineups .match-team h3 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match-lineups .match-team > .muted { margin: 0 0 5px; font-size: 9px; }
+.match-lineups .lbl { margin: 7px 0 3px; font-size: 9px; }
+.match-lineups .list { border-radius: 6px; }
+.match-lineup-player, .match-lineups .match-empty { width: 100%; height: 28px; min-height: 28px; padding: 3px; gap: 3px; text-align: left; border-radius: 0; }
+.match-lineup-player .pos, .match-lineups .match-empty .pos { width: 20px; padding: 2px 0; font-size: 8px; border-radius: 3px; }
+.match-player-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 600; }
+.match-player-captain, .match-player-injury, .match-player-state { flex: none; font-size: 8px; white-space: nowrap; }
+.match-player-captain { text-decoration: none; color: var(--mute); }
+.match-player-cards:empty, .match-player-injury:empty { display: none; }
+.match-player-cards { flex: none; font-size: 12px; line-height: 1; }
+.match-lineup-player .live-health { flex: none; display: block; min-width: 25px; text-align: right; margin: 0; }
+.match-lineup-player .live-health > b { font-size: 9px; }
+.match-lineup-player .live-fatigue, .match-lineup-player .live-condition-bar { display: none; }
 .match-team-pitch { height: 330px; aspect-ratio: auto; margin: 4px 0; }
 .match-team-pitch .tk-c { background: var(--team-color) !important; color: var(--team-ink); font-size: 11px; }
 .match-stats { background: var(--stand); border: 1px solid var(--line); border-radius: 8px; padding: 9px; }

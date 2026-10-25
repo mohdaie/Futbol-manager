@@ -29,14 +29,14 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(() => LIVE && LIVE.M.min >= 1, null, { timeout: 30000 });
 
     await page.locator('[data-a=matchView][data-v=lineup]').click();
-    check('condition and fatigue are visible for all eleven players in Line up without opening Subs', await page.locator('#liveWatchPlayers .live-watch-player').count(), 11);
+    check('condition is visible for all eleven players in Line up without opening Subs', await page.locator('#liveWatchPlayers .live-watch-player').count(), 11);
     await page.evaluate(() => { LIVE.paused = true; const S = liveSide(); S.cond[S.on[1]] = 64; S.cond[S.on[2]] = 78; S.injuries.push([S.on[1], 'Test injury', 1]); updateBoard(LIVE); });
     const tiredId = await page.evaluate(() => liveSide().on[1]);
     const tiringId = await page.evaluate(() => liveSide().on[2]);
     check('the live panel shows current match condition and injury separately', await page.locator(`#liveWatchPlayers [data-health-id="${tiredId}"]`).getAttribute('aria-label'), 'Injured · Condition 64% · Tired');
-    check('moderate fatigue has a distinct label', await page.locator(`#liveWatchPlayers [data-health-id="${tiringId}"] .live-fatigue`).innerText(), 'Tiring');
+    check('moderate fatigue remains available in the condition label', (await page.locator(`#liveWatchPlayers [data-health-id="${tiringId}"]`).getAttribute('aria-label')).includes('Tiring'), true);
     await page.locator(`#liveWatchPlayers [data-id="${tiredId}"]`).click();
-    check('the live panel opens the player card directly', await page.evaluate(() => UI.popup.key), 'live:pl');
+    check('the live panel opens the replacement picker directly', await page.evaluate(() => UI.popup.key), 'live:lineupSub');
     await act('closeSheet');
 
     await act('liveSheet', { k: 'tactics' });
