@@ -82,6 +82,7 @@ function ensureWorld(options = {}) {
   if (G.scout && typeof ensureScouting === 'function') ensureScouting();
   if (typeof ensureAgents === 'function') ensureAgents();
   if (typeof ensureDeals === 'function') ensureDeals();
+  if (typeof ensureFriendlySchedule === 'function') ensureFriendlySchedule();
   if (typeof ensureSocial === 'function') ensureSocial();
   Object.values(G.players).forEach(p => { migrateAttrs(p); if (p.ht == null) genBio(p); });
   const pool = { all: Object.values(G.players).filter(p => p.club !== 'FA'), byNat: {}, byClub: {}, stars: [] };

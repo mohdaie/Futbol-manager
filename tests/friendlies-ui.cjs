@@ -44,6 +44,27 @@ const assert = require('node:assert/strict');
 
     await page.evaluate(() => { while (G.week < PRESEASON_WEEKS) advanceWeek(); go('fixtures'); });
     check('the assistant coach is hidden once the season starts', await page.locator('[data-a="friendlyAnalyse"]').count(), 0);
+
+    const repaired = await page.evaluate(() => {
+      const candidate = friendlyCandidates().find(c => !G.fixtures.some(f => f.fr && (f.h === c.id || f.a === c.id)));
+      const old = { id: G.nextId++, w: 0, d: 5, t: '15:00', h: G.club, a: candidate.id, fr: true, hg: null, ag: null };
+      G.fixtures.push(old);
+      const results = JSON.stringify(G.fixtures.filter(f => f.fr && played(f)));
+      saveGame(); loadGame(); go('fixtures');
+      const firstNews = G.news.filter(n => n.title === 'Friendly schedule corrected').length;
+      saveGame(); loadGame();
+      return { removed: !G.fixtures.some(f => f.id === old.id), results: JSON.stringify(G.fixtures.filter(f => f.fr && played(f))) === results,
+        idempotent: firstNews === 1 && G.news.filter(n => n.title === 'Friendly schedule corrected').length === 1,
+        noPastPreview: !G.fixtures.some(f => f.fr && isUserFx(f) && !played(f) && fxDayNo(f) < todayNo()) };
+    });
+    check('loading an August save removes overdue July previews and keeps results', repaired, { removed: true, results: true, idempotent: true, noPastPreview: true });
+    const late = await page.evaluate(() => {
+      G.week = 2; G.day = 6; G.fixtures = G.fixtures.filter(f => !f.fr);
+      const opponent = friendlyCandidates()[0];
+      const r = arrangeFriendly(opponent.id); go('fixtures');
+      return { week: r.fx.w, future: fxDayNo(r.fx) >= todayNo() };
+    });
+    check('Sunday scheduling uses the coming Saturday', late, { week: 3, future: true });
     check('no page errors', errors, []);
   } finally {
     await browser.close();

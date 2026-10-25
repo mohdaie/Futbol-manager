@@ -48,5 +48,48 @@ check('the pre-season weeks run out when all of them are taken', `(() => {
   return freePreseasonWeek() === null && arrangeFriendly(fresh.id).error === 'No pre-season week is free.';
 })()`);
 
+// Isolate calendar regressions from the engine matches above.
+rt.run(`function withFriendlyCalendar(fn) {
+  const original = { fixtures: G.fixtures, week: G.week, day: G.day, news: G.news };
+  try { G.fixtures = []; G.week = 2; G.day = 0; G.news = []; return fn(); }
+  finally { Object.assign(G, original); }
+}`);
+check('arranging midway through pre-season never selects an earlier empty week', `withFriendlyCalendar(() => {
+  const r = arrangeFriendly(friendlyCandidates()[0].id);
+  return !r.error && r.fx.w === 2 && fxDayNo(r.fx) >= todayNo();
+})`);
+check('Saturday allows a same-day friendly but Sunday moves to next week', `withFriendlyCalendar(() => {
+  G.day = 5; const saturday = freePreseasonWeek(); G.day = 6;
+  return saturday === 2 && freePreseasonWeek() === 3;
+})`);
+check('both clubs must be free in the selected week', `withFriendlyCalendar(() => {
+  const opponent = friendlyCandidates()[0].id;
+  G.fixtures.push({ id: -10, w: 2, h: opponent, a: 'FA', d: 5 });
+  const r = arrangeFriendly(opponent);
+  return !r.error && r.fx.w === 3;
+})`);
+check('stale arrange actions cannot add friendlies after pre-season', `withFriendlyCalendar(() => {
+  G.week = PRESEASON_WEEKS;
+  return freePreseasonWeek() === null && !!arrangeFriendly(friendlyCandidates()[0].id).error && !G.fixtures.length;
+})`);
+check('last pre-season Sunday has no date available', `withFriendlyCalendar(() => {
+  G.week = PRESEASON_WEEKS - 1; G.day = 6;
+  return freePreseasonWeek() === null && !!arrangeFriendly(friendlyCandidates()[0].id).error;
+})`);
+check('old backdated friendlies are rearranged without changing played or league fixtures', `withFriendlyCalendar(() => {
+  const opponents = friendlyCandidates(), old = opponents.slice(0,2).map((c,i) => ({ id: -20-i, w: i, d: 5, t: '15:00', h: G.club, a: c.id, fr: true, hg: null, ag: null }));
+  const pastResult = { ...old[0], id: -30, hg: 2, ag: 1 }, league = { ...old[0], id: -31, fr: false };
+  G.fixtures = [...old, pastResult, league];
+  const preserved = JSON.stringify([pastResult, league]); ensureFriendlySchedule();
+  const first = JSON.stringify([G.fixtures, G.news]); ensureFriendlySchedule();
+  return old.every(f => G.fixtures.includes(f) && fxDayNo(f) >= todayNo()) && old[0].w !== old[1].w
+    && JSON.stringify([pastResult, league]) === preserved && G.news.length === 1 && JSON.stringify([G.fixtures, G.news]) === first;
+})`);
+check('overdue friendlies are cancelled once pre-season ends without fabricated scores', `withFriendlyCalendar(() => {
+  const old = { id: -40, w: 0, d: 5, h: G.club, a: friendlyCandidates()[0].id, fr: true, hg: null, ag: null };
+  G.fixtures = [old]; G.week = PRESEASON_WEEKS + 1; ensureFriendlySchedule();
+  return !G.fixtures.length && old.hg === null && G.news.length === 1 && /cancelled/.test(G.news[0].body);
+})`);
+
 console.log(`friendlies: ${checks.length} checks passed`);
 for (const name of checks) console.log(' ok -', name);

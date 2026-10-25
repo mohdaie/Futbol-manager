@@ -48,17 +48,42 @@ async function friendlyRun() {
   render();
 }
 
-// The first pre-season week with no fixture of ours in it, or null if all of them are taken.
-function freePreseasonWeek() {
-  for (let w = 0; w < PRESEASON_WEEKS; w++) if (!G.fixtures.some(f => f.w === w && isUserFx(f))) return w;
+// Saturday fixtures must be today or later, with both clubs free that week.
+function freePreseasonWeek(home = G.club, away = null) {
+  for (let w = Math.max(0, G.week); w < PRESEASON_WEEKS; w++) {
+    if (w * 7 + 5 < todayNo()) continue;
+    if (!G.fixtures.some(f => f.w === w && (f.h === home || f.a === home || away && (f.h === away || f.a === away)))) return w;
+  }
   return null;
 }
 
+// Repair backdated friendlies in existing saves without inventing match results.
+function ensureFriendlySchedule() {
+  const overdue = G.fixtures.filter(f => f.fr && !played(f) && fxDayNo(f) < todayNo() && G.live?.fid !== f.id).sort(fxSort);
+  if (!overdue.length) return;
+  const ids = new Set(overdue.map(f => f.id));
+  G.fixtures = G.fixtures.filter(f => !ids.has(f.id));
+  const changes = [];
+  for (const fx of overdue) {
+    const w = freePreseasonWeek(fx.h, fx.a);
+    if (w == null) {
+      if (isUserFx(fx)) changes.push(`${clubName(fx.h === G.club ? fx.a : fx.h)}: cancelled because no pre-season date remains.`);
+      continue;
+    }
+    fx.w = w; fx.d = 5;
+    fx.wx = genWeather(fxDate(fx), fx.t);
+    G.fixtures.push(fx);
+    if (isUserFx(fx)) changes.push(`${clubName(fx.h === G.club ? fx.a : fx.h)}: rearranged for ${fxWhen(fx)}.`);
+  }
+  if (changes.length) addNews('club', 'Friendly schedule corrected', 'Some unplayed friendlies had been scheduled before the current date. ' + changes.join(' '));
+}
+
 function arrangeFriendly(cid) {
+  ensureFriendlySchedule();
   const opponent = G.clubs[cid];
   if (!opponent || opponent.backgroundOnly || opponent.squad.length < 11) return { error: 'This club does not have a playable squad yet.' };
   if (G.fixtures.some(f => f.fr && (f.h === cid || f.a === cid))) return { error: 'Already arranged.' };
-  const w = freePreseasonWeek();
+  const w = freePreseasonWeek(G.club, cid);
   if (w == null) return { error: 'No pre-season week is free.' };
   const fx = { id: G.nextId++, r: null, w, d: 5, t: '15:00', tv: false, h: G.club, a: cid, hg: null, ag: null, fr: true };
   fx.wx = genWeather(fxDate(fx), fx.t);
@@ -76,6 +101,6 @@ ACT.friendlyAnalyse = () => {
 ACT.friendlyArrange = ds => {
   const r = arrangeFriendly(ds.id);
   if (r.error) { toast(r.error); return; }
-  toast('Friendly arranged for pre-season week ' + (r.fx.w + 1) + '.');
+  toast('Friendly arranged for ' + fxWhen(r.fx) + '.');
   render();
 };

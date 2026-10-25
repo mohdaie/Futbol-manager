@@ -225,6 +225,7 @@ SCREENS.gamestatus = {
 // The assistant coach's pre-season friendlies: analysis of the overseas clubs in the game, and one-tap arranging.
 function friendlyCard() {
   if (!inPreseason()) return '';
+  if (freePreseasonWeek() == null) return '<div class="card"><h3>Pre-season friendlies</h3><p class="muted">No pre-season dates remain available.</p></div>';
   const A = UI.friendly && UI.friendly.wk === G.week ? UI.friendly : null, head = '<h3>Assistant coach <small>pre-season friendlies</small></h3>';
   if (A && A.busy) return `<div class="card">${head}<p class="muted">${esc(A.step)}</p></div>`;
   if (!A || !A.rows) return `<div class="card">${head}<p class="muted">He looks at the overseas clubs already in the game, plays each one a few simulated games, and picks the friendlies that test the squad most.</p><button class="btn pri" data-a="friendlyAnalyse">Find friendlies</button></div>`;
