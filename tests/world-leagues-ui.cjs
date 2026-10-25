@@ -34,8 +34,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('[data-a=psTab][data-v=bio]').tap();
     check('A reserve profile shows its real inspirational figure and transfer action',/Inspirational figure/.test(await page.locator('#layer .sheet').textContent())&&await page.locator('#layer .sheet [data-a=offer]').count()===1);
     await page.evaluate(()=>{closeSheet(true);go('clubs');});
-    check('Standard club names appear beside their game nicknames',/Getafe CF/.test(await page.locator('[data-a=clubPage][data-id=ES1_GET]').textContent()));
+    check('Club directory hides real names while retaining metadata',!/Getafe CF/.test(await page.locator('[data-a=clubPage][data-id=ES1_GET]').textContent())&&await page.evaluate(()=>G.clubs.ES1_GET.realName==='Getafe CF'));
     await page.locator('[data-a=clubPage][data-id=ES1_GET]').tap();
+    check('Club header hides the real name',!/Getafe CF/.test(await page.locator('.clubhead').textContent()));
     check('A placeholder club has a working dashboard with its league and country',/La Liga/.test(await page.locator('.main').textContent())&&/Spain/.test(await page.locator('.main').textContent()));
     await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
     check('The dummy squad shows 25 slots with no player profile or transfer controls',await page.locator('.main .list .row').count()===25&&await page.locator('.main [data-a=player],.main [data-a=contract],.main [data-a=scoutFile]').count()===0);

@@ -198,7 +198,7 @@ ACT.admPSave = ds => {
   p.mor = clamp(nval('apMor'), 0, 100); p.cond = clamp(nval('apCond'), 0, 100); p.shp = clamp(nval('apShp'), 0, 100);
   p.wage = Math.max(0, nval('apWage')); p.con = nval('apCon');
   ATTRS.forEach((a, i) => { p.at[i] = clamp(Math.round(nval('apAt' + i)), 1, 20); });
-  p.ca = ratingFor(p.at, p.pos);
+  p.ca = playerRating(p);
   p.pa = clamp(Math.max(p.ca, nval('apPa')), 1, 100);
   const to = val('apClub');
   if (to !== p.club) { moveClub(p, to); if (to === G.club) G.know[p.id] = 100; if (to === 'FA') p.con = 0; }

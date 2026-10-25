@@ -166,7 +166,7 @@ SCREENS.clubs = {
     const definition = WORLD_LEAGUES[selected];
     return `<h1 class="h1">Club directory</h1><div class="chips wrap">${groups.map(([id, label]) => `<button class="chip ${selected === id ? 'on' : ''}" data-a="clubLeague" data-id="${id}">${esc(label)}</button>`).join('')}</div>
       <p class="muted">${definition ? `${definition.country} · ${definition.name} · ${clubs.length} clubs · ${clubs.filter(c => c.foreignSquad).length} friendly opponents with transferable players. League fixtures are inactive.` : 'Browse league clubs, overseas teams and free agents.'}</p>
-      <div class="list">${clubs.map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.realName ? esc(c.realName) + ' · ' : ''}${c.fa ? 'Unattached players' : esc(clubCompetitionLabel(c))} · ${c.backgroundOnly ? '25 read-only players' : c.squad.length + ' players'}</small></span><span class="chev">›</span></button>`).join('')}</div>`;
+      <div class="list">${clubs.map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.fa ? 'Unattached players' : esc(clubCompetitionLabel(c))} · ${c.backgroundOnly ? '25 read-only players' : c.squad.length + ' players'}</small></span><span class="chev">›</span></button>`).join('')}</div>`;
   },
 };
 ACT.clubLeague = ds => { UI.tab.clubLeague = ds.id === 'all' || LEAGUES[ds.id] || WORLD_LEAGUES[ds.id] ? ds.id : 'all'; render(); };
@@ -176,7 +176,7 @@ SCREENS.clubview = {
     if (!c) return empty('Club unavailable', 'Browse clubs from the directory.');
     const section = p.section || 'overview', level = p.level || 'A';
     const tab = (s, label) => `<button class="chip ${section === s ? 'on' : ''}" data-a="clubPage" data-id="${c.id}" data-section="${s}">${label}</button>`;
-    const heading = `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 50)}<div><h1 class="h1" data-no-links>${esc(c.name)}</h1>${c.realName ? `<p class="muted" data-no-links>${esc(c.realName)}</p>` : ''}<p class="muted">${c.fa ? 'Unattached players' : esc(c.city || natName(c.nat)) + (c.worldLeague ? ' · ' + esc(clubCompetitionLabel(c)) : '') + (!c.backgroundOnly ? ' · Manager ' + esc(c.mgr || 'Not recorded') : '')}</p></div></section><div class="chips">${tab('overview', 'Dashboard')}${tab('squad', 'Squad')}${tab('fixtures', 'Fixtures')}${!c.backgroundOnly ? tab('transfers', 'Transfers') : ''}</div>`;
+    const heading = `<section class="clubhead" style="--k1:${c.c1}">${badge(c.id, 50)}<div><h1 class="h1" data-no-links>${esc(c.name)}</h1><p class="muted">${c.fa ? 'Unattached players' : esc(c.city || natName(c.nat)) + (c.worldLeague ? ' · ' + esc(clubCompetitionLabel(c)) : '') + (!c.backgroundOnly ? ' · Manager ' + esc(c.mgr || 'Not recorded') : '')}</p></div></section><div class="chips">${tab('overview', 'Dashboard')}${tab('squad', 'Squad')}${tab('fixtures', 'Fixtures')}${!c.backgroundOnly ? tab('transfers', 'Transfers') : ''}</div>`;
     if (c.backgroundOnly) {
       const slots = dummySquadSlots(c);
       const localCount = slots.filter(p => p.nat === c.nat).length;

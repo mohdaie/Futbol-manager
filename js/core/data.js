@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.24.7';
+const GAME_VERSION = '2026.10.25.1';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -148,6 +148,38 @@ const WEIGHTS = {
   ST: { fin: 3, cmp: 2, fir: 2, pac: 2, hea: 1, str: 1, dri: 1, dec: 1, otb: 3, ant: 1 },
 };
 WEIGHTS.DR = WEIGHTS.DL; WEIGHTS.MR = WEIGHTS.ML; WEIGHTS.AMR = WEIGHTS.AML;
+
+// Versioned calibration shared by the database builder and live development.
+const CALIBRATED_ROLE_TIERS = {
+  DC: ['tck mar hea pos', 'dec str ant cmp', 'pas fir ldr wor tea'],
+  DL: ['pac sta cro wor', 'tck pos dri agi', 'pas fir dec ant tea'],
+  DM: ['pas tck pos dec ant', 'vis wor sta tea cmp', 'fir mar str agi ldr'],
+  MC: ['pas vis dec fir', 'wor sta tea dri cmp', 'fin tck pos ant otb fla'],
+  AMC: ['vis pas fir dec', 'dri fin otb fla', 'cmp agi tea ant cro'],
+  AML: ['pac dri cro otb', 'fir agi fla fin', 'pas vis dec wor tea sta'],
+  ML: ['pac sta cro wor', 'dri fir tck pos', 'pas vis dec tea otb ant'],
+  ST: ['fin otb cmp ant', 'hea pac fir str', 'vis dec wor dri tea'],
+};
+const CALIBRATED_WEIGHTS = {};
+for (const pos of Object.keys(WEIGHTS)) {
+  const alias = { DR:'DL', MR:'ML', AMR:'AML' }[pos] || pos;
+  const keeperCore = ['ref','han','one','kic','pos','ant','dec','agi'];
+  const w = Object.fromEntries(ATTRS.map(([k,,group]) => [k, pos === 'GK'
+    ? (keeperCore.includes(k) ? .7 / 8 : .3 / 18) : group === 'G' ? .05 : .75]));
+  if (pos !== 'GK') CALIBRATED_ROLE_TIERS[alias].forEach((keys, i) => {
+    keys.split(' ').forEach(k => { w[k] = [1.6,1.3,1][i]; });
+  });
+  CALIBRATED_WEIGHTS[pos] = Object.freeze(w);
+}
+Object.freeze(CALIBRATED_WEIGHTS);
+function calibratedAbility(at, pos) {
+  const w = CALIBRATED_WEIGHTS[pos];
+  if (!w) throw new Error('Unsupported calibrated position: ' + pos);
+  let sum = 0, total = 0;
+  for (const k in w) { sum += at[A[k]] * w[k]; total += w[k]; }
+  const mean = sum / total;
+  return { ca: Math.max(1, Math.min(100, Math.round(20 + 4.65 * mean))), weightedMean: mean };
+}
 
 const PERSONALITIES = ['Professional', 'Ambitious', 'Determined', 'Balanced', 'Model Citizen', 'Temperamental', 'Laid Back', 'Loyal'];
 

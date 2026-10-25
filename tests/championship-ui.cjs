@@ -19,7 +19,7 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     await page.goto(base); await page.locator('[data-a=titleNew]').click();
     check('Premier League selection offers the 20 updated clubs', await page.locator('[data-a=pickClub]').count() === 20);
     await page.locator('[data-a=pickLeague][data-id=ECH]').tap();
-    check('Championship selection offers 24 clubs with official names beside nicknames', await page.locator('[data-a=pickClub]').count() === 24 && /Wrexham AFC/.test(await page.locator('[data-a=pickClub][data-id=WRE]').textContent()));
+    check('Championship selection uses fictional names and keeps real names in metadata', await page.locator('[data-a=pickClub]').count() === 24 && !/Wrexham AFC/.test(await page.locator('[data-a=pickClub][data-id=WRE]').textContent()) && /Red Dragons/.test(await page.locator('[data-a=pickClub][data-id=WRE]').textContent()) && await page.evaluate(()=>CHAMPIONSHIP_CLUBS.find(c=>c.id==='WRE').realName==='Wrexham AFC'));
     await page.locator('[data-a=startGame]').tap();
     check('A Championship career opens on its own dashboard', await page.evaluate(() => UI.s === 'home' && leagueOf(G.club) === 'ECH' && leagueTable().length === 24));
     for (const screen of ['squad', 'tactics', 'fixtures', 'table', 'youth', 'clubs', 'finance', 'gamestatus']) await page.evaluate(screen => go(screen), screen);
