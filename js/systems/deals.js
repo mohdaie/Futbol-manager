@@ -19,6 +19,30 @@ const WINDOW_STAGES = ['bid', 'agent', 'terms', 'player', 'medical', 'final', 'o
 const dofR = () => staffAvg('Director', 8);
 const dealOpen = d => !d.closed;
 const activeDeal = (pid, dir) => G.deals.find(d => dealOpen(d) && d.pid === pid && (!dir || d.dir === dir));
+// Decisions remain pending even after their news item has been read or dismissed.
+function pendingTransferDecisions() {
+  const priority = { final: 0, finalout: 0, finalloan: 0, offer: 1, loancounter: 1 };
+  return (G?.deals || []).filter(d => dealOpen(d) && d.dir !== 'ai' && d.need)
+    .sort((a,b) => (priority[a.need.k] ?? 2) - (priority[b.need.k] ?? 2) || a.id - b.id);
+}
+function directorTransferAdvice(d) {
+  const p=G.players[d.pid];
+  if(d.loanTerms) {
+    const t=d.need.k==='loancounter'?d.need.terms:d.loanTerms,check=validateLoan(p.id,d.to,t);
+    if(check.error)return `I would not approve these terms yet: ${check.error}`;
+    return `${loanDealSummary({...d,loanTerms:t})}. The loan club's weekly wage cost is ${wageFmt(Math.round(p.wage*t.wageShare/100))}.${t.obligationApps?' The appearance clause can trigger a permanent purchase.':''} I recommend proceeding only if this move fits your squad plan.`;
+  }
+  if(d.dir==='out') {
+    const value=pValue(p),key=isKeyPlayer(p),ratio=(d.fee||0)/Math.max(1,value);
+    return `We value ${fullName(p)} at ${money(value)}. ${key?'He is a key player, so consider who will replace him. ':''}${ratio>=1.25?'This is a strong offer; I recommend accepting.':ratio>=.95?(key?'The price is fair, but I recommend keeping him unless you have a replacement.':'This is a fair offer; I recommend accepting.'):'The offer is below his value; I recommend asking for more or rejecting it.'} ${d.need.k==='finalout'?'You must sanction the sale for it to go through.':'Accepting an offer starts talks; you still approve the final sale.'}`;
+  }
+  if(d.need.k==='package')return `I recommend revising the package: ${d.need.reason}`;
+  const cost=(d.need.fee??d.fee??d.memo?.max??0)+(d.agentFee||0)+(d.bonus||0),wage=d.need.wage||d.wage||d.memo?.wage||0,room=Math.max(0,G.fin.wb-clubWageBill(userClub())+(transferExchange(d)?.wage||0));
+  if(cost>G.fin.tb||wage>room)return `I recommend resolving the budget first. Cash and fees: ${money(cost)} against ${money(G.fin.tb)} available; weekly wage ${wageFmt(wage)} against ${wageFmt(room)} of room.`;
+  const memo=d.memo||dofMemo(p);
+  return `${DOF_SAYS[memo.verdict]} Cash and fees so far: ${money(cost)}; weekly wage ${wageFmt(wage)}. Review his role and the agreed terms before you approve the move.`;
+}
+
 const wait = (a, b) => {
   const days = ri(a, b), pressure = typeof windowClosingPressure === 'function' ? windowClosingPressure() : 0;
   const rush = pressure ? 1 - pressure * 0.8 : 1;
@@ -35,7 +59,7 @@ function dealNews(d, title, body, loud) {
   if (!loud) G.news[0].q = 1;
 }
 function needDecision(d, k, title, body, extra = {}) {
-  d.need = { k, ...extra }; d.next = null;
+  d.need = { k, ...extra }; d.next = null; d.advice = null;
   dealNews(d, title, body, true);
 }
 function closeDeal(d, ok, why, loud = true) {

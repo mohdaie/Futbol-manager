@@ -52,13 +52,20 @@ const assert = require('node:assert/strict');
       while (!deadlineToday() && guard++ < 80) { const r = advanceDay(); if (r === 'match') playUserInstant(userFixture()); }
       const mine = Object.values(G.players).filter(x => G.clubs[x.club].pl && x.club !== G.club && lvlOf(x) === 'A' && !activeDeal(x.id) && !isKeyPlayer(x)).slice(0, 3)
         .map(p => startDeal(p, 'bid', { lim: { fee: 1e9, wage: 1e6 }, fee: roundMoney(askingPrice(p)), approach: 'open', opened: true, next: dayAbs() + 5 }).id);
+      // Answer outstanding decisions from the setup's time skip before pressing Continue.
+      pendingTransferDecisions().forEach(d => { if(d.need.k==='offer')answerOffer(d,'reject');else dealWalk(d); });
       return { date: fmtDate(today(), false), mine, t0: G.tHist.length, s0: G.social.length };
     });
     check('Calendar reaches deadline day', pre.date.startsWith('1 Sep'), true);
     await page.evaluate(() => { G.settings.speed = 4; go('home'); ACT.continue(); });
-    await page.waitForFunction(() => document.querySelector('#dayrun .dr-cal.dl'), null, { timeout: 15000 });
-    check('Deadline day shows a clock', await page.locator('#dayrun .dr-cal.dl .dr-day').innerText(), '09:00');
-    check('Deadline day news stops the calendar first', await page.locator('#dayrun', { hasText: 'Deadline day' }).count() >= 1, true);
+    await page.waitForFunction(() => G.dd?.h >= 9, null, { timeout: 15000 });
+    const decisionFirst = await page.evaluate(() => pendingTransferDecisions().length > 0);
+    check('Deadline day shows its clock or pauses for a required transfer response', decisionFirst ? await page.evaluate(() => !DAYRUN.on && UI.popup?.key.startsWith('deal:')) : await page.locator('#dayrun .dr-cal.dl .dr-day').innerText() === '09:00', true);
+    check('Deadline day stops for news or a required decision', decisionFirst || await page.locator('#dayrun', { hasText: 'Deadline day' }).count() >= 1, true);
+    if (decisionFirst) await page.evaluate(() => {
+      pendingTransferDecisions().forEach(d => { if(d.need.k==='final')completeIn(d);else if(d.need.k==='offer')answerOffer(d,'reject');else if(d.need.k==='finalout')blockOut(d);else if(['bidlimit','notforsale','agentfee','wagelimit'].includes(d.need.k))dealRaise(d,d.need.wage||d.need.fee||d.agentFee);else dealWalk(d); });
+      closeSheet(true);
+    });
     await page.screenshot({ path: '/tmp/futbol-deadline-0900.png' });
     await page.evaluate(() => ACT.dayRunGo());
     await page.waitForFunction(() => G.dd.h >= 13 || !DAYRUN.on, null, { timeout: 30000 });

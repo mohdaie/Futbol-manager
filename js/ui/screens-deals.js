@@ -116,6 +116,7 @@ function dealSheet(id) {
     ${dealStages(d)}
     <p class="dstatus ${d.closed ? (d.closed.ok ? 'good' : 'bad') : d.need ? 'warn' : ''}">${esc(dealStatus(d))}</p>
     ${(() => { const w = agentWords(d), a = agentOf(p); return w && a ? `<section class="fsec"><h4>Message from ${esc(a.name)}</h4><blockquote class="aiq">${esc(w)}</blockquote></section>` : ''; })()}
+    ${n?`<section class="fsec"><p class="note">Respond before continuing. Final approval stays with you.</p><button class="btn wide" data-a="dealAdvice" data-id="${d.id}">Ask Director of Football</button>${d.advice?`<blockquote class="aiq" data-dof-advice>${esc(d.advice)}</blockquote>`:''}</section>`:''}
     ${act}
     ${terms ? `<section class="fsec"><h4>Terms so far</h4><p>${esc(terms)}</p>${d.lim ? `<p class="muted">Your limits: ${money(d.lim.fee)} · ${wageFmt(d.lim.wage)} a week</p>` : ''}</section>` : ''}
     ${memoHtml}
@@ -124,6 +125,11 @@ function dealSheet(id) {
   </article>`, { key: 'deal:' + id, restore: () => dealSheet(id), valid: () => G?.deals?.some(x => x.id === id) });
 }
 ACT.deal = ds => dealSheet(+ds.id);
+ACT.dealAdvice = ds => {
+  const d=G.deals.find(x=>x.id===+ds.id);
+  if(!d||d.closed||!d.need||d.dir==='ai')return;
+  d.advice=directorTransferAdvice(d);saveGame();dealSheet(d.id);
+};
 ACT.dealForm = ds => {
   const F = UI.dealForm;
   if (ds.k === 'approach') F.approach = ds.v;

@@ -111,6 +111,7 @@ function restoreScreen() {
 function shell(body) {
   const c = userClub(), unread = G.news.filter(n => !n.read).length, reports = G.scout.reports.length;
   const fx = userFixture(), matchNow = fx && !played(fx) && (fx.d ?? 5) <= G.day;
+  const pendingTransfers = pendingTransferDecisions();
   const cur = NAV.some(n => n[0] === UI.s) ? UI.s : Object.keys(NAV_GROUPS).find(k => NAV_GROUPS[k].includes(UI.s)) || 'more';
   return `<div class="app">
     <header class="top">
@@ -127,7 +128,7 @@ function shell(body) {
     <main class="main">${body}<div class="spacer"></div></main>
     ${UI.s === 'admin' ? '' : `<div class="bottombar">
       <button class="bb-sum" data-a="go" data-s="news">${ICON.doc}<span>${unread} news · ${reports} report${reports === 1 ? '' : 's'}</span></button>
-      <button class="cta ${matchNow ? 'match' : ''}" data-a="continue">${matchNow ? 'Matchday' : 'Continue'}${ICON.arrow}</button>
+      <button class="cta ${matchNow ? 'match' : ''}" data-a="continue">${pendingTransfers.length ? 'Review transfer (' + pendingTransfers.length + ')' : matchNow ? 'Matchday' : 'Continue'}${ICON.arrow}</button>
     </div>`}
   </div>`;
 }

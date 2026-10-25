@@ -10,8 +10,18 @@ const DAY_MS = 520;   // time each day stays on screen
 const DAYRUN_MAX = 35; // safety stop after five weeks without anything happening
 const DAYRUN = { on: false, timer: 0, days: 0, feed: [], stop: null };
 
+function reviewRequiredTransfer() {
+  const pending=pendingTransferDecisions();
+  if(!pending.length)return false;
+  DAYRUN.on=false;clearTimeout(DAYRUN.timer);DAYRUN.timer=0;closeDayRun();
+  UI.tab.tr='deals';go('transfers');dealSheet(pending[0].id);
+  toast('Respond to the transfer decision before continuing.');
+  return true;
+}
+
 function startDayRun() {
   if (!G || DAYRUN.on) return;
+  if (reviewRequiredTransfer()) return;
   const fx = userFixture();
   if (fx && !played(fx) && (fx.d ?? 5) <= G.day) return matchdayNow(fx);
   Object.assign(DAYRUN, { on: true, days: 0, feed: [], stop: null });
@@ -31,11 +41,13 @@ async function dayTick() {
   const game = G;
   DAYRUN.timer = 0;
   if (!DAYRUN.on || !G) return;
+  if (reviewRequiredTransfer()) return;
   // Deadline day: the hours tick by before the day moves on.
   const fxNow = userFixture();
   if (deadlineToday() && !(G.dd && G.dd.key === G.season + ':' + windowState().label && G.dd.done) && !(fxNow && !played(fxNow) && (fxNow.d ?? 5) <= G.day)) {
     const first = G.nextId, nPosts = G.social ? G.social.length : 0, D = deadlineHour();
     saveGame();
+    if (reviewRequiredTransfer()) return;
     const fresh = G.news.filter(n => n.id >= first), imp = fresh.filter(newsImportant);
     const posts = G.social ? G.social.slice(0, Math.max(0, G.social.length - nPosts)) : [];
     const deal = posts.find(p => p.kind === 'here' || p.kind === 'done') || posts.find(p => p.kind !== 'ticker') || null;
@@ -62,6 +74,7 @@ async function dayTick() {
   if (line.length) DAYRUN.feed.unshift({ d: wasDay, t: line.join(' · ') });
   DAYRUN.feed.length = Math.min(DAYRUN.feed.length, 4);
   const imp = fresh.filter(newsImportant);
+  if (reviewRequiredTransfer()) return;
   if (r === 'match') return finishDayRun(() => matchdayNow(userFixture()));
   if (r === 'season') return finishDayRun(() => go('review'));
   if (r === 'sacked') return finishDayRun(() => go('home'));
