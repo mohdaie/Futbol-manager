@@ -64,12 +64,13 @@ const assert = require('node:assert/strict');
 
     const send = await page.evaluate(({ pid, foreign, video }) => [scoutPlayer(G.players[pid]).ok, scoutPlayer(G.players[foreign]).ok, scoutPlayer(G.players[video], 'video').ok, scoutPlayer(G.players[pid]).ok], r);
     check('Scout and video jobs start; no double booking', send, [true, true, true, false]);
+    check('Watch jobs take no more than two weeks', await page.evaluate(() => G.scout.jobs.filter(j => j.mode === 'watch').every(j => j.end - j.start >= 7 && j.end - j.start <= 14)), true);
     const cap = await page.evaluate(() => { const n = staffOf('Scout').length * SCOUT_LOAD; const pool = Object.values(G.players).filter(p => p.club !== G.club && p.club !== 'FA' && !G.scout.jobs.some(j => j.pid === p.id)); let ok = 0; for (let i = 0; i < 12; i++) if (scoutPlayer(pool[i]).ok) ok++; const jobs = G.scout.jobs.filter(j => j.mode === 'watch').length; G.scout.jobs = G.scout.jobs.slice(0, 3); return [jobs, n, ok]; });
     check('Each scout follows up to three players', cap[0], cap[1]);
     const run = await page.evaluate(({ pid, foreign, video }) => {
       const k0 = [knowOf(G.players[pid]), knowOf(G.players[foreign])];
       let days = 0, vk = null;
-      while (days < 24) { const res = advanceDay(); if (res === 'match') { playUserInstant(userFixture()); continue; } days++; if (days === 3) vk = knowOf(G.players[video]); }
+      while (days < 15) { const res = advanceDay(); if (res === 'match') { playUserInstant(userFixture()); continue; } days++; if (days === 3) vk = knowOf(G.players[video]); }
       const f = G.scout.reports.find(x => x.pid === pid), ff = G.scout.reports.find(x => x.pid === foreign);
       return { k0, k1: [knowOf(G.players[pid]), knowOf(G.players[foreign])], vk, seen: f.seen.length, rt: f.seen.find(x => x.rt != null)?.rt ?? null, fseen: ff.seen.length, left: G.scout.jobs.filter(j => j.pid === pid).length, news: G.news.some(n => n.action && n.action.t === 'scoutfile' && n.action.pid === pid), grade: f.grade, hist: f.hist.length };
     }, r);
@@ -78,7 +79,7 @@ const assert = require('node:assert/strict');
     check('Matches watched are logged with ratings', typeof run.rt, 'number');
     check('Overseas players are watched at weekends', run.k1[1] > run.k0[1] && run.fseen >= 2, true);
     check('Video analysis files within days and stops at 74%', run.vk > 10 && run.vk <= 74, true);
-    check('Job ends after three weeks with a news item', [run.left, run.news], [0, true]);
+    check('Job ends within two weeks with a news item', [run.left, run.news], [0, true]);
     check('File keeps a history of the report', run.hist >= 2, true);
 
     await page.evaluate(id => { G.know[id] = 82; scoutFileSheet(id); }, r.pid);

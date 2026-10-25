@@ -5,21 +5,21 @@
 
 const WHO_TXT = { dof: 'Director of Football', club: 'Club', agent: 'Agent', player: 'Player', medical: 'Medical', you: 'You', done: 'Done', fail: 'Off' };
 function dealStages(d) {
-  const st = DEAL_STAGES[d.dir], i = st.findIndex(s => s[0] === d.stage);
+  const st = d.loanTerms ? [['interest', 'Approach'], ['bid', 'Club agreement'], ['player', 'Player'], ['medical', 'Medical'], ['final', 'Sign']] : DEAL_STAGES[d.dir], i = st.findIndex(s => s[0] === d.stage);
   return `<ol class="dstages">${st.map((s, k) => `<li class="${d.closed ? (d.closed.ok || k < i ? 'ok' : k === i ? 'off' : '') : k < i ? 'ok' : k === i ? 'now' : ''}">${s[1]}</li>`).join('')}</ol>`;
 }
 function dealStatus(d) {
   const p = G.players[d.pid];
   if (d.closed) return d.closed.why;
-  if (d.need) return { meeting: 'Meet the Director of Football', bidlimit: 'Their price is above your limit', notforsale: 'Not for sale', agentfee: 'The agent wants his fee', wagelimit: 'Wage demand above your limit', final: 'Ready to sign: your decision', offer: 'An offer: your decision', finalout: 'Sale ready: your decision' }[d.need.k] || 'Your decision';
+  if (d.need) return { loancounter: 'Loan counteroffer: your decision', finalloan: 'Ready to complete loan: your decision', meeting: 'Meet the Director of Football', bidlimit: 'Their price is above your limit', notforsale: 'Not for sale', agentfee: 'The agent wants his fee', wagelimit: 'Wage demand above your limit', final: 'Ready to sign: your decision', offer: 'An offer: your decision', finalout: 'Sale ready: your decision' }[d.need.k] || 'Your decision';
   const days = d.next != null ? Math.max(0, d.next - dayAbs()) : 0;
   const what = { review: 'Director of Football reviewing the file', interest: 'Sounding out his club and agent', bid: d.bidOut ? 'Waiting for the club\'s answer' : 'Preparing an offer', agent: 'Talking to his agent', terms: 'Negotiating personal terms', player: `Waiting for ${p ? pname(p) : 'the player'} to decide`, medical: 'Medical', offer: 'Waiting for their answer', talks: 'In talks' }[d.stage] || '';
-  return what + (days ? ` · ${days} day${days > 1 ? 's' : ''}` : '') + (!inWindow() && WINDOW_STAGES.includes(d.stage) ? ' · waits for the window' : '');
+  return what + (days ? ` · ${days} day${days > 1 ? 's' : ''}` : '') + (!inWindow() && (d.loanTerms || WINDOW_STAGES.includes(d.stage)) ? ' · waits for the window' : '');
 }
 function dealRow(d) {
   const p = G.players[d.pid];
   if (!p) return '';
-  const sub = `${d.dir === 'out' ? '→ ' + clubName(d.to) : d.dir === 'ai' ? clubName(d.from) + ' → ' + clubName(d.to) : clubName(d.from)} · ${dealStatus(d)}`;
+  const sub = `${d.loanTerms ? 'Loan · ' : ''}${d.dir === 'out' ? '→ ' + clubName(d.to) : d.dir === 'ai' ? clubName(d.from) + ' → ' + clubName(d.to) : clubName(d.from)} · ${dealStatus(d)}`;
   return `<button class="row act deal ${d.need ? 'need' : ''} ${d.closed ? (d.closed.ok ? 'won' : 'lost') : ''}" data-a="deal" data-id="${d.id}"><span class="grow"><b>${esc(fullName(p))}</b><small>${esc(sub)}</small></span>${d.need ? '<em class="tag warn">Decide</em>' : ''}<span class="chev">›</span></button>`;
 }
 
@@ -95,6 +95,8 @@ function dealSheet(id) {
   } else if (n) {
     const btn = (k, t, cls = '') => `<button class="btn wide ${cls}" data-a="dealGo" data-id="${d.id}" data-k="${k}">${t}</button>`;
     const body = {
+      loancounter: () => `<p>${esc(clubName(d.dir === 'in' ? d.from : d.to))} propose ${money(n.terms.fee)} and ${n.terms.wageShare}% of wages paid by ${esc(clubName(d.to))}.</p>` + btn('loanaccept', 'Accept revised loan terms', 'pri') + btn('walk', 'Walk away', 'ghost'),
+      finalloan: () => btn('loancomplete', 'Complete the loan', 'pri') + btn('pull', 'Pull out', 'ghost'),
       bidlimit: () => btn('raise', 'Raise the limit to ' + money(n.fee), 'pri') + btn('walk', 'Walk away', 'ghost'),
       notforsale: () => btn('raise', 'Bid ' + money(n.fee) + ' anyway', 'pri') + btn('walk', 'Walk away', 'ghost'),
       agentfee: () => btn('raise', 'Pay ' + money(d.agentFee), 'pri') + btn('walk', 'Walk away', 'ghost'),
@@ -134,6 +136,11 @@ ACT.dealGo = ds => {
   if (!d || !d.need) return;
   let msg = '';
   const k = ds.k;
+  if (k === 'loanaccept' && d.loanTerms && d.need.k === 'loancounter') {
+    d.loanTerms = { ...d.need.terms }; d.fee = d.loanTerms.fee; d.loanAgreed = true; d.need = null; d.next = wait(1, 2);
+    dealLog(d, `You accept the counteroffer: ${loanDealSummary(d)}.`, 'you'); msg = 'Revised loan terms accepted. Talks continue.';
+  }
+  if (k === 'loancomplete') { const result = completeLoan(d); if (result.error) return toast(result.error); msg = result.msg; }
   if (k === 'proceed') { const F = UI.dealForm; const error = dealProceed(d, F.approach, F.fee, F.wage, readDealTerms(d)); if (error) return toast(error);msg = 'The Director of Football is on it.'; }
   if (k === 'monitor') { dealMonitor(d); msg = 'Kept on file.'; }
   if (k === 'drop') { dealDrop(d); msg = 'Dropped.'; }

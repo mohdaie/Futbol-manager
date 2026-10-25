@@ -39,7 +39,7 @@ function needDecision(d, k, title, body, extra = {}) {
   dealNews(d, title, body, true);
 }
 function closeDeal(d, ok, why, loud = true) {
-  if (!ok && (d.dir !== 'in' || d.pub || d.leaked || d.approach === 'open') && !['review', 'meeting'].includes(d.stage) && typeof dealMedia === 'function') dealMedia(d, 'off');
+  if (!d.loanTerms && !ok && (d.dir !== 'in' || d.pub || d.leaked || d.approach === 'open') && !['review', 'meeting'].includes(d.stage) && typeof dealMedia === 'function') dealMedia(d, 'off');
   d.closed = { ok, why, date: today().getTime() }; d.need = null; d.next = null;
   dealLog(d, why, ok ? 'done' : 'fail');
   if (d.dir !== 'ai') dealNews(d, (ok ? 'Done deal: ' : 'Deal off: ') + pname(G.players[d.pid]), why, loud);
@@ -123,11 +123,12 @@ function dealTick(d, force) {
     if (d.dir !== 'out' && d.from !== p.club) return closeDeal(d, false, `${fullName(p)} has joined the ${clubName(p.club)} instead.`, d.dir === 'in');
     if (d.dir === 'out' && p.club !== G.club) return closeDeal(d, false, `${fullName(p)} is no longer at the club.`, false);
     const fa = G.clubs[d.from] && G.clubs[d.from].fa;
-    if (!fa && d.opened && !inWindow() && WINDOW_STAGES.includes(d.stage)) return closeDeal(d, false, `The window shut before the deal for ${fullName(p)} was done.`, d.dir !== 'ai');
+    if (!fa && d.opened && !inWindow() && (d.loanTerms || WINDOW_STAGES.includes(d.stage))) return closeDeal(d, false, `The window shut before the deal for ${fullName(p)} was done.`, d.dir !== 'ai');
     if (d.need || d.next == null || (!force && dayAbs() < d.next)) return;
-    if (!fa && WINDOW_STAGES.includes(d.stage) && !inWindow()) { d.next = dayAbs() + 1; return; } // talks resume when the window opens
-    if (WINDOW_STAGES.includes(d.stage)) d.opened = true;
-    (DEAL_STEP[d.dir][d.stage] || (() => {}))(d, p);
+    if (!fa && (d.loanTerms || WINDOW_STAGES.includes(d.stage)) && !inWindow()) { d.next = dayAbs() + 1; return; } // talks resume when the window opens
+    if ((d.loanTerms || WINDOW_STAGES.includes(d.stage))) d.opened = true;
+    if (d.loanTerms) loanDealTick(d, p);
+    else (DEAL_STEP[d.dir][d.stage] || (() => {}))(d, p);
     if (force && dealOpen(d) && d.next != null) d.next = dayAbs(); // still moving by the hour
   }
 }
@@ -303,6 +304,7 @@ DEAL_STEP.in.final = () => {};
 DEAL_STEP.out.final = () => {};
 
 function dealSummary(d) {
+  if (d.loanTerms) return loanDealSummary(d);
   const t = [];
   if (d.fee || d.proposal) t.push(transferPackageSummary(d) + (d.add ? ` + ${money(d.add)} add-ons` : ''));
   if (d.agentFee) t.push(`agent ${money(d.agentFee)}`);
@@ -339,7 +341,7 @@ function dealRaise(d, amount) {
 }
 function dealWalk(d) {
   const late = ['agent', 'terms', 'player', 'medical', 'final'].includes(d.stage);
-  if (late) agentRelMove(G.players[d.pid], d.stage === 'final' ? -10 : -5, d.stage === 'final' ? 'You pulled out at the last moment' : 'You walked away during talks');
+  if (late && !d.loanTerms) agentRelMove(G.players[d.pid], d.stage === 'final' ? -10 : -5, d.stage === 'final' ? 'You pulled out at the last moment' : 'You walked away during talks');
   closeDeal(d, false, d.stage === 'final' ? 'You pulled out.' : 'You walked away from the deal.', false);
 }
 

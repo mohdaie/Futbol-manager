@@ -3,6 +3,7 @@
 ACT.loan = ds => loanSheet(+ds.id);
 function loanSheet(pid) {
   const p = G.players[pid]; if (!p) return toast('That player is unavailable.');
+  const pending = activeDeal(pid); if (pending && (pending.loanTerms || !['review', 'meeting'].includes(pending.stage))) return dealSheet(pending.id);
   const outgoing = p.club === G.club, hostOptions = domesticClubs().filter(id => id !== (outgoing ? G.club : p.club));
   if (!outgoing && (p.club === 'FA' || !inWindow())) return toast(p.club === 'FA' ? 'Free agents cannot be loaned.' : 'Loan deals need an open transfer window.');
   if (activeLoan(p)) return toast('This player is already on loan.');
@@ -15,7 +16,7 @@ function loanSheet(pid) {
   const terms = [[8,'8 weeks'],[16,'16 weeks'],[26,'Half season · 26 weeks'],[38,'Season long · 38 weeks']].filter(([weeks])=>weeks<=maxTerm);
   if (!terms.some(([weeks])=>weeks===maxTerm)) terms.push([maxTerm,`Contract limit · ${maxTerm} weeks`]);
   sheet(`<div class="eyebrow">${direction} · ${esc(fullName(p))}</div><h3 class="sh-t">Loan agreement</h3>
-    <p class="muted">A temporary registration with a fixed return date. Agree the fee, wage contribution and any purchase or recall clauses.</p>
+    <p class="muted">A temporary registration with a fixed return date. Propose the fee, wage contribution and any purchase or recall clauses. Club talks, player agreement and a medical take place before your final approval.</p>
     ${outgoing ? `<div class="field"><label for="loanHost">Loan destination</label>${selectHtml('loanHost', hostOptions.map(id=>[id,clubName(id)]), F.host, 'loanField', 'data-k="host"')}</div>` : `<p>Parent club: <b>${esc(clubName(p.club))}</b></p>`}
     <div class="two"><div class="field"><label for="loanDuration">Duration</label>${selectHtml('loanDuration', terms, F.duration, 'loanField', 'data-k="duration"')}</div>
       <div class="field"><label for="loanWage">Loan club pays wages</label>${selectHtml('loanWage', [[100,'100%'],[75,'75%'],[50,'50%'],[25,'25%'],[0,'0%']], F.wageShare, 'loanField', 'data-k="wageShare"')}</div></div>
@@ -35,7 +36,7 @@ ACT.loanSubmit = ds => {
   const obligationApps=clause==='obligation'?(+document.getElementById('loanApps')?.value||15):0, recall=!!document.getElementById('loanRecall')?.checked;
   const host=p.club===G.club?F.host:G.club, result=loanOffer(p.id,host,{...F,fee,optionFee,obligationApps,recall});
   if(result.error)return toast(result.error);
-  closeSheet(true);saveGame();toast(result.msg);render();
+  closeSheet(true);saveGame();toast(result.msg);dealSheet(result.deal.id);render();
 };
 TR_TABS.loans = () => {
   const list=Object.values(G.players).filter(p=>activeLoan(p)&&(p.loan.parent===G.club||p.loan.host===G.club)).sort((a,b)=>a.loan.end-b.loan.end);

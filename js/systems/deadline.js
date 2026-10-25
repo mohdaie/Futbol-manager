@@ -18,7 +18,7 @@ function deadlineHour() {
   const D = ddState();
   if (D.done) return D;
   D.h++;
-  G.deals.filter(d => dealOpen(d) && !d.need && WINDOW_STAGES.includes(d.stage)).forEach(d => {
+  G.deals.filter(d => dealOpen(d) && !d.need && (d.loanTerms || WINDOW_STAGES.includes(d.stage))).forEach(d => {
     if (hash01(d.id + ':h' + D.h + ':' + G.season) < (d.dir === 'ai' ? 0.45 : 0.6)) dealTick(d, true);
   });
   if (hash01('pan' + D.h + dayAbs()) < 0.55) aiMarket();       // late panic buys
@@ -30,7 +30,7 @@ function deadlineHour() {
   }
   if (D.h >= 23) {
     D.done = true;
-    const open = G.deals.filter(d => dealOpen(d) && d.dir !== 'ai' && WINDOW_STAGES.includes(d.stage));
+    const open = G.deals.filter(d => dealOpen(d) && d.dir !== 'ai' && (d.loanTerms || WINDOW_STAGES.includes(d.stage)));
     addNews('transfer', 'The window has shut', `${G.tHist.length - D.t0} deals were done on deadline day.${open.length ? ` ${open.length} of your deals did not finish in time and collapse: ${open.map(d => pname(G.players[d.pid])).join(', ')}.` : ''}`);
   }
   return D;

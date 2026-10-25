@@ -5,7 +5,7 @@
      Detailed (75: mental, personality, potential), Full file (90: everything exact).
      Within a stage each attribute is confirmed in turn, so at 90% about 90% of the file is exact.
      An attribute not confirmed yet is a range that always contains the true value; one not reached is "?".
-   - Scouting takes time. A scout follows a player for up to three weeks and every match he watches adds
+   - Scouting takes time. A scout follows a player for up to two weeks and every match he watches adds
      knowledge (his rating, his home region, whether the player played). Video analysis is quick and cheap
      but stops at the Scouted stage. Assignments search a region and file first reports.
    - Every player watched has a file (G.scout.reports) with a grade, a recommendation, the matches watched,
@@ -17,7 +17,7 @@ const KNOW_STAGES = [[0, 'Heard of'], [25, 'Watched'], [50, 'Scouted'], [75, 'De
 const knowStage = k => KNOW_STAGES.filter(s => k >= s[0]).pop();
 const nextStage = k => KNOW_STAGES.find(s => s[0] > k);
 const STAGE_UNLOCK = { 25: 'physical attributes', 50: 'technical attributes, contract and asking price', 75: 'mental attributes, personality, potential and agent', 90: 'the full file: every value exact' };
-const SCOUT_DAYS = 21, VIDEO_DAYS = 2, VIDEO_CAP = 74, SCOUT_LOAD = 3;
+const SCOUT_DAYS = 14, VIDEO_DAYS = 2, VIDEO_CAP = 74, SCOUT_LOAD = 3;
 const dayAbs = () => G.season * 400 + todayNo();
 const scoutRushMultiplier = () => 1 + (typeof windowClosingPressure === 'function' ? windowClosingPressure() : 0) * 1.5;
 const scoutReportDays = base => {
@@ -134,7 +134,7 @@ function logWatch(j, p, entry) {
 }
 
 /* ---------- following a player ---------- */
-// mode 'watch': a scout follows him for three weeks; 'video': a quick look at match footage.
+// mode 'watch': a scout follows him for up to two weeks; 'video': a quick look at match footage.
 function scoutPlayer(p, mode = 'watch') {
   if (!p || p.club === G.club) return { ok: false, msg: 'He is already your player.' };
   if (G.scout.jobs.some(j => j.pid === p.id)) return { ok: false, msg: 'A scout is already on him.' };
@@ -184,6 +184,7 @@ function scoutDay() {
   G.scout.jobs.forEach(j => {
     const p = G.players[j.pid];
     if (!p || p.club === G.club) { j.end = -1; return; }
+    if (j.mode === 'watch') j.end = Math.min(j.end, j.start + SCOUT_DAYS);
     const c = G.clubs[p.club];
     const pressure = typeof windowClosingPressure === 'function' ? windowClosingPressure() : 0;
     if (j.mode === 'watch' && pressure >= 0.35) {
