@@ -18,14 +18,15 @@ function worldAlertQueue() {
   return G.worldAlerts;
 }
 
+function worldAlertContent(item) {
+  const split=item.text.indexOf(' · '),label=split<0?'WORLD':item.text.slice(0,split),detail=split<0?item.text:item.text.slice(split+3);
+  return `<button class="world-alert-story" type="button" data-a="worldAlertOpen" aria-label="${esc(item.text+(item.postId?' Open source story.':''))}"><b>${esc(label)}</b><span>${esc(detail)}</span></button><button class="world-alert-close" type="button" data-a="worldAlertDismiss" aria-label="Dismiss notification">×</button>`;
+}
 function worldAlertMarkup() {
-  const item = worldAlertQueue()[0];
-  if (!item) return '<button id="world-alert" class="world-alert" type="button" data-a="worldAlertDismiss" aria-label="Dismiss notification" hidden></button>';
-  if (!WORLD_ALERT_TIMER && !WORLD_ALERT_EXIT_TIMER) WORLD_ALERT_TIMER = setTimeout(worldAlertAdvance, WORLD_ALERT_MS);
-  const split = item.text.indexOf(' · ');
-  const label = split < 0 ? 'WORLD' : item.text.slice(0, split);
-  const detail = split < 0 ? item.text : item.text.slice(split + 3);
-  return `<button id="world-alert" class="world-alert world-alert-in" type="button" data-a="worldAlertDismiss" aria-label="${esc(item.text)}"><b>${esc(label)}</b><span>${esc(detail)}</span><i aria-hidden="true">×</i></button>`;
+  const item=worldAlertQueue()[0];
+  if(!item)return '<div id="world-alert" class="world-alert" hidden></div>';
+  if(!WORLD_ALERT_TIMER&&!WORLD_ALERT_EXIT_TIMER)WORLD_ALERT_TIMER=setTimeout(worldAlertAdvance,WORLD_ALERT_MS);
+  return `<div id="world-alert" class="world-alert world-alert-in">${worldAlertContent(item)}</div>`;
 }
 
 function worldAlertSync() {
@@ -33,9 +34,7 @@ function worldAlertSync() {
   const item = worldAlertQueue()[0];
   if (!el) return;
   if (!item) { el.hidden = true; el.classList.remove('world-alert-in', 'world-alert-out'); return; }
-  const split = item.text.indexOf(' · '), label = split < 0 ? 'WORLD' : item.text.slice(0, split);
-  const detail = split < 0 ? item.text : item.text.slice(split + 3);
-  el.innerHTML = `<b>${esc(label)}</b><span>${esc(detail)}</span><i aria-hidden="true">×</i>`;
+  el.innerHTML = worldAlertContent(item);
   el.setAttribute('aria-label', item.text);
   el.hidden = false;
   el.classList.remove('world-alert-out');
@@ -67,12 +66,18 @@ function dismissWorldAlert() {
   worldAlertAdvance();
 }
 ACT.worldAlertDismiss = dismissWorldAlert;
+ACT.worldAlertOpen = () => {
+  const item=worldAlertQueue()[0];
+  if(!item?.postId)return dismissWorldAlert();
+  clearTimeout(WORLD_ALERT_TIMER);clearTimeout(WORLD_ALERT_EXIT_TIMER);WORLD_ALERT_TIMER=WORLD_ALERT_EXIT_TIMER=0;
+  worldAlertQueue().shift();UI.tab.tr='rumours';go('transfers');threadSheet(item.postId);
+};
 
-function queueWorldAlert(text) {
+function queueWorldAlert(text, source = {}) {
   if (!G || !text) return;
   const line = worldAlertShort(text), queue = worldAlertQueue();
   if (queue.some(item => item.text === line)) return;
-  queue.push({ text: line, date: today().getTime() });
+  queue.push({ text: line, date: today().getTime(), ...source });
   // A busy simulated day can create many events; retain a short, recent queue.
   if (queue.length > 6) queue.splice(0, queue.length - 6);
   worldAlertSync();
@@ -119,7 +124,7 @@ function worldAlertFromPost(post) {
   const other = post.clubs.find(cid => cid !== player.club && G.clubs[cid]);
   if (!other) return;
   if (post.kind === 'rumour') {
-    queueWorldAlert(`RUMOUR · ${clubName(other)} linked with ${fullName(player)}...`);
+    queueWorldAlert(`RUMOUR · ${clubName(other)} linked with ${fullName(player)}...`, { postId: post.id });
   } else if (post.kind === 'done') {
     const tx = (G.tHist || []).find(t => t.pid === player.id && t.date === today().getTime());
     if (tx) return worldAlertTransfer(tx);

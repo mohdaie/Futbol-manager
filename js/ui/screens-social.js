@@ -22,11 +22,11 @@ function postHtml(p, full) {
     <footer><span>💬 ${p.replies.length}</span><span>↻ ${fmtK(p.reposts)}</span><span>♥ ${fmtK(p.likes)}</span>${a.kind !== 'club' && a.kind !== 'fan' ? `<span class="rel" title="How often this account is right">${Math.round(a.rel * 100)}% reliable</span>` : ''}</footer></div></article>`;
 }
 function threadSheet(id) {
-  const p = G.social.find(x => x.id === id);
+  const p = G.social.find(x => x.id === id) || (G.rumours || []).find(x => x.id === id);
   if (!p) return;
   sheet(`${postHtml(p, true)}<div class="sreplies">${p.replies.map(r => postHtml({ ...r, id: 0, date: p.date + 1800e3, replies: [], reposts: Math.round(r.likes / 9), kind: 'reply' }, true)).join('') || '<p class="muted">No replies yet.</p>'}</div>
     <div class="btns">${p.pid && G.players[p.pid] ? `<button class="btn" data-a="player" data-id="${p.pid}">Player profile</button>` : ''}${p.deal && G.deals.some(d => d.id === p.deal && d.dir !== 'ai') ? `<button class="btn" data-a="deal" data-id="${p.deal}">Open the deal</button>` : ''}</div>`,
-  { key: 'thread:' + id, restore: () => threadSheet(id), valid: () => G?.social?.some(x => x.id === id) });
+  { key: 'thread:' + id, restore: () => threadSheet(id), valid: () => G?.social?.some(x => x.id === id) || G?.rumours?.some(x => x.id === id) });
 }
 ACT.thread = ds => threadSheet(+ds.id);
 ACT.newsView = ds => { UI.tab.nv = ds.v; render(); };
@@ -43,21 +43,32 @@ function transferCentre() {
   const recent = t => today().getTime() - t < 864e5 * 21;
   const here = G.social.filter(p => (p.kind === 'here' || p.kind === 'agreed') && recent(p.date)).slice(0, 8);
   const talks = G.deals.filter(d => dealOpen(d) && d.dir === 'ai' && G.players[d.pid]).slice(0, 8);
-  const rum = G.social.filter(p => p.kind === 'rumour').slice(0, 8);
+  const rum = transferRumours().slice(0, 8);
   const done = G.tHist.slice(0, 12), off = G.deals.filter(d => d.closed && !d.closed.ok && d.dir !== 'in' && recent(d.closed.date) && G.players[d.pid] && d.stage !== 'talks').slice(0, 6);
   const win = windowState();
   return `<div class="banner ${win.open ? 'open' : ''} ${win.open && win.left <= 3 ? 'dl' : ''}"><b>${win.label}${win.open ? (win.left === 0 ? ` · DEADLINE DAY${G.dd && G.dd.h > 8 ? ' · ' + String(Math.min(23, G.dd.h)).padStart(2, '0') + ':00' : ''}` : ' · closes ' + win.closes + ' · ' + win.left + ' days left') : ' · opens ' + win.opens}</b><span>${G.deals.filter(dealOpen).length} deals in progress</span></div>
     ${pressCard()}
     <div class="sec-h"><h2>Here we go</h2></div><div class="feed-s">${here.map(p => postHtml(p)).join('') || empty('Nothing agreed lately', 'Fee agreements and done deals appear here.')}</div>
     <div class="sec-h"><h2>Talks in progress</h2><span class="muted">${talks.length}</span></div><div class="list">${talks.map(dealRow).join('') || empty('Quiet', 'Clubs talk mostly while a window is open.')}</div>
-    <div class="sec-h"><h2>Rumour mill</h2></div><div class="feed-s">${rum.map(p => postHtml(p)).join('') || empty('No rumours', 'They will come.')}</div>
+    <div class="sec-h"><h2>Rumour mill</h2><button class="link" data-a="transferRumours">View all ${transferRumours().length}</button></div><div class="feed-s">${rum.map(p => postHtml(p)).join('') || empty('No rumours', 'They will come.')}</div>
     <div class="sec-h"><h2>Done deals</h2></div><div class="list">${done.map(t => `<div class="row tx ${t.to === G.club || t.from === G.club ? 'me' : ''}"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><span class="stat"><b>${t.fee ? money(t.fee) : 'Free'}</b></span></div>`).join('') || empty('No transfers yet', '')}</div>
     ${off.length ? `<div class="sec-h"><h2>Collapsed</h2></div><div class="list">${off.map(dealRow).join('')}</div>` : ''}`;
 }
+function transferRumours() {
+  const seen = new Set();
+  return [...G.social.filter(p=>p.kind==='rumour'), ...(G.rumours||[])].sort((a,b)=>b.date-a.date)
+    .filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
+}
+function transferRumoursHtml() {
+  const list=transferRumours();
+  return `<h2 class="h2">Transfer rumours</h2><p class="muted">Media reports and speculation, including stories shown in the notification bar. These are not confirmed offers.</p><div class="sec-h"><span class="muted">${list.length} rumours</span></div><div class="feed-s">${list.map(p=>postHtml(p)).join('')||empty('No rumours yet','Media links and leaked talks will appear here.')}</div>`;
+}
+TR_TABS.rumours = transferRumoursHtml;
+ACT.transferRumours = () => { UI.tab.tr='rumours';go('transfers'); };
 const SOCIAL_F = [['all', 'For you'], ['journalist', 'Journalists'], ['rumour', 'Rumours'], ['fan', 'Fans'], ['mine', 'Your club']];
 function socialFeed() {
   const f = UI.tab.sf2 || 'all';
-  const list = G.social.filter(p => { const a = mediaAcc(p.acc); return f === 'all' || (f === 'mine' ? p.clubs.includes(G.club) : f === 'rumour' ? ['rumour', 'influencer', 'tabloid'].includes(a.kind) : f === 'fan' ? ['fan', 'club'].includes(a.kind) : a.kind === f); });
+  const list = f === 'rumour' ? transferRumours() : G.social.filter(p => { const a = mediaAcc(p.acc); return f === 'all' || (f === 'mine' ? p.clubs.includes(G.club) : f === 'fan' ? ['fan', 'club'].includes(a.kind) : a.kind === f); });
   return `<div class="chips">${SOCIAL_F.map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="tab" data-key="sf2" data-v="${k}">${n}</button>`).join('')}</div>
-    <div class="feed-s">${list.slice(0, 60).map(p => postHtml(p)).join('') || empty('Nothing yet', 'Posts appear as the transfer market moves.')}</div>`;
+    <div class="feed-s">${(f==='rumour'?list:list.slice(0,60)).map(p => postHtml(p)).join('') || empty('Nothing yet', 'Posts appear as the transfer market moves.')}</div>`;
 }

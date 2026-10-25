@@ -47,6 +47,10 @@ function post(acc, txt, o = {}) {
   const p = { id: G.nextId++, date: today().getTime() + Math.floor(hash01(G.nextId + 't') * 20) * 3600e3 / 2, acc, txt, pid: o.pid || null, clubs: o.clubs || [], kind: o.kind || 'post', likes, reposts: Math.round(likes * (0.08 + hash01(G.nextId + 'r') * 0.12)), replies: [], real: o.real !== false, deal: o.deal || null };
   G.social.unshift(p);
   if (G.social.length > 160) G.social.length = 160;
+  if (p.kind === 'rumour') {
+    (G.rumours ||= []).unshift(p);
+    G.rumours.length = Math.min(G.rumours.length, 120);
+  }
   if (typeof worldAlertFromPost === 'function') worldAlertFromPost(p);
   if (o.react && p.clubs.length) fanReplies(p);
   if (typeof postWords === 'function' && ['rumour', 'here', 'agreed', 'talks', 'off'].includes(p.kind)) postWords(p);
@@ -110,8 +114,6 @@ function falseRumour(i) {
   const acc = pickAcc(accsOf([3, 4]), s + 'a'), n = fullName(p);
   const lines = [`${to.name} are monitoring ${n} ahead of a possible move 👀`, `EXCLUSIVE: ${n} is on ${to.name}'s shortlist. Scouts were at his last match.`, `${n} would be open to a move to ${to.name}, sources say 🗣️`, `${to.name} preparing an offer for ${n}?! 🤯`];
   const pt = post(acc.id, lines[Math.floor(hash01(s + 'x') * lines.length)], { pid: p.id, clubs: [to.id, p.club], kind: 'rumour', real: false, react: true });
-  (G.rumours || (G.rumours = [])).unshift({ date: today().getTime(), pid: p.id, to: to.id, txt: pt.txt, acc: acc.id, real: false });
-  G.rumours.length = Math.min(G.rumours.length, 60);
   transferBuzz(p, to.id, false);
   if (p.club === G.club) pressRequest(p, 'ours', pt);
 }
@@ -160,5 +162,14 @@ function pressAnswer(id, choice) {
 
 function ensureSocial() {
   G.social = G.social || []; G.media = G.media || { req: [] };
+  // Keep the same source posts after the general social feed rolls over. Recover older rumour records too.
+  const archive = (G.rumours || []).map(r => {
+    const source = G.social.find(p => p.kind === 'rumour' && p.pid === r.pid && p.txt === r.txt && Math.abs(p.date-r.date) < 864e5);
+    const p = source || r;
+    return { ...p, id: p.id ?? G.nextId++, kind: 'rumour', clubs: p.clubs || [p.to].filter(Boolean), replies: p.replies || [], likes: p.likes || 0, reposts: p.reposts || 0 };
+  });
+  const seen = new Set();
+  G.rumours = [...G.social.filter(p => p.kind === 'rumour'), ...archive].sort((a,b) => b.date-a.date)
+    .filter(p => { if(seen.has(p.id))return false;seen.add(p.id);return true; }).slice(0,120);
   if (G.staff && !staffOf('Press').length && G.clubs[G.club]) G.staff.push(genStaffMember('Press', G.clubs[G.club].rep));
 }

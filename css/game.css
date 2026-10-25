@@ -887,3 +887,6 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 .live-sub-out { margin: 8px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--stand); }
 .live-sub-player .live-health { flex: none; }
 .live-sub-player:disabled { opacity: 1; }
+
+.world-alert-story { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left; }
+.world-alert-close { flex: none; color: var(--mute); font-size: 17px; padding: 3px 5px; line-height: 1; }
