@@ -123,7 +123,7 @@ function calcUnits(S) {
     n++;
     const p = G.players[id], slot = ip[i], f = pForm(S, p) * fam(p, slot[0]);
     // Keeper roles: a sweeper keeper gives up a little shot-stopping to cover the space behind a high line; a ball-playing keeper helps build-up play.
-    if (slot[0] === 'GK') { gkRole = roleOf(S, i); gk = ratingFor(p.at, 'GK') * f * (1 + (gkRole.d || 0)); return; }
+    if (slot[0] === 'GK') { gkRole = roleOf(S, i); gk = playerRating(p, 'GK') * f * (1 + (gkRole.d || 0)); return; }
     const role = roleOf(S, i), y = slot[2], yo = oop[S.map[i]][2];
     const wA = clamp((0.8 - y) * 1.8, 0.08, 1), wM = clamp(1 - Math.abs(y - 0.52) * 2.6, 0.1, 1), wD = clamp((yo - 0.36) * 1.9, 0.08, 1);
     att += cAtt(p) * f * wA * (1 + (role.a || 0)); wa += wA;

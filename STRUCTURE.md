@@ -819,3 +819,25 @@ player-profiles, world-leagues and world-squads, outside this notification chang
 Premier League registration limits no longer restrict preseason or other friendly selection. Foreign clubs are
 not treated as Premier League clubs when their club record has no domestic league field. The assistant coach's
 friendly analysis now uses the same friendly eligibility rules as arranged friendlies.
+
+## 2026.10.25.1 — calibrated Premier League first-team database
+
+The four supplied calibrated roster files now define all 543 Premier League first-team profiles across 20 clubs.
+The generated profile database is keyed by stable England source IDs, keeps the supplied fictional display names,
+positions, ages and 26 attributes, and preserves the inspirational figure as the biography link. Thirteen primary
+positions follow the roster files where they differ from the existing identity snapshot. CA uses the positional
+weighted mean and the documented `round(clamp(20 + 4.65 * M, 1, 100))` conversion. PA uses the supplied PA–CA
+gap clamped to the documented age band. New careers use the database; an untouched opening career can migrate
+once, while saves with match history retain their developed attributes and abilities. Regenerate with
+`node scripts/build-calibrated-premier-league-profiles.cjs`. The formula and its limitations are recorded in
+`docs/calibrated-pl-rosters/Part-2-Rating-Provenance-and-CA-PA-Derivation.md`.
+
+### Calibrated rating consistency
+
+The database builder and runtime share the calibrated weight vectors and CA calculation in `js/core/data.js`. `playerRating` carries each calibrated player’s rating version through training, positional ratings, goalkeeper units and admin edits. Legacy players retain their existing method. PA stays fixed during training. `tests/calibrated-rating-consistency.cjs` checks all 543 calibrated players for creation parity, growth, decline, PA ceilings and positional ratings.
+
+### Fictional club names in the interface
+
+Club selection, directory rows and profile headers display fictional club names. Real club names remain in `realName` metadata for identity matching. Browser regression checks cover the visible text and preserved metadata.
+
+Legacy-save migration recovers inspirations before supplemental additions and checks normalized inspirations as well as source IDs. Profiles missing physical measurements receive stable estimates saved with the profile baseline.

@@ -12,8 +12,8 @@ function bumpAttr(p, dir, focusKeys) {
   else key = pick(ATTRS.filter(a => (p.pos === 'GK') === (a[2] === 'G') || a[2] === 'M')).at(0);
   const i = A[key];
   p.at[i] = clamp(p.at[i] + dir, 1, 20);
-  p.ca = ratingFor(p.at, p.pos);
-  if (p.ca > p.pa && dir > 0) { p.at[i] -= 1; p.ca = ratingFor(p.at, p.pos); }
+  p.ca = playerRating(p);
+  if (p.ca > p.pa && dir > 0) { p.at[i] -= 1; p.ca = playerRating(p); }
 }
 
 // Attribute baselines and weekly change log for the manager's club. The log lives

@@ -16,21 +16,25 @@ function migrateAttrs(p) {
   });
   const fresh = ATTRS.slice(22).map(a => a[0]).filter(k => WEIGHTS[p.pos][k]);
   for (let n = 0; n < 40 && fresh.length; n++) {
-    const r = ratingFor(p.at, p.pos);
+    const r = playerRating(p);
     if (Math.abs(r - old) <= 0) break;
     const i = A[pick(fresh)];
     p.at[i] = clamp(p.at[i] + (r < old ? 1 : -1), 1, 20);
   }
-  p.ca = ratingFor(p.at, p.pos);
+  p.ca = playerRating(p);
   p.pa = Math.max(p.pa, p.ca);
 }
 
-function ratingFor(at, pos) {
+function ratingFor(at, pos, calibrationVersion = 0) {
+  if (calibrationVersion === 1) return calibratedAbility(at, pos).ca;
   const w = WEIGHTS[pos];
   let s = 0, t = 0;
   for (const k in w) { s += at[A[k]] * w[k]; t += w[k]; }
   return Math.round((s / t) * 5);
 }
+
+// Keep a player's rating method through training, edits and positional changes.
+const playerRating = (p, pos = p.pos) => ratingFor(p.at, pos, p.originProfile?.calibrationVersion || 0);
 
 // 1 = natural position. Lower means playing out of position.
 function fam(p, pos) {
@@ -43,7 +47,7 @@ function fam(p, pos) {
   return f;
 }
 
-const ovrAt = (p, pos) => (pos === p.pos ? p.ca : Math.round(ratingFor(p.at, pos) * fam(p, pos)));
+const ovrAt = (p, pos) => (pos === p.pos ? p.ca : Math.round(playerRating(p, pos) * fam(p, pos)));
 const pname = p => (!p ? 'Unknown' : p.fn ? p.fn[0] + '. ' + p.ln : p.ln);
 const fullName = p => (!p ? 'Unknown' : p.fn ? p.fn + ' ' + p.ln : p.ln);
 // Squad level: A first team, R reserves, Y U18s (older saves used a youth flag).
@@ -78,7 +82,8 @@ function generatedAttrs(pos, ca) {
 
 function genPlayer(o) {
   const pos = o.pos, nat = o.nat || 'ENG';
-  const ca = clamp(Math.round(o.ca), 25, 94);
+  const calibrated = o.profile?.calibrationVersion === 1;
+  const ca = clamp(Math.round(o.ca), 25, calibrated ? 100 : 94);
   const at = o.profile ? o.profile.at.slice() : generatedAttrs(pos, ca);
   if (!o.profile) at[A.ldr] = clamp(Math.round(rf(4, 15) + (o.age - 24) * 0.3), 1, 20);
   const [fn, ln] = genName(nat);
@@ -86,18 +91,19 @@ function genPlayer(o) {
   const p = {
     id: G.nextId++, fn, ln, nat, age: o.age, pos,
     alt: o.profile ? o.profile.alt.slice() : pos !== 'GK' && R() < 0.45 ? [pick(ALT_POS[pos])] : [],
-    at, ca: ratingFor(at, pos), pa: 0, club: o.club || 'FA', no: 0, wage: 0, con: 0,
+    at, ca: ratingFor(at, pos, calibrated ? 1 : 0), pa: 0, club: o.club || 'FA', no: 0, wage: 0, con: 0,
     mor: ri(55, 80), cond: 100, shp: ri(55, 75), inj: null, ban: 0,
     foot: R() < left ? 'Left' : 'Right', pers: pick(PERSONALITIES),
     st: newStats(), car: { a: 0, g: 0 }, status: (o.lvl || (o.youth ? 'Y' : 'A')) === 'A' ? '' : 'Prospect', listed: false, lvl: o.lvl || (o.youth ? 'Y' : 'A'), prev: null,
   };
   if (o.profile) {
     const profile = o.profile;
-    p.originProfile = { version: ROSTER_PROFILE_VERSION, key: o.profileKey, at: at.slice(), ca: p.ca,
+    p.originProfile = { version: ROSTER_PROFILE_VERSION, calibrationVersion: profile.calibrationVersion || null,
+      key: o.profileKey, at: at.slice(), ca: p.ca,
       pa: Math.max(p.ca, profile.pa), ht: profile.ht, wt: profile.wt, alt: profile.alt.slice() };
     p.ht = profile.ht; p.wt = profile.wt;
   }
-  p.pa = clamp(Math.round(o.pa ?? p.ca), p.ca, 97);
+  p.pa = clamp(Math.round(o.pa ?? p.ca), p.ca, calibrated ? 100 : 97);
   genBio(p);
   return p;
 }
@@ -147,6 +153,7 @@ function migrateRosterProfiles() {
   let retained = 0;
   all.forEach(p => {
     const key = fullName(p), profile = ROSTER_PROFILES[key];
+    if (p.originProfile?.calibrationVersion) return;
     // Also require position, inspiration, and original age. A renamed/generated player is not a roster match.
     if (!profile || p.insp !== profile.insp || p.pos !== profile.pos || p.originProfile) return;
     if (!untouched || p.age !== profile.age) { retained++; return; }

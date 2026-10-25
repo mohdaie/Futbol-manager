@@ -28,9 +28,10 @@ function genManagerName() {
 // Body and ambition: set when a player is created.
 function genBio(p) {
   const youth = p.age < 18 ? (18 - p.age) * 2.5 : 0;
-  p.ht = p.originProfile ? p.originProfile.ht : Math.round(clamp((HT_BASE[p.pos] || 180) + gauss() * 5.5 - youth, 160, 204));
+  p.ht = p.originProfile?.ht ?? Math.round(clamp((HT_BASE[p.pos] || 180) + gauss() * 5.5 - youth, 160, 204));
   const bmi = 22.6 + gauss() * 0.9 + (p.at[A.str] - 10) * 0.07 + (p.pos === 'GK' ? 0.5 : 0) - (p.age < 19 ? 0.8 : 0);
-  p.wt = p.originProfile ? p.originProfile.wt : Math.round(clamp(bmi, 19.5, 27.5) * Math.pow(p.ht / 100, 2));
+  p.wt = p.originProfile?.wt ?? Math.round(clamp(bmi, 19.5, 27.5) * Math.pow(p.ht / 100, 2));
+  if (p.originProfile) { p.originProfile.ht = p.ht; p.originProfile.wt = p.wt; }
   const r = { Ambitious: [15, 20], Determined: [12, 18], Professional: [10, 17], 'Laid Back': [2, 8], Loyal: [5, 12] }[p.pers] || [6, 15];
   p.amb = ri(r[0], r[1]);
 }
@@ -56,8 +57,6 @@ function ensureWorld(options = {}) {
   G.know ||= {};
   ensureCompetitions();
   ensureWorldLeagues();
-  if (typeof addEnglandExpansionPlayers === 'function') addEnglandExpansionPlayers();
-  if (typeof ensurePremierLeagueRegistrations === 'function') ensurePremierLeagueRegistrations();
   // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.
   if (!G.flags.insp && typeof ROSTERS !== 'undefined') {
     const by = {};
@@ -70,8 +69,12 @@ function ensureWorld(options = {}) {
     });
     G.flags.insp = 1;
   }
+  // Recover legacy identities before supplemental and overseas deduplication.
+  if (typeof addEnglandExpansionPlayers === 'function') addEnglandExpansionPlayers();
+  if (typeof ensurePremierLeagueRegistrations === 'function') ensurePremierLeagueRegistrations();
   ensureForeignSquads(options);
   if (typeof applyEnglandPlayerNameOverrides === 'function') applyEnglandPlayerNameOverrides();
+  if (typeof migrateEnglandCalibratedProfiles === 'function') migrateEnglandCalibratedProfiles();
   Object.values(G.clubs).forEach(c => { if (!c.fa && !c.backgroundOnly && !c.mgr) c.mgr = genManagerName(); if (c.tac && !c.tac.style && !c.fa) c.tac = aiTactic(c.rep); });
   if (G.tactics) { G.tactics.lost ??= 1; G.tactics.won ??= 1; G.tactics.pi ??= {}; }
   if (G.club && G.clubs[G.club]) G.clubs[G.club].mgr = G.manager;

@@ -568,17 +568,27 @@ technician keeps technique without automatically keeping youthful mobility. Over
 completed attributes; it must not randomise or flatten them to hit a target. Keep physique and familiar
 positions stable across new worlds. Unverified physical details are estimates, not claimed measurements.
 
-Each named first-team entry has an explicit original quality assessment and football archetype, with
-individual overrides for distinctive players. These are our fictional-player design decisions, not another
-game's attribute database. Less-documented entries carry a provisional assessment and must not be presented
-as fully scouted. Generated reserves, youth and free agents still vary, but their profiles also distinguish
-specialists; no automatic ability bonus to physical attributes merely for being old.
+Each named first-team entry has an explicit football profile; do not flatten or randomize its attributes to
+hit a target. For the 2026/27 Premier League first teams, the calibrated roster dataset is keyed by stable
+England source ID. Its position-specific weights produce a weighted mean `M`; CA is
+`round(clamp(20 + 4.65 * M, 1, 100))`, with ordinary half-up rounding. The 4.65 scale and 20-point offset
+are calibration constants for this roster set. PA is the calculated CA plus the source roster's PA-minus-CA
+gap clamped to the age band in the calibration document; players aged 30 or older receive no extra PA unless
+late-peak evidence is explicitly recorded. The source CA is not retained as the final CA. The complete
+weight vectors, age bands, input checks, and provenance requirements are in
+`docs/calibrated-pl-rosters/Part-2-Rating-Provenance-and-CA-PA-Derivation.md`.
+
+The Premier League dataset contains user-supplied fictional names, attributes, and source potential gaps;
+its values are not independently verified. Physical measurements absent from it remain existing estimates.
+Other authored rosters and generated reserves, youth, and free agents retain their current rating methods.
+Less-documented entries must not be presented as fully scouted; no automatic ability bonus is applied merely
+for being old.
 
 Corrections apply to all new careers and untouched starting saves. Do not silently replace developed
 players in an existing career: training increments before this change were not recorded separately, so they
 cannot honestly be reconstructed. Those careers retain their attributes and progress; a new career uses the
 complete revised database. Once applied, store the profile baseline/version on each player for future
-explicit, progression-aware updates. Do not change match-engine coefficients to conceal database faults.
+explicit, progression-aware updates. Legacy inspirations must be recovered before supplemental roster additions; match stable IDs and normalized inspirations to avoid adding the same player twice. Missing height and weight receive stable estimated values rather than nulls. Do not change match-engine coefficients to conceal database faults.
 
 **You should see:** the finisher arriving to finish, the dribbler carrying, the creator distributing, the veteran
 using judgement, and tall/strong targets contesting aerial balls. Different new worlds keep these identities.
