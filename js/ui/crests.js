@@ -7,6 +7,30 @@ const CLUB_CREST_NAMES = Object.freeze({
   'Toffees': 'TOF', 'Cottagers': 'COT', 'Peacocks': 'PEA', 'Reds': 'RED',
   'Citizens': 'CIT', 'Red Devils': 'DEV', 'Magpies': 'MAG', 'Tricky Trees': 'TRE',
   'Black Cats': 'CAT', 'Spurs': 'SPU', 'Hammers': 'HAM', 'Old Gold': 'OLD',
+  'Sky Blues': 'SKY',
+  'Tigers': 'TIG',
+  'Tractor Boys': 'TRA',
+  'Brummies': 'BIR',
+  'Rovers': 'BLA',
+  'Trotters': 'BOL',
+  'Robins': 'BRI',
+  'Bluebirds': 'CAR',
+  'Addicks': 'CHA',
+  'Rams': 'DER',
+  'Imps': 'LIN',
+  'Boro': 'MID',
+  'Lions': 'MIL',
+  'Canaries': 'NOR',
+  'Pompey': 'POM',
+  'Lilywhites': 'PRE',
+  'Hoops': 'QPR',
+  'Blades': 'SHU',
+  'Saints': 'SOU',
+  'Potters': 'STO',
+  'Swans': 'SWA',
+  'Hornets': 'WAT',
+  'Baggies': 'WBA',
+  'Red Dragons': 'WRE',
   'Castilla CF': 'F0', 'Lutece SG': 'F1', 'Lombardia AC': 'F2', 'Rhein 04': 'F3',
   'Porto Norte': 'F4', 'Amstel FC': 'F5', 'Rio Atletico': 'F6', 'Pampas Juniors': 'F7',
   'Brussels Royal': 'F8', 'Tokyo Bay FC': 'F9', 'Oslo Vikings': 'F10',
@@ -40,6 +64,6 @@ function clubBadge(c, size = 28) {
 document.addEventListener('error', e => {
   const img = e.target;
   if (!img.matches?.('img.crest-art')) return;
-  const c = G?.clubs[img.dataset.crestClub] || CLUBS.find(c => c.id === img.dataset.crestClub) || FOREIGN.find(c => c.name === img.dataset.crestName);
+  const c = G?.clubs?.[img.dataset.crestClub] || ENGLISH_CLUBS.find(c => c.id === img.dataset.crestClub) || FOREIGN.find(c => c.name === img.dataset.crestName);
   if (c) img.outerHTML = fallbackClubBadge(c, +img.getAttribute('width') || 28);
 }, true);
