@@ -47,7 +47,7 @@ const CHAMPIONSHIP_CLUBS = ENGLAND_MEMBERSHIP_2026.ECH.map(id => ENGLISH_CLUBS.f
 
 // Clubs abroad. They play no fixtures; they hold players you can scout and buy. ros: their real-based squad in FOREIGN_ROSTERS (rosters.js).
 const FOREIGN = [
-  { name: 'Castilla CF', ros: 'RMA', nat: 'ESP', rep: 86, c1: '#F5F5F5', c2: '#5B2C83' },
+  { name: 'Castilla CF', ros: 'RMA', nat: 'ESP', rep: 86, c1: '#FFFFFF', c2: '#FEBE10' },
   { name: 'Lutece SG', ros: 'PSG', nat: 'FRA', rep: 84, c1: '#0B2A5B', c2: '#E2001A' },
   { name: 'Lombardia AC', ros: 'MIL', nat: 'ITA', rep: 81, c1: '#B5121B', c2: '#111111' },
   { name: 'Rhein 04', ros: 'LEV', nat: 'GER', rep: 80, c1: '#E32219', c2: '#111111' },
