@@ -124,7 +124,7 @@ function youthIntake() {
   for (let i = 0; i < n && squadSpace(c); i++) names.push(genYouth(c, q));
   if (!names.length) return;
   const star = names.slice().sort((a, b) => b.pa - a.pa)[0];
-  addNews('club', 'Youth intake arrives', `${names.length} new players join the ${c.league === 'ECH' ? 'reserves' : 'academy'}. Head of youth development highlights ${fullName(star)} (${star.pos}) as the pick of the group.`);
+  addStory('club', 'Youth intake arrives', `${names.length} new players join the ${c.league === 'ECH' ? 'reserves' : 'academy'}. Head of youth development highlights ${fullName(star)} (${star.pos}) as the pick of the group.`);
 }
 
 function boardRequest(kind) {
@@ -264,6 +264,6 @@ function takeJob(cid) {
   if (vacancy) { vacancy.status = 'filled'; vacancy.filled = today().getTime(); }
   setupUserClub();
   G.board.conf = 60;
-  addNews('club', `${G.manager} takes over at ${theClub(cid)}`, `After leaving ${theClub(old)}, ${G.manager} gets a fresh start. Objective: ${lcFirst(G.board.target.text)}.`);
+  addStory('club', `${G.manager} takes over at ${theClub(cid)}`, `After leaving ${theClub(old)}, ${G.manager} gets a fresh start. Objective: ${lcFirst(G.board.target.text)}.`);
   saveGame();
 }

@@ -179,7 +179,7 @@ function managerOwnerBonus(kind, amount, detail) {
   c.bal -= amount;
   if (G.ledger) G.ledger.manager = (G.ledger.manager || 0) + amount;
   managerRecordIncome(p, kind, amount, detail);
-  if (kind !== 'win') addNews('club', 'Manager bonus paid', `${money(amount)} ${MANAGER_INCOME_NAMES[kind]?.toLowerCase() || 'bonus'} paid to ${G.manager}. ${detail}`);
+  if (kind !== 'win') addLog('club', 'Manager bonus paid', `${money(amount)} ${MANAGER_INCOME_NAMES[kind]?.toLowerCase() || 'bonus'} paid to ${G.manager}. ${detail}`);
   return amount;
 }
 function managerMatchBonus(fx) {

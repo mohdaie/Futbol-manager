@@ -67,7 +67,7 @@ async function dayTick() {
   DAYRUN.days++;
   if (r === 'ok') saveGame(); // every day is saved, so a refresh never loses days
   const games = G.fixtures.filter(played).length - playedBefore;
-  const fresh = G.news.filter(n => n.id >= firstNews);
+  const fresh = G.news.filter(n => n.id >= firstNews && n.box !== 'log');
   const line = [];
   if (games) line.push(`${games} match${games > 1 ? 'es' : ''} played`);
   fresh.filter(n => !newsImportant(n)).slice(0, 2).forEach(n => line.push(n.title));

@@ -144,7 +144,7 @@ function processLoans() {
     if (l.optionFee && l.obligationApps && apps >= l.obligationApps) l.clauseTriggered = true;
     if (l.clauseTriggered && !l.clauseDone && inWindow()) {
       l.clauseDone = true;
-      if (!endLoan(p, 'appearance-triggered purchase obligation', true)) addNews('club', `Purchase obligation triggered for ${pname(p)}`, `${clubName(l.host)} must complete the ${money(l.optionFee)} purchase.`);
+      if (!endLoan(p, 'appearance-triggered purchase obligation', true)) addLog('club', `Purchase obligation triggered for ${pname(p)}`, `${clubName(l.host)} must complete the ${money(l.optionFee)} purchase.`);
     } else if (l.end <= today().getTime() && !(l.clauseTriggered && !l.clauseDone)) endLoan(p);
   });
 }

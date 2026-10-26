@@ -65,6 +65,7 @@ function needDecision(d, k, title, body, extra = {}) {
 function closeDeal(d, ok, why, loud = true, news = true) {
   if (!d.loanTerms && !ok && (d.dir !== 'in' || d.pub || d.leaked || d.approach === 'open') && !['review', 'meeting'].includes(d.stage) && typeof dealMedia === 'function') dealMedia(d, 'off');
   d.closed = { ok, why, date: today().getTime() }; d.need = null; d.next = null;
+  G.news.forEach(n => { if (n.action?.t === 'deal' && n.action.id === d.id) n.done = true; }); // nothing left to decide
   dealLog(d, why, ok ? 'done' : 'fail');
   if (d.dir !== 'ai' && news) dealNews(d, (ok ? 'Done deal: ' : 'Deal off: ') + pname(G.players[d.pid]), why, loud);
 }
@@ -439,7 +440,7 @@ function payAddOns() {
     if (!p || p.club !== G.club) return false;
     if (p.st.a < a.apps) return true;
     userClub().bal -= a.amount; G.ledger.buys += a.amount; if (G.clubs[a.to]) G.clubs[a.to].bal += a.amount;
-    addNews('club', `Add-on paid for ${pname(p)}`, `${fullName(p)} has reached ${a.apps} appearances: ${money(a.amount)} paid to ${theClub(a.to)}.`);
+    addLog('club', `Add-on paid for ${pname(p)}`, `${fullName(p)} has reached ${a.apps} appearances: ${money(a.amount)} paid to ${theClub(a.to)}.`);
     return false;
   });
 }

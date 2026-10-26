@@ -288,10 +288,26 @@ function emptyLedger() { return { tv: 0, gate: 0, spon: 0, merch: 0, sales: 0, p
 // News that stops the day-by-day calendar: transfers, offers, contracts, injuries, suspensions, the board.
 const NEWS_STOP = /injur|hurt|suspend|contract|released|board|sack|takes over|scouting assignment|youth intake|season begins/i;
 const newsImportant = n => (n.cat === 'transfer' && !n.q) || n.cat === 'inbox' || (n.cat === 'club' && NEWS_STOP.test(n.title));
-function addNews(cat, title, body, action) {
-  G.news.unshift({ id: G.nextId++, date: (typeof today === 'function' ? today() : weekDate(G.week)).getTime(), cat, title, body: body || '', action: action || null, read: false, done: false });
-  if (G.news.length > 160) G.news.length = 160;
+/* Where an item lives: 'news' (public stories), 'inbox' (private, may need you) or 'log' (private
+   admin notices). Anything with an action or about your club defaults to the inbox. */
+const defaultNewsBox = (cat, action) => (action || cat === 'inbox' || cat === 'club' ? 'inbox' : 'news');
+function addNews(cat, title, body, action, box) {
+  G.news.unshift({ id: G.nextId++, date: (typeof today === 'function' ? today() : weekDate(G.week)).getTime(), cat, title, body: body || '', action: action || null, box: box || defaultNewsBox(cat, action), read: false, done: false });
+  // Over the cap, drop the oldest item that is not still waiting for your decision.
+  while (G.news.length > 160) { const i = G.news.findLastIndex(n => !(n.action && !n.done)); G.news.splice(i < 0 ? G.news.length - 1 : i, 1); }
   if (typeof worldAlertForNews === 'function') worldAlertForNews(G.news[0]);
+}
+const addLog = (cat, title, body, action) => addNews(cat, title, body, action, 'log');
+const addStory = (cat, title, body, action) => addNews(cat, title, body, action, 'news');
+// Saves from before the split: sort existing items once, by the same rules as new ones.
+const LEGACY_LOG = /^(Transfer instalment (paid|received)|Add-on paid|Sell-on paid|Manager bonus paid|Staff have learned|Friendly schedule corrected|Purchase obligation triggered)| promoted$/;
+const LEGACY_STORY = /signs a new contract$| released$|^Youth intake arrives| takes over at /;
+function ensureNewsBoxes() {
+  const closed = new Set((G.deals || []).filter(d => d.closed).map(d => d.id)), answered = new Set((G.media?.req || []).filter(r => r.done).map(r => r.id));
+  (G.news || []).forEach(n => {
+    n.box ||= LEGACY_LOG.test(n.title) ? 'log' : n.cat === 'club' && !n.action && LEGACY_STORY.test(n.title) ? 'news' : defaultNewsBox(n.cat, n.action);
+    if (n.action?.t === 'deal' && closed.has(n.action.id) || n.action?.t === 'press' && answered.has(n.action.id)) n.done = true;
+  });
 }
 
 function saveGame() {

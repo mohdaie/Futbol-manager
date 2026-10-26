@@ -36,7 +36,7 @@ function clubBriefingFacts() {
     { id: 'academy', name: 'Youth academy', screen: 'youth', status: G.board.facYouth < 8 ? 'monitor' : 'healthy', severity: 1,
       evidence: `Youth facilities level ${G.board.facYouth}/20; ${squadOf(G.club).filter(p => lvlOf(p) === 'Y').length} youth players.`, action: 'Review youth development' },
   ];
-  const events = G.news.filter(n => n.cat !== 'league').slice(0, 3).map(n => ({ id: 'news:' + n.id, title: n.title, detail: n.body.slice(0, 320) }));
+  const events = G.news.filter(n => n.cat !== 'league' && n.box !== 'log').slice(0, 3).map(n => ({ id: 'news:' + n.id, title: n.title, detail: n.body.slice(0, 320) }));
   const result = last ? `${clubName(last.h)} ${last.hg}–${last.ag} ${clubName(last.a)}.` : 'No completed league matches for us yet.';
   return { version: 1, club: c.name, clubId: G.club, season: G.season, day: dayAbs(), date: fmtDate(today()), assistant: staffOf('Assistant')[0]?.name || 'Staff team', result, events, departments };
 }

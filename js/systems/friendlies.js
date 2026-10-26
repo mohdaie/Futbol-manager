@@ -75,7 +75,7 @@ function ensureFriendlySchedule() {
     G.fixtures.push(fx);
     if (isUserFx(fx)) changes.push(`${clubName(fx.h === G.club ? fx.a : fx.h)}: rearranged for ${fxWhen(fx)}.`);
   }
-  if (changes.length) addNews('club', 'Friendly schedule corrected', 'Some unplayed friendlies had been scheduled before the current date. ' + changes.join(' '));
+  if (changes.length) addLog('club', 'Friendly schedule corrected', 'Some unplayed friendlies had been scheduled before the current date. ' + changes.join(' '));
 }
 
 function arrangeFriendly(cid) {

@@ -5,7 +5,7 @@ const CAREER_ACTIONS = new Set(['instant', 'instant2', 'admWeeks', 'admSimMine',
    Tiny UI framework: router, app shell, bottom sheets, toasts, click/change
    dispatch through data-a / data-c attributes, and shared components. */
 
-const UI = { s: 'home', p: {}, tab: {}, f: { squad: 'ALL', sort: 'pos', news: 'all', lvl: 'A' }, search: { pos: 'Any', region: 'Everywhere', maxAge: 40, maxFee: 0, minOvr: 0, maxOvr: 100, name: '' }, sheetOpts: null };
+const UI = { s: 'home', p: {}, tab: {}, f: { squad: 'ALL', sort: 'pos', news: 'all', inbox: 'all', lvl: 'A' }, search: { pos: 'Any', region: 'Everywhere', maxAge: 40, maxFee: 0, minOvr: 0, maxOvr: 100, name: '' }, sheetOpts: null };
 const SCREENS = {};  // name -> { render(p) -> html, after?(p), full?: bool, title?: string }
 const ACT = {};      // click actions: ACT[name](dataset, el)
 const CHG = {};      // change actions: CHG[name](value, dataset, el)
@@ -109,7 +109,7 @@ function restoreScreen() {
 }
 
 function shell(body) {
-  const c = userClub(), unread = G.news.filter(n => !n.read).length, reports = G.scout.reports.length;
+  const c = userClub(), unread = G.news.filter(n => !n.read && n.box !== 'log').length, inbox = G.news.filter(n => !n.read && n.box === 'inbox').length, reports = G.scout.reports.length;
   const fx = userFixture(), matchNow = fx && !played(fx) && (fx.d ?? 5) <= G.day;
   const pendingTransfers = pendingTransferDecisions();
   const cur = NAV.some(n => n[0] === UI.s) ? UI.s : Object.keys(NAV_GROUPS).find(k => NAV_GROUPS[k].includes(UI.s)) || 'more';
@@ -127,7 +127,7 @@ function shell(body) {
     <div class="subbar"><button data-a="go" data-s="club">${badge(c.id, 20)}<b>${esc(c.name)}</b><span>· ${esc(phaseLabel())}</span></button><span>${ICON.cal}${fmtDate(today())}</span></div>
     <main class="main">${body}<div class="spacer"></div></main>
     ${UI.s === 'admin' ? '' : `<div class="bottombar">
-      <button class="bb-sum" data-a="go" data-s="news">${ICON.doc}<span>${unread} news · ${reports} report${reports === 1 ? '' : 's'}</span></button>
+      <button class="bb-sum" data-a="go" data-s="news">${ICON.doc}<span>${inbox} inbox · ${reports} report${reports === 1 ? '' : 's'}</span></button>
       <button class="cta ${matchNow ? 'match' : ''}" data-a="continue">${pendingTransfers.length ? 'Review transfer (' + pendingTransfers.length + ')' : matchNow ? 'Matchday' : 'Continue'}${ICON.arrow}</button>
     </div>`}
   </div>`;

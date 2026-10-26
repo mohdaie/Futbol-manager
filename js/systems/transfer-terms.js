@@ -129,7 +129,7 @@ function settleTransferFee(p, toId, fee, terms = TRANSFER_TERMS_DEFAULT, exchang
       from.bal -= cut; G.clubs[old.club].bal += cut;
       if (from.id === G.club) { G.ledger.sales -= cut; G.fin.tb = Math.max(0, G.fin.tb - Math.round(cut * .5)); }
       if (old.club === G.club) { G.ledger.sales += cut; G.fin.tb += Math.round(cut * .5); }
-      addNews('transfer', `Sell-on paid for ${pname(p)}`, `${clubName(from.id)} paid ${money(cut)} to ${clubName(old.club)} (${old.pct}% of the next sale package).`);
+      addLog('transfer', `Sell-on paid for ${pname(p)}`, `${clubName(from.id)} paid ${money(cut)} to ${clubName(old.club)} (${old.pct}% of the next sale package).`);
     }
   }
   delete p.sellOn; delete p.buyBack;
@@ -143,7 +143,7 @@ function payTransferInstalments(seasonEnd = false) {
     const due = row.due ? row.due <= now : seasonEnd && row.season <= G.season;
     if (!due || !G.clubs[row.from] || !G.clubs[row.to]) { keep.push(row);continue; }
     transferCash(row.from, row.to, row.amount);
-    if (row.from === G.club || row.to === G.club) addNews('club', row.from === G.club ? 'Transfer instalment paid' : 'Transfer instalment received', `${money(row.amount)}: ${clubName(row.from)} → ${clubName(row.to)}${row.name ? ' for ' + row.name : ''}.`);
+    if (row.from === G.club || row.to === G.club) addLog('club', row.from === G.club ? 'Transfer instalment paid' : 'Transfer instalment received', `${money(row.amount)}: ${clubName(row.from)} → ${clubName(row.to)}${row.name ? ' for ' + row.name : ''}.`);
   }
   G.payments = keep;
 }

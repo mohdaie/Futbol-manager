@@ -146,7 +146,11 @@ function socialDay() {
   G.deals.filter(d => dealOpen(d) && d.dir === 'in' && d.approach === 'quiet' && !d.leaked && ['bid', 'agent', 'terms', 'player', 'medical'].includes(d.stage)).forEach(d => {
     if (hash01(d.id + ':' + dayAbs() + 'lk') < 0.02 * (22 - pressR()) / 12) { d.leaked = true; dealLog(d, 'The talks have leaked to the press.', 'club'); dealMedia(d, 'leak'); }
   });
-  (G.media.req || []).forEach(r => { if (!r.done && dayAbs() - r.day > 5) { r.done = true; r.choice = 'none'; } });
+  (G.media.req || []).forEach(r => {
+    if (r.done || dayAbs() - r.day <= 5) return;
+    r.done = true; r.choice = 'none';
+    G.news.forEach(n => { if (n.action?.t === 'press' && n.action.id === r.id) n.done = true; }); // the story has moved on
+  });
 }
 // A rumour with no deal behind it: a player at a league club linked with a big club, or your player linked away.
 function falseRumour(i) {

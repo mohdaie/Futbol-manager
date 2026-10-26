@@ -73,7 +73,7 @@ function offerContract(pid, wage, years, status, fee, mode) {
   if (mode === 'renew') {
     p.wage = wage; p.con = G.season + years + off; p.status = status;
     p.mor = clamp(p.mor + 8, 0, 100);
-    addNews('club', `${pname(p)} signs a new contract`, `${fullName(p)} has agreed a new ${years}-year deal worth ${wageFmt(wage)}.`);
+    addStory('club', `${pname(p)} signs a new contract`, `${fullName(p)} has agreed a new ${years}-year deal worth ${wageFmt(wage)}.`);
     return { ok: true, msg: `${fullName(p)} signs a new ${years}-year contract.` };
   }
   completeSigning(p, fee, wage, years + off, status);
@@ -126,7 +126,7 @@ function releasePlayer(p) {
   userClub().bal -= comp; G.ledger.wages += comp;
   moveClub(p, 'FA');
   p.con = 0;
-  addNews('club', `${fullName(p)} released`, `${fullName(p)} has left the club by mutual consent. Compensation paid: ${money(comp)}.`);
+  addStory('club', `${fullName(p)} released`, `${fullName(p)} has left the club by mutual consent. Compensation paid: ${money(comp)}.`);
   return comp;
 }
 

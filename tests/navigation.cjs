@@ -180,7 +180,7 @@ const assert = require('node:assert/strict');
     check('Unsubmitted text is preserved', await page.locator('#sName').inputValue(), 'test draft');
     await act('tab', { key: 'tr', v: 'short' }); await back();
     check('Transfer tab history is restored', await page.evaluate(() => UI.tab.tr || 'search'), 'search');
-    await act('go', { s: 'news' });
+    await act('newsOpen', { v: 'inbox' }); // a new career's first items are private: welcome and pre-season
     await page.locator('.main [data-a="news"]').first().click();
     const newsKey = (await state()).popup;
     await act('player', { id: pid }); await back();

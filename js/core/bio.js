@@ -55,6 +55,7 @@ function linkBio(p, pool) {
 // Makes sure every club has a manager and every player has personal details (new games and older saves).
 function ensureWorld(options = {}) {
   G.know ||= {};
+  ensureNewsBoxes();
   ensureCompetitions();
   ensureWorldLeagues();
   // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.

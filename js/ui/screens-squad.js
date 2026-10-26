@@ -185,7 +185,7 @@ ACT.setLvl = ds => {
   if (!Object.hasOwn(clubLevels(userClub()), to)) return toast('This club has first team and reserves only.');
   if (to === 'A' && levelSquad(G.club, 'A').length >= 30) return toast('The first team already has 30 players. Move someone down first.');
   p.lvl = to; p.youth = false;
-  if (to === 'A') { p.status = 'Prospect'; p.wage = Math.max(p.wage, 1500); addNews('club', `${fullName(p)} promoted`, `${fullName(p)} moves up from the ${LEVELS[from].toLowerCase()} to the first-team squad.`); }
+  if (to === 'A') { p.status = 'Prospect'; p.wage = Math.max(p.wage, 1500); addLog('club', `${fullName(p)} promoted`, `${fullName(p)} moves up from the ${LEVELS[from].toLowerCase()} to the first-team squad.`); }
   if (from === 'A') { G.tactics.slots = G.tactics.slots.map(id => (id === p.id ? null : id)); G.tactics.bench = (G.tactics.bench || []).filter(id => id !== p.id); p.mor = clamp(p.mor - 10, 0, 100); }
   toast(`${pname(p)} moved to the ${to === 'Y' ? 'U18s' : LEVELS[to].toLowerCase()}.`); closeSheet(true); render();
 };

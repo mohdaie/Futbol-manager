@@ -328,7 +328,7 @@ function staffSeasonEnd() {
     if (gain && s.rating < 20) { s.rating = Math.min(20, s.rating + gain); up.push(`${s.name} (${s.role.toLowerCase()}) +${gain}`); }
     s.xp = 0;
   });
-  if (up.length) addNews('club', 'Staff have learned from the season', `Their advice paid off and they have improved: ${up.join(', ')}.`);
+  if (up.length) addLog('club', 'Staff have learned from the season', `Their advice paid off and they have improved: ${up.join(', ')}.`);
 }
 
 /* ---------- learning tables (device-wide, like the AI Brain) ---------- */

@@ -103,8 +103,9 @@ SCREENS.home = {
 
     return `<div class="dash-h"><h1 class="h1">Dashboard</h1></div>
       ${assistantBriefingCard()}${clubCard}${next}${finance}
-      <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="go" data-s="news">All news</button></div>
-      <div class="list">${G.news.slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
+      ${dashboardInbox()}
+      <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="newsOpen" data-v="news">All news</button></div>
+      <div class="list">${G.news.filter(n => n.box === 'news').slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
   },
 };
 ACT.dashboardCompetition = ds => {
@@ -114,28 +115,50 @@ ACT.dashboardCompetition = ds => {
   go('competitions');
 };
 const NEWS_CATS = [['all', 'All'], ['inbox', 'Inbox'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Club'], ['league', 'League']];
+// Chips inside each view. News filters public stories by section; Inbox splits out what needs you and the club log.
+const STORY_CHIPS = [['all', 'All'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Your club'], ['league', 'League']];
+const INBOX_CHIPS = [['all', 'All'], ['action', 'Needs action'], ['log', 'Club log']];
+const needsYou = n => !!n.action && !n.done && n.action.t !== 'player';
+// The section label on a row. Generic inbox items are named by what they are about.
+const INBOX_LABELS = { press: 'Press', treq: 'Squad', renew: 'Contracts' };
+const newsLabel = n => (n.cat === 'inbox' ? INBOX_LABELS[n.action?.t] || 'Club' : NEWS_CATS.find(c => c[0] === n.cat)[1]);
+function newsList(view) {
+  if (view === 'news') { const f = UI.f.news; return G.news.filter(n => n.box === 'news' && (f === 'all' || n.cat === f)); }
+  const f = UI.f.inbox;
+  return G.news.filter(n => f === 'log' ? n.box === 'log' : n.box === 'inbox' && (f !== 'action' || needsYou(n)));
+}
+// Dashboard: what needs you first, otherwise the latest private items.
+function dashboardInbox() {
+  const box = G.news.filter(n => n.box === 'inbox'), act = box.filter(needsYou), show = (act.length ? act : box).slice(0, 3);
+  if (!show.length) return '';
+  return `<div class="sec-h"><h2>Inbox${act.length ? ` <em class="tag warn">${act.length} need${act.length === 1 ? 's' : ''} you</em>` : ''}</h2><button class="link" data-a="newsOpen" data-v="inbox">Open inbox</button></div>
+      <div class="list">${show.map(newsRow).join('')}</div>`;
+}
+ACT.newsOpen = ds => { UI.tab.nv = ds.v; go('news'); };
 function newsRow(n) {
-  const needs = n.action && !n.done && n.action.t !== 'player';
+  const needs = needsYou(n);
   return `<button class="row act news ${n.read ? '' : 'unread'}" data-a="news" data-id="${n.id}">
-    <span class="ncat c-${n.cat}">${NEWS_CATS.find(c => c[0] === n.cat)[1]}</span>
+    <span class="ncat c-${n.cat}">${newsLabel(n)}</span>
     <span class="grow"><b>${esc(n.title)}</b><small>${fmtDate(n.date, false)}${needs ? ' · <em class="tag warn">Action</em>' : ''}</small></span><span class="chev">›</span></button>`;
 }
 
 SCREENS.news = {
   render() {
-    const f = UI.f.news, list = G.news.filter(n => f === 'all' || n.cat === f), v = UI.tab.nv || 'news';
-    const head = `<h1 class="h1">News</h1><div class="seg nviews">${NEWS_VIEWS.map(([k, n]) => `<button class="${v === k ? 'on' : ''}" data-a="newsView" data-v="${k}">${n}</button>`).join('')}</div>`;
+    const v = UI.tab.nv || 'news', unreadInbox = G.news.filter(n => n.box === 'inbox' && !n.read).length;
+    const head = `<h1 class="h1">News</h1><div class="seg nviews">${NEWS_VIEWS.map(([k, n]) => `<button class="${v === k ? 'on' : ''}" data-a="newsView" data-v="${k}">${n}${k === 'inbox' && unreadInbox ? ` · ${unreadInbox}` : ''}</button>`).join('')}</div>`;
     if (v === 'tc') return head + transferCentre();
     if (v === 'social') return head + socialFeed();
+    const inbox = v === 'inbox', chips = inbox ? INBOX_CHIPS : STORY_CHIPS, f = inbox ? UI.f.inbox : UI.f.news, list = newsList(v);
+    const none = inbox ? (f === 'log' ? ['Nothing logged yet', 'Payments, bonuses and other club records appear here.'] : ['Inbox empty', 'Messages for you will appear here.']) : ['Nothing here', 'Stories in this section will appear as the season goes on.'];
     return `${head}
-      <div class="chips">${NEWS_CATS.map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="newsF" data-v="${k}">${n}</button>`).join('')}</div>
+      <div class="chips">${chips.map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="newsF" data-v="${k}">${n}</button>`).join('')}</div>
       <div class="sec-h"><span class="muted">${list.length} items</span><button class="link" data-a="readAll">Mark all read</button></div>
-      <div class="list">${list.map(newsRow).join('') || empty('Nothing here', 'News in this category will appear as the season goes on.')}</div>`;
+      <div class="list">${list.map(newsRow).join('') || empty(...none)}</div>`;
   },
 };
 ACT.treq = ds => { toast(answerRequest(G.players[+ds.id], ds.v === '1')); saveGame(); if (UI.popup) closeSheet(true); render(); };
-ACT.newsF = ds => { UI.f.news = ds.v; render(); };
-ACT.readAll = () => { G.news.forEach(n => { n.read = true; }); render(); };
+ACT.newsF = ds => { UI.f[UI.tab.nv === 'inbox' ? 'inbox' : 'news'] = ds.v; render(); };
+ACT.readAll = () => { newsList(UI.tab.nv === 'inbox' ? 'inbox' : 'news').forEach(n => { n.read = true; }); render(); };
 ACT.news = ds => {
   const n = G.news.find(x => x.id === +ds.id);
   if (!n) return;
@@ -148,11 +171,11 @@ ACT.news = ds => {
   if (a && a.t === 'deal' && G.deals.some(d => d.id === a.id)) actions = `<div class="btns"><button class="btn pri" data-a="deal" data-id="${a.id}">Open the deal</button></div>`;
   if (a && a.t === 'scoutfile' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="scoutFile" data-id="${a.pid}">Open scouting file</button></div>`;
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;
-  if (a && n.done) actions += '<p class="note">Dealt with.</p>';
+  if (a && n.done) actions += '<p class="note">Nothing left to decide.</p>';
   const playerIds = n.action?.pid && G.players[n.action.pid] ? [+n.action.pid] : null;
   const title = playerIds ? `<h3 class="sh-t">${playerMentionsHtml(n.title, playerIds)}</h3>` : `<h3 class="sh-t">${esc(n.title)}</h3>`;
   const body = playerIds ? `<p class="body">${playerMentionsHtml(n.body, playerIds)}</p>` : `<p class="body">${esc(n.body)}</p>`;
-  sheet(`<div class="eyebrow">${NEWS_CATS.find(c => c[0] === n.cat)[1]} · ${fmtDate(n.date)}</div>${title}${body}${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
+  sheet(`<div class="eyebrow">${newsLabel(n)} · ${fmtDate(n.date)}</div>${title}${body}${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
 };
 ACT.bid = ds => {
   const n = G.news.find(x => x.id === +ds.id);

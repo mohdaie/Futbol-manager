@@ -1,9 +1,9 @@
 'use strict';
 /* ===== screens-social.js =====
-   News has three views: News, Transfer centre (Press Officer statements, here-we-go, talks, rumours,
+   News has four views: News (public stories), Inbox (private items and the club log), Transfer centre (Press Officer statements, here-we-go, talks, rumours,
    done and collapsed deals) and Social (a Threads-style feed). */
 
-const NEWS_VIEWS = [['news', 'News'], ['tc', 'Transfer centre'], ['social', 'Social']];
+const NEWS_VIEWS = [['news', 'News'], ['inbox', 'Inbox'], ['tc', 'Transfer centre'], ['social', 'Social']];
 const ago = t => { const h = Math.max(0, Math.round((today().getTime() + 12 * 3600e3 - t) / 3600e3)); return h < 24 ? h + 'h' : Math.round(h / 24) + 'd'; };
 const fmtK = n => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'K' : String(n));
 const ACC_COL = { journalist: '#2DE2EE', tabloid: '#F2C14E', rumour: '#B9A3FF', influencer: '#FF8AD8', fan: '#7DF59E', club: '#FFFFFF' };
