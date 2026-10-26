@@ -73,6 +73,19 @@ const fs = require('node:fs'), path = require('node:path');
     });
     check('No template writes "the" before a club name (articles come from the club data)', text, []);
 
+    const library = await page.evaluate(() => {
+      const counts = Object.fromEntries(Object.entries(STORY_TEMPLATES).map(([k, v]) => [k, v.length]));
+      const frequent = ['win', 'draw', 'loss', 'draw-goalless', 'signing', 'signing-big', 'potm', 'manager-month'];
+      const V = { us: 'Gunners', opp: 'Villans', oppP: "Villans'", score: '2-0', gf: 2, motm: 'A Player', scorers: 'Hertwig and Bako' };
+      G.storyRecent = []; const run = []; for (let i = 0; i < 20; i++) run.push(storyTemplate('win', V, 'w' + i)[0]);
+      G.storyRecent = []; const away = []; for (let i = 0; i < 8; i++) away.push(storyTemplate('win', { ...V, away: '1' }, 'a' + i)[0]);
+      return { thin: Object.entries(counts).filter(([, n]) => n < 3).map(([k]) => k), thinFrequent: frequent.filter(k => counts[k] < 8),
+        distinct: new Set(run).size, firstDistinct: new Set(run.slice(0, 15)).size, awayUsed: away.some(h => /road|Away-day/.test(h)), noAwayLeak: run.every(h => !/road|Away-day/.test(h)) };
+    });
+    check('Every occasion has at least 3 templates, frequent ones at least 8', [library.thin, library.thinFrequent], [[], []]);
+    check('Twenty wins with identical facts: no repeat in the first 15, at least 17 different headlines', [library.firstDistinct, library.distinct >= 17], [15, true]);
+    check('Situational templates appear only when their fact is true (an away win)', [library.awayUsed, library.noAwayLeak], [true, true]);
+
     const privateItem = await page.evaluate(() => { addNews('inbox', 'Private', 'Test.', { t: 'renew', pid: seniorSquad(G.club)[0].id }); makeStory(G.news[0], 'club', 'new-contract', { player: 'X', pos: 'striker', years: 3 }); return !!G.news[0].story; });
     check('Only public News items become newspaper stories', privateItem, false);
 

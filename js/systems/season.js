@@ -96,7 +96,7 @@ function monthly() {
     });
     if (best) {
       addNews('league', `${MONTH_NAMES[d0.getMonth()]} Player of the Month`, `${fullName(best)} of ${theClub(best.club)} wins the award.`);
-      if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'potm', { player: fullName(best), club: hClub(best.club), month: MONTH_NAMES[d0.getMonth()] }, [best.club]);
+      if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'potm', { player: fullName(best), club: hClub(best.club), month: MONTH_NAMES[d0.getMonth()], pos: POS_NAME[best.pos].toLowerCase(), ...(best.st.g >= 3 ? { goals: best.st.g } : {}), ...(best.st.a >= 5 ? { apps: best.st.a } : {}) }, [best.club]);
       if (best.club === G.club) best.mor = clamp(best.mor + 10, 0, 100);
     }
     const t0 = d0.getTime() - 35 * 864e5;
@@ -109,7 +109,7 @@ function monthly() {
     if (top) {
       const mine = top[0] === G.club;
       addNews('league', `${MONTH_NAMES[d0.getMonth()]} Manager of the Month`, mine ? `${G.manager} wins the award after ${top[1]} points from the month.` : `${TheClub(top[0])} manager collects the award after ${top[1]} points.`);
-      if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'manager-month', { club: hClub(top[0]), pts: top[1], month: MONTH_NAMES[d0.getMonth()] }, [top[0]]);
+      if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'manager-month', { club: hClub(top[0]), pts: top[1], month: MONTH_NAMES[d0.getMonth()], mgr: mine ? G.manager : G.clubs[top[0]].mgr }, [top[0]]);
       if (mine) { G.board.conf = clamp(G.board.conf + 3, 0, 100); G.trophies.push({ season: seasonLabel(), name: MONTH_NAMES[d0.getMonth()] + ' Manager of the Month' }); }
     }
   }
