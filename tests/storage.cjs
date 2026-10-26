@@ -30,6 +30,16 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       saveGame(); saveGame(); saveGame(); await SaveStorage.flush(); SaveStorage.worker.postMessage = original;
       return count === 1;
     }));
+    check('Clock checkpoints store playtime without copying players or clubs', await page.evaluate(async () => {
+      await SaveStorage.flush(); const sent = []; const original = SaveStorage.worker.postMessage.bind(SaveStorage.worker);
+      SaveStorage.worker.postMessage = data => { sent.push(data); original(data); };
+      const players = Object.keys(G.players).length; G.playtime.ms += 5000; saveClock();
+      await new Promise(resolve => setTimeout(resolve, 300)); SaveStorage.worker.postMessage = original;
+      const saved = await SaveStorage.request('load');
+      const clock = sent.filter(message => message.type === 'saveWorld');
+      return clock.length === 1 && !('players' in clock[0].data) && !('clubs' in clock[0].data) &&
+        saved.playtime.ms === G.playtime.ms && Object.keys(saved.players).length === players;
+    }));
     check('Closing during a real pending checkpoint is guarded until it commits', await page.evaluate(async () => {
       saveGame(); const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event);
       const protectedClose = event.defaultPrevented; await SaveStorage.flush();

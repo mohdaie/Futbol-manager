@@ -59,6 +59,27 @@ async function writeCareer(game) {
   fingerprints = records;
   return { savedAt: clean.savedAt };
 }
+// Clock checkpoints change only the career metadata. Players and clubs keep their last full checkpoint.
+async function writeWorld(data) {
+  const { players, clubs, ...world } = JSON.parse(JSON.stringify(data)), json = JSON.stringify(world);
+  if (!fingerprints.has('world:career')) throw new Error('Career has not been saved in full yet.');
+  if (fingerprints.get('world:career') === json) return { savedAt: world.savedAt };
+  const db = await openSaveDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('world', 'readwrite');
+    let failure;
+    const version = tx.objectStore('world').get('revision');
+    version.onsuccess = () => {
+      if ((version.result || 0) !== revision) { failure = new Error('Another tab saved this career. Reload this tab or export a backup before continuing.'); tx.abort(); return; }
+      tx.objectStore('world').put(world, 'career');
+      tx.objectStore('world').put(revision + 1, 'revision');
+    };
+    tx.oncomplete = () => { revision++; resolve(); };
+    tx.onabort = tx.onerror = () => reject(failure || tx.error || new Error('Save transaction failed.'));
+  });
+  fingerprints.set('world:career', json);
+  return { savedAt: world.savedAt };
+}
 async function storageJob(type, data) {
   if (type === 'loadBrain' || type === 'saveBrain') {
     const db = await openSaveDB();
@@ -86,6 +107,7 @@ async function storageJob(type, data) {
     return game;
   }
   if (type === 'save') return writeCareer(data);
+  if (type === 'saveWorld') return writeWorld(data);
   if (type === 'delete') {
     const db = await openSaveDB();
     await new Promise((resolve, reject) => {

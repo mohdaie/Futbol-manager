@@ -36,7 +36,7 @@ function updatePlaytimeDisplay() {
 // Checkpoint during play and on mobile app switches / page exits.
 setInterval(() => {
   syncPlaytime();
-  if (G && PLAY_CLOCK.active) saveGame();
+  if (G && PLAY_CLOCK.active) saveClock();
   updatePlaytimeDisplay();
 }, 15000);
 document.addEventListener('visibilitychange', () => { syncPlaytime(); if (G) saveGame(); });
