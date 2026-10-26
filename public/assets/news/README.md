@@ -13,5 +13,5 @@ story occasions to these names and never shows the same photo twice in a row. To
 drop the WebP here, add it to the manifest and list it under one or more occasions in `NEWS_IMAGES`.
 `tests/newspaper.cjs` checks that every photo a story can use exists.
 
-The `life-*` photos, `match-injury` and `match-red-card` are not mapped to an occasion yet; they are
-for player life events and match incidents.
+The `life-*` photos illustrate player life events (`js/systems/life.js`). `match-injury` and
+`match-red-card` are not mapped to an occasion yet; they are for future match-incident stories.

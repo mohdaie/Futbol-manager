@@ -114,13 +114,13 @@ ACT.dashboardCompetition = ds => {
   UI.tab.homeCompetitionView = 'table';
   go('competitions');
 };
-const NEWS_CATS = [['all', 'All'], ['inbox', 'Inbox'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Club'], ['league', 'League']];
+const NEWS_CATS = [['all', 'All'], ['inbox', 'Inbox'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Club'], ['life', 'Off the pitch'], ['league', 'League']];
 // Chips inside each view. News filters public stories by section; Inbox splits out what needs you and the club log.
-const STORY_CHIPS = [['all', 'All'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Your club'], ['league', 'League']];
+const STORY_CHIPS = [['all', 'All'], ['match', 'Matches'], ['transfer', 'Transfers'], ['club', 'Your club'], ['life', 'Off the pitch'], ['league', 'League']];
 const INBOX_CHIPS = [['all', 'All'], ['action', 'Needs action'], ['log', 'Club log']];
 const needsYou = n => !!n.action && !n.done && n.action.t !== 'player';
 // The section label on a row. Generic inbox items are named by what they are about.
-const INBOX_LABELS = { press: 'Press', treq: 'Squad', renew: 'Contracts' };
+const INBOX_LABELS = { press: 'Press', treq: 'Squad', renew: 'Contracts', life: 'Squad' };
 const newsLabel = n => (n.cat === 'inbox' ? INBOX_LABELS[n.action?.t] || 'Club' : NEWS_CATS.find(c => c[0] === n.cat)[1]);
 function newsList(view) {
   if (view === 'news') { const f = UI.f.news; return G.news.filter(n => n.box === 'news' && (f === 'all' || n.cat === f)); }
@@ -199,6 +199,7 @@ ACT.news = ds => {
   if (a && !n.done && a.t === 'bid') actions = `<div class="btns"><button class="btn pri" data-a="bid" data-id="${n.id}" data-c2="accept">Accept ${money(a.fee)}</button><button class="btn" data-a="bid" data-id="${n.id}" data-c2="counter">Ask for ${money(roundMoney(a.fee * 1.2))}</button><button class="btn ghost" data-a="bid" data-id="${n.id}" data-c2="reject">Reject</button></div>`;
   if (a && a.t === 'treq' && G.players[a.pid] && G.players[a.pid].treq) actions = `<div class="btns"><button class="btn pri" data-a="treq" data-id="${a.pid}" data-v="1">Accept and list him</button><button class="btn" data-a="treq" data-id="${a.pid}" data-v="0">Refuse</button></div>`;
   if (a && a.t === 'press') { const r = (G.media.req || []).find(x => x.id === a.id); if (r && !r.done) actions = `<div class="btns col">${STATEMENTS[r.kind].map(([k, t]) => `<button class="btn wide ${k === r.advice ? 'pri' : ''}" data-a="press" data-id="${r.id}" data-k="${k}">${esc(t)}${k === r.advice ? ' (advised)' : ''}</button>`).join('')}</div>`; }
+  if (a && a.t === 'life') { const ev = lifeEvent(a.id); if (ev && !ev.choice) actions = `<div class="btns col">${LIFE_CHOICES[ev.kind].map(([k, t, mor, fans, board, cost]) => `<button class="btn wide" data-a="lifeChoice" data-id="${ev.id}" data-k="${k}">${esc(t)}<small class="muted"> · ${lifeEffectText(mor, fans, board, cost)}</small></button>`).join('')}</div>`; }
   if (a && a.t === 'deal' && G.deals.some(d => d.id === a.id)) actions = `<div class="btns"><button class="btn pri" data-a="deal" data-id="${a.id}">Open the deal</button></div>`;
   if (a && a.t === 'scoutfile' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="scoutFile" data-id="${a.pid}">Open scouting file</button></div>`;
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;
@@ -208,6 +209,12 @@ ACT.news = ds => {
   const body = playerIds ? `<p class="body">${playerMentionsHtml(n.body, playerIds)}</p>` : `<p class="body">${esc(n.body)}</p>`;
   sheet(`${n.story ? storyHeader(n, 'in-sheet') : `<div class="eyebrow">${newsLabel(n)} · ${fmtDate(n.date)}</div>${title}`}${body}${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
 };
+// Plain words for a choice's effects, shown under each button.
+function lifeEffectText(mor, fans, board, cost) {
+  const w = (v, s) => v ? (v > 0 ? `${s} up` : `${s} down`) : '';
+  return [w(mor, 'his morale'), w(fans, 'fans'), w(board, 'board'), cost ? money(cost) : ''].filter(Boolean).join(', ') || 'no effect';
+}
+ACT.lifeChoice = ds => { const msg = lifeAnswer(+ds.id, ds.k); saveGame(); if (msg) toast(msg); if (UI.popup) closeSheet(true); render(); };
 ACT.bid = ds => {
   const n = G.news.find(x => x.id === +ds.id);
   const msg = respondBid(n, ds.c2);

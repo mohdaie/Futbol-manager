@@ -10,7 +10,7 @@ const OUTLETS = {
   club: { name: 'The Local End', desk: 'Club report', motto: 'Our town. Our club. Always.', tag: c => `${c.city || 'Local'}'s football newspaper` },
   match: { name: 'The Final Whistle', desk: 'Match report', motto: 'More than a game', tag: () => 'Matches · analysis · reaction' },
   transfer: { name: 'The Transfer Record', desk: 'Transfer desk', motto: 'People move football forward', tag: () => 'Transfers · contracts · insight' },
-  life: { name: 'Beyond the Touchline', desk: 'People & community', motto: 'People · community · opportunity', tag: () => 'Stories from off the pitch' },
+  life: { name: 'Beyond the Touchline', desk: 'Off the pitch', motto: 'People · community · opportunity', tag: () => 'Stories from off the pitch' },
   league: { name: 'The League Gazette', desk: 'League report', motto: 'Same rivalries. New stories.', tag: () => 'Fixtures · tables · opinion' },
 };
 const SECTION_NAMES = { club: 'Your club', match: 'Matches', transfer: 'Transfers', life: 'Off the pitch', league: 'League' };
@@ -35,6 +35,9 @@ const NEWS_IMAGES = {
   'playoffs': ['league-promotion', 'league-trophy'], 'retirements': ['league-retirement'],
   'youth-intake': ['club-academy', 'club-training'], 'new-contract': ['club-contract', 'club-matchday-gates'], 'released': ['transfer-farewell', 'league-retirement'],
   'takes-over': ['club-new-manager', 'match-manager-touchline'],
+  'life-ambassador': ['life-ambassador', 'life-community'], 'life-hospital': ['life-hospital-visit'], 'life-community': ['life-community', 'life-ambassador'],
+  'life-sponsor': ['life-sponsor'], 'life-wedding': ['life-wedding'], 'life-baby': ['life-baby'], 'life-accident': ['life-car-accident'],
+  'life-nightclub': ['life-nightclub'], 'life-social': ['life-social-media'], 'life-homesick': ['life-homesick'],
 };
 
 
@@ -252,12 +255,56 @@ const STORY_TEMPLATES = {
     ['A new chapter at {club}', '{mgr} takes charge in the dugout.'], ['{mgr} is the new boss', 'Supporters welcome a fresh face in the dugout.'],
     ['Welcome, {mgr}', '{mgr} is in charge at {club}.'], ['{club} under new management', '{mgr} takes charge.'],
   ],
+  // Beyond the Touchline: warm for good news, measured for bad news. Facts only; no speculation.
+  'life-ambassador': [
+    ['A different kind of goal', '{player} becomes a charity ambassador.'], ['{player} gives something back', 'The {clubAdj} {pos} takes on a charity ambassador role.'],
+    ['{player} steps up for local children', 'A new charity role for the {age}-year-old.'], ['Hero off the pitch', '{player} is named a charity ambassador.'],
+    ['{player} lends his name to a good cause', 'The {pos} becomes an ambassador for a children\'s charity.'],
+  ],
+  'life-hospital': [
+    ['Smiles on the ward', '{player} spends an afternoon with young patients.'], ['{player} brightens a hospital ward', 'A quiet visit to the children\'s hospital.'],
+    ['Time well spent', 'The {clubAdj} {pos} visits children in hospital.'], ['{player} visits young fans in hospital', 'Signed shirts and a long chat with patients.'],
+  ],
+  'life-community': [
+    ['{player} back to grassroots', 'The {pos} coaches local schoolchildren.'], ['Lessons from {player}', 'A community session with the {clubAdj} {pos}.'],
+    ['Where it all starts', '{player} helps out at a local football session.'], ['{player} on coaching duty', 'Schoolchildren get tips from the {age}-year-old.'],
+  ],
+  'life-sponsor': [
+    ['{player} lands boot deal', 'A personal sponsorship for the {clubAdj} {pos}.'], ['New boots for {player}', 'The {pos} signs a sponsorship deal.'],
+    ['{player} signs with a boot brand', 'His profile keeps growing.'], ['Big business for {player}', 'The {age}-year-old agrees a boot deal.'],
+  ],
+  'life-wedding': [
+    ['Wedding bells for {player}', 'The {clubAdj} {pos} marries in a private ceremony.'], ['{player} ties the knot', 'Congratulations to the {pos} and his new wife.'],
+    ['Just married', '{player} weds in a private ceremony.'], ['A happy day for {player}', 'The {age}-year-old gets married.'],
+  ],
+  'life-baby': [
+    ['{player} becomes a father', 'The {clubAdj} {pos} and his partner welcome their first child.'], ['Baby joy for {player}', 'A new arrival for the {pos}.'],
+    ['Congratulations, {player}', 'The {age}-year-old is a dad.'], ['A new fan for {club}', '{player} welcomes his first child.'],
+  ],
+  'life-accident': [
+    ['{player} hurt in car accident', 'The {pos} is expected to miss {weeks} weeks; nobody was seriously hurt.'], ['Car accident sidelines {player}', 'Minor injuries will keep him out for {weeks} weeks.'],
+    ['{player} out after road accident', 'The {clubAdj} {pos} suffered minor injuries.'], ['Worrying moments for {player}', 'He is recovering from a car accident and should be back in {weeks} weeks.'],
+  ],
+  'life-nightclub': [
+    ['{player} in nightclub row', 'The {clubAdj} {pos} was photographed leaving a club in the early hours.'], ['Late night for {player}', 'Pictures emerge of the {pos} out days before a match.'],
+    ['Questions for {player}', 'The {pos} is pictured on a night out before a game.'], ['{player} caught out', 'Photos of a late night out put the {pos} in the spotlight.'],
+  ],
+  'life-social': [
+    ['{player} in online row with fans', 'The {clubAdj} {pos} deletes angry posts.'], ['Posts deleted after {player} outburst', 'The {pos} clashed with supporters online.'],
+    ['{player} loses his cool online', 'A spat with fans on social media.'], ['Social media storm for {player}', 'The {age}-year-old hits back at critics, then deletes the posts.'],
+  ],
+  'life-homesick': [
+    ['{player} struggling to settle', 'The {pos} is said to be missing home in {country}.'], ['Far from home', '{player} finds life in England hard.'],
+    ['Homesick {player} needs support', 'The {age}-year-old misses {country}.'], ['A hard time for {player}', 'The {clubAdj} {pos} is finding it tough away from {country}.'],
+  ],
 };
 
 // How prominent a story is on the front page. Your club's news always counts for more.
 const STORY_WEIGHT = { 'signing-record': 70, 'sacked': 60, 'derby-win': 60, 'derby-loss': 55, 'win-hattrick': 55, 'window-shut': 50, 'deadline': 45, 'season-start': 45, 'playoffs': 45,
   'win-late': 50, 'win-big': 50, 'loss-heavy': 50, 'your-signing': 50, 'signing-big': 45, 'sale': 45, 'appointed': 40, 'takes-over': 55, 'potm': 35, 'manager-month': 35,
   'win-brace': 45, 'loss-late': 45, 'draw-late': 45, 'derby-draw': 45, 'win': 40, 'draw': 30, 'loss': 35, 'draw-goalless': 25, 'friendly': 10,
+  'life-nightclub': 40, 'life-accident': 38, 'life-social': 35, 'life-homesick': 30, 'life-ambassador': 30, 'life-baby': 28, 'life-wedding': 28,
+  'life-sponsor': 25, 'life-hospital': 25, 'life-community': 20,
   'signing': 30, 'signing-abroad': 32, 'signing-free': 22, 'loan': 18, 'loan-return': 12, 'loan-permanent': 25, 'retirements': 20, 'youth-intake': 30, 'new-contract': 25, 'released': 20 };
 
 const fillStory = (t, V) => t.replace(/\{(\w+)\}/g, (_, k) => V[k] ?? '');
