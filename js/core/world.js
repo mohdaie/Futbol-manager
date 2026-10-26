@@ -2,7 +2,7 @@
 // Background club registry. Selected compact squads are added separately;
 // registry membership itself never creates players, fixtures or league jobs.
 function ensureWorldLeagues() {
-  if (G.worldLeagueVersion === 2) return;
+  if (G.worldLeagueVersion === 3) return;
   const existing = Object.values(G.clubs);
   G.worldLeagues ||= {};
   for (const definition of Object.values(WORLD_LEAGUES)) {
@@ -20,13 +20,14 @@ function ensureWorldLeagues() {
       }
       c.worldLeague = definition.id;
       c.realName ||= entry.realName;
-      if (c.backgroundOnly) { c.c1 = entry.c1; c.c2 = entry.c2; }
+      // Version 3: real club colours. Legacy F-id clubs keep the colours their crest artwork uses.
+      if (c.id === entry.id) { c.c1 = entry.c1; c.c2 = entry.c2; }
       ids.push(c.id);
     }
     G.worldLeagues[definition.id] = { clubs: ids,
       mode: ids.some(id => G.clubs[id].foreignSquad) ? 'clubs-and-squads' : 'clubs-only', active: false };
   }
-  G.worldLeagueVersion = 2;
+  G.worldLeagueVersion = 3;
 }
 
 function worldLeagueClubs(id) {

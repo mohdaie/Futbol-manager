@@ -64,7 +64,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
       delete G.worldLeagues;delete G.worldLeagueVersion;
       await saveGameAsync();return{playerIds,fixtures};
     });
-    await page.reload();await page.waitForFunction(()=>G?.worldLeagueVersion===2);
+    await page.reload();await page.waitForFunction(()=>G?.worldLeagueVersion===3);
     check('Loading an old save adds the club registry while retaining every player and fixture',await page.evaluate(({playerIds,fixtures})=>playerIds.every(id=>Object.hasOwn(G.players,id))&&JSON.stringify(G.fixtures)===fixtures&&Object.keys(G.clubs).length===130,legacy));
     check('Three rollovers create no annual selected-club intake or dummy player records',await page.evaluate(()=>{
       const original=genPlayer;let generated=0;genPlayer=options=>{if(G.clubs[options?.club]?.foreignSquad)generated++;return original(options);};
