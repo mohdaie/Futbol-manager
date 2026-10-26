@@ -135,7 +135,36 @@ function dashboardInbox() {
       <div class="list">${show.map(newsRow).join('')}</div>`;
 }
 ACT.newsOpen = ds => { UI.tab.nv = ds.v; go('news'); };
+/* ---------- newspaper stories (newspaper.js) ---------- */
+// The front-page lead: the heaviest story from the last three days of news in this list.
+function leadStory(list) {
+  const stories = list.filter(n => n.story);
+  if (!stories.length) return null;
+  const since = stories[0].date - 3 * 864e5;
+  return stories.filter(n => n.date >= since).sort((a, b) => b.story.weight - a.story.weight || b.date - a.date)[0];
+}
+function scoreBar(s) {
+  const side = id => { const c = G.clubs[id], col = c?.c1 || '#555'; return `<span style="background:${col};color:${isLight(col) ? '#141414' : '#fff'}">${esc(hClub(id))}</span>`; };
+  return `<div class="pscore" data-no-links>${side(s.h)}<b>${s.hg}–${s.ag}</b>${side(s.a)}</div>`;
+}
+// The full newspaper header: masthead, section tag, photo, headline, standfirst and dateline.
+function storyHeader(n, size = 'lead') {
+  const s = n.story, o = OUTLETS[s.outlet] || OUTLETS.league, tint = G.clubs[s.tint]?.c1 || '#777';
+  return `<article class="paper p-${s.outlet} ${size}" style="--tint:${tint}">
+    <header class="mast" data-no-links><b>${esc(o.name)}</b><small>${esc(o.tag(userClub()))}</small></header>
+    <span class="psec">${esc(SECTION_NAMES[s.outlet])}</span>
+    ${s.img ? `<figure class="pimg"><img src="public/assets/news/${s.img}.webp" alt="" loading="lazy" decoding="async"></figure>` : ''}
+    <h2 class="phead">${esc(s.headline)}</h2><p class="pstand">${esc(s.standfirst)}</p>
+    ${s.score ? scoreBar(s.score) : ''}
+    <footer class="pfoot">${fmtDate(n.date, false)} · ${esc(o.desk)}</footer></article>`;
+}
+function storyRow(n) {
+  const s = n.story, o = OUTLETS[s.outlet] || OUTLETS.league;
+  return `<button class="row act news story ${n.read ? '' : 'unread'}" data-a="news" data-id="${n.id}">
+    <span class="grow"><small class="pmini p-${s.outlet}">${esc(o.name)}</small><b>${esc(s.headline)}</b><small>${esc(s.standfirst)}</small><small class="muted">${fmtDate(n.date, false)}</small></span><span class="chev">›</span></button>`;
+}
 function newsRow(n) {
+  if (n.story) return storyRow(n);
   const needs = needsYou(n);
   return `<button class="row act news ${n.read ? '' : 'unread'}" data-a="news" data-id="${n.id}">
     <span class="ncat c-${n.cat}">${newsLabel(n)}</span>
@@ -150,10 +179,12 @@ SCREENS.news = {
     if (v === 'social') return head + socialFeed();
     const inbox = v === 'inbox', chips = inbox ? INBOX_CHIPS : STORY_CHIPS, f = inbox ? UI.f.inbox : UI.f.news, list = newsList(v);
     const none = inbox ? (f === 'log' ? ['Nothing logged yet', 'Payments, bonuses and other club records appear here.'] : ['Inbox empty', 'Messages for you will appear here.']) : ['Nothing here', 'Stories in this section will appear as the season goes on.'];
+    const lead = inbox ? null : leadStory(list), rest = lead ? list.filter(n => n !== lead) : list;
     return `${head}
       <div class="chips">${chips.map(([k, n]) => `<button class="chip ${f === k ? 'on' : ''}" data-a="newsF" data-v="${k}">${n}</button>`).join('')}</div>
+      ${lead ? `<div class="lead-story" data-a="news" data-id="${lead.id}" role="button" tabindex="0">${storyHeader(lead)}</div>` : ''}
       <div class="sec-h"><span class="muted">${list.length} items</span><button class="link" data-a="readAll">Mark all read</button></div>
-      <div class="list">${list.map(newsRow).join('') || empty(...none)}</div>`;
+      <div class="list">${rest.map(newsRow).join('') || (lead ? '' : empty(...none))}</div>`;
   },
 };
 ACT.treq = ds => { toast(answerRequest(G.players[+ds.id], ds.v === '1')); saveGame(); if (UI.popup) closeSheet(true); render(); };
@@ -175,7 +206,7 @@ ACT.news = ds => {
   const playerIds = n.action?.pid && G.players[n.action.pid] ? [+n.action.pid] : null;
   const title = playerIds ? `<h3 class="sh-t">${playerMentionsHtml(n.title, playerIds)}</h3>` : `<h3 class="sh-t">${esc(n.title)}</h3>`;
   const body = playerIds ? `<p class="body">${playerMentionsHtml(n.body, playerIds)}</p>` : `<p class="body">${esc(n.body)}</p>`;
-  sheet(`<div class="eyebrow">${newsLabel(n)} · ${fmtDate(n.date)}</div>${title}${body}${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
+  sheet(`${n.story ? storyHeader(n, 'in-sheet') : `<div class="eyebrow">${newsLabel(n)} · ${fmtDate(n.date)}</div>${title}`}${body}${actions}${newsLinks(n)}`, { key: 'news:' + n.id, restore: () => ACT.news({ id: n.id }), valid: () => !!G?.news.find(x => x.id === n.id), onClose: () => render() });
 };
 ACT.bid = ds => {
   const n = G.news.find(x => x.id === +ds.id);

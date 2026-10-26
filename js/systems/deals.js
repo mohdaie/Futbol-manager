@@ -320,7 +320,7 @@ const DEAL_STEP = {
       if (G.tHist.length > 120) G.tHist.length = 120;
       closeDeal(d, true, 'Done.', false);
       dealMedia(d, 'here'); dealMedia(d, 'done');
-      if (fee >= 15e6 || from.pl) { addNews('transfer', `${fullName(p)} joins ${theClub(c)}`, `${TheClub(c)} sign ${fullName(p)} (${p.age}, ${p.pos}) from ${from.fa ? 'free agency' : theClub(from)}${fee ? ' for ' + money(fee) : ''}.`); G.news[0].q = 1; }
+      if (fee >= 15e6 || from.pl) { addNews('transfer', `${fullName(p)} joins ${theClub(c)}`, `${TheClub(c)} sign ${fullName(p)} (${p.age}, ${p.pos}) from ${from.fa ? 'free agency' : theClub(from)}${fee ? ' for ' + money(fee) : ''}.`); G.news[0].q = 1; if (typeof makeStory === 'function') storyTransfer(G.news[0], 'signing', p, from.id, c.id, fee); }
     },
   },
 };

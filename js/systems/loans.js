@@ -105,6 +105,7 @@ function completeLoan(d) {
   p.loan = { parent: from, host: host.id, start, end: endDate.getTime(), duration, fee, wageShare, parentWage: wage, parentContract: con, parentLevel: level, recall, optionFee, obligationApps, appsAtStart: p.st?.a || 0, clauseDone: false };
   moveClub(p, host.id); p.loan.host = host.id; p.wage = wage; p.con = con;
   addNews('transfer', `${fullName(p)} joins ${host.name} on loan`, `${fullName(p)} joins on a ${duration}-week loan. ${fee ? `${money(fee)} loan fee; ` : ''}${host.name} cover ${wageShare}% of his wages.${optionFee ? ` ${obligationApps ? `Obligation to buy for ${money(optionFee)} after ${obligationApps} appearances.` : `Option to buy for ${money(optionFee)}.`}` : ''}${recall ? ' The parent club can recall him in a transfer window.' : ''}`);
+  if (typeof makeStory === 'function') storyTransfer(G.news[0], 'loan', p, parent.id, host.id, fee, { weeks: duration });
   G.tHist.unshift({ date: start, pid: p.id, name: fullName(p), from, to: host.id, fee, loan: true, end: p.loan.end });
   if (G.tHist.length > 120) G.tHist.length = 120;
   closeDeal(d, true, `${fullName(p)} joins ${host.name} on loan: ${loanDealSummary(d)}.`, false);
@@ -125,6 +126,7 @@ function endLoan(p, reason = 'loan expired', convert = false) {
     if (G.tHist.length > 120) G.tHist.length = 120;
     delete p.loan; moveClub(p, host.id); p.wage = permanentWage; p.con = G.season + 3;
     addNews('transfer', `${fullName(p)} signs permanently for ${host.name}`, `The loan purchase clause is completed for ${money(fee)}.`);
+    if (typeof makeStory === 'function') storyTransfer(G.news[0], 'loan-permanent', p, parent.id, host.id, fee);
     return true;
   }
   if (!parent || !host) { delete p.loan; return false; }
@@ -135,6 +137,7 @@ function endLoan(p, reason = 'loan expired', convert = false) {
   }
   p.wage = l.parentWage; p.con = l.parentContract; p.lvl = l.parentLevel;
   addNews('transfer', `${fullName(p)} returns to ${parent.name}`, `${fullName(p)} returns from ${host.name}: ${reason}.`);
+  if (typeof makeStory === 'function') storyTransfer(G.news[0], 'loan-return', p, host.id, parent.id, 0);
   return true;
 }
 function processLoans() {

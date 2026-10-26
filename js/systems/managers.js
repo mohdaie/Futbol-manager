@@ -221,6 +221,7 @@ function postManagerJob(cid, reason = 'The club is seeking a new manager.') {
   const c = G.clubs[cid], job = { id: G.nextId++, cid, league: c.league, opened: today().getTime(), expires: dayAbs() + 35, status: 'open', reason };
   G.managerJobs.unshift(job); G.managerJobs = G.managerJobs.slice(0, 20);
   addNews('league', `Manager wanted: ${c.name}`, `${c.name} are seeking a new manager in the ${leagueName(c.league)}. ${reason}`);
+  if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'sacked', { club: c.name }, [c.id]);
   return job;
 }
 function managerJobWeek() {
@@ -229,6 +230,7 @@ function managerJobWeek() {
     const c = G.clubs[j.cid]; if (!c || c.id === G.club) return;
     managerReplaceAt(j.cid, 'Contract ended'); j.status = 'filled'; j.filled = today().getTime();
     addNews('league', `${c.name} appoint a manager`, `${c.mgr} takes charge in the ${leagueName(c.league)}.`);
+    if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'appointed', { club: c.name, mgr: c.mgr, league: leagueName(c.league) }, [c.id]);
   });
 }
 function managerSeasonRecords() {

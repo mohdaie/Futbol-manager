@@ -10,6 +10,7 @@ function ddState() {
   if (!G.dd || G.dd.key !== key) {
     G.dd = { key, h: 8, done: false, t0: G.tHist.length };
     addNews('transfer', `Deadline day: the ${s.label.toLowerCase()} shuts at 23:00`, `It's deadline day. Deals move by the hour now; anything not done by 23:00 collapses. Open deals involving your club: ${G.deals.filter(d => dealOpen(d) && d.dir !== 'ai').length}.`);
+    if (typeof makeStory === 'function') storySimple(G.news[0], 'transfer', 'deadline', {});
   }
   return G.dd;
 }
@@ -36,6 +37,7 @@ function deadlineHour() {
     addNews('transfer', 'The window has shut', `${G.tHist.length - D.t0} deals were done on deadline day.` +
       (ours.length ? ` Your move${ours.length > 1 ? 's' : ''} for ${names(ours)} ran out of time.` : '') +
       (theirs.length ? ` Bids for ${names(theirs)} lapsed; ${theirs.length > 1 ? 'they stay' : 'he stays'}.` : ''));
+    if (typeof makeStory === 'function') storySimple(G.news[0], 'transfer', 'window-shut', { deals: G.tHist.length - D.t0 });
   }
   return D;
 }

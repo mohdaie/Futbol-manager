@@ -16,6 +16,7 @@ function updateCompetitionSeason() {
       P.ties.push([first.id, second.id]);
     });
     addNews('league', 'Championship promotion playoffs', P.participants.map(clubName).join(', ') + ' compete for the final promotion place. No away goals; level second legs go to extra time and penalties.');
+    if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'playoffs', { clubs: P.participants.map(hClub).join(', ') }, P.participants);
   }
   const P = G.playoffs;
   if (!P.final && P.ties.every(([, id]) => played(G.fixtures.find(f => f.id === id)))) {

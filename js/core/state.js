@@ -192,6 +192,7 @@ function newGame(clubId, manager, avatar) {
   setupUserClub();
   addNews('club', 'Welcome to ' + theClub(clubId), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${lcFirst(G.board.target.text)}. The transfer budget is ${money(G.fin.tb)}.`, null);
   addNews('club', 'Pre-season begins', 'Set your training focus, review the squad and check the tactics screen before the opening match in mid-August. The summer transfer window is open until 1 September.');
+  seasonOpeningStory();
   saveGame();
 }
 
@@ -296,6 +297,12 @@ function addNews(cat, title, body, action, box) {
   // Over the cap, drop the oldest item that is not still waiting for your decision.
   while (G.news.length > 160) { const i = G.news.findLastIndex(n => !(n.action && !n.done)); G.news.splice(i < 0 ? G.news.length - 1 : i, 1); }
   if (typeof worldAlertForNews === 'function') worldAlertForNews(G.news[0]);
+}
+// The public curtain-raiser for a season, so the front page is never empty on day one.
+function seasonOpeningStory() {
+  const lg = leagueOf(G.club), name = leagueName(lg);
+  addStory('league', `${seasonLabel()} ${name} season`, `The ${name} season ${seasonLabel()} is on its way.`);
+  if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'season-start', { league: name, season: seasonLabel(), teams: leagueClubs(lg).length });
 }
 const addLog = (cat, title, body, action) => addNews(cat, title, body, action, 'log');
 const addStory = (cat, title, body, action) => addNews(cat, title, body, action, 'news');

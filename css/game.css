@@ -890,3 +890,31 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 
 .world-alert-story { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left; }
 .world-alert-close { flex: none; color: var(--mute); font-size: 17px; padding: 3px 5px; line-height: 1; }
+
+/* ---------- newspaper stories (newspaper.js) ---------- */
+:root { --paper: #EFE7D6; --paper-ink: #17130F; --paper-mute: #5B5247; --f-paper: 'Playfair Display', Georgia, 'Times New Roman', serif; --f-tab: 'Oswald', 'Arial Narrow', Impact, sans-serif; }
+.paper { --acc: #1F3A68; --acc-ink: #fff; display: block; background: var(--paper); color: var(--paper-ink); border-radius: 6px; padding: 12px 14px 10px; box-shadow: 0 1px 0 rgba(0,0,0,.25), 0 6px 14px rgba(0,0,0,.25); text-align: left; }
+.paper.p-club { --acc: #8E1B1B; } .paper.p-match { --acc: #E3B43A; --acc-ink: #17130F; } .paper.p-transfer { --acc: #2E5E3A; } .paper.p-life { --acc: #C4502E; } .paper.p-league { --acc: #1F3A68; }
+.paper .mast { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--paper-ink); box-shadow: 0 3px 0 -1px var(--acc); }
+.paper .mast b { font-family: var(--f-paper); font-weight: 800; font-size: 21px; letter-spacing: -.01em; line-height: 1; font-variant: small-caps; }
+.paper .mast small { font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: var(--paper-mute); text-align: right; line-height: 1.3; }
+.paper .psec { display: inline-block; margin: 10px 0 8px; padding: 3px 8px; background: var(--acc); color: var(--acc-ink); font-size: 9.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.paper .pimg { position: relative; margin: 0 0 9px; aspect-ratio: 16 / 9; overflow: hidden; background: #2b2620; border-radius: 2px; }
+.paper .pimg img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(1) sepia(.28) contrast(1.06); }
+.paper .pimg::after { content: ''; position: absolute; inset: 0; background: var(--tint); mix-blend-mode: color; opacity: .3; pointer-events: none; }
+.paper .phead { margin: 0; font-family: var(--f-paper); font-weight: 800; font-size: 27px; line-height: 1.02; letter-spacing: -.015em; text-wrap: balance; }
+.paper.p-match .phead { font-family: var(--f-tab); font-weight: 700; text-transform: uppercase; font-size: 30px; letter-spacing: 0; line-height: .98; }
+.paper.p-life .phead { font-style: italic; }
+.paper .pstand { margin: 6px 0 0; font-family: var(--f-paper); font-size: 14px; line-height: 1.3; color: var(--paper-ink); }
+.paper .pscore { display: flex; align-items: stretch; margin-top: 10px; font-family: var(--f-tab); font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: .04em; }
+.paper .pscore span { flex: 1; padding: 6px 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.paper .pscore b { flex: none; padding: 6px 12px; background: var(--paper-ink); color: var(--paper); font-size: 15px; }
+.paper .pfoot { margin-top: 9px; padding-top: 6px; border-top: 1px solid rgba(23,19,15,.25); font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--paper-mute); }
+.paper.in-sheet { margin: -2px 0 10px; box-shadow: none; }
+.lead-story { display: block; margin: 4px 0 12px; cursor: pointer; border-radius: 6px; }
+.lead-story:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.row.story .grow b { font-family: var(--f-paper); font-weight: 700; font-size: 15px; line-height: 1.15; }
+.row.story .grow small:not(.pmini):not(.muted) { color: var(--chalk); opacity: .82; }
+.pmini { display: block; margin-bottom: 2px; font-family: var(--f-paper); font-variant: small-caps; font-weight: 800; font-size: 11px; letter-spacing: .02em; color: #9FB4E0; }
+.pmini.p-club { color: #F08A8A; } .pmini.p-match { color: #F2C65A; } .pmini.p-transfer { color: #7FD39A; } .pmini.p-life { color: #F39A78; } .pmini.p-league { color: #9FB4E0; }
+@media (max-width: 360px) { .paper .mast small { display: none; } .paper .phead { font-size: 24px; } .paper.p-match .phead { font-size: 26px; } }

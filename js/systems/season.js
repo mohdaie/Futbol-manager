@@ -96,6 +96,7 @@ function monthly() {
     });
     if (best) {
       addNews('league', `${MONTH_NAMES[d0.getMonth()]} Player of the Month`, `${fullName(best)} of ${theClub(best.club)} wins the award.`);
+      if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'potm', { player: fullName(best), club: hClub(best.club), month: MONTH_NAMES[d0.getMonth()] }, [best.club]);
       if (best.club === G.club) best.mor = clamp(best.mor + 10, 0, 100);
     }
     const t0 = d0.getTime() - 35 * 864e5;
@@ -108,6 +109,7 @@ function monthly() {
     if (top) {
       const mine = top[0] === G.club;
       addNews('league', `${MONTH_NAMES[d0.getMonth()]} Manager of the Month`, mine ? `${G.manager} wins the award after ${top[1]} points from the month.` : `${TheClub(top[0])} manager collects the award after ${top[1]} points.`);
+      if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'manager-month', { club: hClub(top[0]), pts: top[1], month: MONTH_NAMES[d0.getMonth()] }, [top[0]]);
       if (mine) { G.board.conf = clamp(G.board.conf + 3, 0, 100); G.trophies.push({ season: seasonLabel(), name: MONTH_NAMES[d0.getMonth()] + ' Manager of the Month' }); }
     }
   }
@@ -125,6 +127,7 @@ function youthIntake() {
   if (!names.length) return;
   const star = names.slice().sort((a, b) => b.pa - a.pa)[0];
   addStory('club', 'Youth intake arrives', `${names.length} new players join the ${c.league === 'ECH' ? 'reserves' : 'academy'}. Head of youth development highlights ${fullName(star)} (${star.pos}) as the pick of the group.`);
+  if (typeof makeStory === 'function') storySimple(G.news[0], 'club', 'youth-intake', { count: names.length, star: fullName(star) }, [G.club]);
 }
 
 function boardRequest(kind) {
@@ -238,7 +241,8 @@ function rollover() {
   G.ledgerPrev = G.ledger; G.ledger = emptyLedger();
   G.pitches = [];
   addNews('club', `${seasonLabel()} season begins`, `Board objective: ${lcFirst(G.board.target.text)}. Transfer budget: ${money(G.fin.tb)}.` + (left.length ? ` Out of contract and gone: ${left.join(', ')}.` : ''));
-  if (retired.length) addNews('league', 'Retirements', retired.join(', ') + ' have hung up their boots.');
+  seasonOpeningStory();
+  if (retired.length) { addNews('league', 'Retirements', retired.join(', ') + ' have hung up their boots.'); if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'retirements', { names: retired.length > 4 ? retired.slice(0, 4).join(', ') + ' and others' : retired.join(', ') }); }
   saveGame();
 }
 
@@ -265,5 +269,6 @@ function takeJob(cid) {
   setupUserClub();
   G.board.conf = 60;
   addStory('club', `${G.manager} takes over at ${theClub(cid)}`, `After leaving ${theClub(old)}, ${G.manager} gets a fresh start. Objective: ${lcFirst(G.board.target.text)}.`);
+  if (typeof makeStory === 'function') storySimple(G.news[0], 'club', 'takes-over', { club: hClub(cid), mgr: G.manager }, [cid]);
   saveGame();
 }

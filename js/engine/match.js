@@ -434,9 +434,10 @@ function finishMatch(M) {
     if (typeof adviceResult === 'function') adviceResult(fx, S.st.g, O.st.g, S.st.xg, O.st.xg);
     if (typeof postMatchAnalysis === 'function') postMatchAnalysis(M, fx);
     const opp = clubName(O.cid), sg = S.st.g, og = O.st.g;
-    const head = sg > og ? `${clubName(G.club)} beat the ${opp} ${sg}-${og}` : sg < og ? `${clubName(G.club)} lose ${sg}-${og} to the ${opp}` : `${clubName(G.club)} held ${sg}-${og} by the ${opp}`;
+    const head = sg > og ? `${clubName(G.club)} beat ${theClub(O.cid)} ${sg}-${og}` : sg < og ? `${clubName(G.club)} lose ${sg}-${og} to ${theClub(O.cid)}` : `${clubName(G.club)} held ${sg}-${og} by ${theClub(O.cid)}`;
     const scorers = S.goals.map(g => pname(G.players[g.pid]) + ' ' + g.min + "'").join(', ');
     addNews('match', head, (scorers ? 'Scorers: ' + scorers + '. ' : '') + (motm ? 'Player of the match: ' + fullName(G.players[motm]) + '.' : ''));
+    if (typeof makeStory === 'function') storyMatch(G.news[0], fx, S, O, motm);
     G.lastMatch = fx.id;
   }
   if (typeof updateCompetitionSeason === 'function') updateCompetitionSeason();

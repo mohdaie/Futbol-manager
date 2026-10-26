@@ -74,6 +74,7 @@ function offerContract(pid, wage, years, status, fee, mode) {
     p.wage = wage; p.con = G.season + years + off; p.status = status;
     p.mor = clamp(p.mor + 8, 0, 100);
     addStory('club', `${pname(p)} signs a new contract`, `${fullName(p)} has agreed a new ${years}-year deal worth ${wageFmt(wage)}.`);
+    if (typeof makeStory === 'function') storySimple(G.news[0], 'club', 'new-contract', { player: fullName(p), pos: POS_NAME[p.pos].toLowerCase(), years }, [G.club]);
     return { ok: true, msg: `${fullName(p)} signs a new ${years}-year contract.` };
   }
   completeSigning(p, fee, wage, years + off, status);
@@ -108,6 +109,7 @@ function completeSigning(p, fee, wage, years, status, terms) {
   G.pitches = G.pitches.filter(x => x.pid !== p.id);
   G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: from.id, to: G.club, fee, upfront: settlement.upfront, deferred: settlement.deferred, exchangeValue: terms?.exchangeValue || 0 });
   addNews('transfer', `${fullName(p)} signs for ${theClub(me)}`, `${fullName(p)} (${p.age}, ${p.pos}) arrives from ${fromName}${fee ? ' for ' + money(fee) : ''} on a ${years}-year deal worth ${wageFmt(wage)}.`);
+  if (typeof makeStory === 'function') storyTransfer(G.news[0], 'your-signing', p, from.id, G.club, fee, { years });
 }
 
 function sellPlayer(p, toId, fee, terms) {
@@ -118,6 +120,7 @@ function sellPlayer(p, toId, fee, terms) {
   p.wage = wageFor(p, to.rep); p.con = G.season + ri(2, 5);
   G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: G.club, to: toId, fee, upfront: settlement.upfront, deferred: settlement.deferred, exchangeValue: terms?.exchangeValue || 0 });
   addNews('transfer', `${fullName(p)} leaves for ${theClub(to)}`, `${fullName(p)} has been sold for ${money(fee)}. Half of cash received is added to your transfer budget; future instalments are credited when paid.`);
+  if (typeof makeStory === 'function') storyTransfer(G.news[0], 'sale', p, G.club, toId, fee);
 }
 
 function releasePlayer(p) {
@@ -127,6 +130,7 @@ function releasePlayer(p) {
   moveClub(p, 'FA');
   p.con = 0;
   addStory('club', `${fullName(p)} released`, `${fullName(p)} has left the club by mutual consent. Compensation paid: ${money(comp)}.`);
+  if (typeof makeStory === 'function') storySimple(G.news[0], 'club', 'released', { player: fullName(p), pos: POS_NAME[p.pos].toLowerCase() }, [G.club]);
   return comp;
 }
 
