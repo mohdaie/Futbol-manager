@@ -17,18 +17,26 @@ const SECTION_NAMES = { club: 'Your club', match: 'Matches', transfer: 'Transfer
 
 // Photos in public/assets/news, by occasion. Several per occasion where they fit; the last one used is skipped.
 const NEWS_IMAGES = {
-  'win': ['match-header-goal', 'match-late-winner'], 'win-late': ['match-late-winner'], 'win-brace': ['match-header-goal', 'match-late-winner'],
-  'win-big': ['match-late-winner', 'club-matchday-gates'], 'derby-win': ['match-derby'], 'derby-draw': ['match-derby'], 'derby-loss': ['match-derby'],
-  'draw': ['match-header-goal'], 'draw-late': ['match-late-winner'], 'draw-goalless': ['club-matchday-gates', 'match-derby'],
-  'loss': ['match-heavy-defeat'], 'loss-late': ['match-heavy-defeat'], 'loss-heavy': ['match-heavy-defeat'], 'friendly': ['club-training'],
-  'signing': ['transfer-shirt', 'transfer-medical'], 'signing-big': ['transfer-shirt', 'transfer-medical'], 'signing-record': ['transfer-shirt'],
-  'signing-free': ['transfer-shirt', 'transfer-airport'], 'signing-abroad': ['transfer-airport', 'transfer-medical'], 'your-signing': ['transfer-shirt', 'transfer-medical'],
-  'sale': ['transfer-airport'], 'loan': ['transfer-airport'], 'loan-return': ['transfer-airport'], 'loan-permanent': ['transfer-shirt'],
-  'deadline': ['transfer-deadline'], 'window-shut': ['transfer-deadline'],
-  'potm': ['league-trophy'], 'manager-month': ['league-trophy'], 'sacked': ['league-sacked'], 'appointed': ['club-new-manager'],
-  'season-start': ['league-season-start'], 'playoffs': ['league-trophy'], 'retirements': [],
-  'youth-intake': ['club-training'], 'new-contract': ['club-matchday-gates'], 'released': ['club-training'], 'takes-over': ['club-new-manager'],
+  'win': ['match-header-goal', 'match-late-winner', 'club-fans-celebrate', 'match-penalty'], 'win-late': ['match-late-winner', 'club-fans-celebrate'],
+  'win-brace': ['match-header-goal', 'match-late-winner', 'match-penalty'], 'win-hattrick': ['match-header-goal', 'club-fans-celebrate'],
+  'win-big': ['match-late-winner', 'club-matchday-gates', 'club-fans-celebrate'], 'derby-win': ['match-derby', 'club-fans-celebrate'],
+  'derby-draw': ['match-derby', 'match-draw'], 'derby-loss': ['match-derby'],
+  'draw': ['match-draw', 'match-header-goal', 'match-save', 'match-manager-touchline'], 'draw-late': ['match-late-winner', 'match-penalty', 'match-draw'],
+  'draw-goalless': ['club-matchday-gates', 'match-save', 'match-draw'],
+  'loss': ['match-heavy-defeat', 'match-manager-touchline', 'match-save'], 'loss-late': ['match-heavy-defeat', 'match-manager-touchline'],
+  'loss-heavy': ['match-heavy-defeat', 'league-relegation'], 'friendly': ['club-training', 'club-academy'],
+  'signing': ['transfer-shirt', 'transfer-medical', 'club-contract', 'transfer-agent-phone'], 'signing-big': ['transfer-shirt', 'transfer-medical', 'transfer-agent-phone'],
+  'signing-record': ['transfer-shirt', 'transfer-agent-phone'], 'signing-free': ['transfer-shirt', 'transfer-airport', 'club-contract'],
+  'signing-abroad': ['transfer-airport', 'transfer-medical', 'transfer-agent-phone'], 'your-signing': ['transfer-shirt', 'transfer-medical', 'club-contract'],
+  'sale': ['transfer-farewell', 'transfer-airport'], 'loan': ['transfer-loan', 'transfer-airport'], 'loan-return': ['transfer-loan', 'transfer-airport'],
+  'loan-permanent': ['transfer-shirt', 'club-contract'], 'deadline': ['transfer-deadline', 'transfer-agent-phone'], 'window-shut': ['transfer-deadline'],
+  'potm': ['league-award', 'league-trophy'], 'manager-month': ['league-award', 'match-manager-touchline'], 'sacked': ['league-sacked', 'club-boardroom'],
+  'appointed': ['club-new-manager', 'club-boardroom', 'match-manager-touchline'], 'season-start': ['league-season-start', 'club-matchday-gates'],
+  'playoffs': ['league-promotion', 'league-trophy'], 'retirements': ['league-retirement'],
+  'youth-intake': ['club-academy', 'club-training'], 'new-contract': ['club-contract', 'club-matchday-gates'], 'released': ['transfer-farewell', 'league-retirement'],
+  'takes-over': ['club-new-manager', 'match-manager-touchline'],
 };
+
 
 /* Templates: [headline, standfirst, need]. {x} is a fact from the event; a template whose facts are
    missing is skipped, and need lists facts a template requires without printing them (such as

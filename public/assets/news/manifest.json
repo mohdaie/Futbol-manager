@@ -1,5 +1,33 @@
 [
   {
+    "file": "club-academy.webp",
+    "occasion": "club-academy",
+    "width": 1200,
+    "height": 800,
+    "bytes": 55632
+  },
+  {
+    "file": "club-boardroom.webp",
+    "occasion": "club-boardroom",
+    "width": 1200,
+    "height": 800,
+    "bytes": 42430
+  },
+  {
+    "file": "club-contract.webp",
+    "occasion": "club-contract",
+    "width": 1200,
+    "height": 800,
+    "bytes": 23752
+  },
+  {
+    "file": "club-fans-celebrate.webp",
+    "occasion": "club-fans-celebrate",
+    "width": 1200,
+    "height": 800,
+    "bytes": 59774
+  },
+  {
     "file": "club-matchday-gates.webp",
     "occasion": "club-matchday-gates",
     "width": 1200,
@@ -19,6 +47,34 @@
     "width": 1200,
     "height": 800,
     "bytes": 64934
+  },
+  {
+    "file": "league-award.webp",
+    "occasion": "league-award",
+    "width": 1200,
+    "height": 800,
+    "bytes": 14702
+  },
+  {
+    "file": "league-promotion.webp",
+    "occasion": "league-promotion",
+    "width": 1200,
+    "height": 800,
+    "bytes": 114946
+  },
+  {
+    "file": "league-relegation.webp",
+    "occasion": "league-relegation",
+    "width": 1200,
+    "height": 800,
+    "bytes": 94344
+  },
+  {
+    "file": "league-retirement.webp",
+    "occasion": "league-retirement",
+    "width": 1200,
+    "height": 800,
+    "bytes": 93776
   },
   {
     "file": "league-sacked.webp",
@@ -63,6 +119,20 @@
     "bytes": 97444
   },
   {
+    "file": "life-community.webp",
+    "occasion": "life-community",
+    "width": 1200,
+    "height": 800,
+    "bytes": 95388
+  },
+  {
+    "file": "life-homesick.webp",
+    "occasion": "life-homesick",
+    "width": 1200,
+    "height": 800,
+    "bytes": 33036
+  },
+  {
     "file": "life-hospital-visit.webp",
     "occasion": "life-hospital-visit",
     "width": 1200,
@@ -84,6 +154,13 @@
     "bytes": 9820
   },
   {
+    "file": "life-sponsor.webp",
+    "occasion": "life-sponsor",
+    "width": 1200,
+    "height": 800,
+    "bytes": 29854
+  },
+  {
     "file": "life-wedding.webp",
     "occasion": "life-wedding",
     "width": 1200,
@@ -96,6 +173,13 @@
     "width": 1200,
     "height": 800,
     "bytes": 72152
+  },
+  {
+    "file": "match-draw.webp",
+    "occasion": "match-draw",
+    "width": 1200,
+    "height": 800,
+    "bytes": 64672
   },
   {
     "file": "match-header-goal.webp",
@@ -112,11 +196,53 @@
     "bytes": 107444
   },
   {
+    "file": "match-injury.webp",
+    "occasion": "match-injury",
+    "width": 1200,
+    "height": 800,
+    "bytes": 56638
+  },
+  {
     "file": "match-late-winner.webp",
     "occasion": "match-late-winner",
     "width": 1200,
     "height": 800,
     "bytes": 70508
+  },
+  {
+    "file": "match-manager-touchline.webp",
+    "occasion": "match-manager-touchline",
+    "width": 1200,
+    "height": 800,
+    "bytes": 50686
+  },
+  {
+    "file": "match-penalty.webp",
+    "occasion": "match-penalty",
+    "width": 1200,
+    "height": 800,
+    "bytes": 84084
+  },
+  {
+    "file": "match-red-card.webp",
+    "occasion": "match-red-card",
+    "width": 1200,
+    "height": 800,
+    "bytes": 49972
+  },
+  {
+    "file": "match-save.webp",
+    "occasion": "match-save",
+    "width": 1200,
+    "height": 800,
+    "bytes": 72010
+  },
+  {
+    "file": "transfer-agent-phone.webp",
+    "occasion": "transfer-agent-phone",
+    "width": 1200,
+    "height": 800,
+    "bytes": 34034
   },
   {
     "file": "transfer-airport.webp",
@@ -131,6 +257,20 @@
     "width": 1200,
     "height": 800,
     "bytes": 22376
+  },
+  {
+    "file": "transfer-farewell.webp",
+    "occasion": "transfer-farewell",
+    "width": 1200,
+    "height": 800,
+    "bytes": 81206
+  },
+  {
+    "file": "transfer-loan.webp",
+    "occasion": "transfer-loan",
+    "width": 1200,
+    "height": 800,
+    "bytes": 85722
   },
   {
     "file": "transfer-medical.webp",
