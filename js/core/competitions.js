@@ -13,7 +13,7 @@ const leagueClubs = (id = leagueOf(G.club)) => domesticClubs().filter(cid => lea
 const clubLevels = c => c?.backgroundOnly ? {} : Object.fromEntries((c?.foreignSquad ? ['A', 'R'] : leagueRules(c?.league || 'EPL').levels).map(k => [k, LEVELS[k]]));
 const clubSquadMax = c => c?.backgroundOnly ? 0 : c?.foreignSquad?.maxPlayers ?? leagueRules(c?.league || 'EPL').squadMax ?? Infinity;
 const squadSpace = (c, p) => !!c && !c.backgroundOnly && (p?.club === c.id && c.squad.includes(p.id) || c.squad.length < clubSquadMax(c));
-const squadLimitMessage = c => c?.backgroundOnly ? `${c.name} have a placeholder squad. Transfers are unavailable until player data is added.` : `${c.name} already have ${clubSquadMax(c)} players. Release or transfer someone before signing another player.`;
+const squadLimitMessage = c => c?.backgroundOnly ? `${c.name} are not signing players.` : `${c.name} already have ${clubSquadMax(c)} players. Release or transfer someone before signing another player.`;
 function ensureCompetitions() {
   if (!G.competitionVersion) (G.flags ||= {}).legacyLeagueSetup = true;
   // A loaded career keeps its own membership and fixtures. Do not rewrite a

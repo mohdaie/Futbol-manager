@@ -40,7 +40,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     check('A placeholder club has a working dashboard with its league and country',/La Liga/.test(await page.locator('.main').textContent())&&/Spain/.test(await page.locator('.main').textContent()));
     await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
     check('The dummy squad shows 25 slots with no player profile or transfer controls',await page.locator('.main .list .row').count()===25&&await page.locator('.main [data-a=player],.main [data-a=contract],.main [data-a=scoutFile]').count()===0);
-    check('Virtual squads explain that players cannot be scouted or transferred',/cannot be scouted or transferred/.test(await page.locator('.main .note').textContent())&&await page.locator('.main .list .row').first().textContent().then(t=>!/Placeholder/.test(t)&&/Spain/.test(t)));
+    check('Background squads show plain player rows with no read-only labels',!/read-only|placeholder|world-building/i.test(await page.locator('.main').textContent())&&await page.locator('.main .list .row').first().textContent().then(t=>!/Placeholder/.test(t)&&/Spain/.test(t)));
     check('Dummy clubs expose no Transfers tab',await page.locator('[data-a=clubPage][data-section=transfers]').count()===0);
     await page.locator('[data-a=clubPage][data-section=fixtures]').tap();
     check('A background club explains it has no fixtures',/No fixtures/.test(await page.locator('.main').textContent()));
