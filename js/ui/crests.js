@@ -128,7 +128,7 @@ function clubBadge(c, size = 28) {
   if (!c) return '';
   const key = clubCrestKey(c);
   if (!key) return fallbackClubBadge(c, size);
-  return `<img class="crest crest-art" src="public/assets/clubs/${key}.webp" width="${size}" height="${Math.round(size * 1.15)}" alt="" aria-hidden="true" decoding="async" data-crest-club="${esc(c.id || '')}" data-crest-name="${esc(c.name)}">`;
+  return `<img class="crest crest-art" src="public/assets/clubs/${key}.webp?v=2026.10.26.4" width="${size}" height="${Math.round(size * 1.15)}" alt="" aria-hidden="true" decoding="async" data-crest-club="${esc(c.id || '')}" data-crest-name="${esc(c.name)}">`;
 }
 
 // Keep a usable badge if artwork cannot be loaded, including on club selection

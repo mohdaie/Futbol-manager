@@ -2,7 +2,7 @@
 // Background club registry. Selected compact squads are added separately;
 // registry membership itself never creates players, fixtures or league jobs.
 function ensureWorldLeagues() {
-  if (G.worldLeagueVersion === 3) return;
+  if (G.worldLeagueVersion === 2) { ensureWorldCrestPalettes(); return; }
   const existing = Object.values(G.clubs);
   G.worldLeagues ||= {};
   for (const definition of Object.values(WORLD_LEAGUES)) {
@@ -20,14 +20,14 @@ function ensureWorldLeagues() {
       }
       c.worldLeague = definition.id;
       c.realName ||= entry.realName;
-      // Version 3: real club colours. Legacy F-id clubs keep the colours their crest artwork uses.
-      if (c.id === entry.id) { c.c1 = entry.c1; c.c2 = entry.c2; }
+      if (c.backgroundOnly) { c.c1 = entry.c1; c.c2 = entry.c2; }
       ids.push(c.id);
     }
     G.worldLeagues[definition.id] = { clubs: ids,
       mode: ids.some(id => G.clubs[id].foreignSquad) ? 'clubs-and-squads' : 'clubs-only', active: false };
   }
-  G.worldLeagueVersion = 3;
+  G.worldLeagueVersion = 2;
+  ensureWorldCrestPalettes();
 }
 
 function worldLeagueClubs(id) {
@@ -72,3 +72,16 @@ const VIRTUAL_SQUAD_PROFILES = {
   DE1: { local: 'GER', localCount: 8, eu: ['ESP','FRA','ITA','POR','NED','BEL','IRL','SCO','DEN','NOR'], nonEuCount: 7, international: ['BRA','ARG','NGA','GHA','SEN','CIV','JPN','MAS','USA'] },
   FR1: { local: 'FRA', localCount: 8, eu: ['ESP','GER','ITA','POR','NED','BEL','IRL','SCO','DEN','NOR'], nonEuCount: 7, international: ['BRA','ARG','NGA','GHA','SEN','CIV','JPN','MAS','USA'] },
 };
+
+// One-time colour correction for the audited clubs, including established squads.
+// Resolve legacy generated foreign IDs through their authored roster identity.
+const WORLD_CREST_PALETTE_FIX_IDS = new Set(["ES1_ATH", "ES1_ATM", "ES1_BAR", "ES1_CEL", "ES1_VAL", "ES1_VIL", "IT1_JUV", "DE1_DOR", "DE1_FRA", "DE1_BAY", "DE1_RBL", "FR1_MON", "FR1_LIL", "ES1_RMA", "IT1_ATA", "IT1_INT", "IT1_COM", "FR1_STR", "FR1_MAR", "FR1_TRO"]);
+function ensureWorldCrestPalettes() {
+  if (G.worldCrestPaletteVersion === 1) return;
+  for (const entry of WORLD_CLUBS.filter(c => WORLD_CREST_PALETTE_FIX_IDS.has(c.id))) {
+    const c = G.clubs[entry.id] || Object.values(G.clubs).find(c => c.foreign && !c.fa &&
+      (entry.existingRoster && c.ros === entry.existingRoster || c.name === entry.name));
+    if (c) { c.c1 = entry.c1; c.c2 = entry.c2; }
+  }
+  G.worldCrestPaletteVersion = 1;
+}

@@ -223,12 +223,12 @@
     "id": "F0",
     "name": "Castilla CF",
     "file": "F0.webp",
-    "primary": "#F5F5F5",
-    "secondary": "#5B2C83",
+    "primary": "#FFFFFF",
+    "secondary": "#FEBE10",
     "width": 256,
     "height": 294,
-    "bytes": 28764,
-    "sourcePngSha256": "dc85a87ba6e6ad07a18785399506af6f0edec8fd5ab90c62296f0787495cba80"
+    "bytes": 25840,
+    "sourcePngSha256": "245e52319be260ae1dbcabc5cb91ad59c7f9ff1f9d55908e7de5fc6e3b0a2b12"
   },
   {
     "id": "F1",
@@ -630,12 +630,12 @@
     "id": "ES1_ATH",
     "name": "Lions of Bilbao",
     "file": "ES1_ATH.webp",
-    "primary": "#A50044",
-    "secondary": "#F7CB46",
+    "primary": "#ED1C24",
+    "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 27732,
-    "sourcePngSha256": "1907ace0f3cc51fe56a969f51c75b2a98ebdfff70c5550be71d36345beaa79d8"
+    "bytes": 28936,
+    "sourcePngSha256": "7b74942e7dc96dd9552bb643f5187e40fa5cf16213fe776da840815ebeafbcf1"
   },
   {
     "id": "ES1_OSA",
@@ -652,12 +652,13 @@
     "id": "ES1_ATM",
     "name": "Colchoneros",
     "file": "ES1_ATM.webp",
-    "primary": "#A50044",
-    "secondary": "#F7CB46",
+    "primary": "#D71920",
+    "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 27854,
-    "sourcePngSha256": "1907ace0f3cc51fe56a969f51c75b2a98ebdfff70c5550be71d36345beaa79d8"
+    "bytes": 28224,
+    "sourcePngSha256": "7b74942e7dc96dd9552bb643f5187e40fa5cf16213fe776da840815ebeafbcf1",
+    "tertiary": "#142D4E"
   },
   {
     "id": "ES1_ALA",
@@ -686,11 +687,11 @@
     "name": "Blaugrana",
     "file": "ES1_BAR.webp",
     "primary": "#A50044",
-    "secondary": "#F7CB46",
+    "secondary": "#00529F",
     "width": 256,
     "height": 294,
-    "bytes": 27492,
-    "sourcePngSha256": "1907ace0f3cc51fe56a969f51c75b2a98ebdfff70c5550be71d36345beaa79d8"
+    "bytes": 21560,
+    "sourcePngSha256": "7b74942e7dc96dd9552bb643f5187e40fa5cf16213fe776da840815ebeafbcf1"
   },
   {
     "id": "ES1_GET",
@@ -730,11 +731,11 @@
     "name": "Celestes",
     "file": "ES1_CEL.webp",
     "primary": "#8CCCE5",
-    "secondary": "#D71920",
+    "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 25456,
-    "sourcePngSha256": "8d728c91be398c0b8d8dd3c2e11dd92c51e058fbe8805882da93b94c7d09b9e1"
+    "bytes": 20736,
+    "sourcePngSha256": "7b74942e7dc96dd9552bb643f5187e40fa5cf16213fe776da840815ebeafbcf1"
   },
   {
     "id": "ES1_DEP",
@@ -818,22 +819,22 @@
     "name": "Bats",
     "file": "ES1_VAL.webp",
     "primary": "#FFFFFF",
-    "secondary": "#F58220",
+    "secondary": "#111111",
     "width": 256,
     "height": 294,
-    "bytes": 25054,
-    "sourcePngSha256": "0573a3e4676eed38612a6a2401fbea101ec668e857a65ed980791a27a756282b"
+    "bytes": 20654,
+    "sourcePngSha256": "7b74942e7dc96dd9552bb643f5187e40fa5cf16213fe776da840815ebeafbcf1"
   },
   {
     "id": "ES1_VIL",
     "name": "Yellow Submarine",
     "file": "ES1_VIL.webp",
-    "primary": "#A50044",
-    "secondary": "#F7CB46",
+    "primary": "#FFE667",
+    "secondary": "#002D62",
     "width": 256,
     "height": 294,
-    "bytes": 23400,
-    "sourcePngSha256": "a9d41008e9d7f4fe0af802ed68daf377a1128b2c5c139ec0950c8bba47fd346d"
+    "bytes": 26712,
+    "sourcePngSha256": "21296b052a2cf5d95641cb54086eb656d5bb5ecf153bb4f4997b3b717162974c"
   },
   {
     "id": "IT1_MON",
@@ -872,12 +873,12 @@
     "id": "IT1_ATA",
     "name": "La Dea",
     "file": "IT1_ATA.webp",
-    "primary": "#1369B0",
-    "secondary": "#FFFFFF",
+    "primary": "#1E71B8",
+    "secondary": "#111111",
     "width": 256,
     "height": 294,
-    "bytes": 26962,
-    "sourcePngSha256": "a9d41008e9d7f4fe0af802ed68daf377a1128b2c5c139ec0950c8bba47fd346d"
+    "bytes": 24422,
+    "sourcePngSha256": "245e52319be260ae1dbcabc5cb91ad59c7f9ff1f9d55908e7de5fc6e3b0a2b12"
   },
   {
     "id": "IT1_BOL",
@@ -905,23 +906,23 @@
     "id": "IT1_COM",
     "name": "Lariani",
     "file": "IT1_COM.webp",
-    "primary": "#75C5F0",
+    "primary": "#0047AB",
     "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 18890,
-    "sourcePngSha256": "32651b47180c0e313a439fce19fcd5eeb19facf71a1852580f24a3b9bd4f1f94"
+    "bytes": 25726,
+    "sourcePngSha256": "ad58f26adb5c08a2799885c14de33ba7fdd1349dc520df4ad199ed6debdf38f8"
   },
   {
     "id": "IT1_INT",
     "name": "Nerazzurri",
     "file": "IT1_INT.webp",
-    "primary": "#1369B0",
-    "secondary": "#FFFFFF",
+    "primary": "#00529F",
+    "secondary": "#111111",
     "width": 256,
     "height": 294,
-    "bytes": 27548,
-    "sourcePngSha256": "32651b47180c0e313a439fce19fcd5eeb19facf71a1852580f24a3b9bd4f1f94"
+    "bytes": 22812,
+    "sourcePngSha256": "ad58f26adb5c08a2799885c14de33ba7fdd1349dc520df4ad199ed6debdf38f8"
   },
   {
     "id": "IT1_FRO",
@@ -949,12 +950,12 @@
     "id": "IT1_JUV",
     "name": "Old Lady",
     "file": "IT1_JUV.webp",
-    "primary": "#1369B0",
-    "secondary": "#FFFFFF",
+    "primary": "#FFFFFF",
+    "secondary": "#111111",
     "width": 256,
     "height": 294,
-    "bytes": 27588,
-    "sourcePngSha256": "32651b47180c0e313a439fce19fcd5eeb19facf71a1852580f24a3b9bd4f1f94"
+    "bytes": 23040,
+    "sourcePngSha256": "21296b052a2cf5d95641cb54086eb656d5bb5ecf153bb4f4997b3b717162974c"
   },
   {
     "id": "IT1_PAR",
@@ -1081,12 +1082,12 @@
     "id": "DE1_DOR",
     "name": "Black and Yellows",
     "file": "DE1_DOR.webp",
-    "primary": "#212121",
-    "secondary": "#E94F36",
+    "primary": "#FFDD00",
+    "secondary": "#111111",
     "width": 256,
     "height": 294,
-    "bytes": 26378,
-    "sourcePngSha256": "b3f1ea962f36e95ed12d2fb52696358225c5d2752f3cc1acbad60024dc28718f"
+    "bytes": 30052,
+    "sourcePngSha256": "21296b052a2cf5d95641cb54086eb656d5bb5ecf153bb4f4997b3b717162974c"
   },
   {
     "id": "DE1_BMG",
@@ -1103,12 +1104,12 @@
     "id": "DE1_FRA",
     "name": "Frankfurt Eagles",
     "file": "DE1_FRA.webp",
-    "primary": "#212121",
-    "secondary": "#E94F36",
+    "primary": "#111111",
+    "secondary": "#E30613",
     "width": 256,
     "height": 294,
-    "bytes": 26574,
-    "sourcePngSha256": "a8d4e5da202faa825adbaa59f30a2e3e1147ea0960d01cfc1c0618347d9b2a9a"
+    "bytes": 23872,
+    "sourcePngSha256": "21296b052a2cf5d95641cb54086eb656d5bb5ecf153bb4f4997b3b717162974c"
   },
   {
     "id": "DE1_AUG",
@@ -1125,12 +1126,12 @@
     "id": "DE1_BAY",
     "name": "Bavarians",
     "file": "DE1_BAY.webp",
-    "primary": "#212121",
-    "secondary": "#E94F36",
+    "primary": "#DC052D",
+    "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 25958,
-    "sourcePngSha256": "a8d4e5da202faa825adbaa59f30a2e3e1147ea0960d01cfc1c0618347d9b2a9a"
+    "bytes": 28004,
+    "sourcePngSha256": "21296b052a2cf5d95641cb54086eb656d5bb5ecf153bb4f4997b3b717162974c"
   },
   {
     "id": "DE1_S04",
@@ -1158,12 +1159,12 @@
     "id": "DE1_RBL",
     "name": "Red Bulls",
     "file": "DE1_RBL.webp",
-    "primary": "#212121",
-    "secondary": "#E94F36",
+    "primary": "#FFFFFF",
+    "secondary": "#DD003F",
     "width": 256,
     "height": 294,
-    "bytes": 21028,
-    "sourcePngSha256": "9cbf9af85a271ef317af82f07a6af56d2cce56a09327583799b0aceb16f175f7"
+    "bytes": 25290,
+    "sourcePngSha256": "245e52319be260ae1dbcabc5cb91ad59c7f9ff1f9d55908e7de5fc6e3b0a2b12"
   },
   {
     "id": "DE1_FRE",
@@ -1246,12 +1247,12 @@
     "id": "FR1_MON",
     "name": "Monégasques",
     "file": "FR1_MON.webp",
-    "primary": "#183766",
-    "secondary": "#E7EAF1",
+    "primary": "#E30613",
+    "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 24486,
-    "sourcePngSha256": "ba6968776f15add2422d30c03c235aa5ec818e9133b28356259f82bd45dade3c"
+    "bytes": 26616,
+    "sourcePngSha256": "245e52319be260ae1dbcabc5cb91ad59c7f9ff1f9d55908e7de5fc6e3b0a2b12"
   },
   {
     "id": "FR1_ANG",
@@ -1268,12 +1269,12 @@
     "id": "FR1_TRO",
     "name": "Troyens",
     "file": "FR1_TRO.webp",
-    "primary": "#75C5F0",
+    "primary": "#1C4D8C",
     "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 22662,
-    "sourcePngSha256": "ba6968776f15add2422d30c03c235aa5ec818e9133b28356259f82bd45dade3c"
+    "bytes": 25978,
+    "sourcePngSha256": "ad58f26adb5c08a2799885c14de33ba7fdd1349dc520df4ad199ed6debdf38f8"
   },
   {
     "id": "FR1_LOR",
@@ -1312,12 +1313,12 @@
     "id": "FR1_LIL",
     "name": "Dogues",
     "file": "FR1_LIL.webp",
-    "primary": "#183766",
-    "secondary": "#E7EAF1",
+    "primary": "#E21A23",
+    "secondary": "#142D4E",
     "width": 256,
     "height": 294,
-    "bytes": 27234,
-    "sourcePngSha256": "2745c619a6a9bcaa10556ecdd0d612bc63625f54e9584d9b94ce0e0cdb8ae36a"
+    "bytes": 24702,
+    "sourcePngSha256": "245e52319be260ae1dbcabc5cb91ad59c7f9ff1f9d55908e7de5fc6e3b0a2b12"
   },
   {
     "id": "FR1_NIC",
@@ -1345,12 +1346,12 @@
     "id": "FR1_MAR",
     "name": "Phocéens",
     "file": "FR1_MAR.webp",
-    "primary": "#183766",
-    "secondary": "#E7EAF1",
+    "primary": "#2FAEE0",
+    "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 28734,
-    "sourcePngSha256": "2745c619a6a9bcaa10556ecdd0d612bc63625f54e9584d9b94ce0e0cdb8ae36a"
+    "bytes": 26652,
+    "sourcePngSha256": "ad58f26adb5c08a2799885c14de33ba7fdd1349dc520df4ad199ed6debdf38f8"
   },
   {
     "id": "FR1_PFC",
@@ -1367,12 +1368,12 @@
     "id": "FR1_STR",
     "name": "Racing Alsace",
     "file": "FR1_STR.webp",
-    "primary": "#00529F",
+    "primary": "#007BC4",
     "secondary": "#FFFFFF",
     "width": 256,
     "height": 294,
-    "bytes": 24982,
-    "sourcePngSha256": "646805272db9d6d6637b1bad5a59f7a1d35ef890e709f08912da85755091c5b0"
+    "bytes": 25474,
+    "sourcePngSha256": "ad58f26adb5c08a2799885c14de33ba7fdd1349dc520df4ad199ed6debdf38f8"
   },
   {
     "id": "FR1_LEN",

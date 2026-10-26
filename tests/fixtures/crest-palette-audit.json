@@ -1,0 +1,143 @@
+{
+  "ES1_ATH": {
+    "name": "Lions of Bilbao",
+    "colors": [
+      "#ED1C24",
+      "#FFFFFF"
+    ]
+  },
+  "ES1_ATM": {
+    "name": "Colchoneros",
+    "colors": [
+      "#D71920",
+      "#FFFFFF",
+      "#142D4E"
+    ]
+  },
+  "ES1_BAR": {
+    "name": "Blaugrana",
+    "colors": [
+      "#A50044",
+      "#00529F"
+    ]
+  },
+  "ES1_CEL": {
+    "name": "Celestes",
+    "colors": [
+      "#8CCCE5",
+      "#FFFFFF"
+    ]
+  },
+  "ES1_VAL": {
+    "name": "Bats",
+    "colors": [
+      "#FFFFFF",
+      "#111111"
+    ]
+  },
+  "ES1_VIL": {
+    "name": "Yellow Submarine",
+    "colors": [
+      "#FFE667",
+      "#002D62"
+    ]
+  },
+  "IT1_JUV": {
+    "name": "Old Lady",
+    "colors": [
+      "#FFFFFF",
+      "#111111"
+    ]
+  },
+  "DE1_DOR": {
+    "name": "Black and Yellows",
+    "colors": [
+      "#FFDD00",
+      "#111111"
+    ]
+  },
+  "DE1_FRA": {
+    "name": "Frankfurt Eagles",
+    "colors": [
+      "#111111",
+      "#E30613"
+    ]
+  },
+  "DE1_BAY": {
+    "name": "Bavarians",
+    "colors": [
+      "#DC052D",
+      "#FFFFFF"
+    ]
+  },
+  "DE1_RBL": {
+    "name": "Red Bulls",
+    "colors": [
+      "#FFFFFF",
+      "#DD003F"
+    ]
+  },
+  "FR1_MON": {
+    "name": "Monégasques",
+    "colors": [
+      "#E30613",
+      "#FFFFFF"
+    ]
+  },
+  "FR1_LIL": {
+    "name": "Dogues",
+    "colors": [
+      "#E21A23",
+      "#142D4E"
+    ]
+  },
+  "F0": {
+    "name": "Castilla CF",
+    "colors": [
+      "#FFFFFF",
+      "#FEBE10"
+    ]
+  },
+  "IT1_ATA": {
+    "name": "La Dea",
+    "colors": [
+      "#1E71B8",
+      "#111111"
+    ]
+  },
+  "IT1_INT": {
+    "name": "Nerazzurri",
+    "colors": [
+      "#00529F",
+      "#111111"
+    ]
+  },
+  "IT1_COM": {
+    "name": "Lariani",
+    "colors": [
+      "#0047AB",
+      "#FFFFFF"
+    ]
+  },
+  "FR1_STR": {
+    "name": "Racing Alsace",
+    "colors": [
+      "#007BC4",
+      "#FFFFFF"
+    ]
+  },
+  "FR1_MAR": {
+    "name": "Phocéens",
+    "colors": [
+      "#2FAEE0",
+      "#FFFFFF"
+    ]
+  },
+  "FR1_TRO": {
+    "name": "Troyens",
+    "colors": [
+      "#1C4D8C",
+      "#FFFFFF"
+    ]
+  }
+}
