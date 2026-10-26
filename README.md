@@ -39,6 +39,6 @@ Set them up in Admin → Jev AI and Admin → DeepSeek. Keys are stored only in 
 
 ## Assets
 
-`public/assets/clubs/` holds the 57 approved Armoury Shield club crests as transparent, mobile-sized WebP files. The same renderer supplies club selection and every in-game badge, including existing careers. Free agents, unknown clubs and failed image loads retain a generated shield. See the folder's README and manifest for the artwork mapping.
+`public/assets/clubs/` holds the 129 approved Armoury Shield club crests as transparent, mobile-sized WebP files. The same renderer supplies club selection and every in-game badge, including existing careers. Free agents, unknown clubs and failed image loads retain a generated shield. See the folder's README and manifest for the artwork mapping.
 
 `public/assets/managers/` holds five comic-style manager portraits (see its README). The game shows them as **Manager 1 to 5**: you pick one on the start screen and can change it in Settings. It loads the small WebP copies in `public/assets/managers/small/` (320 px, about 20 KB each) rather than the 1.5 MB originals.
