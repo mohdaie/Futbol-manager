@@ -24,7 +24,7 @@ function askingPrice(p) {
 // Would the player consider joining your club?
 function interest(p) {
   const me = userClub(), from = G.clubs[p.club];
-  if (p.ca > me.rep + 6 + joinPull(p) && R() < 0.85 && !(from && from.rep < me.rep)) return { ok: false, msg: `${fullName(p)} does not see the ${me.name} as a step up.` };
+  if (p.ca > me.rep + 6 + joinPull(p) && R() < 0.85 && !(from && from.rep < me.rep)) return { ok: false, msg: `${fullName(p)} does not see ${theClub(me)} as a step up.` };
   if (from && !from.fa && from.rep > me.rep + 10 && isKeyPlayer(p)) return { ok: false, msg: `${fullName(p)} is settled at a bigger club and will not talk to you.` };
   return { ok: true };
 }
@@ -50,9 +50,9 @@ function makeBid(pid, fee) {
   if (!it.ok) return { r: 'reject', msg: it.msg };
   if (c.fa) return { r: 'accept', fee: 0, msg: `${fullName(p)} is a free agent. Agree personal terms to sign.` };
   const ask = askingPrice(p);
-  if (fee >= ask) return { r: 'accept', fee, msg: `The ${c.name} accept your offer of ${money(fee)}.` };
-  if (fee >= ask * 0.75) return { r: 'counter', fee: ask, msg: `The ${c.name} reject ${money(fee)} but would accept ${money(ask)}.` };
-  return { r: 'reject', msg: `The ${c.name} reject your offer out of hand. It is well short of their valuation.` };
+  if (fee >= ask) return { r: 'accept', fee, msg: `${TheClub(c)} accept your offer of ${money(fee)}.` };
+  if (fee >= ask * 0.75) return { r: 'counter', fee: ask, msg: `${TheClub(c)} reject ${money(fee)} but would accept ${money(ask)}.` };
+  return { r: 'reject', msg: `${TheClub(c)} reject your offer out of hand. It is well short of their valuation.` };
 }
 
 // Personal terms. Returns {ok, msg}. mode: 'buy' | 'renew'
@@ -77,7 +77,7 @@ function offerContract(pid, wage, years, status, fee, mode) {
     return { ok: true, msg: `${fullName(p)} signs a new ${years}-year contract.` };
   }
   completeSigning(p, fee, wage, years + off, status);
-  return { ok: true, msg: `${fullName(p)} joins the ${userClub().name}${fee ? ' for ' + money(fee) : ' on a free transfer'}.` };
+  return { ok: true, msg: `${fullName(p)} joins ${theClub(userClub())}${fee ? ' for ' + money(fee) : ' on a free transfer'}.` };
 }
 
 // Signed players join the first team unless they are still U18 age.
@@ -99,7 +99,7 @@ function completeSigning(p, fee, wage, years, status, terms) {
   if (!p || G.players[p.id] !== p || G.clubs[p.club]?.backgroundOnly) throw new Error('This player is unavailable for transfer.');
   if (!squadSpace(userClub(), p)) throw new Error(squadLimitMessage(userClub()));
   const me = userClub(), from = G.clubs[p.club];
-  const fromName = from.fa ? 'free agency' : 'the ' + from.name;
+  const fromName = from.fa ? 'free agency' : theClub(from);
   const settlement = settleTransferFee(p, G.club, fee, terms, terms?.exchangeValue || 0);
   moveClub(p, G.club);
   p.wage = wage; p.con = G.season + years; p.status = status; p.mor = clamp(p.mor + 10, 0, 100);
@@ -107,7 +107,7 @@ function completeSigning(p, fee, wage, years, status, terms) {
   G.shortlist = G.shortlist.filter(id => id !== p.id);
   G.pitches = G.pitches.filter(x => x.pid !== p.id);
   G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: from.id, to: G.club, fee, upfront: settlement.upfront, deferred: settlement.deferred, exchangeValue: terms?.exchangeValue || 0 });
-  addNews('transfer', `${fullName(p)} signs for the ${me.name}`, `${fullName(p)} (${p.age}, ${p.pos}) arrives from ${fromName}${fee ? ' for ' + money(fee) : ''} on a ${years}-year deal worth ${wageFmt(wage)}.`);
+  addNews('transfer', `${fullName(p)} signs for ${theClub(me)}`, `${fullName(p)} (${p.age}, ${p.pos}) arrives from ${fromName}${fee ? ' for ' + money(fee) : ''} on a ${years}-year deal worth ${wageFmt(wage)}.`);
 }
 
 function sellPlayer(p, toId, fee, terms) {
@@ -117,7 +117,7 @@ function sellPlayer(p, toId, fee, terms) {
   moveClub(p, toId);
   p.wage = wageFor(p, to.rep); p.con = G.season + ri(2, 5);
   G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: G.club, to: toId, fee, upfront: settlement.upfront, deferred: settlement.deferred, exchangeValue: terms?.exchangeValue || 0 });
-  addNews('transfer', `${fullName(p)} leaves for the ${to.name}`, `${fullName(p)} has been sold for ${money(fee)}. Half of cash received is added to your transfer budget; future instalments are credited when paid.`);
+  addNews('transfer', `${fullName(p)} leaves for ${theClub(to)}`, `${fullName(p)} has been sold for ${money(fee)}. Half of cash received is added to your transfer budget; future instalments are credited when paid.`);
 }
 
 function releasePlayer(p) {
@@ -138,8 +138,8 @@ function respondBid(n, choice) {
   if (choice === 'accept') { sellPlayer(p, a.from, a.fee); return `${fullName(p)} sold for ${money(a.fee)}.`; }
   if (choice === 'counter') {
     const want = roundMoney(a.fee * 1.2);
-    if (want <= pValue(p) * 1.45 && R() < 0.6) { sellPlayer(p, a.from, want); return `The ${clubName(a.from)} agree to ${money(want)}. ${fullName(p)} has been sold.`; }
-    return `The ${clubName(a.from)} walk away from the deal.`;
+    if (want <= pValue(p) * 1.45 && R() < 0.6) { sellPlayer(p, a.from, want); return `${TheClub(a.from)} agree to ${money(want)}. ${fullName(p)} has been sold.`; }
+    return `${TheClub(a.from)} walk away from the deal.`;
   }
   p.mor = clamp(p.mor - (p.listed ? 0 : 3), 0, 100);
   return 'Bid rejected.';

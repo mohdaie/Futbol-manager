@@ -103,7 +103,7 @@ function sitLabel(key) {
 }
 function sitText(M, S, f) {
   const O = M.sides[1 - S.idx], tot = S.st.pos + O.st.pos || 1;
-  return `Football match, minute ${f.min}. You manage the ${clubName(S.cid)} (${f.home ? 'home' : 'away'}) against the ${clubName(O.cid)}. ` +
+  return `Football match, minute ${f.min}. You manage ${theClub(S.cid)} (${f.home ? 'home' : 'away'}) against ${theClub(O.cid)}. ` +
     `Score ${S.st.g}-${O.st.g}, you are ${f.diff > 0 ? 'winning' : f.diff < 0 ? 'losing' : 'level'}. ` +
     `Your team is ${f.str < 0.92 ? 'weaker than' : f.str > 1.08 ? 'stronger than' : 'about equal to'} the opponent (strength ratio ${f.str}). ` +
     `Your outfield players have ${f.cond}% energy left. Red cards: you ${S.reds.length}, them ${O.reds.length}. ` +

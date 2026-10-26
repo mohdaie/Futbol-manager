@@ -44,7 +44,7 @@ function reviewTransferPackage(d) {
   const t = transferProposal(d), { buyer, seller, player: p } = transferParties(d), q = transferExchange(d);
   if (t.years) {
     const rule = instalmentPolicy(d.fee, seller);
-    if (t.years > rule.years || t.upfrontPct < rule.upfrontPct) return { ok: false, who: 'club', reason: `The ${seller.name} require at least ${rule.upfrontPct}% upfront and no more than ${rule.years} year${rule.years === 1 ? '' : 's'} for this cash fee${seller.bal < 0 ? ' because they need cash now' : ''}.` };
+    if (t.years > rule.years || t.upfrontPct < rule.upfrontPct) return { ok: false, who: 'club', reason: `${TheClub(seller)} require at least ${rule.upfrontPct}% upfront and no more than ${rule.years} year${rule.years === 1 ? '' : 's'} for this cash fee${seller.bal < 0 ? ' because they need cash now' : ''}.` };
     const upfront = Math.round(d.fee * t.upfrontPct / 100);
     const commitments = transferCommitments(buyer.id).owed;
     if (buyer.bal - upfront < -Math.max(5e6, d.fee * .5) || commitments + d.fee - upfront > Math.max(20e6, Math.max(0, buyer.bal) * 1.5)) return { ok: false, who: 'agent', reason: 'The agent will not approve the payment risk: the buyer needs more cash or fewer outstanding commitments.' };
@@ -53,9 +53,9 @@ function reviewTransferPackage(d) {
     const fair = pValue(q);
     if (t.exchangeValue > fair * 1.2 || t.exchangeValue < fair * .6) return { ok: false, who: 'club', reason: `The clubs do not agree with the exchange valuation of ${money(t.exchangeValue)} for ${pname(q)} (market estimate ${money(fair)}).` };
     const needed = !seniorSquad(seller.id).some(x => x.id !== p.id && x.pos === q.pos && x.ca >= q.ca);
-    if (q.ca < seller.rep - (needed ? 24 : 17)) return { ok: false, who: 'club', reason: `The ${seller.name} do not consider ${pname(q)} suitable for their squad.` };
+    if (q.ca < seller.rep - (needed ? 24 : 17)) return { ok: false, who: 'club', reason: `${TheClub(seller)} do not consider ${pname(q)} suitable for their squad.` };
     const refusal = exchangeAgentReview(q, seller); if (refusal) return { ok: false, who: 'agent', reason: refusal };
-    if (Math.max(q.wage, wageFor(q, seller.rep)) > Math.max(15000, clubWageBill(seller) * .3)) return { ok: false, who: 'club', reason: `The ${seller.name} cannot support the exchange player's wage.` };
+    if (Math.max(q.wage, wageFor(q, seller.rep)) > Math.max(15000, clubWageBill(seller) * .3)) return { ok: false, who: 'club', reason: `${TheClub(seller)} cannot support the exchange player's wage.` };
   }
   if (d.dir === 'out' && (d.fee || 0) + t.exchangeValue > Math.max(pValue(p) * 1.45, d.initialFee || d.fee || 0)) return { ok: false, who: 'club', reason: 'The buyer rejects the combined cash and exchange value as too high for this player.' };
   if (t.buyBackPrice && t.buyBackPrice < Math.max(pValue(p) * 1.25, ((d.fee || 0) + t.exchangeValue) * 1.1)) return { ok: false, who: 'agent', reason: 'The buyer and the player’s agent require a buy-back price of at least 125% of market value and 110% of this transfer package.' };

@@ -162,7 +162,7 @@ function managerPayWeek() {
     c.bal -= salary;
     if (p.id === G.managerProfileId) {
       userSalary = salary;
-      managerRecordIncome(p, 'salary', salary, `Weekly salary from the ${c.name}.`);
+      managerRecordIncome(p, 'salary', salary, `Weekly salary from ${theClub(c)}.`);
       const sponsor = Math.round((c.rep * 65) + (p.awards.length * 250));
       if (sponsor > 0) managerRecordIncome(p, 'sponsor', sponsor, 'Weekly personal sponsorship and endorsement income.', true);
     } else {

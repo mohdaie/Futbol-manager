@@ -144,7 +144,7 @@ function dealTick(d, force) {
     const p = G.players[d.pid];
     if (!p) return closeDeal(d, false, 'The player has retired.', false);
     if (d.dir === 'in' && p.club === G.club) return closeDeal(d, true, `${fullName(p)} is already your player.`, false);
-    if (d.dir !== 'out' && d.from !== p.club) return closeDeal(d, false, `${fullName(p)} has joined the ${clubName(p.club)} instead.`, d.dir === 'in');
+    if (d.dir !== 'out' && d.from !== p.club) return closeDeal(d, false, `${fullName(p)} has joined ${theClub(p.club)} instead.`, d.dir === 'in');
     if (d.dir === 'out' && p.club !== G.club) return closeDeal(d, false, `${fullName(p)} is no longer at the club.`, false);
     const fa = G.clubs[d.from] && G.clubs[d.from].fa;
     if (!fa && d.opened && !inWindow() && (d.loanTerms || WINDOW_STAGES.includes(d.stage))) return closeDeal(d, false, `The window shut before the deal for ${fullName(p)} was done.`, d.dir !== 'ai');
@@ -180,7 +180,7 @@ const DEAL_STEP = {
     },
     interest(d, p) {
       const c = G.clubs[p.club], fa = c.fa, will = willOf(p, d);
-      if (will === 'refuses') return closeDeal(d, false, `${agentOf(p) ? agentOf(p).name : 'His agent'} says ${fullName(p)} does not want to join the ${userClub().name}.`);
+      if (will === 'refuses') return closeDeal(d, false, `${agentOf(p) ? agentOf(p).name : 'His agent'} says ${fullName(p)} does not want to join ${theClub(userClub())}.`);
       dealLog(d, `${agentOf(p) ? agentOf(p).name + ', his agent' : 'His agent'}: ${fullName(p)} ${WILL_TXT[will]}.`, 'agent');
       if (fa) { d.stage = 'agent'; d.next = wait(1, 2); return; }
       const buyBack = d.buyBackTriggered && activeBuyBack(p) && p.buyBack.price === d.buyBackTriggered.price;
@@ -188,12 +188,12 @@ const DEAL_STEP = {
       const ask = buyBack ? p.buyBack.price : roundMoney(askingPrice(p) * (d.pub ? 1.05 : 1)), key = isKeyPlayer(p), long = p.con - G.season >= 3; // public interest raises the price
       d.ask = ask;
       if (!buyBack && key && long && c.rep >= userClub().rep && !p.listed) {
-        dealLog(d, `The ${c.name}: he is not for sale.`, 'club');
-        return needDecision(d, 'notforsale', `${pname(p)} not for sale`, `The ${c.name} say ${fullName(p)} is not for sale. Only a huge offer, about ${money(roundMoney(ask * 1.4))}, might change their mind.`, { fee: roundMoney(ask * 1.4) });
+        dealLog(d, `${TheClub(c)}: he is not for sale.`, 'club');
+        return needDecision(d, 'notforsale', `${pname(p)} not for sale`, `${TheClub(c)} say ${fullName(p)} is not for sale. Only a huge offer, about ${money(roundMoney(ask * 1.4))}, might change their mind.`, { fee: roundMoney(ask * 1.4) });
       }
-      dealLog(d, `The ${c.name} would listen to offers around ${money(roundMoney(ask * (1 + (hash01(p.id + 'ask') - 0.5) * (20 - dofR()) * 0.02)))}.`, 'club');
+      dealLog(d, `${TheClub(c)} would listen to offers around ${money(roundMoney(ask * (1 + (hash01(p.id + 'ask') - 0.5) * (20 - dofR()) * 0.02)))}.`, 'club');
       d.stage = 'bid';
-      if (ask > (d.lim.fee + transferProposal(d).exchangeValue) * 1.15) return needDecision(d, 'bidlimit', `${pname(p)}: price above your limit`, `The ${c.name} value ${fullName(p)} at about ${money(ask)}. Your limit is ${money(d.lim.fee)}. Raise it, or walk away.`, { fee: ask });
+      if (ask > (d.lim.fee + transferProposal(d).exchangeValue) * 1.15) return needDecision(d, 'bidlimit', `${pname(p)}: price above your limit`, `${TheClub(c)} value ${fullName(p)} at about ${money(ask)}. Your limit is ${money(d.lim.fee)}. Raise it, or walk away.`, { fee: ask });
       d.fee = buyBack ? ask : Math.min(d.lim.fee, Math.max(0, (d.memo && d.memo.open ? d.memo.open : roundMoney(ask * 0.85)) - transferProposal(d).exchangeValue));
       d.next = wait(0, 1);
     },
@@ -206,20 +206,20 @@ const DEAL_STEP = {
         const value = transferOfferValue(d), need = ask * (c.bal < 0 ? 0.9 : 1);
         // A borderline offer: the AI's answer for the selling club, if it is back in time.
         const ai = d.ai && d.ai.club && d.ai.club.fee === d.fee && value >= need * 0.88 && value < need * 1.05 ? aiAnswer(d, 'club') : null;
-        if (!d.buyBackTriggered && ai === 'Reject') return closeDeal(d, false, `The ${c.name} reject the offer and end talks over ${fullName(p)}.`);
+        if (!d.buyBackTriggered && ai === 'Reject') return closeDeal(d, false, `${TheClub(c)} reject the offer and end talks over ${fullName(p)}.`);
         if (d.buyBackTriggered && activeBuyBack(p) && d.fee >= ask || ai === 'Accept' || (value >= need && ai !== 'Counter')) {
           approveTransferPackage(d);
-          dealLog(d, `The ${c.name} accept ${money(d.fee)}${d.add ? ' plus ' + money(d.add) + ' in add-ons' : ''}${transferProposal(d).years ? ', with agreed instalments' : ''}.`, 'club');
-          dealNews(d, `Fee agreed for ${pname(p)}`, `The ${c.name} accept ${money(d.fee)} for ${fullName(p)}. Next: talks with his agent.`);
+          dealLog(d, `${TheClub(c)} accept ${money(d.fee)}${d.add ? ' plus ' + money(d.add) + ' in add-ons' : ''}${transferProposal(d).years ? ', with agreed instalments' : ''}.`, 'club');
+          dealNews(d, `Fee agreed for ${pname(p)}`, `${TheClub(c)} accept ${money(d.fee)} for ${fullName(p)}. Next: talks with his agent.`);
           if (d.pub || d.leaked) dealMedia(d, 'agreed');
           d.stage = 'agent'; d.next = wait(1, 3); return;
         }
-        if (d.round >= 4 || value < ask * 0.6) return closeDeal(d, false, `The ${c.name} end talks over ${fullName(p)}.`);
+        if (d.round >= 4 || value < ask * 0.6) return closeDeal(d, false, `${TheClub(c)} end talks over ${fullName(p)}.`);
         const cashAsk = Math.max(0, ask - transferProposal(d).exchangeValue);
         const counter = roundMoney(d.round === 1 ? cashAsk * 1.05 : Math.max(cashAsk, (d.counter || cashAsk) * 0.97));
         d.counter = counter;
-        dealLog(d, `The ${c.name} reject ${money(d.fee)} and want ${money(counter)}.`, 'club');
-        if (counter > d.lim.fee) return needDecision(d, 'bidlimit', `${pname(p)}: they want ${money(counter)}`, `The ${c.name} want ${money(counter)} for ${fullName(p)}, above your limit of ${money(d.lim.fee)}.`, { fee: counter });
+        dealLog(d, `${TheClub(c)} reject ${money(d.fee)} and want ${money(counter)}.`, 'club');
+        if (counter > d.lim.fee) return needDecision(d, 'bidlimit', `${pname(p)}: they want ${money(counter)}`, `${TheClub(c)} want ${money(counter)} for ${fullName(p)}, above your limit of ${money(d.lim.fee)}.`, { fee: counter });
         d.fee = roundMoney(Math.min(d.lim.fee, d.fee + (counter - d.fee) * (0.55 + dofR() * 0.01)));
         d.next = wait(1, 2); return;
       }
@@ -278,26 +278,26 @@ const DEAL_STEP = {
       approveTransferPackage(d);
       const buyer = G.clubs[d.to];
       d.will = buyer.rep >= userClub().rep + 3 || p.listed || p.mor < 40 ? 'keen' : buyer.rep >= userClub().rep - 6 ? 'open' : p.pers === 'Loyal' ? 'refuses' : 'hesitant';
-      dealLog(d, `${fullName(p)} is talking to the ${buyer.name}: he ${WILL_TXT[d.will]}.`, 'player');
+      dealLog(d, `${fullName(p)} is talking to ${theClub(buyer)}: he ${WILL_TXT[d.will]}.`, 'player');
       d.stage = 'player'; d.next = wait(1, 3);
     },
     player(d, p) {
-      if (d.will === 'refuses' || (d.will === 'hesitant' && hash01(d.id + 'stay') < 0.5)) { p.mor = clamp(p.mor + 4, 0, 100); return closeDeal(d, false, `${fullName(p)} has turned down the ${clubName(d.to)} and wants to stay.`); }
-      dealLog(d, `${fullName(p)} has agreed terms with the ${clubName(d.to)}.`, 'player');
+      if (d.will === 'refuses' || (d.will === 'hesitant' && hash01(d.id + 'stay') < 0.5)) { p.mor = clamp(p.mor + 4, 0, 100); return closeDeal(d, false, `${fullName(p)} has turned down ${theClub(d.to)} and wants to stay.`); }
+      dealLog(d, `${fullName(p)} has agreed terms with ${theClub(d.to)}.`, 'player');
       d.stage = 'medical'; d.next = wait(1, 2);
     },
     medical(d, p) {
-      if (p.inj && p.inj.w >= 6) return closeDeal(d, false, `${fullName(p)} failed his medical at the ${clubName(d.to)}.`);
+      if (p.inj && p.inj.w >= 6) return closeDeal(d, false, `${fullName(p)} failed his medical at ${theClub(d.to)}.`);
       dealLog(d, 'Medical passed.', 'medical');
       d.stage = 'final';
-      needDecision(d, 'finalout', `Sale of ${pname(p)} ready`, `The ${clubName(d.to)} are ready to sign ${fullName(p)} for ${money(d.fee)}. Sanction the sale or block it.`);
+      needDecision(d, 'finalout', `Sale of ${pname(p)} ready`, `${TheClub(d.to)} are ready to sign ${fullName(p)} for ${money(d.fee)}. Sanction the sale or block it.`);
     },
     offer(d, p) { // the buyer answers your counter
       const review = reviewTransferPackage(d);
       if (!review.ok) return needDecision(d, 'package', 'Transfer package rejected', review.reason, {reason:review.reason});
       const val = pValue(p);
-      if (d.fee + transferProposal(d).exchangeValue <= val * 1.45 && hash01(d.id + 'c' + d.round) < 0.65) { dealLog(d, `The ${clubName(d.to)} agree to ${money(d.fee)}.`, 'club'); d.stage = 'terms'; d.next = wait(1, 2); dealNews(d, `${clubName(d.to)} meet your price`, `The ${clubName(d.to)} agree to pay ${money(d.fee)} for ${fullName(p)}. He will now talk to them.`); return; }
-      closeDeal(d, false, `The ${clubName(d.to)} walk away from the deal for ${fullName(p)}.`);
+      if (d.fee + transferProposal(d).exchangeValue <= val * 1.45 && hash01(d.id + 'c' + d.round) < 0.65) { dealLog(d, `${TheClub(d.to)} agree to ${money(d.fee)}.`, 'club'); d.stage = 'terms'; d.next = wait(1, 2); dealNews(d, `${clubName(d.to)} meet your price`, `${TheClub(d.to)} agree to pay ${money(d.fee)} for ${fullName(p)}. He will now talk to them.`); return; }
+      closeDeal(d, false, `${TheClub(d.to)} walk away from the deal for ${fullName(p)}.`);
     },
   },
   ai: {
@@ -306,7 +306,7 @@ const DEAL_STEP = {
       d.stage = 'terms'; d.next = wait(1, 4);
       dealMedia(d, 'agreed');
       const hit = activeDeal(p.id, 'in');
-      if (hit && hit.stage !== 'review' && hit.stage !== 'meeting') dealLog(hit, `The ${clubName(d.to)} have agreed a fee too. Move fast.`, 'club');
+      if (hit && hit.stage !== 'review' && hit.stage !== 'meeting') dealLog(hit, `${TheClub(d.to)} have agreed a fee too. Move fast.`, 'club');
     },
     terms(d, p) {
       if (hash01(d.id + 'b') < 0.1) return closeDeal(d, false, 'The player turned the move down.', false);
@@ -314,12 +314,12 @@ const DEAL_STEP = {
       if (!squadSpace(c, p)) return closeDeal(d, false, squadLimitMessage(c), false);
       settleTransferFee(p, c.id, fee);
       moveClub(p, c.id);
-      p.wage = wageFor(p, c.rep); p.con = G.season + ri(2, 5);
+      p.wage = wageFor(p, c.rep); p.con = G.season + ri(2, 5); d.years = p.con - G.season;
       G.tHist.unshift({ date: today().getTime(), pid: p.id, name: fullName(p), from: from.id, to: c.id, fee });
       if (G.tHist.length > 120) G.tHist.length = 120;
       closeDeal(d, true, 'Done.', false);
       dealMedia(d, 'here'); dealMedia(d, 'done');
-      if (fee >= 15e6 || from.pl) { addNews('transfer', `${fullName(p)} joins the ${c.name}`, `The ${c.name} sign ${fullName(p)} (${p.age}, ${p.pos}) from ${from.fa ? 'free agency' : 'the ' + from.name}${fee ? ' for ' + money(fee) : ''}.`); G.news[0].q = 1; }
+      if (fee >= 15e6 || from.pl) { addNews('transfer', `${fullName(p)} joins ${theClub(c)}`, `${TheClub(c)} sign ${fullName(p)} (${p.age}, ${p.pos}) from ${from.fa ? 'free agency' : theClub(from)}${fee ? ' for ' + money(fee) : ''}.`); G.news[0].q = 1; }
     },
   },
 };
@@ -390,7 +390,7 @@ function completeIn(d) {
   agentRelMove(p, 8, `Completed ${fullName(p)}'s move`);
   signingMood(p, d.fee || 0, d.wage);dealMedia(d, 'done');
   closeDeal(d, true, `${fullName(p)} has signed: ${dealSummary(d)}.`, false);
-  return `${fullName(p)} signs for the ${me.name}.`;
+  return `${fullName(p)} signs for ${theClub(me)}.`;
 }
 function completeExchangePlayer(q, to, value, agentFee) {
   const from = q.club, wage = Math.max(q.wage, wageFor(q, to.rep));
@@ -411,7 +411,7 @@ function completeOut(d) {
   saleMood(p, d.to);if(q)removeFromClub(q);
   sellPlayer(p, d.to, d.fee, terms);if(q)completeExchangePlayer(q, userClub(), terms.exchangeValue, exchangeFee);
   agentRelMove(p, 4, `Sanctioned ${fullName(p)}'s move`);dealMedia(d, 'here');dealMedia(d, 'done');
-  closeDeal(d, true, `${fullName(p)} has joined the ${clubName(d.to)}: ${dealSummary(d)}.`, false);
+  closeDeal(d, true, `${fullName(p)} has joined ${theClub(d.to)}: ${dealSummary(d)}.`, false);
   return `${fullName(p)} sold for ${money(d.fee)}.`;
 }
 function blockOut(d) { const p = G.players[d.pid];if(d.buyBackTriggered && activeBuyBack(p,d.to))return 'The agreed buy-back right cannot be blocked by the selling club.'; agentRelMove(p, d.will === 'keen' ? -8 : -3, `Blocked ${fullName(p)}'s move`); p.mor = clamp(p.mor - (d.will === 'keen' ? 14 : 4), 0, 100); closeDeal(d, false, `You blocked the sale of ${fullName(p)}${d.will === 'keen' ? '. He is unhappy' : ''}.`, false); }
@@ -424,10 +424,10 @@ function answerOffer(d, choice) {
     const review = reviewTransferPackage(d);
     if (!review.ok) { needDecision(d, 'package', 'Transfer package rejected', review.reason, {reason:review.reason}); return review.reason; }
     approveTransferPackage(d);
-    dealMedia(d, 'agreed'); dealLog(d, `You accept ${money(d.fee)}.`, 'you'); d.stage = 'terms'; d.next = wait(1, 2); return `Offer accepted. ${pname(p)} will talk to the ${clubName(d.to)}.`; }
-  if (choice === 'counter') { d.round++; d.fee = roundMoney(d.fee * 1.2); dealLog(d, `You ask for ${money(d.fee)}.`, 'you'); d.next = wait(1, 2); return `You asked for ${money(d.fee)}. Waiting for the ${clubName(d.to)}.`; }
+    dealMedia(d, 'agreed'); dealLog(d, `You accept ${money(d.fee)}.`, 'you'); d.stage = 'terms'; d.next = wait(1, 2); return `Offer accepted. ${pname(p)} will talk to ${theClub(d.to)}.`; }
+  if (choice === 'counter') { d.round++; d.fee = roundMoney(d.fee * 1.2); dealLog(d, `You ask for ${money(d.fee)}.`, 'you'); d.next = wait(1, 2); return `You asked for ${money(d.fee)}. Waiting for ${theClub(d.to)}.`; }
   p.mor = clamp(p.mor - (p.listed ? 0 : 3), 0, 100);
-  closeDeal(d, false, `You rejected the offer from the ${clubName(d.to)}.`, false);
+  closeDeal(d, false, `You rejected the offer from ${theClub(d.to)}.`, false);
   return 'Offer rejected.';
 }
 
@@ -439,7 +439,7 @@ function payAddOns() {
     if (!p || p.club !== G.club) return false;
     if (p.st.a < a.apps) return true;
     userClub().bal -= a.amount; G.ledger.buys += a.amount; if (G.clubs[a.to]) G.clubs[a.to].bal += a.amount;
-    addNews('club', `Add-on paid for ${pname(p)}`, `${fullName(p)} has reached ${a.apps} appearances: ${money(a.amount)} paid to the ${clubName(a.to)}.`);
+    addNews('club', `Add-on paid for ${pname(p)}`, `${fullName(p)} has reached ${a.apps} appearances: ${money(a.amount)} paid to ${theClub(a.to)}.`);
     return false;
   });
 }
@@ -451,7 +451,7 @@ function aiDeal(c, p, fee) {
   if (!squadSpace(c, p) || activeDeal(p.id, 'ai')) return;
   const d = { id: G.nextId++, dir: 'ai', pid: p.id, from: p.club, to: c.id, stage: 'talks', next: wait(2, 6), fee, log: [], created: today().getTime(), round: 0, opened: true };
   G.deals.unshift(d);
-  dealLog(d, `The ${c.name} open talks for ${fullName(p)}.`, 'club');
+  dealLog(d, `${TheClub(c)} open talks for ${fullName(p)}.`, 'club');
   dealMedia(d, 'talks');
 }
 // A bid for one of your players starts a deal; a bid that meets his release clause cannot be refused.
@@ -460,20 +460,20 @@ function bidForUser(b, p, fee) {
   const d = { id: G.nextId++, dir: 'out', pid: p.id, from: G.club, to: b.id, stage: 'offer', next: null, fee, initialFee: fee, log: [], created: today().getTime(), round: 0, opened: true };
   G.deals.unshift(d);
   if (activeBuyBack(p, b.id) && fee >= p.buyBack.price) {
-    d.fee=p.buyBack.price;d.buyBackTriggered={...p.buyBack};dealLog(d, `The ${b.name} activate their agreed buy-back price of ${money(d.fee)}. The player must still agree.`, 'club');
+    d.fee=p.buyBack.price;d.buyBackTriggered={...p.buyBack};dealLog(d, `${TheClub(b)} activate their agreed buy-back price of ${money(d.fee)}. The player must still agree.`, 'club');
     d.stage='terms';d.next=wait(1,2);return dealNews(d, `Buy-back activated: ${pname(p)}`, `${b.name} exercise their fixed-price right. Personal terms and medical still apply.`, true);
   }
   if (p.rc && fee >= p.rc) {
-    dealLog(d, `The ${b.name} have met ${fullName(p)}'s release clause (${money(p.rc)}).`, 'club');
+    dealLog(d, `${TheClub(b)} have met ${fullName(p)}'s release clause (${money(p.rc)}).`, 'club');
     d.stage = 'terms'; d.next = wait(1, 2);
-    return dealNews(d, `Release clause met: ${pname(p)}`, `The ${b.name} have triggered ${fullName(p)}'s ${money(p.rc)} release clause. You cannot refuse; he is talking to them.`, true);
+    return dealNews(d, `Release clause met: ${pname(p)}`, `${TheClub(b)} have triggered ${fullName(p)}'s ${money(p.rc)} release clause. You cannot refuse; he is talking to them.`, true);
   }
   transferBuzz(p, b.id, true);
   const val = pValue(p), key = isKeyPlayer(p);
   const advice = fee >= val * 1.25 ? 'A strong offer. I would accept.' : key ? 'He is a key player. I would reject or ask for more.' : fee >= val * 0.95 ? 'A fair offer.' : 'Below his value. Ask for more.';
-  dealLog(d, `The ${b.name} offer ${money(fee)} for ${fullName(p)} (valued at ${money(val)}). Director of Football: ${advice}`, 'club');
+  dealLog(d, `${TheClub(b)} offer ${money(fee)} for ${fullName(p)} (valued at ${money(val)}). Director of Football: ${advice}`, 'club');
   if (hash01(d.id + 'pub') < 0.5) dealMedia(d, 'bid');
-  needDecision(d, 'offer', `Bid for ${pname(p)}`, `The ${b.name} have offered ${money(fee)} for ${fullName(p)} (valued at ${money(val)}). Director of Football: ${advice}`);
+  needDecision(d, 'offer', `Bid for ${pname(p)}`, `${TheClub(b)} have offered ${money(fee)} for ${fullName(p)} (valued at ${money(val)}). Director of Football: ${advice}`);
 }
 
 // Older saves and new careers: the deal lists and a Director of Football.

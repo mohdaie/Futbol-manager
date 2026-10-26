@@ -59,7 +59,7 @@ function loanDealTick(d, p) {
   if (activeLoan(p)) return closeDeal(d, false, 'The player has already joined another club on loan.');
   const other = G.clubs[d.dir === 'in' ? d.from : d.to];
   if (d.stage === 'interest') {
-    dealLog(d, `The ${other.name} are considering the loan proposal.`, 'club');
+    dealLog(d, `${TheClub(other)} are considering the loan proposal.`, 'club');
     d.stage = 'bid'; d.next = wait(1, 2); return;
   }
   if (d.stage === 'bid') {

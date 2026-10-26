@@ -28,7 +28,7 @@ function transferBuzz(p, toId, strong) {
   const drop = Math.round(2 + lvl * 2);
   p.unset = { to: to.id, lvl, since: dayAbs() };
   p.mor = clamp(p.mor - drop, 0, 100);
-  if (p.club === G.club && Math.floor(lvl) > Math.floor(u.lvl)) addNews('club', `${pname(p)} distracted by ${to.name} interest`, `${fullName(p)} has been distracted by the ${to.name}'s interest. His morale has dropped. Talk to him, or make a statement through your Press Officer.`, { t: 'player', pid: p.id });
+  if (p.club === G.club && Math.floor(lvl) > Math.floor(u.lvl)) addNews('club', `${pname(p)} distracted by ${to.name} interest`, `${fullName(p)} has been distracted by ${possessive(theClub(to))} interest. His morale has dropped. Talk to him, or make a statement through your Press Officer.`, { t: 'player', pid: p.id });
 }
 // Each week: unsettled players drift, may ask to leave, and calm down when the links stop.
 function moodWeekly() {

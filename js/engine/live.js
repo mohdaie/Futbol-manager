@@ -332,7 +332,7 @@ function liveEvent(L, e) {
   const txt = commLine(L, e); if (txt) pushFeed(L, 'info', txt, e.side, players);
 }
 function liveMark(L, m) {
-  const tn = 'The ' + clubName(L.M.sides[m.s].cid);
+  const tn = TheClub(L.M.sides[m.s].cid);
   if (m.k === 'corner') pushFeed(L, 'info', `Corner to ${tn.toLowerCase().replace('the ', 'the ')}.`, m.s);
   if (m.k === 'chance' && R() < 0.5) pushFeed(L, 'info', `${tn} are through on goal!`, m.s);
 }
@@ -633,7 +633,7 @@ const SHOT_NOUN = { placed: 'placed shot', driven: 'low drive', power: 'powerful
 const SHOT_NAME = { placed: 'Placed shot', driven: 'Low drive', power: 'Power shot', long: 'Long shot', curler: 'Curler', chip: 'Chip', volley: 'Volley', header: 'Header', 'free kick': 'Free kick', penalty: 'Penalty', 'open goal': 'Open goal' };
 function commLine(L, ev) {
   const M = L.M, S = M.sides[ev.side], O = M.sides[1 - ev.side], n = id => pname(G.players[id]);
-  const tn = 'the ' + clubName(S.cid);
+  const tn = theClub(S.cid);
   const fk = ev.fk ? 'Free kick. ' : ev.ck ? 'Corner. ' : '';
   switch (ev.t) {
     case 'goal': return ev.pen ? `Penalty to ${tn}. ${n(ev.pid)} sends the keeper the wrong way. ${L.disp.join('-')}.` : `${fk}${n(ev.pid)} scores for ${tn}${SHOT_WITH[ev.kind] ? ' ' + SHOT_WITH[ev.kind] + (ev.aim && ev.aim !== 'central' && !['chip', 'power', 'open goal'].includes(ev.kind) ? ' into the ' + ev.aim : '') : ''}${ev.aid ? ', set up by ' + n(ev.aid) : ''}. ${L.disp.join('-')}.`;
@@ -648,14 +648,14 @@ function commLine(L, ev) {
     case 'foul': return `Foul by ${n(ev.pid)}. Free kick to ${tn}.`;
     case 'offside': return `Flag up. ${n(ev.pid)} ${pick(['is offside, timing his run too early', 'is caught offside', 'strays beyond the last defender', 'has gone too soon. Offside'])}.`;
     case 'inj': return `${n(ev.pid)} is down with a suspected ${ev.inj.toLowerCase()}.`;
-    case 'tac': return `The ${clubName(S.cid)} ${MGR_SAY[ev.opt] || 'change their approach'}.`;
+    case 'tac': return `${TheClub(S.cid)} ${MGR_SAY[ev.opt] || 'change their approach'}.`;
     case 'sub': return `Substitution, ${clubName(S.cid)}: ${n(ev.pid)} on, ${n(ev.out)} off.`;
     default: return '';
   }
 }
 
 function fillerLine(L, ev) {
-  const t = 'The ' + clubName(L.M.sides[ev.side].cid);
+  const t = TheClub(L.M.sides[ev.side].cid);
   return pick([`${t} keep the ball in midfield.`, `${t} build patiently from the back.`, `${t} work it out to the flank.`, `Neat passing from ${t.toLowerCase()}.`, `${t} probe for an opening.`]);
 }
 

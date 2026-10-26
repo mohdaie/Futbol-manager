@@ -13,6 +13,15 @@ const SHIRT = { GK: [1, 13, 31], DR: [2, 22, 32], DL: [3, 23, 33], DC: [4, 5, 15
 const club = id => G.clubs[id];
 const userClub = () => G.clubs[G.club];
 const clubName = id => (G.clubs[id] ? G.clubs[id].name : 'Free agent');
+// "the Reds", but "Spurs", "Old Gold" and overseas names such as "La Dea" take no article. Takes a club or an id.
+const NO_ARTICLE = new Set(['SPU', 'OLD', 'POM', 'MID']);
+function theClub(c) {
+  if (typeof c !== 'object') c = G.clubs[c];
+  if (!c) return 'a free agent';
+  return c.foreign || c.worldLeague || NO_ARTICLE.has(c.id) ? c.name : 'the ' + c.name;
+}
+const TheClub = c => { const s = theClub(c); return s[0].toUpperCase() + s.slice(1); };
+const possessive = s => s + (/s$/i.test(s) ? "'" : "'s");
 const plClubs = () => leagueClubs('EPL');
 const squadOf = id => G.clubs[id].squad.map(pid => G.players[pid]).filter(Boolean);
 const seniorSquad = id => squadOf(id).filter(p => lvlOf(p) === 'A');
@@ -181,7 +190,7 @@ function newGame(clubId, manager, avatar) {
   ensureWorld({ newCareer: true });
   G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
   setupUserClub();
-  addNews('club', 'Welcome to the ' + clubName(clubId), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${G.board.target.text.toLowerCase()}. The transfer budget is ${money(G.fin.tb)}.`, null);
+  addNews('club', 'Welcome to ' + theClub(clubId), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${lcFirst(G.board.target.text)}. The transfer budget is ${money(G.fin.tb)}.`, null);
   addNews('club', 'Pre-season begins', 'Set your training focus, review the squad and check the tactics screen before the opening match in mid-August. The summer transfer window is open until 1 September.');
   saveGame();
 }

@@ -85,7 +85,7 @@ function dealMedia(d, ev) {
   if (ev === 'approach') post(pickAcc(accsOf([2, 3]), s).id, `${to} have made an approach for ${n}. ${from} aware of the interest.`, { ...o, kind: 'talks' });
   if (ev === 'leak') post(pickAcc(accsOf([3, 4]), s).id, `Hearing ${to} are working quietly on a deal for ${n} 👀`, { ...o, kind: 'rumour' });
   if (ev === 'agreed') post(pickAcc(accsOf([1, 2], ['journalist']), s).id, `${to} and ${from} have agreed a fee for ${n}${d.fee ? ': ' + money(d.fee) + (d.add ? ' plus add-ons' : '') : ''}. Personal terms next. 🔴`, { ...o, kind: 'agreed', hot: 1.5 });
-  if (ev === 'here') post('romani', `${n} to ${to}, HERE WE GO! 🚨 Agreement in place${d.fee ? ' for ' + money(d.fee) : ''}, medical booked. Contract until ${G.season + (d.years || 4)}.`, { ...o, kind: 'here', hot: 3, react: true });
+  if (ev === 'here') post('romani', `${n} to ${to}, HERE WE GO! 🚨 Agreement in place${d.fee ? ' for ' + money(d.fee) : ''}, medical booked.${d.years ? ` Contract until ${G.season + d.years}.` : ''}`, { ...o, kind: 'here', hot: 3, react: true });
   if (ev === 'done') { post('off:' + d.to, `✍️ ${n} is a ${to} player! Welcome to the club.`, { ...o, kind: 'done', hot: 2, react: true }); }
   if (ev === 'off') post(pickAcc(accsOf([1, 2], ['journalist']), s).id, `Talks between ${to} and ${from} over ${n} have collapsed. ❌`, { ...o, kind: 'off' });
   if (ev === 'bid') post(pickAcc(accsOf([2, 3]), s).id, `${to} have made an offer for ${n}. ${from} considering it.`, { ...o, kind: 'talks' });
@@ -112,7 +112,7 @@ function falseRumour(i) {
   const to = pickAcc(bigClubs().filter(c => c.id !== p.club), s + 'c');
   if (!to) return;
   const acc = pickAcc(accsOf([3, 4]), s + 'a'), n = fullName(p);
-  const lines = [`${to.name} are monitoring ${n} ahead of a possible move 👀`, `EXCLUSIVE: ${n} is on ${to.name}'s shortlist. Scouts were at his last match.`, `${n} would be open to a move to ${to.name}, sources say 🗣️`, `${to.name} preparing an offer for ${n}?! 🤯`];
+  const lines = [`${to.name} are monitoring ${n} ahead of a possible move 👀`, `EXCLUSIVE: ${n} is on ${possessive(to.name)} shortlist.${p.st.a ? ' Scouts were at his last match.' : ''}`, `${n} would be open to a move to ${to.name}, sources say 🗣️`, `${to.name} preparing an offer for ${n}?! 🤯`];
   const pt = post(acc.id, lines[Math.floor(hash01(s + 'x') * lines.length)], { pid: p.id, clubs: [to.id, p.club], kind: 'rumour', real: false, react: true });
   transferBuzz(p, to.id, false);
   if (p.club === G.club) pressRequest(p, 'ours', pt);

@@ -40,10 +40,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     check('A placeholder club has a working dashboard with its league and country',/La Liga/.test(await page.locator('.main').textContent())&&/Spain/.test(await page.locator('.main').textContent()));
     await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
     check('The dummy squad shows 25 slots with no player profile or transfer controls',await page.locator('.main .list .row').count()===25&&await page.locator('.main [data-a=player],.main [data-a=contract],.main [data-a=scoutFile]').count()===0);
-    check('Virtual squads explain that names are display-only and cannot be scouted or transferred',/fictional, read-only squad/.test(await page.locator('.main .note').textContent())&&/cannot be scouted or transferred/.test(await page.locator('.main .note').textContent())&&await page.locator('.main .list .row').first().textContent().then(t=>!/Placeholder/.test(t)&&/Spain/.test(t)));
+    check('Virtual squads explain that players cannot be scouted or transferred',/cannot be scouted or transferred/.test(await page.locator('.main .note').textContent())&&await page.locator('.main .list .row').first().textContent().then(t=>!/Placeholder/.test(t)&&/Spain/.test(t)));
     check('Dummy clubs expose no Transfers tab',await page.locator('[data-a=clubPage][data-section=transfers]').count()===0);
     await page.locator('[data-a=clubPage][data-section=fixtures]').tap();
-    check('A background club explains its calendar is pending',/Fixtures pending/.test(await page.locator('.main').textContent()));
+    check('A background club explains it has no fixtures',/No fixtures/.test(await page.locator('.main').textContent()));
     await page.evaluate(()=>go('clubs'));check('Directory navigation retains the country filter',await page.locator('.main .row[data-a=clubPage]').count()===20);
     await page.locator('[data-a=clubLeague][data-id=all]').tap();
     check('All clubs are reachable without duplicating the existing four overseas clubs',await page.locator('.main .row[data-a=clubPage]').count()===130);

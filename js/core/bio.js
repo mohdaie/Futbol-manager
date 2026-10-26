@@ -167,7 +167,7 @@ function bioNotes(p) {
   if (favMgrHere(p)) out.push([`Plays for his favourite manager: happier and develops faster.`, 'good']);
   else if (p.fmn === G.manager && !mine) out.push([`Calls you his favourite manager: more willing to join and asks for less.`, 'good']);
   else if (mine) out.push(['Win him over: a good season with regular games may make you his favourite manager.', '']);
-  if (outgrown(p)) out.push([`Ambitious and thinks he is too good for the ${c.name}: morale slowly drops.`, 'warn']);
+  if (outgrown(p)) out.push([`Ambitious and thinks he is too good for ${theClub(c)}: morale slowly drops.`, 'warn']);
   else if (p.amb >= 15) out.push(['Very ambitious: develops faster, but asks for more money and expects a big club.', '']);
   if (p.amb <= 6) out.push(['Low ambition: develops slower, but asks for less money.', '']);
   return out;

@@ -95,7 +95,7 @@ function monthly() {
       if (v > bv) { bv = v; best = p; }
     });
     if (best) {
-      addNews('league', `${MONTHS[d0.getMonth()]} Player of the Month`, `${fullName(best)} of the ${clubName(best.club)} wins the award.`);
+      addNews('league', `${MONTH_NAMES[d0.getMonth()]} Player of the Month`, `${fullName(best)} of ${theClub(best.club)} wins the award.`);
       if (best.club === G.club) best.mor = clamp(best.mor + 10, 0, 100);
     }
     const t0 = d0.getTime() - 35 * 864e5;
@@ -107,8 +107,8 @@ function monthly() {
     const top = Object.entries(pts).sort((a, b) => b[1] - a[1])[0];
     if (top) {
       const mine = top[0] === G.club;
-      addNews('league', `${MONTHS[d0.getMonth()]} Manager of the Month`, mine ? `${G.manager} wins the award after ${top[1]} points from the month.` : `The ${clubName(top[0])} manager collects the award after ${top[1]} points.`);
-      if (mine) { G.board.conf = clamp(G.board.conf + 3, 0, 100); G.trophies.push({ season: seasonLabel(), name: MONTHS[d0.getMonth()] + ' Manager of the Month' }); }
+      addNews('league', `${MONTH_NAMES[d0.getMonth()]} Manager of the Month`, mine ? `${G.manager} wins the award after ${top[1]} points from the month.` : `${TheClub(top[0])} manager collects the award after ${top[1]} points.`);
+      if (mine) { G.board.conf = clamp(G.board.conf + 3, 0, 100); G.trophies.push({ season: seasonLabel(), name: MONTH_NAMES[d0.getMonth()] + ' Manager of the Month' }); }
     }
   }
   G.flags.snap = {};
@@ -169,7 +169,7 @@ function seasonEnd() {
   const repOrder = leagueClubs().slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
   table.forEach((r, i) => { const cl = G.clubs[r.id]; cl.rep = clamp(Math.round((cl.rep + (repOrder.indexOf(r.id) - i) * 0.4) * 10) / 10, 55, 95); });
   G.seasonReview = review;
-  if ((pos > target + 5 && G.board.conf < 35) || G.board.conf < 10) { sack(`A ${ordinal(pos)}-place finish against a target of ${G.board.target.text.toLowerCase()} has cost you your job.`); }
+  if ((pos > target + 5 && G.board.conf < 35) || G.board.conf < 10) { sack(`A ${ordinal(pos)}-place finish against a target of ${lcFirst(G.board.target.text)} has cost you your job.`); }
   review.divisionChanges = applyDivisionChanges();
   rollover();
 }
@@ -237,7 +237,7 @@ function rollover() {
   }
   G.ledgerPrev = G.ledger; G.ledger = emptyLedger();
   G.pitches = [];
-  addNews('club', `${seasonLabel()} season begins`, `Board objective: ${G.board.target.text.toLowerCase()}. Transfer budget: ${money(G.fin.tb)}.` + (left.length ? ` Out of contract and gone: ${left.join(', ')}.` : ''));
+  addNews('club', `${seasonLabel()} season begins`, `Board objective: ${lcFirst(G.board.target.text)}. Transfer budget: ${money(G.fin.tb)}.` + (left.length ? ` Out of contract and gone: ${left.join(', ')}.` : ''));
   if (retired.length) addNews('league', 'Retirements', retired.join(', ') + ' have hung up their boots.');
   saveGame();
 }
@@ -264,6 +264,6 @@ function takeJob(cid) {
   if (vacancy) { vacancy.status = 'filled'; vacancy.filled = today().getTime(); }
   setupUserClub();
   G.board.conf = 60;
-  addNews('club', `${G.manager} takes over at the ${clubName(cid)}`, `After leaving the ${clubName(old)}, ${G.manager} gets a fresh start. Objective: ${G.board.target.text.toLowerCase()}.`);
+  addNews('club', `${G.manager} takes over at ${theClub(cid)}`, `After leaving ${theClub(old)}, ${G.manager} gets a fresh start. Objective: ${lcFirst(G.board.target.text)}.`);
   saveGame();
 }

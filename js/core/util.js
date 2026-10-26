@@ -69,6 +69,9 @@ function esc(s) {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// Lowercase the first letter only, so proper nouns such as "Champions Cup" survive mid-sentence.
+const lcFirst = s => (s ? s[0].toLowerCase() + s.slice(1) : s);
 const WDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function fmtDate(d, withDay = true) {
   d = new Date(d);
