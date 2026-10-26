@@ -9,7 +9,7 @@ function ddState() {
   const s = windowState(), key = G.season + ':' + s.label;
   if (!G.dd || G.dd.key !== key) {
     G.dd = { key, h: 8, done: false, t0: G.tHist.length };
-    addNews('transfer', `Deadline day: the ${s.label.toLowerCase()} shuts at 23:00`, `It is deadline day. Deals move by the hour now; anything not done by 23:00 collapses. ${G.deals.filter(d => dealOpen(d) && d.dir !== 'ai').length} of your deals are still open.`);
+    addNews('transfer', `Deadline day: the ${s.label.toLowerCase()} shuts at 23:00`, `It's deadline day. Deals move by the hour now; anything not done by 23:00 collapses. Open deals involving your club: ${G.deals.filter(d => dealOpen(d) && d.dir !== 'ai').length}.`);
   }
   return G.dd;
 }
@@ -31,7 +31,11 @@ function deadlineHour() {
   if (D.h >= 23) {
     D.done = true;
     const open = G.deals.filter(d => dealOpen(d) && d.dir !== 'ai' && (d.loanTerms || WINDOW_STAGES.includes(d.stage)));
-    addNews('transfer', 'The window has shut', `${G.tHist.length - D.t0} deals were done on deadline day.${open.length ? ` ${open.length} of your deals did not finish in time and collapse: ${open.map(d => pname(G.players[d.pid])).join(', ')}.` : ''}`);
+    const names = list => list.map(d => pname(G.players[d.pid])).join(', ');
+    const ours = open.filter(d => d.dir !== 'out'), theirs = open.filter(d => d.dir === 'out');
+    addNews('transfer', 'The window has shut', `${G.tHist.length - D.t0} deals were done on deadline day.` +
+      (ours.length ? ` Your move${ours.length > 1 ? 's' : ''} for ${names(ours)} ran out of time.` : '') +
+      (theirs.length ? ` Bids for ${names(theirs)} lapsed; ${theirs.length > 1 ? 'they stay' : 'he stays'}.` : ''));
   }
   return D;
 }

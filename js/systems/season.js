@@ -30,7 +30,7 @@ function advanceWeek() {
   G.day = 0;
   if (G.week >= SEASON_WEEKS) { seasonEnd(); return G.gameOver ? 'sacked' : 'season'; }
   const nx = userFixture();
-  if (nx && !G.press[nx.id]) G.press[nx.id] = { Q: pickPress(), done: false };
+  if (nx && !G.press[nx.id]) G.press[nx.id] = { Q: pickPress(nx), done: false };
   saveGame();
   return 'ok';
 }

@@ -62,11 +62,11 @@ function needDecision(d, k, title, body, extra = {}) {
   d.need = { k, ...extra }; d.next = null; d.advice = null;
   dealNews(d, title, body, true);
 }
-function closeDeal(d, ok, why, loud = true) {
+function closeDeal(d, ok, why, loud = true, news = true) {
   if (!d.loanTerms && !ok && (d.dir !== 'in' || d.pub || d.leaked || d.approach === 'open') && !['review', 'meeting'].includes(d.stage) && typeof dealMedia === 'function') dealMedia(d, 'off');
   d.closed = { ok, why, date: today().getTime() }; d.need = null; d.next = null;
   dealLog(d, why, ok ? 'done' : 'fail');
-  if (d.dir !== 'ai') dealNews(d, (ok ? 'Done deal: ' : 'Deal off: ') + pname(G.players[d.pid]), why, loud);
+  if (d.dir !== 'ai' && news) dealNews(d, (ok ? 'Done deal: ' : 'Deal off: ') + pname(G.players[d.pid]), why, loud);
 }
 
 /* ---------- the Director of Football's review ---------- */
@@ -147,7 +147,7 @@ function dealTick(d, force) {
     if (d.dir !== 'out' && d.from !== p.club) return closeDeal(d, false, `${fullName(p)} has joined ${theClub(p.club)} instead.`, d.dir === 'in');
     if (d.dir === 'out' && p.club !== G.club) return closeDeal(d, false, `${fullName(p)} is no longer at the club.`, false);
     const fa = G.clubs[d.from] && G.clubs[d.from].fa;
-    if (!fa && d.opened && !inWindow() && (d.loanTerms || WINDOW_STAGES.includes(d.stage))) return closeDeal(d, false, `The window shut before the deal for ${fullName(p)} was done.`, d.dir !== 'ai');
+    if (!fa && d.opened && !inWindow() && (d.loanTerms || WINDOW_STAGES.includes(d.stage))) return closeDeal(d, false, `The window shut before the deal for ${fullName(p)} was done.`, d.dir !== 'ai', !G.dd?.done); // the deadline summary already listed it
     if (d.need || d.next == null || (!force && dayAbs() < d.next)) return;
     if (!fa && (d.loanTerms || WINDOW_STAGES.includes(d.stage)) && !inWindow()) { d.next = dayAbs() + 1; return; } // talks resume when the window opens
     if ((d.loanTerms || WINDOW_STAGES.includes(d.stage))) d.opened = true;

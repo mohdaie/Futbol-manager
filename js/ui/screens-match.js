@@ -163,7 +163,7 @@ SCREENS.prematch = {
     const ip = FORMATIONS[T.ip];
     const warn = [];
     T.slots.forEach((id, i) => { const p = G.players[id]; if (!p) warn.push(`No player at ${ip[i][0]}.`); else if (fam(p, ip[i][0]) < 0.9) warn.push(`${pname(p)} is out of position at ${ip[i][0]}.`); else if (p.cond < 75) warn.push(`${pname(p)} is tired (${p.cond}%).`); });
-    const pc = G.press[fx.id] || (G.press[fx.id] = { Q: pickPress(), done: false }), Q = pc.Q || PRESS[pc.q];
+    const pc = G.press[fx.id] || (G.press[fx.id] = { Q: pickPress(fx), done: false }), Q = pc.Q || PRESS[pc.q];
     return `<section class="hero" style="--k1:${G.clubs[fx.h].c1};--k2:${G.clubs[fx.a].c1}">
         <div class="eyebrow">${esc(phaseLabel())} · ${fxWhen(fx)} · ${esc(G.clubs[fx.h].ground)}</div>
         <div class="vs">${badge(fx.h, 46)}<div class="vs-mid"><b>v</b></div>${badge(fx.a, 46)}</div>

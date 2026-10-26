@@ -20,10 +20,12 @@ function aiBudget(kind, max) {
   G.aiDay[kind] = n + 1;
   return true;
 }
+// Staff ability already shows in which facts they see; the rating only sets how sure they sound.
+const sure = r => (r >= 15 ? 'Sound sure of yourself.' : r >= 9 ? 'Be practical.' : 'Keep it simple and hedge a little.');
 const VOICE = {
-  Director: r => `You are the director of football of a football club in a management game, briefing the manager. Your ability is ${r}/20: ${r >= 15 ? 'sharp and decisive' : r >= 9 ? 'clear and practical' : 'plain and a little vague'}.`,
-  Scout: r => `You are the chief scout of a football club in a management game, summing up a scouting file for the manager. Your ability is ${r}/20.`,
-  Press: r => `You are the press officer of a football club in a management game, advising the manager on a statement. Your ability is ${r}/20.`,
+  Director: r => `You are the director of football at the club, briefing the manager. Dry and money-first; end with a clear yes or no. ${sure(r)}`,
+  Scout: r => `You are the chief scout, summing up a scouting file for the manager. Talk about what you saw on the pitch: one strength, one doubt. ${sure(r)}`,
+  Press: r => `You are the club's press officer, advising the manager on a statement. Cautious; think about tomorrow's headlines. ${sure(r)}`,
 };
 // One short text from facts, cached per key. Returns the text when ready, otherwise null (built-in wording shows).
 function aiVoice(feat, key, persona, facts, onReady, len = '2-3 short sentences') {
@@ -33,7 +35,7 @@ function aiVoice(feat, key, persona, facts, onReady, len = '2-3 short sentences'
   if (!aiBudget('ds', 40)) return null;
   AI_VOICE[key] = {};
   const data = { facts };
-  const sys = `${persona} Write ${len}. Use ONLY the facts given. Do not add any number, player, club or event that is not in the facts. Reply only with JSON {"text": "..."}.`;
+  const sys = `${persona} Write ${len}. Use ONLY the facts given. Do not add any number, player, club or event that is not in the facts. ${AI_STYLE} Reply only with JSON {"text": "..."}.`;
   dsChat([{ role: 'system', content: sys }, { role: 'user', content: JSON.stringify(data) }], 'Transfers: ' + key.split(':')[0], { json: true, maxTokens: 220 }).then(res => {
     const t = String(JSON.parse(res.text).text || '').trim();
     if (t && staffTextValid(t, data)) { AI_VOICE[key].text = t; if (onReady) onReady(t); }
@@ -70,15 +72,21 @@ function agentWords(d) {
   const recent = d.log.filter(l => l.who === 'agent' || l.who === 'club' || l.who === 'player').slice(0, 3).map(l => l.txt);
   if (!recent.length) return null;
   const facts = [`Agent: ${a.name} of ${a.agency}, style: ${a.style} (${AGENT_STYLE[a.style]})`, `Client: ${fullName(p)}`, `Club he is talking to: ${clubName(G.club)}`, `Relationship with this club: ${relLabel(agentRel(a))}`, ...recent];
-  return aiVoice('agents', 'ag:' + d.id + ':' + d.stage + ':' + d.log.length, `You are ${a.name}, a football agent in a management game, sending a short message to the manager.`, facts, reopen('deal:' + d.id), '1-2 short sentences in first person');
+  return aiVoice('agents', 'ag:' + d.id + ':' + d.stage + ':' + d.log.length, `You are ${a.name}, a football agent, sending a short message to the manager. Pushy and flattering; you always want a little more for your client.`, facts, reopen('deal:' + d.id), '1-2 short sentences in first person');
 }
 // Journalists and influencers write their own posts (from the facts of the built-in post).
 function postWords(p) {
   const a = mediaAcc(p.acc);
   if (!['journalist', 'tabloid', 'rumour', 'influencer'].includes(a.kind) || !aiBudget('post', 12)) return;
-  const style = { journalist: a.tier === 1 ? 'a top transfer journalist: short, factual, a few emojis, "HERE WE GO" only if the facts say it is done' : 'a transfer journalist: short and careful', tabloid: 'a tabloid: loud and dramatic', rumour: 'a rumour account: breathless, hints at sources', influencer: 'a football influencer: chatty, opinionated, with emojis' }[a.kind];
-  const facts = [`Post to rewrite: ${p.txt}`, ...(p.pid && G.players[p.pid] ? [`Player: ${fullName(G.players[p.pid])}`] : []), ...p.clubs.map(c => `Club: ${clubName(c)}`)];
-  aiVoice('news', 'post:' + p.id, `You write social media posts for ${a.name}, ${style}, in a football management game.`, facts, t => { p.txt = t; p.ai = true; }, 'one post under 220 characters');
+  const style = {
+    journalist: a.tier === 1 ? 'a top transfer reporter. Short and factual, like "Understand Spurs have asked about X. No bid yet." Use "HERE WE GO" only if the facts say the deal is done' : 'a careful transfer reporter. Short; says what is and is not confirmed, like "Bid in from Spurs for X. Club yet to respond."',
+    tabloid: 'a British tabloid back page. Headline style, punchy verbs (swoop, raid, plot), like "Spurs plot raid for X". No "bombshell", "shock" or "sensational"',
+    rumour: 'a transfer rumour account. Claims inside knowledge ("told", "hearing"), like "Told Spurs have asked about X. More soon."',
+    influencer: 'a football fan influencer. Opinionated and casual, like "X to Spurs makes sense to me tbh"',
+  }[a.kind];
+  const recent = G.social.filter(x => x.acc === p.acc && x.id !== p.id).slice(0, 3).map(x => x.txt);
+  const facts = [`Post to rewrite: ${p.txt}`, ...(p.pid && G.players[p.pid] ? [`Player: ${fullName(G.players[p.pid])}`] : []), ...p.clubs.map(c => `Club: ${clubName(c)}`), ...recent.map(t => `Recent post by this account (do not reuse its wording): ${t}`)];
+  aiVoice('news', 'post:' + p.id, `You write the social media posts for ${a.name} (@${a.handle}), ${style}. Keep every fact and add none. Do not start with the club name. At most one emoji, or none.`, facts, t => { p.txt = t; p.ai = true; }, 'one post under 220 characters');
 }
 
 /* ---------- decisions (Jev) ---------- */

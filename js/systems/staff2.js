@@ -254,9 +254,9 @@ function staffWords(role, key, facts) {
   const c = STAFF_WORDS[key];
   if (c) return c.text || null;
   STAFF_WORDS[key] = {};
-  const r = Math.round(staffR(role)), data = { staffRating: r, role: STAFF_ROLE_TEXT[role], facts };
-  const sys = `You are the ${STAFF_ROLE_TEXT[role]} of a football club in a management game. Your ability is ${r}/20: ${r >= 15 ? 'be precise and confident' : r >= 9 ? 'be clear but not too detailed' : 'speak simply, you are not very insightful'}. ` +
-    'Write 2-3 short sentences to the manager summing up your advice. Use ONLY the facts given. Do not add any number, player, club or event that is not in the facts. Reply only with JSON {"text": "..."}.';
+  const r = Math.round(staffR(role)), data = { role: STAFF_ROLE_TEXT[role], facts };
+  const sys = `You are the club's ${STAFF_ROLE_TEXT[role]}, talking to the manager. ${r >= 15 ? 'Sound sure of yourself.' : r >= 9 ? 'Be practical.' : 'Keep it simple and hedge a little.'} ` +
+    'Write 2-3 short sentences summing up your advice. Use ONLY the facts given. Do not add any number, player, club or event that is not in the facts. ' + AI_STYLE + ' Reply only with JSON {"text": "..."}.';
   dsChat([{ role: 'system', content: sys }, { role: 'user', content: JSON.stringify(data) }], role + ' advice', { json: true, maxTokens: 220 }).then(res => {
     const t = String(JSON.parse(res.text).text || '').trim();
     if (t && staffTextValid(t, data)) { STAFF_WORDS[key].text = t; if (typeof render === 'function') render(); }

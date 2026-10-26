@@ -17,6 +17,8 @@ const AI_PRICES = {
   'deepseek-v4-pro': { hit: [0.022, 0.044], miss: [0.66, 1.32], out: [1.98, 3.96] },
 };
 const JEV_MODELS = [['jev-latest', 'jev-latest (stable, recommended)'], ['jev-preview', 'jev-preview (newest build)'], ['jev-1.14.0', 'jev-1.14.0 (pinned)'], ['jev-1.13.0', 'jev-1.13.0 (pinned)']];
+// House style for every DeepSeek text, so generated lines sound like British football people, not a chatbot.
+const AI_STYLE = 'British football register: plain words, contractions, short sentences. Never use: crucial, key, pivotal, testament, showcase, game-changer, poised, electrifying, delve, journey, "it\'s worth noting", "overall", "moving forward", "in terms of". No lists of three, no rhetorical questions, no closing summary. Never mention that this is a game.';
 const DS_MODELS = [['deepseek-flash', 'deepseek-flash (cheapest, recommended)'], ['deepseek-v4-pro', 'deepseek-v4-pro (stronger, ~4x price)']];
 
 // Game features each service can drive. Saved now; wired in when each feature is built.
@@ -28,7 +30,7 @@ const AI_FEATURES = {
 function aiDefaults() {
   return {
     jev: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: JEV_RELAY_URL, model: 'jev-latest', timeout: 10000, budget: 2, feat: { briefing: true, engine: true } },
-    ds: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: DS_RELAY_URL, base: 'https://api.deepseek.com', model: 'deepseek-flash', thinking: false, maxTokens: 300, temp: 0.9, timeout: 20000, budget: 3, feat: { briefing: true } },
+    ds: { on: false, mode: 'relay', relaySetup: 1, key: '', proxy: DS_RELAY_URL, base: 'https://api.deepseek.com', model: 'deepseek-flash', thinking: false, maxTokens: 300, temp: 0.7, timeout: 20000, budget: 3, feat: { briefing: true } },
     usage: {}, log: [],
   };
 }

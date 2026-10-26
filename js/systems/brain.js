@@ -427,12 +427,45 @@ function brainStats() {
 
 /* ---------- DeepSeek text library: press conference questions ---------- */
 function pressPool() { return PRESS.concat(brain().press.filter(p => p.ok)); }
-function pickPress() { const pool = pressPool(), q = pick(pool); if (q.id) { q.used = (q.used || 0) + 1; brainSave(); } return JSON.parse(JSON.stringify({ q: q.q, a: q.a })); }
+// What a journalist could ask about before this fixture: flags for PRESS[].when plus names for the {placeholders}.
+function pressContext(fx) {
+  const us = G.club, me = G.clubs[us], oid = fx && (fx.h === us ? fx.a : fx.h), them = G.clubs[oid];
+  if (!them) return {};
+  const tbl = leagueTable(), row = tbl.find(r => r.id === us), orow = tbl.find(r => r.id === oid);
+  const form = row ? row.form : [], streak = test => { let n = 0; for (let i = form.length - 1; i >= 0 && test(form[i]); i--) n++; return n; };
+  const winless = streak(r => r !== 'W'), wins = streak(r => r === 'W'), pos = row ? tbl.indexOf(row) + 1 : 0, played = row ? row.p : 0;
+  const sq = seniorSquad(us), third = sq.map(p => p.ca).sort((x, y) => y - x)[2] || 99;
+  const star = sq.filter(p => p.inj && p.ca >= third).sort((x, y) => y.ca - x.ca)[0];
+  const link = (G.rumours || []).find(r => G.players[r.pid]?.club === us && today().getTime() - r.date < 14 * 864e5);
+  const runN = winless >= 3 ? winless : wins, run = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][runN] || String(runN);
+  return {
+    opp: theClub(them), Opp: TheClub(them), star: star ? fullName(star) : '', linked: link ? fullName(G.players[link.pid]) : '', pos: pos ? ordinal(pos) : '', run, Run: run[0].toUpperCase() + run.slice(1),
+    oppForm: !!orow && orow.form.slice(-3).filter(r => r === 'W').length >= 2, winless: winless >= 3, winRun: wins >= 3,
+    derby: !!me.city && me.city === them.city, underdog: them.rep >= me.rep + 6, favourite: me.rep >= them.rep + 8,
+    starOut: !!star, linked_: !!link, top: played >= 5 && pos <= 4, bottom: played >= 5 && pos > tbl.length - 3,
+    boardUneasy: G.board.conf < 40, early: !played, home: fx.h === us, away: fx.a === us,
+    unhappy: sq.some(p => p.mor <= 42 && p.ca >= third - 5),
+  };
+}
+// A question that fits the situation, not one asked in the last few press conferences.
+function pickPress(fx) {
+  const ctx = pressContext(fx || (typeof userFixture === 'function' ? userFixture() : null)), seen = G.pressSeen ||= [];
+  const key = q => q.id || 'b' + PRESS.indexOf(q);
+  const fits = q => (!q.when || ctx[q.when === 'linked' ? 'linked_' : q.when]) && (ctx.opp || !/\{/.test(q.q));
+  let pool = pressPool().filter(fits);
+  const fresh = pool.filter(q => !seen.includes(key(q)));
+  if (fresh.length) pool = fresh;
+  const q = wpick(pool, x => (x.when ? 3 : 1));
+  if (q.id) { q.used = (q.used || 0) + 1; brainSave(); }
+  seen.unshift(key(q)); seen.length = Math.min(seen.length, 8);
+  const fill = t => t.replace(/\{(\w+)\}/g, (_, k) => ctx[k] ?? '');
+  return { q: fill(q.q), a: q.a.map(([t, e]) => [fill(t), { ...e }]) };
+}
 
 async function generatePress(n = 5) {
   const r = await dsChat([
-    { role: 'system', content: 'You write content for a mobile football manager game set in an English top division with nickname clubs (Gunners, Reds, Citizens and so on). Reply only with JSON.' },
-    { role: 'user', content: `Write ${n} different pre-match press conference questions a journalist might ask the manager. For each, give exactly 3 possible manager answers and the effect of each answer on squad morale (mor), fan confidence (fan) and board confidence (board), each an integer from -3 to 3. Vary the tone: confident, cautious, combative. Keep questions under 25 words and answers under 15 words. JSON shape: {"questions":[{"q":"...","answers":[{"text":"...","mor":0,"fan":0,"board":0}]}]}` },
+    { role: 'system', content: 'You write pre-match press conference questions and manager answers for English football, where clubs go by nicknames (Gunners, Reds, Citizens and so on). ' + AI_STYLE + ' Reply only with JSON.' },
+    { role: 'user', content: `Write ${n} pre-match press conference questions a British football journalist would really ask. Each must be about something specific (a player's form, an injury, a selection call, tactics, the table, a recent result), never "how do you assess your chances". Do not name players or clubs. For each, give exactly 3 manager answers that sound like a real manager: short, guarded, sometimes deflecting. Give each answer's effect on squad morale (mor), fan confidence (fan) and board confidence (board), each an integer from -3 to 3. Questions under 25 words, answers under 15 words. Do not use "journey", "process" or "at the end of the day". JSON shape: {"questions":[{"q":"...","answers":[{"text":"...","mor":0,"fan":0,"board":0}]}]}` },
   ], 'Press library', { json: true, maxTokens: 1500 });
   let data;
   try { data = JSON.parse(r.text); } catch (e) { throw new Error('DeepSeek did not return valid JSON. Try again.'); }

@@ -110,9 +110,9 @@ function assistantWords(a) {
 // Optional: DeepSeek words the advice, from the facts only. Rejected if it adds numbers or names.
 async function assistantAiWords(a) {
   if (!aiReady('ds', 'staff')) return;
-  const facts = { assistantRating: a.r, prediction: a.pred, currentStyle: styleName(a.cur), recommendedStyle: styleName(a.rec), pointsGain: a.gain, opponentStyle: styleName(a.opp.style), reasons: a.facts, playersMentioned: a.facts.join(' ') };
-  const sys = `You are the assistant manager of a football club in a management game. Your ability is ${a.r}/20: ${a.r >= 15 ? 'be precise and confident' : a.r >= 9 ? 'be clear but not too detailed' : 'speak simply, you are not very insightful'}. ` +
-    'Write 2-3 short sentences of advice to the manager. Use ONLY the facts given. Do not add any number, player, club or event that is not in the facts. Reply only with JSON {"text": "..."}.';
+  const facts = { prediction: a.pred, currentStyle: styleName(a.cur), recommendedStyle: styleName(a.rec), pointsGain: a.gain, opponentStyle: styleName(a.opp.style), reasons: a.facts, playersMentioned: a.facts.join(' ') };
+  const sys = `You are the assistant manager, talking the manager through the next game. ${a.r >= 15 ? 'Sound sure of yourself.' : a.r >= 9 ? 'Be practical.' : 'Keep it simple and hedge a little.'} ` +
+    'Write 2-3 short sentences of advice. Use ONLY the facts given. Do not add any number, player, club or event that is not in the facts. ' + AI_STYLE + ' Reply only with JSON {"text": "..."}.';
   try {
     const res = await dsChat([{ role: 'system', content: sys }, { role: 'user', content: JSON.stringify(facts) }], 'Assistant advice', { json: true, maxTokens: 220 });
     const t = String(JSON.parse(res.text).text || '').trim();
