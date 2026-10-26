@@ -307,10 +307,10 @@ function injurySubs(M, S) {
   return evs;
 }
 
-// Computer manager: forced changes, then a tactical decision at each checkpoint (see brain.js).
+// Computer manager: forced changes, then a tactical review at checkpoints and after goals and red cards (see brain.js).
 function aiManage(M, S) {
   const evs = injurySubs(M, S);
-  if (CHECKPOINTS.includes(M.min)) evs.push(...(S.user ? applyMgrOption(M, S, rulesDecision(M, S)) : brainDecide(M, S)));
+  if (typeof managerReview === 'function') evs.push(...managerReview(M, S, S.user ? (M, S) => applyMgrOption(M, S, rulesDecision(M, S)) : brainDecide));
   return evs;
 }
 

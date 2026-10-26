@@ -93,7 +93,7 @@ function fastMinute(M) {
     if (R() < tune('injuryRate') / 2 * M.mod.inj) { const e = injury(M, S); if (e) evs.push(e); }
   }
   evs.forEach(e => M.log.push(e));
-  M.sides.forEach(S => { evs.push(...injurySubs(M, S)); if (CHECKPOINTS.includes(M.min)) evs.push(...brainDecide(M, S)); });
+  M.sides.forEach(S => { evs.push(...injurySubs(M, S)); evs.push(...managerReview(M, S, brainDecide)); });
   if (M.min >= (M.finishAt ?? 90 + M.added)) decideMatchEnd(M);
   return evs;
 }

@@ -26,9 +26,14 @@ const MGR_OPTIONS = {
   cpress: 'Counter-press straight after losing the ball and press high',
   protect: 'Tell the full-backs and midfielders to stay back, and tired players to press less',
   mark: 'Tell the defenders and defensive midfielders to mark tighter and stay on their feet',
+  exploit: 'Use the extra man: push on, stretch the pitch wide and press high',
 };
 const MGR_SAY = { attack: 'push forward and go for it', defend: 'drop deeper to protect the result', press: 'start pressing higher up the pitch', fresh: 'make changes to freshen things up',
-  restyle: 'change their whole approach', counter: 'sit deeper and look to break', cpress: 'start hunting the ball the moment they lose it', protect: 'tell their full-backs to hold their positions', mark: 'tighten up at the back with closer marking' };
+  restyle: 'change their whole approach', counter: 'sit deeper and look to break', cpress: 'start hunting the ball the moment they lose it', protect: 'tell their full-backs to hold their positions', mark: 'tighten up at the back with closer marking',
+  exploit: 'push on and stretch the short-handed side' };
+// Besides the checkpoints, managers look again two minutes after a goal or a red card, and every ten minutes
+// from the 20th unless they changed something in the last eight.
+const REVIEW_DELAY = 2, REVIEW_EVERY = 10, REVIEW_COOLDOWN = 8;
 const STYLE_IDX = ['gegen', 'tiki', 'bal', 'counter', 'long'];
 const BRAIN_MODES = [
   ['rules', 'Built-in rules', 'The original fixed rules. No AI, no learning used.'],
@@ -84,7 +89,7 @@ function duelShare(S, O) {
   return a + b ? Math.round(100 * a / (a + b)) : 50;
 }
 function sitKey(f) {
-  const mb = f.min < 55 ? 'HT' : f.min < 65 ? '60' : f.min < 75 ? '70' : '80';
+  const mb = f.min < 46 ? '1H' : f.min < 55 ? 'HT' : f.min < 65 ? '60' : f.min < 75 ? '70' : '80';
   const s = f.str < 0.92 ? 'weaker' : f.str > 1.08 ? 'stronger' : 'even';
   const k = [mb, clamp(f.diff, -2, 2), s, f.cond < 70 ? 'tired' : 'fresh', f.reds > 0 ? 'man down' : f.reds < 0 ? 'man up' : '11v11'];
   // The team's style is part of the situation: what works for a pressing side may not work for a possession side.
@@ -94,7 +99,7 @@ function sitKey(f) {
 function sitLabel(key) {
   const [mb, d, s, c, r, st] = key.split('|');
   const score = +d > 0 ? `winning by ${d}` : +d < 0 ? `losing by ${-d}` : 'level';
-  return `${mb === 'HT' ? 'Half-time' : mb + "'"}, ${score}, ${s}, ${c}${r === '11v11' ? '' : ', ' + r}${st ? ', ' + (STYLES[st] ? STYLES[st].n : 'custom tactic') : ''}`;
+  return `${mb === 'HT' ? 'Half-time' : mb === '1H' ? 'First half' : mb + "'"}, ${score}, ${s}, ${c}${r === '11v11' ? '' : ', ' + r}${st ? ', ' + (STYLES[st] ? STYLES[st].n : 'custom tactic') : ''}`;
 }
 function sitText(M, S, f) {
   const O = M.sides[1 - S.idx], tot = S.st.pos + O.st.pos || 1;
@@ -112,7 +117,12 @@ function sitText(M, S, f) {
 function rulesDecision(M, S) {
   const f = situation(M, S), O = M.sides[1 - S.idx];
   if (f.diff < 0 && f.min >= 70) return 'attack';
-  if (f.diff === 1 && f.min >= 80) return 'defend';
+  // An extra man is there to be used: push on while level or behind, and look for a second goal while one up.
+  if (f.reds < 0 && (f.diff <= 0 || f.diff === 1 && f.min < 75) && (S.ment < 3 || S.press < 2 || S.width < 2)) return 'exploit';
+  // A man down: protect a lead and stay compact while level. Behind late, the first rule still chases the game.
+  if (f.reds > 0 && f.diff > 0) return f.min >= 75 && S.ment > 1 ? 'defend' : 'protect';
+  if (f.reds > 0 && f.diff === 0 && f.min < 75 && S.line !== 0) return 'counter';
+  if (f.diff === 1 && f.min >= 80 && S.ment > 1) return 'defend';
   if (f.cond < 68 && f.min >= 60) return 'fresh';
   if (f.diff > 0 && f.min >= 70 && f.cond < 75) return 'protect';
   if (f.min <= 60 && f.fit < 45 && styleKey(S) !== bestStyleFor(M, S)) return 'restyle';
@@ -168,6 +178,8 @@ function applyMgrOption(M, S, opt) {
     Object.assign(S, { line: 0, press: 0, won: 2, lost: 0, ment: Math.max(1, S.ment - 1) });
   } else if (opt === 'cpress') {
     Object.assign(S, { lost: 2, press: 2 });
+  } else if (opt === 'exploit') {
+    Object.assign(S, { ment: Math.max(S.ment, 3), press: 2, width: 2 });
   } else if (opt === 'protect') {
     S.on.forEach((id, i) => {
       if (!id || !i) return;
@@ -240,6 +252,21 @@ function applyPendingManagerChanges(M) {
   return events;
 }
 
+// Whether this side's manager reviews the match this minute (see REVIEW_DELAY).
+function managerReviewDue(M, S) {
+  const seen = M.sides.map(x => x.st.g + ':' + x.reds.length).join('|');
+  if ((S.aiSeen ?? '0:0|0:0') !== seen) { S.aiSeen = seen; S.aiNext = M.min + REVIEW_DELAY; }
+  if (CHECKPOINTS.includes(M.min)) return true;
+  if (S.aiNext != null && M.min >= S.aiNext) { S.aiNext = null; return true; }
+  return M.min >= 20 && M.min < 90 && M.min % REVIEW_EVERY === 0 && M.min - (S.aiLast ?? -REVIEW_COOLDOWN) >= REVIEW_COOLDOWN;
+}
+// Review and apply. Remembers when a change was made, for the cooldown.
+function managerReview(M, S, decide) {
+  if (!managerReviewDue(M, S)) return [];
+  const evs = decide(M, S);
+  if (evs.some(e => e.t === 'tac')) S.aiLast = M.min;
+  return evs;
+}
 // Decision for a computer-managed side in a normal league match (synchronous).
 function brainDecide(M, S) {
   const B = brain(), f = situation(M, S), key = sitKey(f), V = activeVersion();
