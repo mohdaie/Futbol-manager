@@ -104,6 +104,55 @@ def load_real_names():
                 if r.get('first_name'): add(r['first_name'] + ' ' + r.get('second_name', ''))
     return full, fl
 
+
+def node_json(expr, files):
+    """Evaluate a JS expression after loading game files; returns parsed JSON."""
+    import subprocess
+    load = ''.join(f"vm.runInContext(fs.readFileSync('js/core/{f}.js','utf8'),c);" for f in files)
+    js = f"const fs=require('node:fs'),vm=require('node:vm');const c=vm.createContext({{}});{load}process.stdout.write(JSON.stringify(vm.runInContext({json.dumps(expr)},c)));"
+    return json.loads(subprocess.check_output(['node', '-e', js], cwd=ROOT, text=True))
+
+GAME_WEIGHTS = None
+def game_weights():
+    global GAME_WEIGHTS
+    if GAME_WEIGHTS is None:
+        GAME_WEIGHTS = node_json('WEIGHTS', ['util', 'data'])
+    return GAME_WEIGHTS
+
+def game_rating(r):
+    """The game's own position rating (players.js ratingFor) for a row's attributes."""
+    w = game_weights()[r['position']]
+    return math.floor(sum(int(r[k]) * v for k, v in w.items()) / sum(w.values()) * 5 + 0.5)  # JS Math.round, not banker's rounding
+
+def calibrate(r, lo, hi):
+    """Nudge key attributes by single points until the game rates the player exactly at his CA."""
+    w = game_weights()[r['position']]
+    keys = [k for k in sorted(w, key=lambda k: -w[k]) if not (r['position'] != 'GK' and k in GK_STATS)]
+    best = (abs(int(r['ca']) - game_rating(r)), {k: r[k] for k in keys})
+    for _ in range(120):
+        diff = int(r['ca']) - game_rating(r)
+        if abs(diff) < best[0]:
+            best = (abs(diff), {k: r[k] for k in keys})
+        if diff == 0:
+            return
+        step = 1 if diff > 0 else -1
+        cand = [k for k in keys if 1 <= int(r[k]) + step <= 20]
+        # big gaps move the important attributes; the last point moves a minor one so the rounding settles
+        if abs(diff) > 2:
+            k = max(cand, key=lambda k: w[k] * (20 - int(r[k]) if step > 0 else int(r[k]) - 1))
+        else:
+            k = min(cand, key=lambda k: (w[k], -(20 - int(r[k]) if step > 0 else int(r[k]) - 1)))
+        r[k] = str(int(r[k]) + step)
+    r.update(best[1])
+    rating = game_rating(r)
+    if rating != int(r['ca']):
+        # one point of rounding noise: record the rating the game will compute, as long as it stays inside the club band
+        if abs(rating - int(r['ca'])) > 1 or not lo <= rating <= hi:
+            raise RuntimeError('could not calibrate ' + r['name_in_game'])
+        r['ca'] = str(rating)
+    if int(r['pa']) < int(r['ca']):
+        r['pa'] = r['ca']
+
 class Namer:
     """Unique fictional names, checked against every name already in the game files and, when
     OVERSEAS_REAL_NAMES is set, against real players (exact full name, or same first + last name)."""
@@ -192,6 +241,7 @@ def repair(clubs, namer):
                 new = min(max(ca, lo), hi)
                 nudge(r, new - ca); r['ca'] = str(new)
                 log.append(f'{club}: {old} CA {ca} -> {new} (band {lo}-{hi}), attributes adjusted')
+            calibrate(r, lo, hi)
             if int(r['pa']) < int(r['ca']):
                 r['pa'] = r['ca']
             if (club, old) in INSPIRED_FIX:
@@ -348,6 +398,7 @@ def gen_club(entry, rep, league, band_lo, model, namer, slope=0.2):
                    eu_status=eu, hg_status=hg, ca=str(ca), pa=str(pa), foot=foot, ht_cm=str(ht), wt_kg=str(wt),
                    confidence='generated', notes='-', **{k: str(v) for k, v in stats.items()})
         row['name_in_game'] = namer.make(random.Random(f'gen:{cid}:{i}:name'), nat)
+        calibrate(row, lo, hi)
         u21_fields(row)
         band_cap_note(row, hi)
         if league == 'La Liga' and pos == 'GK':
@@ -381,10 +432,65 @@ def validate(club_rows, band, league, expect):
         if any(not 1 <= int(r[s]) <= 20 for s in STATS): errs.append('stat range')
     return errs
 
+
+POS_OK = {'GK', 'DL', 'DC', 'DR', 'DM', 'ML', 'MC', 'MR', 'AML', 'AMC', 'AMR', 'ST'}
+def game_alts(r):
+    out = []
+    for a in r['alt_positions'].replace('-', '').split('/'):
+        a = {'WBL': 'DL', 'WBR': 'DR'}.get(a, a)
+        if a in POS_OK and a != r['position'] and a not in out:
+            out.append(a)
+    return out
+
+def write_game_data(clubs_by_nick, ids_by_nick, reps):
+    """js/core/world-full-squads-data.js: compact rows keyed by WORLD_CLUBS id.
+    Row: [name, position, age, nation, foot L/R/B, ca, pa, height, weight, alt positions, 26 attributes as base-36 digits, inspiration, shirt no]."""
+    dropped, data = [], {}
+    for nick, rows in clubs_by_nick.items():
+        out = []
+        for r in rows:
+            insp = r['inspired_by'] if r['inspired_by'] != '-' else ''
+            foot = {'Left': 'L', 'Right': 'R', 'Either': 'B'}[r['foot']]
+            attrs = ''.join(format(int(r[k]), 'x') if int(r[k]) < 16 else chr(ord('g') + int(r[k]) - 16) for k in STATS)
+            out.append([r['name_in_game'], r['position'], int(r['age']), r['nation'], foot, int(r['ca']), int(r['pa']),
+                        int(r['ht_cm']), int(r['wt_kg']), '/'.join(game_alts(r)), attrs, insp, int(r['squad_no'])])
+        data[ids_by_nick[nick]] = {'rep': reps[nick], 'rows': out}
+    text = ("'use strict';\n// Generated by scripts/build-overseas-squads.py from data/world/overseas. Fictional names; ability, potential and\n"
+            "// physique are original game estimates. Row: [name, position, July-2026 age, nation, foot, ca, pa, height cm, weight kg,\n"
+            "// alt positions, 26 attributes (one char each, 1-20 as 1-9 a-f g-k, in ATTRS order), inspiration, shirt number].\n"
+            "const OVERSEAS_FULL_SQUADS = " + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ";\n")
+    (ROOT / 'js/core/world-full-squads-data.js').write_text(text, encoding='utf-8')
+    return dropped
+
+
+def dedupe_inspirations(clubs):
+    """A real person may be the archetype of only one player in the game. The draft reused people who already have
+    a player in the English, selected-overseas or authored rosters; those slots keep their ability but lose the link."""
+    taken = {fold(n) for n in node_json(
+        "(()=>{const o=[];for(const rs of Object.values(ENGLAND_ROSTERS_2026))for(const r of rs)if(r[5])o.push(r[5]);"
+        "for(const rs of Object.values(ROSTERS))for(const r of rs)if(r[8])o.push(r[8]);"
+        "for(const rs of Object.values(FOREIGN_ROSTERS))for(const r of rs)if(r[8])o.push(r[8]);"
+        "for(const d of Object.values(WORLD_SQUAD_DATA))for(const r of d.rows)if(r[5])o.push(r[5]);return o;})()",
+        ['data', 'world-data', 'rosters', 'profiles', 'england-rosters', 'world-squads-data'])}
+    dropped = 0
+    for info in clubs.values():
+        for r in info['rows']:
+            key = fold(r['inspired_by'])
+            if r['inspired_by'] == '-':
+                continue
+            if key in taken:
+                r['inspired_by'] = '-'; r['confidence'] = 'generated'
+                add_note(r, 'inspiration already used elsewhere in the game'); dropped += 1
+            else:
+                taken.add(key)
+    return dropped
+
 def main():
     clubs = parse_draft(DRAFT)
     namer = Namer()
     log = repair(clubs, namer)
+    n = dedupe_inspirations(clubs)
+    if n: log.append(f'{n} slots kept their ability but lost their `inspired_by` link because that real person already has a player elsewhere in the game')
     # --- big clubs
     errs = []
     for club, info in clubs.items():
@@ -413,7 +519,7 @@ def main():
     world = json.loads(subprocess_world())
     by_id = {c['id']: c for c in world}
     model = attr_models([r for info in clubs.values() for r in info['rows']])
-    rows_all, summary = [], []
+    rows_all, summary, generated, gen_reps = [], [], {}, {}
     md2 = ['# Other Overseas Clubs: Full 25-Man Squad Database (2026/27)', '',
         'Full first-team squads (25 players each) for the 56 La Liga, Serie A, Bundesliga and Ligue 1 clubs that are not in the big-club file, so every club in the four overseas leagues can be scouted.',
         'All names are fictional and unique. `inspired_by` is `-` because these are generated players, not stand-ins for specific real people; `confidence` is `generated`.',
@@ -430,9 +536,13 @@ def main():
             md2 += [f'### {entry["name"]} ({entry["realName"]})', f'**Reputation:** {rep} | **CA Band:** {lo}–{lo + 9} | **Registration Rule:** {OTHER[lg]["rule"]}', '',
                     '```csv', write_csv_block(rows).rstrip('\n'), '```', '']
             rows_all += rows
+            generated[entry['name']] = rows; gen_reps[entry['name']] = rep
             summary.append((lg, entry['name'], rep, lo, round(statistics.mean(int(r['ca']) for r in rows), 1),
                             sum(r['eu_status'] == 'Non-EU' for r in rows), round(statistics.mean(int(r['age']) for r in rows), 1)))
     (OUT / 'other_overseas_clubs_squad_rosters.md').write_text('\n'.join(md2), encoding='utf-8')
+    by_nick = {c['name']: c['id'] for c in world}
+    every = {**{k: v['rows'] for k, v in clubs.items()}, **generated}
+    dropped = write_game_data(every, by_nick, {**{k: v['rep'] for k, v in clubs.items()}, **gen_reps})
     names = Counter(r['name_in_game'] for r in rows_all) + Counter(r['name_in_game'] for i in clubs.values() for r in i['rows'])
     assert max(names.values()) == 1, 'duplicate names'
     print(len(clubs), 'big clubs repaired;', len(summary), 'clubs generated;', len(rows_all), 'players;', len(log), 'repairs logged')

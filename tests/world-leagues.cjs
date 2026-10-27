@@ -7,6 +7,14 @@ for (const file of ['js/systems/transfers.js','js/core/save-format.js','js/syste
   vm.runInContext(fs.readFileSync(path.resolve(__dirname,'..',file),'utf8'),rt.ctx,{filename:file});
 }
 rt.run("newGame('GUN','World QA',1)");
+// Rebuild the previous release's state (17-player selected clubs, 56 placeholders) so the registry and placeholder rules stay covered;
+// the new full-squad migration is exercised at the end.
+rt.run(`(()=>{for(const c of Object.values(G.clubs).filter(c=>c.worldLeague)){
+  const selected=!!(c.foreignSquad&&WORLD_SQUAD_DATA[c.foreignSquad.catalogId]);
+  for(const id of c.squad.slice()){const p=G.players[id];if(selected&&p.identity?.source!=='OVERSEAS2026')continue;removeFromClub(p);delete G.players[id];delete G.know[id];}
+  if(selected)c.foreignSquad.maxPlayers=17;
+  else{delete c.foreignSquad;delete c.academy;delete c.mgr;Object.assign(c,{backgroundOnly:true,rep:70,bal:0,dummySquad:{size:25,transferable:false},squad:[]});}
+}G.overseasSquadVersion=1;})()`);
 const source=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../data/world/sources.json'),'utf8'));
 for(const [id,league] of Object.entries(source.leagues)) {
   const actual=JSON.parse(rt.run(`JSON.stringify(worldLeagueClubs('${id}').map(c=>c.realName).sort())`));
@@ -38,4 +46,10 @@ check('Dummy clubs cannot arrange or start a friendly', `(()=>{const before=JSON
 check('Existing full overseas squads remain friendly candidates', `friendlyCandidates().every(c=>!c.backgroundOnly&&c.squad.length>=11)&&friendlyCandidates().length>0`);
 check('Save formats retain all league records without materializing placeholders', `(()=>{const before=JSON.stringify(G),copy=parseCareerSave(careerSaveFile(G));return JSON.stringify(copy)===before&&Object.values(copy.clubs).filter(c=>c.backgroundOnly).every(c=>!c.squad.length);})()`);
 check('Import rejects real players inserted into a placeholder club', `(()=>{const copy=JSON.parse(JSON.stringify(G));copy.clubs.ES1_GET.squad.push(copy.clubs[copy.club].squad[0]);try{parseCareerSave(JSON.stringify(copy));return false;}catch{return true;}})()`);
+// Full overseas squads: migrating the previous release's career turns the 56 placeholders into real clubs and completes the 20 selected squads.
+check('Full-squad migration gives all 76 overseas clubs 25 first-team players and removes every placeholder', `(()=>{delete G.overseasSquadVersion;ensureWorld();const cs=Object.values(G.clubs).filter(c=>c.worldLeague);return cs.length===76&&cs.every(c=>!c.backgroundOnly&&c.foreignSquad&&seniorSquad(c.id).length===25&&c.squad.length<=clubSquadMax(c))&&Object.values(G.worldLeagues).every(l=>l.mode==='clubs-and-squads'&&l.active===false);})()`);
+check('Migrated squads are playable, scoutable and keep their own reserves policy', `Object.values(G.clubs).filter(c=>c.worldLeague).every(c=>{const p=autoPick(c.id,c.tac.ip);return p.xi.filter(Boolean).length===11&&p.bench.some(id=>G.players[id].pos==='GK')&&Object.keys(clubLevels(c)).join(',')==='A,R'&&!c.dummySquad;})&&friendlyCandidates().every(c=>!c.backgroundOnly&&seniorSquad(c.id).length>=11)`);
+check('Migrated players keep game ratings equal to their data CA and fixed shirt numbers are unique per club', `Object.values(G.players).filter(p=>p.identity?.source==='OVERSEAS2026').every(p=>{const d=OVERSEAS_FULL_SQUADS[p.identity.id.split(':')[1]].rows[+p.identity.id.split(':')[2]];return p.ca===d[5]&&p.pa===d[6]&&fullName(p)===d[0]&&p.at.length===26;})&&Object.values(G.clubs).filter(c=>c.worldLeague).every(c=>new Set(c.squad.map(id=>G.players[id].no)).size===c.squad.length)`);
+check('Full-squad migration is idempotent, creates no duplicate identities and survives a save reload', `(()=>{const before=JSON.stringify(G),ids=Object.values(G.players).map(p=>p.identity?.id).filter(Boolean);ensureWorld();ensureOverseasFullSquads();const same=JSON.stringify(G)===before;const copy=parseCareerSave(careerSaveFile(G));return same&&new Set(ids).size===ids.length&&JSON.stringify(copy)===before;})()`);
+check('A sold migrated player is not regenerated', `(()=>{const c=G.clubs.ES1_GET,p=seniorSquad(c.id)[0],id=p.identity.id;removeFromClub(p);delete G.players[p.id];ensureWorld();return !Object.values(G.players).some(x=>x.identity?.id===id)&&c.squad.length===24;})()`);
 console.log(JSON.stringify({passed:checks.length,checks},null,2));

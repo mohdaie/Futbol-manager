@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '1.0.0';
+const GAME_VERSION = '1.1.0';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -94,7 +94,7 @@ const NATIONS = {
 const COUNTRY = (() => {
   const g = {
     'Britain & Ireland': 'ENG England|SCO Scotland|WAL Wales|NIR Northern Ireland|IRL Ireland|GIB Gibraltar',
-    Europe: 'FRA France|ESP Spain|POR Portugal|GER Germany|NED Netherlands|BEL Belgium|ITA Italy|NOR Norway|SWE Sweden|DEN Denmark|ISL Iceland|AUT Austria|SUI Switzerland|CRO Croatia|SRB Serbia|BIH Bosnia-Herzegovina|ALB Albania|GRE Greece|TUR Türkiye|UKR Ukraine|POL Poland|CZE Czech Republic|SVK Slovakia|HUN Hungary|GEO Georgia|KAZ Kazakhstan|CYP Cyprus|LTU Lithuania|SVN Slovenia|BUL Bulgaria|FIN Finland|KOS Kosovo|MDA Moldova|RUS Russia|ISR Israel|MNE Montenegro',
+    Europe: 'FRA France|ESP Spain|POR Portugal|GER Germany|NED Netherlands|BEL Belgium|ITA Italy|NOR Norway|SWE Sweden|DEN Denmark|ISL Iceland|AUT Austria|SUI Switzerland|CRO Croatia|SRB Serbia|BIH Bosnia-Herzegovina|ALB Albania|GRE Greece|TUR Türkiye|UKR Ukraine|POL Poland|CZE Czech Republic|SVK Slovakia|HUN Hungary|GEO Georgia|KAZ Kazakhstan|CYP Cyprus|LTU Lithuania|SVN Slovenia|BUL Bulgaria|FIN Finland|KOS Kosovo|MDA Moldova|RUS Russia|ISR Israel|MNE Montenegro|ROU Romania|MKD North Macedonia',
     'South America': 'BRA Brazil|ARG Argentina|URU Uruguay|PAR Paraguay|COL Colombia|ECU Ecuador|CHI Chile|VEN Venezuela|SUR Suriname',
     'North America': 'USA United States|CAN Canada|MEX Mexico|JAM Jamaica|CUW Curaçao|HAI Haiti|BER Bermuda|TRI Trinidad and Tobago|LCA Saint Lucia|BAR Barbados|PAN Panama|MTQ Martinique',
     Africa: "NGA Nigeria|GHA Ghana|SEN Senegal|CIV Ivory Coast|CMR Cameroon|MLI Mali|BFA Burkina Faso|GAM The Gambia|GUI Guinea|ALG Algeria|MAR Morocco|TUN Tunisia|EGY Egypt|COD DR Congo|ANG Angola|BEN Benin|ZIM Zimbabwe|MOZ Mozambique|MTN Mauritania|COM Comoros|LBR Liberia|GNB Guinea-Bissau|CPV Cape Verde|SLE Sierra Leone|KEN Kenya|NAM Namibia|RSA South Africa",

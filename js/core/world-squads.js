@@ -67,7 +67,8 @@ function maintainForeignSquads() {
       if (!p) break;
       p.lvl = 'A'; p.wage = Math.max(p.wage, wageFor(p, c.rep));
     }
-    while (c.squad.length < Math.min(17, clubSquadMax(c))) {
+    // Full 25-man squads are topped up to 22 from the free-agent pool; the original compact squads keep their 17.
+    while (c.squad.length < Math.min(c.foreignSquad.full ? 22 : 17, clubSquadMax(c))) {
       const squad = squadOf(c.id), keepers = squad.filter(p => p.pos === 'GK').length;
       const reserve = seniorSquad(c.id).length >= 11;
       const needed = FORMATIONS[c.tac.ip].map(s => s[0]);
@@ -81,4 +82,73 @@ function maintainForeignSquads() {
       p.wage = wageFor(p, c.rep) * (reserve ? 0.5 : 1);
     }
   }
+}
+
+// Full 25-man overseas squads (OVERSEAS_FULL_SQUADS, world-full-squads-data.js). The 20 selected clubs gain their remaining
+// first-team slots; the other 56 clubs stop being placeholders and receive real, scoutable players. Source identities are stable
+// ('ov26:club:slot'), so a repeated load never re-adds a player who was sold, retired or released.
+const OVERSEAS_FULL_SQUAD_SIZE = 25;
+const OVERSEAS_SHAPES = ['4-3-3', '4-2-3-1', '4-4-2', '3-5-2'];
+
+function playerFromOverseasRow(row, c, id, elapsed) {
+  const [name, pos, age, nat, foot, ca, pa, ht, wt, alt, attrs, inspiration] = row;
+  const at = Array.from(attrs, ch => parseInt(ch, 36));
+  let seed = 2166136261;
+  for (const ch of id) seed = Math.imul(seed ^ ch.charCodeAt(0), 16777619) >>> 0;
+  // A local seed stops a new career rerolling a sourced player's personality, bio and starting condition.
+  const p = matchRandom({ rng: seed }, () => genPlayer({ pos, age: age + elapsed, nat, club: c.id, lvl: 'A', ca, pa,
+    profile: { at, alt: alt ? alt.split('/') : [], ht, wt, pa }, profileKey: id }));
+  p.originProfile = { kind: 'generated-identity', key: id, at: p.at.slice(), ca: p.ca, pa: p.pa, ht: p.ht, wt: p.wt, alt: p.alt.slice() };
+  const parts = name.split(' ');
+  p.fn = parts.length > 1 ? parts.shift() : '';
+  p.ln = parts.join(' ');
+  p.foot = foot === 'L' ? 'Left' : foot === 'B' ? 'Either' : 'Right';
+  if (inspiration) p.insp = inspiration;
+  p.identity = { source: 'OVERSEAS2026', id, dob: null, rosterDate: null };
+  p.con = G.season + 2; // Game contract, not a claim about a real contract.
+  return p;
+}
+
+function ensureOverseasFullSquads() {
+  if (G.overseasSquadVersion === 1 || typeof OVERSEAS_FULL_SQUADS === 'undefined') return;
+  // The compact squads come first. If any selected club is still unseeded, wait for the next load.
+  if (Object.keys(WORLD_SQUAD_DATA).some(id => !G.clubs[id]?.foreignSquad && !Object.values(G.clubs).some(c => c.foreignSquad?.catalogId === id))) return;
+  const owned = new Set(), people = new Set();
+  for (const p of Object.values(G.players)) {
+    if (p.identity?.id) owned.add(p.identity.id);
+    if (p.insp) people.add(worldIdentityKey(p.insp));
+  }
+  const elapsed = Math.max(0, G.season - START_SEASON);
+  for (const [catalogId, data] of Object.entries(OVERSEAS_FULL_SQUADS)) {
+    const entry = WORLD_CLUBS.find(e => e.id === catalogId);
+    const c = entry && worldLeagueClubs(entry.league).find(c => c.id === catalogId || entry.existingRoster &&
+      (c.ros === entry.existingRoster || !c.ros && c.name === entry.name));
+    if (!c) continue;
+    if (c.backgroundOnly) {
+      // A placeholder becomes a real club that can play friendlies and trade players, like the 20 selected clubs.
+      const shape = OVERSEAS_SHAPES[Math.floor(hash01(catalogId + ':shape') * OVERSEAS_SHAPES.length)];
+      c.backgroundOnly = false; delete c.dummySquad;
+      c.rep = data.rep; c.bal = Math.max(c.bal || 0, Math.round(20e6 + Math.pow(Math.max(0, data.rep - 50), 2) * 0.1e6));
+      c.tac = aiTactic(c.rep); c.tac.ip = shape; c.tac.oop = shape;
+      c.academy = { strength: clamp(Math.round(4 + (data.rep - 55) * 0.4 + hash01(catalogId + ':academy') * 4), 3, 14), noAnnualIntake: true,
+        basis: 'Strength estimated from club reputation; this is not an official academy ranking.', estimate: true };
+      c.foreignSquad = { catalogId, seeded: true, maxPlayers: OVERSEAS_FULL_SQUAD_SIZE };
+    }
+    if (!c.foreignSquad) continue;
+    const need = Math.max(0, OVERSEAS_FULL_SQUAD_SIZE - seniorSquad(c.id).length);
+    c.foreignSquad.full = true;
+    c.foreignSquad.maxPlayers = Math.max(c.foreignSquad.maxPlayers || 0, c.squad.length + need);
+    let added = 0;
+    for (let i = 0; i < data.rows.length && added < need; i++) {
+      const row = data.rows[i], id = `ov26:${catalogId}:${i}`;
+      if (owned.has(id) || row[2] + elapsed >= 38 || row[11] && people.has(worldIdentityKey(row[11]))) continue;
+      const p = playerFromOverseasRow(row, c, id, elapsed);
+      addToClub(p, c);
+      if (row[12] && !c.squad.some(x => x !== p.id && G.players[x]?.no === row[12])) p.no = row[12];
+      G.know[p.id] = 10;
+      owned.add(id); added++;
+      if (p.insp) people.add(worldIdentityKey(p.insp));
+    }
+  }
+  G.overseasSquadVersion = 1;
 }
