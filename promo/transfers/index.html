@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+:root{--bg0:#06020d;--bg1:#1b0a33;--cyan:#2de2f0;--violet:#8b5cf6;--magenta:#d946ef;--green:#35e08a;--ink:#ffffff;--soft:rgba(255,255,255,.78);--font-display:'Archivo Black','Inter',sans-serif;--font-body:'Inter',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg0)}
+#root{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;font-family:var(--font-body);color:var(--ink);background:radial-gradient(1200px 900px at 50% 45%,#2a1052 0%,var(--bg1) 38%,var(--bg0) 100%)}
+.fill{position:absolute;inset:0}
+#glowA{position:absolute;left:560px;top:150px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(45,226,240,.30),rgba(45,226,240,0) 65%)}
+#glowB{position:absolute;left:1000px;top:380px;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.40),rgba(139,92,246,0) 65%)}
+#grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:96px 96px}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--cyan);opacity:.0;box-shadow:0 0 18px var(--cyan)}
+.word{position:absolute;left:0;top:0;width:1920px;height:1080px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);line-height:1;white-space:nowrap;letter-spacing:-.01em}
+.word .mask{display:inline-block;overflow:hidden;padding:30px 0 10px}
+.word .ch{display:inline-block;color:transparent;-webkit-text-stroke:3px rgba(45,226,240,.62);background:linear-gradient(180deg,rgba(45,226,240,.34),rgba(139,92,246,.10));-webkit-background-clip:text;background-clip:text}
+.head{position:absolute;left:120px;top:92px;width:560px}
+.head .k{font-weight:900;font-size:28px;letter-spacing:.16em;color:var(--cyan);margin-bottom:18px}
+.head h2{font-family:var(--font-display);font-size:62px;line-height:1.04;letter-spacing:-.01em;background:linear-gradient(90deg,#2de2f0,#8b5cf6 70%,#d946ef);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:6px}
+.head p{margin-top:16px;font-size:28px;line-height:1.3;color:var(--soft);font-weight:700}
+.phone{position:absolute;left:761px;top:123px;width:398px;height:834px;perspective:2400px}
+.tilt{position:absolute;inset:0}
+.device{position:absolute;inset:0;border-radius:64px;background:linear-gradient(145deg,#4a2a86,#150a2b 40%,#2a1450);padding:12px;box-shadow:0 0 0 2px rgba(45,226,240,.55),0 40px 120px rgba(0,0,0,.65),0 0 140px rgba(139,92,246,.45)}
+.screen{position:relative;width:374px;height:810px;border-radius:52px;overflow:hidden;background:#16082a}
+.stage{position:absolute;left:0;top:0;width:390px;height:844px;transform:scale(0.95897);transform-origin:0 0}
+.scr{position:absolute;inset:0;opacity:0;overflow:hidden}
+.scr img.base{position:absolute;left:0;top:0;width:390px;height:844px}
+.cover{position:absolute;left:0;top:0;width:390px;height:100px;overflow:hidden}
+.cover img{width:390px;height:844px}
+.scroller{position:absolute;left:0;top:101.5px;width:390px;height:742.5px;overflow:hidden}
+.sc-inner{position:absolute;left:0;top:0;width:390px}
+.sc-inner img{display:block;width:390px}
+.ring{position:absolute;border-radius:14px;border:3px solid var(--cyan);box-shadow:0 0 0 3px rgba(45,226,240,.18),0 0 26px rgba(45,226,240,.65),inset 0 0 22px rgba(45,226,240,.18);opacity:0}
+.sweep{position:absolute;top:-100px;left:-300px;width:200px;height:1100px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);opacity:0}
+.glass{position:absolute;inset:0;border-radius:52px;background:linear-gradient(125deg,rgba(255,255,255,.14),rgba(255,255,255,0) 32%);pointer-events:none}
+.notch{position:absolute;left:50%;top:10px;width:96px;height:6px;margin-left:-48px;border-radius:3px;background:rgba(255,255,255,.18)}
+svg.leads{position:absolute;left:-700px;top:-300px;width:2000px;height:1500px;overflow:visible;pointer-events:none}
+svg.leads line{stroke:var(--cyan);stroke-width:3;stroke-linecap:round;opacity:0;filter:drop-shadow(0 0 6px rgba(45,226,240,.8))}
+svg.leads circle{fill:var(--cyan);opacity:0}
+.co{position:absolute;width:440px;padding:22px 26px 24px;border-radius:26px;background:linear-gradient(160deg,rgba(40,16,78,.94),rgba(18,7,38,.94));border:2px solid rgba(45,226,240,.6);box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 40px rgba(45,226,240,.18);opacity:0}
+.co .n{display:inline-block;min-width:44px;height:44px;line-height:44px;text-align:center;border-radius:22px;background:linear-gradient(135deg,var(--cyan),var(--violet));color:#0b0418;font-weight:900;font-size:26px;margin-bottom:10px}
+.co h3{font-weight:900;font-size:38px;line-height:1.08;letter-spacing:-.01em;color:#fff}
+.co p{margin-top:8px;font-weight:700;font-size:27px;line-height:1.25;color:var(--soft)}
+.co.good{border-color:rgba(53,224,138,.75);box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 44px rgba(53,224,138,.3)}
+.co.good .n{background:linear-gradient(135deg,#35e08a,#2de2f0)}
+.conf{position:absolute;width:16px;height:16px;border-radius:4px;opacity:0}
+#tracker{position:absolute;left:300px;top:972px;width:1320px;height:60px}
+#trline{position:absolute;left:30px;top:12px;width:1260px;height:6px;border-radius:3px;background:rgba(255,255,255,.14)}
+#trfill{position:absolute;left:30px;top:12px;width:1260px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--violet));transform-origin:0 50%}
+.node{position:absolute;top:0;width:150px;margin-left:-75px;text-align:center}
+.node i{display:block;margin:0 auto;width:24px;height:24px;border-radius:50%;background:#2a1552;border:3px solid rgba(255,255,255,.35)}
+.node b{display:block;margin-top:6px;font-size:26px;font-weight:900;color:rgba(255,255,255,.55)}
+#brand{position:absolute;right:120px;top:92px;text-align:right;font-weight:900;font-size:28px;letter-spacing:.16em;color:#fff}
+#brand span{color:var(--cyan)}
+#endcard{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#endcard .inner{position:absolute;left:960px;top:250px;width:900px}
+#endcard .small{font-weight:900;font-size:30px;letter-spacing:.18em;color:var(--cyan)}
+#endcard h1{font-family:var(--font-display);font-size:122px;white-space:nowrap;line-height:1;margin-top:18px;background:linear-gradient(90deg,#2de2f0,#8b5cf6 70%,#d946ef);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:10px}
+#endcard .tag{margin-top:20px;font-size:44px;font-weight:900}
+#endcard .chips{margin-top:34px;display:flex;flex-wrap:wrap;gap:16px}
+#endcard .chip{padding:12px 26px;border-radius:40px;font-size:28px;font-weight:900;background:rgba(45,226,240,.12);border:2px solid rgba(45,226,240,.6)}
+#endcard .cta{display:inline-block;margin-top:44px;padding:20px 44px;border-radius:44px;font-size:36px;font-weight:900;color:#06020d;background:linear-gradient(90deg,var(--cyan),#6ee7ff);box-shadow:0 0 50px rgba(45,226,240,.6)}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="37.0" data-width="1920" data-height="1080">
+
+<div id="bg" class="clip fill" data-start="0" data-duration="37.0" data-track-index="0"><div id="glowA"></div><div id="glowB"></div><div id="grid"></div>
+<span class="dot" id="dot0" style="left:743px;top:274px"></span>
+<span class="dot" id="dot1" style="left:888px;top:786px"></span>
+<span class="dot" id="dot2" style="left:178px;top:194px"></span>
+<span class="dot" id="dot3" style="left:1761px;top:668px"></span>
+<span class="dot" id="dot4" style="left:272px;top:494px"></span>
+<span class="dot" id="dot5" style="left:1273px;top:179px"></span>
+<span class="dot" id="dot6" style="left:1119px;top:339px"></span>
+<span class="dot" id="dot7" style="left:156px;top:208px"></span>
+<span class="dot" id="dot8" style="left:968px;top:548px"></span>
+<span class="dot" id="dot9" style="left:223px;top:366px"></span>
+<span class="dot" id="dot10" style="left:265px;top:684px"></span>
+<span class="dot" id="dot11" style="left:949px;top:180px"></span>
+<span class="dot" id="dot12" style="left:1773px;top:699px"></span>
+<span class="dot" id="dot13" style="left:333px;top:348px"></span>
+<span class="dot" id="dot14" style="left:1371px;top:762px"></span>
+<span class="dot" id="dot15" style="left:1273px;top:183px"></span>
+</div>
+<div id="word0" class="word clip" data-layout-ignore data-start="0.0" data-duration="4.20" data-track-index="1" data-layout-allow-overflow style="font-size:262px"><span class="mask"><span class="ch" id="w0c0">T</span></span><span class="mask"><span class="ch" id="w0c1">R</span></span><span class="mask"><span class="ch" id="w0c2">A</span></span><span class="mask"><span class="ch" id="w0c3">N</span></span><span class="mask"><span class="ch" id="w0c4">S</span></span><span class="mask"><span class="ch" id="w0c5">F</span></span><span class="mask"><span class="ch" id="w0c6">E</span></span><span class="mask"><span class="ch" id="w0c7">R</span></span><span class="mask"><span class="ch" id="w0c8">S</span></span></div>
+<div id="word1" class="word clip" data-layout-ignore data-start="4.0" data-duration="5.20" data-track-index="1" data-layout-allow-overflow style="font-size:400px"><span class="mask"><span class="ch" id="w1c0">S</span></span><span class="mask"><span class="ch" id="w1c1">E</span></span><span class="mask"><span class="ch" id="w1c2">A</span></span><span class="mask"><span class="ch" id="w1c3">R</span></span><span class="mask"><span class="ch" id="w1c4">C</span></span><span class="mask"><span class="ch" id="w1c5">H</span></span></div>
+<div id="word2" class="word clip" data-layout-ignore data-start="9.0" data-duration="3.20" data-track-index="1" data-layout-allow-overflow style="font-size:440px"><span class="mask"><span class="ch" id="w2c0">S</span></span><span class="mask"><span class="ch" id="w2c1">C</span></span><span class="mask"><span class="ch" id="w2c2">O</span></span><span class="mask"><span class="ch" id="w2c3">U</span></span><span class="mask"><span class="ch" id="w2c4">T</span></span></div>
+<div id="word3" class="word clip" data-layout-ignore data-start="12.0" data-duration="6.70" data-track-index="1" data-layout-allow-overflow style="font-size:440px"><span class="mask"><span class="ch" id="w3c0">O</span></span><span class="mask"><span class="ch" id="w3c1">F</span></span><span class="mask"><span class="ch" id="w3c2">F</span></span><span class="mask"><span class="ch" id="w3c3">E</span></span><span class="mask"><span class="ch" id="w3c4">R</span></span></div>
+<div id="word4" class="word clip" data-layout-ignore data-start="18.5" data-duration="3.20" data-track-index="1" data-layout-allow-overflow style="font-size:470px"><span class="mask"><span class="ch" id="w4c0">M</span></span><span class="mask"><span class="ch" id="w4c1">E</span></span><span class="mask"><span class="ch" id="w4c2">M</span></span><span class="mask"><span class="ch" id="w4c3">O</span></span></div>
+<div id="word5" class="word clip" data-layout-ignore data-start="21.5" data-duration="4.20" data-track-index="1" data-layout-allow-overflow style="font-size:470px"><span class="mask"><span class="ch" id="w5c0">D</span></span><span class="mask"><span class="ch" id="w5c1">E</span></span><span class="mask"><span class="ch" id="w5c2">A</span></span><span class="mask"><span class="ch" id="w5c3">L</span></span></div>
+<div id="word6" class="word clip" data-layout-ignore data-start="25.5" data-duration="4.70" data-track-index="1" data-layout-allow-overflow style="font-size:470px"><span class="mask"><span class="ch" id="w6c0">S</span></span><span class="mask"><span class="ch" id="w6c1">I</span></span><span class="mask"><span class="ch" id="w6c2">G</span></span><span class="mask"><span class="ch" id="w6c3">N</span></span></div>
+<div id="word7" class="word clip" data-layout-ignore data-start="30.0" data-duration="3.20" data-track-index="1" data-layout-allow-overflow style="font-size:430px"><span class="mask"><span class="ch" id="w7c0">S</span></span><span class="mask"><span class="ch" id="w7c1">Q</span></span><span class="mask"><span class="ch" id="w7c2">U</span></span><span class="mask"><span class="ch" id="w7c3">A</span></span><span class="mask"><span class="ch" id="w7c4">D</span></span></div>
+<div id="head0" class="head clip" data-start="0.4" data-duration="3.60" data-track-index="2"><div class="k">THE 2026/27 SEASON · FEATURE 01</div><h2>Find the players to take your club forward.</h2></div>
+<div id="head1" class="head clip" data-start="4.2" data-duration="4.80" data-track-index="2"><div class="k">01 · SEARCH</div><h2>Find your target.</h2><p>Filter the whole database or follow the trending stories.</p></div>
+<div id="head2" class="head clip" data-start="9.2" data-duration="2.80" data-track-index="2"><div class="k">02 · SCOUT</div><h2>Know him before you bid.</h2><p>Open the file: rating, attributes, potential.</p></div>
+<div id="head3" class="head clip" data-start="12.2" data-duration="3.40" data-track-index="2"><div class="k">03 · OFFER</div><h2>Make your move.</h2><p>Set your price and decide how you approach the deal.</p></div>
+<div id="head4" class="head clip" data-start="15.6" data-duration="2.90" data-track-index="2"><div class="k">03 · OFFER</div><h2>More than a fee.</h2><p>Choose payment terms, explore a player exchange and add clauses.</p></div>
+<div id="head5" class="head clip" data-start="18.7" data-duration="2.80" data-track-index="2"><div class="k">04 · ADVICE</div><h2>Your Director of Football weighs in.</h2><p>Finance, tactics and harmony. You make the final call.</p></div>
+<div id="head6" class="head clip" data-start="21.7" data-duration="3.80" data-track-index="2"><div class="k">05 · NEGOTIATE</div><h2>The deal moves.</h2><p>Club, agent and player each have their say.</p></div>
+<div id="head7" class="head clip" data-start="25.7" data-duration="4.30" data-track-index="2"><div class="k">06 · SIGN</div><h2>The final decision is yours.</h2><p>Review the details, then complete the transfer.</p></div>
+<div id="head8" class="head clip" data-start="30.2" data-duration="2.80" data-track-index="2"><div class="k">07 · SQUAD</div><h2>Shape your squad.</h2><p>Review the details and decide your next move.</p></div>
+<div id="brand" class="clip" data-start="0.6" data-duration="36.4" data-track-index="2">FUTBOL <span>MANAGER</span></div>
+<div id="phone" class="phone clip" data-layout-allow-occlusion data-start="0" data-duration="37.0" data-track-index="3"><div id="tilt" class="tilt"><div class="device"><div class="screen"><div class="stage">
+<div class="scr" id="s-a01"><img class="base" src="assets/a01-search-empty.png" alt="">
+<div class="ring" id="c1-ring" style="left:14px;top:283px;width:362px;height:281px"></div>
+<div class="ring" id="c2-ring" style="left:199px;top:472px;width:114px;height:36px"></div>
+</div>
+<div class="scr" id="s-a02"><img class="base" src="assets/a02-results.png" alt="">
+<div class="ring" id="c3-ring" style="left:14px;top:135px;width:362px;height:135px"></div>
+<div class="ring" id="c4-ring" style="left:14px;top:495px;width:362px;height:45px"></div>
+</div>
+<div class="scr" id="s-a03"><img class="base" src="assets/a03-player.png" alt="">
+<div class="ring" id="c5-ring" style="left:292px;top:118px;width:72px;height:112px"></div>
+<div class="ring" id="c6-ring" style="left:40px;top:295px;width:310px;height:185px"></div>
+</div>
+<div class="scr" id="s-a05"><img class="base" src="assets/a05-configured.png" alt="">
+<div class="scroller" id="scroller"><div class="sc-inner" id="scin"><img src="assets/a05-configured-tall.png" alt="">
+<div class="ring" id="c7-ring" style="left:12px;top:285px;width:366px;height:44px"></div>
+<div class="ring" id="c8-ring" style="left:12px;top:362px;width:366px;height:138px"></div>
+<div class="ring" id="c9-ring" style="left:12px;top:540px;width:366px;height:76px"></div>
+<div class="ring" id="c10-ring" style="left:12px;top:745px;width:182px;height:62px"></div>
+<div class="ring" id="c11-ring" style="left:12px;top:1088px;width:366px;height:38px"></div>
+<div class="ring" id="c12-ring" style="left:12px;top:1128px;width:366px;height:108px"></div>
+</div></div>
+</div>
+<div class="scr" id="s-a06"><img class="base" src="assets/a06-proceed.png" alt="">
+<div class="cover"><img src="assets/a03-player.png" alt=""></div>
+<div class="ring" id="c13-ring" style="left:14px;top:110px;width:362px;height:140px"></div>
+</div>
+<div class="scr" id="s-b00"><img class="base" src="assets/b00_agentfee.png" alt="">
+<div class="cover"><img src="assets/a03-player.png" alt=""></div>
+<div class="ring" id="c14-ring" style="left:14px;top:398px;width:362px;height:38px"></div>
+</div>
+<div class="scr" id="s-b01"><img class="base" src="assets/b01_final.png" alt="">
+<div class="cover"><img src="assets/a03-player.png" alt=""></div>
+<div class="ring" id="c15-ring" style="left:14px;top:398px;width:362px;height:38px"></div>
+</div>
+<div class="scr" id="s-b1a"><img class="base" src="assets/b01_final_after.png" alt="">
+<div class="cover"><img src="assets/a03-player.png" alt=""></div>
+<div class="ring" id="c16-ring" style="left:14px;top:208px;width:362px;height:92px"></div>
+</div>
+<div class="scr" id="s-c01"><img class="base" src="assets/c01-signed-profile.png" alt="">
+<div class="ring" id="c17-ring" style="left:14px;top:118px;width:270px;height:90px"></div>
+</div>
+<div class="sweep" id="sweep"></div></div><div class="glass"></div><div class="notch"></div></div></div></div>
+<svg class="leads" viewBox="-700 -300 2000 1500" id="leads">
+<line id="c1-lead" x1="-70.0" y1="417.0" x2="25.4" y2="418.1"/><circle id="c1-pt" cx="25.4" cy="418.1" r="7"/>
+<line id="c2-lead" x1="468.0" y1="147.0" x2="312.2" y2="481.9"/><circle id="c2-pt" cx="312.2" cy="481.9" r="7"/>
+<line id="c3-lead" x1="468.0" y1="147.0" x2="372.6" y2="206.2"/><circle id="c3-pt" cx="372.6" cy="206.2" r="7"/>
+<line id="c4-lead" x1="-70.0" y1="417.0" x2="25.4" y2="508.3"/><circle id="c4-pt" cx="25.4" cy="508.3" r="7"/>
+<line id="c5-lead" x1="468.0" y1="147.0" x2="361.1" y2="178.9"/><circle id="c5-pt" cx="361.1" cy="178.9" r="7"/>
+<line id="c6-lead" x1="-70.0" y1="417.0" x2="50.4" y2="383.6"/><circle id="c6-pt" cx="50.4" cy="383.6" r="7"/>
+<line id="c7-lead" x1="-70.0" y1="417.0" x2="23.5" y2="403.7"/><circle id="c7-pt" cx="23.5" cy="403.7" r="7"/>
+<line id="c8-lead" x1="468.0" y1="147.0" x2="374.5" y2="522.7"/><circle id="c8-pt" cx="374.5" cy="522.7" r="7"/>
+<line id="c9-lead" x1="-70.0" y1="417.0" x2="23.5" y2="337.6"/><circle id="c9-pt" cx="23.5" cy="337.6" r="7"/>
+<line id="c10-lead" x1="468.0" y1="517.0" x2="198.0" y2="527.4"/><circle id="c10-pt" cx="198.0" cy="527.4" r="7"/>
+<line id="c11-lead" x1="468.0" y1="147.0" x2="374.5" y2="595.5"/><circle id="c11-pt" cx="374.5" cy="595.5" r="7"/>
+<line id="c12-lead" x1="-70.0" y1="417.0" x2="23.5" y2="667.5"/><circle id="c12-pt" cx="23.5" cy="667.5" r="7"/>
+<line id="c13-lead" x1="-70.0" y1="417.0" x2="25.4" y2="184.6"/><circle id="c13-pt" cx="25.4" cy="184.6" r="7"/>
+<line id="c14-lead" x1="468.0" y1="147.0" x2="372.6" y2="411.9"/><circle id="c14-pt" cx="372.6" cy="411.9" r="7"/>
+<line id="c15-lead" x1="-70.0" y1="417.0" x2="25.4" y2="411.9"/><circle id="c15-pt" cx="25.4" cy="411.9" r="7"/>
+<line id="c16-lead" x1="468.0" y1="147.0" x2="372.6" y2="255.6"/><circle id="c16-pt" cx="372.6" cy="255.6" r="7"/>
+<line id="c17-lead" x1="468.0" y1="147.0" x2="284.3" y2="168.3"/><circle id="c17-pt" cx="284.3" cy="168.3" r="7"/>
+</svg>
+<div id="c1-card" class="co clip" data-start="4.70" data-duration="2.30" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">1</span><h3>Filter the whole world</h3><p>Position, region, age, value and rating</p></div>
+<div id="c2-card" class="co clip" data-start="5.30" data-duration="1.70" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">2</span><h3>One tap to search</h3><p>Every club, every league</p></div>
+<div id="c3-card" class="co clip" data-start="6.90" data-duration="2.50" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">3</span><h3>Live values, real crests</h3><p>Sort by price, ability or potential</p></div>
+<div id="c4-card" class="co clip" data-start="7.60" data-duration="1.80" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">4</span><h3>Spot your target</h3><p>João Paulo Rocha, £25.0m</p></div>
+<div id="c5-card" class="co clip" data-start="9.30" data-duration="3.00" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">5</span><h3>Rated 82 · Elite</h3><p>A 24-year-old Brazilian striker</p></div>
+<div id="c6-card" class="co clip" data-start="9.90" data-duration="2.40" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">6</span><h3>Read the full file</h3><p>Attributes, best positions, potential</p></div>
+<div id="c7-card" class="co clip" data-start="12.40" data-duration="2.40" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">7</span><h3>Choose your approach</h3><p>Quiet, open or leak to the press</p></div>
+<div id="c8-card" class="co clip" data-start="13.00" data-duration="1.80" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">8</span><h3>Set your ceiling</h3><p>£41.4m fee, £192.5k/w</p></div>
+<div id="c9-card" class="co clip" data-start="15.10" data-duration="3.60" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">9</span><h3>More than a fee</h3><p>2 annual payments · 50% upfront</p></div>
+<div id="c10-card" class="co clip" data-start="15.80" data-duration="2.90" data-track-index="4" data-layout-allow-overlap style="left:468px;top:437px"><span class="n">10</span><h3>Add clauses</h3><p>10% sell-on to the former club</p></div>
+<div id="c11-card" class="co clip" data-start="19.00" data-duration="2.80" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">11</span><h3>Director of Football</h3><p>“Proceed. I recommend we move for him.”</p></div>
+<div id="c12-card" class="co clip" data-start="19.60" data-duration="2.20" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">12</span><h3>Finance, tactics, harmony</h3><p>In budget · 3 Brazil team-mates</p></div>
+<div id="c13-card" class="co clip" data-start="21.70" data-duration="2.00" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">13</span><h3>Talks begin</h3><p>Club and agent sounded out</p></div>
+<div id="c14-card" class="co clip" data-start="23.50" data-duration="2.40" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">14</span><h3>The agent wants £3.4m</h3><p>Pay the fee or walk away</p></div>
+<div id="c15-card" class="co clip" data-start="25.70" data-duration="2.70" data-track-index="4" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">15</span><h3>The final call is yours</h3><p>£37.8m · 4 years · £68m release clause</p></div>
+<div id="c16-card" class="co good clip" data-start="28.10" data-duration="2.30" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">16</span><h3>He has signed</h3><p>£37.8m · 50% upfront · 10% sell-on</p></div>
+<div id="c17-card" class="co good clip" data-start="30.20" data-duration="3.10" data-track-index="4" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">17</span><h3>Welcome to the squad</h3><p>82 rated striker · first team</p></div>
+<span class="conf" id="cf0" style="left:199px;top:317px;background:#8b5cf6" data-dx="-300" data-dy="-278" data-rot="-453"></span>
+<span class="conf" id="cf1" style="left:199px;top:317px;background:#ffffff" data-dx="-244" data-dy="-211" data-rot="-353"></span>
+<span class="conf" id="cf2" style="left:199px;top:317px;background:#d946ef" data-dx="-379" data-dy="-219" data-rot="335"></span>
+<span class="conf" id="cf3" style="left:199px;top:317px;background:#d946ef" data-dx="-104" data-dy="-348" data-rot="154"></span>
+<span class="conf" id="cf4" style="left:199px;top:317px;background:#2de2f0" data-dx="95" data-dy="110" data-rot="77"></span>
+<span class="conf" id="cf5" style="left:199px;top:317px;background:#d946ef" data-dx="262" data-dy="-17" data-rot="-63"></span>
+<span class="conf" id="cf6" style="left:199px;top:317px;background:#ffffff" data-dx="61" data-dy="-474" data-rot="-130"></span>
+<span class="conf" id="cf7" style="left:199px;top:317px;background:#8b5cf6" data-dx="-141" data-dy="316" data-rot="-417"></span>
+<span class="conf" id="cf8" style="left:199px;top:317px;background:#35e08a" data-dx="-337" data-dy="-290" data-rot="246"></span>
+<span class="conf" id="cf9" style="left:199px;top:317px;background:#2de2f0" data-dx="-382" data-dy="7" data-rot="-380"></span>
+<span class="conf" id="cf10" style="left:199px;top:317px;background:#35e08a" data-dx="-269" data-dy="-140" data-rot="-345"></span>
+<span class="conf" id="cf11" style="left:199px;top:317px;background:#2de2f0" data-dx="316" data-dy="-261" data-rot="282"></span>
+<span class="conf" id="cf12" style="left:199px;top:317px;background:#35e08a" data-dx="-427" data-dy="-283" data-rot="-152"></span>
+<span class="conf" id="cf13" style="left:199px;top:317px;background:#d946ef" data-dx="-134" data-dy="-495" data-rot="316"></span>
+<span class="conf" id="cf14" style="left:199px;top:317px;background:#35e08a" data-dx="-454" data-dy="8" data-rot="-15"></span>
+<span class="conf" id="cf15" style="left:199px;top:317px;background:#35e08a" data-dx="-78" data-dy="-346" data-rot="162"></span>
+<span class="conf" id="cf16" style="left:199px;top:317px;background:#ffffff" data-dx="-374" data-dy="-320" data-rot="-209"></span>
+<span class="conf" id="cf17" style="left:199px;top:317px;background:#35e08a" data-dx="-101" data-dy="-595" data-rot="-477"></span>
+<span class="conf" id="cf18" style="left:199px;top:317px;background:#d946ef" data-dx="304" data-dy="-239" data-rot="-381"></span>
+<span class="conf" id="cf19" style="left:199px;top:317px;background:#35e08a" data-dx="-285" data-dy="-109" data-rot="-368"></span>
+<span class="conf" id="cf20" style="left:199px;top:317px;background:#ffffff" data-dx="-25" data-dy="-458" data-rot="-418"></span>
+<span class="conf" id="cf21" style="left:199px;top:317px;background:#35e08a" data-dx="171" data-dy="175" data-rot="404"></span>
+<span class="conf" id="cf22" style="left:199px;top:317px;background:#d946ef" data-dx="228" data-dy="145" data-rot="-215"></span>
+<span class="conf" id="cf23" style="left:199px;top:317px;background:#ffffff" data-dx="-140" data-dy="-617" data-rot="480"></span>
+<span class="conf" id="cf24" style="left:199px;top:317px;background:#8b5cf6" data-dx="30" data-dy="123" data-rot="-263"></span>
+<span class="conf" id="cf25" style="left:199px;top:317px;background:#d946ef" data-dx="-122" data-dy="-308" data-rot="-314"></span>
+<span class="conf" id="cf26" style="left:199px;top:317px;background:#ffffff" data-dx="-18" data-dy="101" data-rot="47"></span>
+<span class="conf" id="cf27" style="left:199px;top:317px;background:#8b5cf6" data-dx="-266" data-dy="165" data-rot="207"></span>
+<span class="conf" id="cf28" style="left:199px;top:317px;background:#2de2f0" data-dx="320" data-dy="-511" data-rot="-33"></span>
+<span class="conf" id="cf29" style="left:199px;top:317px;background:#d946ef" data-dx="367" data-dy="-388" data-rot="-99"></span>
+</div>
+<div id="tracker" class="clip" data-start="3.6" data-duration="29" data-track-index="2"><div id="trline"></div><div id="trfill"></div>
+<div class="node" id="nd0" style="left:30px"><i></i><b>Search</b></div>
+<div class="node" id="nd1" style="left:240px"><i></i><b>Scout</b></div>
+<div class="node" id="nd2" style="left:450px"><i></i><b>Offer</b></div>
+<div class="node" id="nd3" style="left:660px"><i></i><b>Advice</b></div>
+<div class="node" id="nd4" style="left:870px"><i></i><b>Deal</b></div>
+<div class="node" id="nd5" style="left:1080px"><i></i><b>Sign</b></div>
+<div class="node" id="nd6" style="left:1290px"><i></i><b>Squad</b></div>
+</div>
+<div id="endcard" class="clip" data-start="33.0" data-duration="4.0" data-track-index="5"><div class="inner"><div class="small" id="e1">FUTBOL MANAGER · 2026/27</div><h1 id="e2">TRANSFERS.</h1><div class="tag" id="e3">Your club. Your call.</div><div class="chips" id="e4"><span class="chip">Search</span><span class="chip">Scout</span><span class="chip">Negotiate</span><span class="chip">Sign</span></div><div class="cta" id="e5">Play in your browser</div></div></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+const C = [{"id": "c1", "scr": "a01", "s": 4.9, "e": 6.5, "side": "L"}, {"id": "c2", "scr": "a01", "s": 5.5, "e": 6.5, "side": "R"}, {"id": "c3", "scr": "a02", "s": 7.1, "e": 8.9, "side": "R"}, {"id": "c4", "scr": "a02", "s": 7.8, "e": 8.9, "side": "L"}, {"id": "c5", "scr": "a03", "s": 9.5, "e": 11.8, "side": "R"}, {"id": "c6", "scr": "a03", "s": 10.1, "e": 11.8, "side": "L"}, {"id": "c7", "scr": "a05", "s": 12.6, "e": 14.3, "side": "L"}, {"id": "c8", "scr": "a05", "s": 13.2, "e": 14.3, "side": "R"}, {"id": "c9", "scr": "a05", "s": 15.3, "e": 18.2, "side": "L"}, {"id": "c10", "scr": "a05", "s": 16.0, "e": 18.2, "side": "R"}, {"id": "c11", "scr": "a05", "s": 19.2, "e": 21.3, "side": "R"}, {"id": "c12", "scr": "a05", "s": 19.8, "e": 21.3, "side": "L"}, {"id": "c13", "scr": "a06", "s": 21.9, "e": 23.2, "side": "L"}, {"id": "c14", "scr": "b00", "s": 23.7, "e": 25.4, "side": "R"}, {"id": "c15", "scr": "b01", "s": 25.9, "e": 27.9, "side": "L"}, {"id": "c16", "scr": "b1a", "s": 28.3, "e": 29.9, "side": "R"}, {"id": "c17", "scr": "c01", "s": 30.4, "e": 32.8, "side": "R"}];
+const WORDS = [[0.0, 4.2, 9], [4.0, 9.2, 6], [9.0, 12.2, 5], [12.0, 18.7, 5], [18.5, 21.7, 4], [21.5, 25.7, 4], [25.5, 30.2, 4], [30.0, 33.2, 5]];
+const NODES = [4.0, 9.0, 12.0, 18.5, 21.5, 25.5, 30.0];
+
+const $ = (s) => document.querySelector(s);
+const EASE = "expo.out";
+/* background drift */
+tl.fromTo("#glowA", { x: -80, y: 0 }, { x: 160, y: 60, duration: 37, ease: "sine.inOut" }, 0);
+tl.fromTo("#glowB", { x: 80, y: 0 }, { x: -200, y: -80, duration: 37, ease: "sine.inOut" }, 0);
+for (let i = 0; i < 16; i++) {
+  const s = (i * 1.7) % 30, d = 5 + (i % 4);
+  tl.fromTo("#dot" + i, { opacity: 0, y: 0 }, { opacity: 0.8, y: -120 - (i % 5) * 30, duration: d / 2, ease: "sine.out" }, s);
+  tl.to("#dot" + i, { opacity: 0, y: -260 - (i % 5) * 30, duration: d / 2, ease: "sine.in" }, s + d / 2);
+}
+/* giant words */
+WORDS.forEach(([s, e, n], i) => {
+  for (let j = 0; j < n; j++) {
+    tl.fromTo("#w" + i + "c" + j, { yPercent: 115, rotation: 6 }, { yPercent: 0, rotation: 0, duration: 0.8, ease: "expo.out" }, s + 0.08 * j);
+    tl.to("#w" + i + "c" + j, { yPercent: -115, duration: 0.45, ease: "power3.in" }, e - 0.55 + 0.04 * j);
+  }
+  tl.fromTo("#word" + i, { x: 60 }, { x: -60, duration: e - s, ease: "none" }, s);
+});
+/* headlines */
+tl.fromTo("#head0", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 0.4);
+tl.to("#head0", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 3.55);
+tl.fromTo("#head1", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 4.2);
+tl.to("#head1", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 8.55);
+tl.fromTo("#head2", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 9.2);
+tl.to("#head2", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 11.55);
+tl.fromTo("#head3", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 12.2);
+tl.to("#head3", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 15.15);
+tl.fromTo("#head4", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 15.6);
+tl.to("#head4", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 18.05);
+tl.fromTo("#head5", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 18.7);
+tl.to("#head5", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 21.05);
+tl.fromTo("#head6", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 21.7);
+tl.to("#head6", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 25.05);
+tl.fromTo("#head7", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 25.7);
+tl.to("#head7", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 29.55);
+tl.fromTo("#head8", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 30.2);
+tl.to("#head8", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 32.55);
+tl.fromTo("#brand", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 0.6);
+/* phone entrance, float, sway */
+tl.set("#phone", { x: 0, y: 0 }, 0);
+tl.fromTo("#tilt", { y: 1100, rotationX: 28, rotationY: -42, scale: 0.7 }, { y: 0, rotationX: 0, rotationY: 0, scale: 1, duration: 1.7, ease: "expo.out" }, 0.2);
+for (let t = 1.9, k = 0; t < 33; t += 2.6, k++) {
+  tl.to("#phone", { y: k % 2 ? 12 : -14, duration: 2.6, ease: "sine.inOut" }, t);
+}
+for (let t = 1.9, k = 0; t < 32.9; t += 3.3, k++) {
+  tl.to("#tilt", { rotationY: k % 2 ? -7 : 7, rotationX: k % 2 ? 2 : -2, duration: 3.3, ease: "sine.inOut" }, t);
+}
+/* screens */
+const SCR = [["a01", 0.9, 6.6], ["a02", 6.6, 9.0], ["a03", 9.0, 12.0], ["a05", 12.0, 21.6], ["a06", 21.6, 23.4], ["b00", 23.4, 25.6], ["b01", 25.6, 28.0], ["b1a", 28.0, 30.0], ["c01", 30.0, 37]];
+SCR.forEach(([id, s, e], i) => {
+  const first = i === 0, last = i === SCR.length - 1;
+  tl.fromTo("#s-" + id, { opacity: first ? 0 : 0 }, { opacity: 1, duration: first ? 0.7 : 0.35, ease: "power2.out" }, first ? s : s - 0.15);
+  if (!last) tl.to("#s-" + id, { opacity: 0, duration: 0.2, ease: "none" }, e + 0.2);
+  if (!first) tl.fromTo("#sweep", { x: -300, opacity: 0.9 }, { x: 760, opacity: 0, duration: 0.7, ease: "power2.inOut" }, s - 0.1);
+});
+/* scroll the offer sheet */
+tl.fromTo("#scin", { y: 0 }, { y: -340, duration: 0.8, ease: "power3.inOut" }, 14.4);
+tl.to("#scin", { y: -600, duration: 0.8, ease: "power3.inOut" }, 18.4);
+/* callouts */
+C.forEach((c) => {
+  const dir = c.side === "L" ? -1 : 1;
+  tl.fromTo("#" + c.id + "-card", { opacity: 0, x: 60 * dir, scale: 0.92 }, { opacity: 1, x: 0, scale: 1, duration: 0.55, ease: "back.out(1.5)" }, c.s - 0.2);
+  tl.fromTo("#" + c.id + "-ring", { opacity: 0, scale: 1.25 }, { opacity: 1, scale: 1, duration: 0.4, ease: EASE }, c.s);
+  tl.fromTo("#" + c.id + "-lead", { opacity: 0, strokeDasharray: 600, strokeDashoffset: 600 }, { opacity: 1, strokeDashoffset: 0, duration: 0.45, ease: "power2.out" }, c.s);
+  tl.fromTo("#" + c.id + "-pt", { opacity: 0, scale: 0.2, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, c.s + 0.35);
+  tl.to("#" + c.id + "-ring", { scale: 1.035, duration: 0.45, yoyo: true, repeat: 1, ease: "sine.inOut" }, c.s + 0.5);
+  const x = c.e;
+  tl.to("#" + c.id + "-card", { opacity: 0, x: 40 * dir, duration: 0.35, ease: "power2.in" }, x);
+  tl.to("#" + c.id + "-ring", { opacity: 0, duration: 0.3 }, x);
+  tl.to("#" + c.id + "-lead", { opacity: 0, duration: 0.3 }, x);
+  tl.to("#" + c.id + "-pt", { opacity: 0, duration: 0.3 }, x);
+});
+/* confetti when he signs */
+for (let i = 0; i < 30; i++) {
+  const el = $("#cf" + i);
+  const dx = +el.dataset.dx, dy = +el.dataset.dy, rot = +el.dataset.rot;
+  tl.fromTo("#cf" + i, { opacity: 0 }, { opacity: 1, duration: 0.05 }, 28.15);
+  tl.fromTo("#cf" + i, { x: 0, y: 0, rotation: 0 }, { x: dx, y: dy, rotation: rot, duration: 0.9, ease: "power3.out" }, 28.15);
+  tl.to("#cf" + i, { y: dy + 260, opacity: 0, duration: 0.9, ease: "power2.in" }, 29.05);
+}
+/* tracker */
+tl.fromTo("#tracker", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 3.6);
+tl.fromTo("#trfill", { scaleX: 0 }, { scaleX: 0, duration: 0.01 }, 3.6);
+NODES.forEach((t, i) => {
+  tl.to("#trfill", { scaleX: i / (NODES.length - 1), duration: 0.6, ease: "power2.inOut" }, t);
+  tl.to("#nd" + i + " i", { backgroundColor: "#2de2f0", borderColor: "#ffffff", scale: 1.35, duration: 0.35, ease: "back.out(2)" }, t + 0.1);
+  tl.to("#nd" + i + " b", { color: "#ffffff", duration: 0.3 }, t + 0.1);
+});
+tl.to("#tracker", { opacity: 0, y: 20, duration: 0.5, ease: "power2.in" }, 32.6);
+/* end card */
+tl.to("#phone", { x: -330, duration: 1.1, ease: "expo.inOut" }, 32.7);
+tl.to("#tilt", { scale: 0.86, duration: 1.1, ease: "expo.inOut" }, 32.7);
+tl.to("#brand", { opacity: 0, duration: 0.3 }, 32.8);
+["e1", "e2", "e3", "e4", "e5"].forEach((id, i) => {
+  tl.fromTo("#" + id, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.7, ease: EASE }, 33.5 + i * 0.18);
+});
+tl.fromTo("#e5", { scale: 1 }, { scale: 1.06, duration: 0.5, yoyo: true, repeat: 1, ease: "sine.inOut" }, 35.0);
+tl.set({}, {}, 37.0);
+window.__timelines = window.__timelines || {};
+window.__timelines["main"] = tl;
+
+</script></body></html>
