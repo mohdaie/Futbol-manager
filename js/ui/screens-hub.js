@@ -276,7 +276,7 @@ SCREENS.gamestatus = {
         ['Training / youth facilities', `Level ${G.board.facTrain} / ${G.board.facYouth}`], ['Transfer history entries', G.tHist.length],
       ])}</div>
       <div class="card"><h3>Game & save</h3>${kv([
-        ['Game version', GAME_VERSION], ['Save format', G.v], ['Last saved', realDate(G.savedAt)],
+        ['Game version', versionLabel(GAME_VERSION)], ['Save format', G.v], ['Last saved', realDate(G.savedAt)],
         ['World clubs', Object.keys(G.clubs).length], ['World players', Object.keys(G.players).length], ['News / scout reports', `${G.news.length} / ${G.scout.reports.length}`],
         ['Match speed', G.settings.speed + 'x'], ['Career status', G.gameOver ? 'Ended' : 'In progress'],
       ])}<p class="muted">This career is stored in this browser. Export a backup from Settings.</p><button class="btn" data-a="go" data-s="settings">Save & backup settings</button></div>`;

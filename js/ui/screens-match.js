@@ -40,19 +40,22 @@ ACT.titleNewGo = () => go('start');
    (sessionStorage) is not reloaded again while Pages is still rolling it out. */
 const UPDATE = { state: 'idle', v: '', checked: false };
 const UPDATE_KEY = 'futbol-manager:update';
+// Versions are MAJOR.MINOR.PATCH from 1.0.0. Releases before that were dated (2026.10.27.2) and count as older.
+const versionParts = v => { const x = String(v).replace(/^v/, '').split('.').map(Number); return x[0] >= 2000 ? [0, ...x] : x; };
+const versionLabel = v => 'v' + String(v).replace(/^v/, '');
 function versionNewer(a, b) {
-  const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+  const x = versionParts(a), y = versionParts(b);
   for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
   return false;
 }
 function updateText() {
   return ({
     checking: 'Checking for updates…',
-    latest: `Up to date · version ${GAME_VERSION}`,
-    found: `Updating to version ${UPDATE.v}…`,
-    pending: `Version ${UPDATE.v} is still being published. Try again in a minute.`,
-    error: `Could not check for updates · version ${GAME_VERSION}`,
-  })[UPDATE.state] || `Version ${GAME_VERSION}`;
+    latest: `Up to date · ${versionLabel(GAME_VERSION)}`,
+    found: `Updating to ${versionLabel(UPDATE.v)}…`,
+    pending: `${versionLabel(UPDATE.v)} is still being published. Try again in a minute.`,
+    error: `Could not check for updates · ${versionLabel(GAME_VERSION)}`,
+  })[UPDATE.state] || versionLabel(GAME_VERSION);
 }
 function updateShow() { const el = document.getElementById('title-update'); if (el) el.textContent = updateText(); }
 async function checkForUpdate() {

@@ -34,7 +34,8 @@ bottom) and `docs/CLAUDE_HANDOVER.md` (earlier engine notes).
 ## 2. Release process
 
 1. Work on a branch; if the previous PR was merged, restart the branch from `origin/main`.
-2. Bump `GAME_VERSION` in `js/core/data.js` (format `YYYY.MM.DD.N`, N increments).
+2. Bump `GAME_VERSION` in `js/core/data.js` and every `?v=` in `index.html`. Format `MAJOR.MINOR.PATCH` (shown as
+   `v1.0.0`): PATCH for fixes, MINOR for new features, MAJOR for big changes. Releases before 1.0.0 used `YYYY.MM.DD.N`.
 3. Add a short section at the bottom of `STRUCTURE.md`.
 4. Run all tests (below), the strict audit, and the scorecard on 3 seeds.
 5. Open a PR to `main`, squash-merge, then confirm the live site serves the new version:
