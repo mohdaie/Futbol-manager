@@ -48,8 +48,8 @@ const TR_TABS = {
     const f = UI.tab.newAssign || { region: 'Everywhere', pos: 'Any', maxAge: 30, weeks: 4 };
     UI.tab.newAssign = f;
     const fd = UI.tab.sfold || 'new', files = G.scout.reports.filter(r => (r.folder || 'new') === fd && G.players[r.pid]);
-    const scoutRow = s => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>Rating ${s.rating} · knows ${esc(scoutRegion(s))} · ${scoutLoad(s) >= SCOUT_LOAD ? 'fully booked' : (SCOUT_LOAD - scoutLoad(s)) + ' of 3 places free'}</small></span></div>`;
-    return `<div class="card"><h3>Scouts <small>${scouts.length}</small></h3><p class="muted">Each scout follows up to three players, or runs one assignment. A scout who knows a region learns faster there.</p>
+    const scoutRow = s => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>Rating ${s.rating} · from ${esc(natName(s.nat || 'ENG'))} · ${scoutLoad(s) >= SCOUT_LOAD ? 'fully booked' : (SCOUT_LOAD - scoutLoad(s)) + ' of 3 places free'}<br>Knows ${esc(scoutCountryTxt(s, 6))}</small></span></div>`;
+    return `<div class="card"><h3>Scouts <small>${scouts.length}</small></h3><p class="muted">Each scout follows up to three players, or runs one assignment. A scout knows countries by percentage. The better he is and the better he knows a country, the more of its players' files are filled in before anyone watches them, and the faster he learns there. Knowledge grows as he works in a country.</p>
         <div class="list">${scouts.map(scoutRow).join('') || '<p class="muted">No scouts. Hire one in Staff.</p>'}</div></div>
       <div class="card"><h3>Following <small>${jobs.length}</small></h3>
         <div class="list">${jobs.map(j => { const p = G.players[j.pid], s = scoutById(j.sid); return p ? `<div class="row"><span class="grow"><b>${playerLink(p.id, fullName(p))}</b><small>${j.mode === 'video' ? 'Video analysis' : esc(s ? s.name : 'Scout')} · ${knowOf(p)}% · ${j.n || 0} watched · ${Math.max(0, j.end - dayAbs())} days left</small></span><button class="btn sm" data-a="scoutFile" data-id="${p.id}">File</button><button class="btn sm ghost" data-a="stopScout" data-id="${j.id}">Stop</button></div>` : ''; }).join('') || '<p class="muted">Nobody yet. Open a player and choose Scouting > Send a scout.</p>'}</div></div>
@@ -100,6 +100,14 @@ ACT.scoutFolder = ds => { UI.tab.sfold = ds.v; render(); };
 ACT.stopScout = ds => { stopScouting(+ds.id); render(); };
 ACT.cancelAssign = ds => { G.scout.assign = G.scout.assign.filter(a => a.id !== +ds.id); render(); };
 
+// Why a file starts filled in: your scout who knows his country best.
+function netNote(p) {
+  if (leagueKnown(p) || !(netKnow(p) > (G.know[p.id] ?? 10))) return '';
+  const best = netScout(p);
+  if (!best) return '';
+  const cn = scoutCountries(best[0]), cc = clubCountry(p) || p.nat, viaNat = (cn[p.nat] || 0) * 0.6 > (cn[cc] || 0), code = viaNat ? p.nat : cc;
+  return `${esc(best[0].name)} knows ${esc(natName(code))} (${Math.round(cn[code])}%)${viaNat && code !== cc ? ' and follows its players abroad' : ''}: his network fills ${netKnow(p)}% of this file. `;
+}
 /* ---------- scouting file ----------
    A dossier: cover, verdict, attributes (confirmed, estimate or not scouted), sections that open stage by stage,
    notes, matches watched and the history of the report. */
@@ -107,6 +115,7 @@ function scoutFileSheet(pid) {
   const p = G.players[pid];
   if (!p) return toast('That player has retired.');
   const k = knowOf(p), r = scoutFile(p), st = knowStage(k), nx = nextStage(k), so = seenOvr(p), fit = k >= 25 ? fileFit(p) : null;
+  if (r.grade === '?' && k >= 25) { r.grade = scoutGrade(p); r.rec = scoutRec(p, r.grade); } // filed from the network, not watched yet
   const job = G.scout.jobs.find(j => j.pid === p.id), lock = (need, what) => `<p class="lock">Opens at ${need}%: ${what}.</p>`;
   const watchDays = scoutReportDays(SCOUT_DAYS), videoDays = scoutReportDays(VIDEO_DAYS);
   const watchFee = Math.round(jobWeekly({ pid: p.id, mode: 'watch' }) * scoutRushMultiplier()), videoFee = Math.round(3000 * scoutRushMultiplier());
@@ -123,7 +132,7 @@ function scoutFileSheet(pid) {
       <dl><div><dt>Scout</dt><dd>${esc(r.by || '-')}</dd></div><div><dt>Updated</dt><dd>${fmtDate(r.date, false)}</dd></div><div><dt>Matches watched</dt><dd>${r.seen.filter(x => x.rt != null || x.note === 'Did not play').length}</dd></div></dl>
     </header>
     <div class="sf-know"><div class="kvrow"><span>File complete</span><b>${k}% · ${st[1]}</b></div>${bar(k, k >= 90 ? 'good' : k >= 50 ? '' : 'warn')}
-      <small class="muted">${leagueKnown(p) && k < 90 ? 'You know every attribute from watching his league matches. Scout him to find out whether he would join you.' : nx ? `Next at ${nx[0]}%: ${STAGE_UNLOCK[nx[0]]}.` : 'Every value in this file is confirmed.'}${job ? ` Being scouted now (${job.mode === 'video' ? 'video' : esc((scoutById(job.sid) || {}).name || 'scout')}, ${Math.max(0, job.end - dayAbs())} days left).` : ''}</small></div>
+      <small class="muted">${netNote(p)}${leagueKnown(p) && k < 90 ? 'You know every attribute from watching his league matches. Scout him to find out whether he would join you.' : nx ? `Next at ${nx[0]}%: ${STAGE_UNLOCK[nx[0]]}.` : 'Every value in this file is confirmed.'}${job ? ` Being scouted now (${job.mode === 'video' ? 'video' : esc((scoutById(job.sid) || {}).name || 'scout')}, ${Math.max(0, job.end - dayAbs())} days left).` : ''}</small></div>
     <section class="fsec verdict"><h4>Verdict</h4><div class="sf-verdict"><span class="grade g${r.grade}">${r.grade}</span><div><b>${esc(r.rec || 'Watch more')}</b><small>${GRADE_NOTE[r.grade]}</small></div><div class="r"><small>Ability</small>${ovrPill(so.v, so.txt)}</div></div>
       ${fit ? `<p>Best role for you: <b>${POS_NAME[fit.pos]}</b>, about ${fit.est}${fit.cur ? ` against ${playerLink(fit.cur.id, pname(fit.cur))} (${fit.curV})` : ''}.</p>` : ''}</section>
     <section class="fsec"><h4>Attributes</h4><p class="muted">Exact = confirmed · range = estimate · ? = not scouted yet</p><div class="attrs">${attrs}</div></section>
@@ -212,7 +221,7 @@ ACT.budget = ds => { if (!adjustBudgets(+ds.v)) toast('Not enough budget to move
 /* ---------- staff ---------- */
 SCREENS.staff = {
   render() {
-    const row = (s, hire) => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>${STAFF_TITLE[s.role] || s.role} · age ${s.age} · ${wageFmt(s.wage)}</small></span><span class="rt ${s.rating >= 15 ? 'good' : s.rating < 8 ? 'bad' : ''}">${s.rating}</span>${hire ? `<button class="btn sm" data-a="hire" data-id="${s.id}">Hire</button>` : `<button class="btn sm ghost" data-a="fire" data-id="${s.id}">Release</button>`}</div>`;
+    const row = (s, hire) => `<div class="row"><span class="grow"><b>${esc(s.name)}</b><small>${STAFF_TITLE[s.role] || s.role} · age ${s.age} · ${wageFmt(s.wage)}${s.role === 'Scout' ? `<br>Knows ${esc(scoutCountryTxt(s, 4))}` : ''}</small></span><span class="rt ${s.rating >= 15 ? 'good' : s.rating < 8 ? 'bad' : ''}">${s.rating}</span>${hire ? `<button class="btn sm" data-a="hire" data-id="${s.id}">Hire</button>` : `<button class="btn sm ghost" data-a="fire" data-id="${s.id}">Release</button>`}</div>`;
     const rec = typeof assistantRecord === 'function' ? assistantRecord() : null;
     return `<h1 class="h1">Staff</h1>
       <div class="card"><h3>AI-assisted staff</h3><p class="muted">Your assistant manager advises before each match: he plays it through with the game's own engine and recommends a tactic. The better his rating, the more options he tries and the more accurate he is. Advice and results are recorded.</p>

@@ -113,10 +113,14 @@ function fillLevel(c, l, target) {
   }
 }
 
-function staffName() { const n = pickNat({ ENG: 6, SCO: 2, ESP: 1, POR: 1, NED: 1, GER: 1, ITA: 1, FRA: 1 }); const [f, l] = genName(n); return f + ' ' + l; }
+function staffName(n = pickNat({ ENG: 6, SCO: 2, ESP: 1, POR: 1, NED: 1, GER: 1, ITA: 1, FRA: 1 })) { const [f, l] = genName(n); return f + ' ' + l; }
+// Scouts come from anywhere and know countries (scouting.js); other staff are mostly British.
 function genStaffMember(role, rep) {
   const rating = clamp(Math.round(6 + (rep - 60) / 4 + gauss() * 2.5), 3, 20);
-  return { id: G.nextId++, role, name: staffName(), age: ri(32, 64), rating, wage: roundWage(1200 * rating + rf(0, 3000)) };
+  const nat = role === 'Scout' ? pickNat(SCOUT_NATS) : null;
+  const s = { id: G.nextId++, role, name: staffName(nat || undefined), age: ri(32, 64), rating, wage: roundWage(1200 * rating + rf(0, 3000)) };
+  if (nat) { s.nat = nat; if (typeof genScoutCountries === 'function') s.cn = genScoutCountries(s); }
+  return s;
 }
 function genStaffPool(rep) {
   const pool = [];

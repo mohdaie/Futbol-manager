@@ -108,6 +108,8 @@ const natName = c => (COUNTRY[c] ? COUNTRY[c][0] : NATIONS[c] ? NATIONS[c].n : c
 const natRegion = c => (COUNTRY[c] ? COUNTRY[c][1] : NATIONS[c] ? NATIONS[c].r : 'Europe');
 const LEVELS = { A: 'First team', R: 'Reserves', Y: 'U18s' };
 
+// Where scouts come from (weights); each knows his home country best.
+const SCOUT_NATS = { ENG: 8, SCO: 2, IRL: 1, ESP: 2, POR: 2, FRA: 2, GER: 1, ITA: 1, NED: 1, BEL: 1, BRA: 2, ARG: 2, NGA: 1, GHA: 1, SEN: 1, JPN: 1, USA: 1 };
 const REGIONS = ['Everywhere', 'Premier League', 'Championship', 'Britain & Ireland', 'Europe', 'South America', 'Africa', 'Asia', 'North America', 'Free agents'];
 
 // Nationality mix for generated top-flight squads (weights).

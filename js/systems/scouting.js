@@ -12,11 +12,16 @@
      notes and a history, kept in folders.
    - Players in your league (and anyone who has played in it while you were there) are known from watching
      the league: every attribute is exact and the file starts at 89%. Only the full file (90%) is hidden, which
-     holds his happiness, his role and whether he would join you. One scouting visit confirms it. */
+     holds his happiness, his role and whether he would join you. One scouting visit confirms it.
+   - Every scout knows countries, each to a percentage (s.cn): his home country best, then the countries he has
+     worked in. Like a real recruitment network, a good scout who knows a country well already knows its league:
+     players at its clubs (and, less so, its players abroad) start with part of their file filled in, up to the
+     Scouted stage (55%). Youth players are less known. Knowledge of a country grows every time a scout watches a
+     player there or searches it on an assignment, and a scout who knows the country learns faster on the job. */
 
 const LEAGUE_KNOW = 89;
 const inUserLeague = p => { const c = G.clubs[p.club]; return !!(c && c.pl && !c.fa && p.club !== G.club && leagueOf(c.id) === leagueOf(G.club)); };
-const knowOf = p => (p.club === G.club ? 100 : Math.max(G.know[p.id] ?? 10, inUserLeague(p) ? LEAGUE_KNOW : 0));
+const knowOf = p => (p.club === G.club ? 100 : Math.max(G.know[p.id] ?? 10, inUserLeague(p) ? LEAGUE_KNOW : netKnow(p)));
 // Knowledge used for attributes, ability and potential: a league file shows every attribute exactly.
 const leagueKnown = p => (G.leagueSeen || {})[p.id] || inUserLeague(p);
 const attrKnow = p => (leagueKnown(p) ? Math.max(90, knowOf(p)) : knowOf(p));
@@ -95,14 +100,60 @@ function scoutRec(p, grade) {
 }
 const FOLDERS = [['new', 'New'], ['dof', 'With the Director'], ['rec', 'Recommended'], ['mon', 'Monitor'], ['rej', 'Rejected']];
 
-/* ---------- scouts ---------- */
-const SCOUT_REGIONS = REGIONS.filter(r => r !== 'Everywhere' && r !== 'Free agents');
-const scoutRegion = s => s.reg || (s.reg = SCOUT_REGIONS[Math.floor(hash01('reg' + s.id) * SCOUT_REGIONS.length)]);
+/* ---------- scouts and their country knowledge ---------- */
+const NET_CAP = 55;
+// The country whose league a player plays in (English clubs for the Premier League and Championship).
+const clubCountry = p => { const c = G.clubs[p.club]; return !c || c.fa ? null : c.pl ? 'ENG' : c.nat || null; };
+// Countries a scout knows: home country 55-100%, then one to six more, more of them and better known as his rating rises.
+// Football markets (countries with clubs in the game) and his own part of the world are the likeliest.
+function genScoutCountries(s) {
+  const home = s.nat || 'ENG', reg = natRegion(home), r = s.rating;
+  const markets = new Set(Object.values(G.clubs).filter(c => !c.fa).map(c => (c.pl ? 'ENG' : c.nat)));
+  const cn = { [home]: clamp(Math.round(55 + r * 2 + rf(-6, 6)), 55, 100) };
+  const pool = Object.keys(COUNTRY).filter(c => c !== home);
+  for (let n = 1 + Math.floor(r / 5) + (R() < 0.5 ? 1 : 0); n > 0 && pool.length; n--) {
+    const c = wpick(pool, x => (markets.has(x) ? 4 : 1) * (natRegion(x) === reg ? 2.5 : 1));
+    pool.splice(pool.indexOf(c), 1);
+    cn[c] = clamp(Math.round(rf(12, 40) + r * 1.6 + (natRegion(c) === reg ? 8 : 0)), 10, 90);
+  }
+  return cn;
+}
+const scoutCountries = s => s.cn || (s.cn = genScoutCountries(s));
+const sortedCountries = s => Object.entries(scoutCountries(s)).sort((a, b) => b[1] - a[1]);
+const scoutCountryTxt = (s, n = 3) => sortedCountries(s).slice(0, n).map(([c, v]) => `${natName(c)} ${Math.round(v)}%`).join(', ') + (sortedCountries(s).length > n ? ` +${sortedCountries(s).length - n}` : '');
+// How well a scout knows a player's world (0-100): the country of his league, or 60% of that for his nationality.
+const scoutKnows = (s, p) => { const cn = s ? scoutCountries(s) : {}; return Math.max(cn[clubCountry(p) || p.nat] || 0, (cn[p.nat] || 0) * 0.6); };
+// Best knowledge per country across your scouts, weighted by rating (a poor scout knows less, however long he has lived there).
+let NET_CACHE = { g: null, key: '', map: {} };
+function scoutNet() {
+  const sc = G.staff ? staffOf('Scout') : [], key = sc.map(s => s.id + ':' + s.rating + ':' + (s.cnv || 0)).join('|');
+  if (NET_CACHE.g === G && NET_CACHE.key === key) return NET_CACHE.map;
+  const map = {};
+  sc.forEach(s => { const q = 0.4 + 0.6 * s.rating / 20; Object.entries(scoutCountries(s)).forEach(([c, v]) => { map[c] = Math.max(map[c] || 0, v / 100 * q); }); });
+  NET_CACHE = { g: G, key, map };
+  return map;
+}
+// Knowledge a player's file has from the network alone, before anyone watches him.
+function netKnow(p) {
+  const m = scoutNet(), v = Math.max(m[clubCountry(p) || p.nat] || 0, (m[p.nat] || 0) * 0.6);
+  return Math.round(v * NET_CAP * (lvlOf(p) === 'Y' ? 0.6 : 1));
+}
+// The scout of yours who knows this player's country best.
+const netScout = p => staffOf('Scout').map(s => [s, scoutKnows(s, p) * (0.4 + 0.6 * s.rating / 20)]).sort((a, b) => b[1] - a[1])[0] || null;
+// Working in a country teaches it, quickly at first, slowly near 100%.
+function learnCountry(s, code, amt) {
+  if (!s || !code) return;
+  const cn = scoutCountries(s), cur = cn[code] || 0;
+  cn[code] = Math.min(100, Math.round((cur + amt * (1 - cur / 110)) * 10) / 10);
+  s.cnv = (s.cnv || 0) + 1;
+}
+const regionCountries = region => (region === 'Premier League' || region === 'Championship' || region === 'Premier Division' ? ['ENG'] : Object.keys(COUNTRY).filter(c => natRegion(c) === region));
+const regionKnow = (s, region) => Math.max(0, ...regionCountries(region).map(c => scoutCountries(s)[c] || 0));
 const scoutLoad = s => (G.scout.assign.some(a => a.sid === s.id) ? SCOUT_LOAD : 0) + G.scout.jobs.filter(j => j.sid === s.id).length;
 // The best free scout for a player: rating, plus a bonus for knowing the region.
 function pickScout(p) {
   const free = staffOf('Scout').filter(s => scoutLoad(s) < SCOUT_LOAD);
-  return free.sort((a, b) => (b.rating + (scoutRegion(b) === regionOf(p) ? 4 : 0)) - (a.rating + (scoutRegion(a) === regionOf(p) ? 4 : 0)))[0] || null;
+  return free.sort((a, b) => (b.rating + scoutKnows(b, p) * 0.06) - (a.rating + scoutKnows(a, p) * 0.06))[0] || null;
 }
 const scoutById = id => G.staff.find(s => s.id === id) || null;
 const jobWeekly = j => (j.mode === 'video' ? 0 : ['Premier Division', 'Premier League', 'Championship'].includes(regionOf(G.players[j.pid] || {})) ? 6000 : 12000);
@@ -133,14 +184,15 @@ function trimReports() {
   const drop = G.scout.reports.filter(r => r.folder === 'new' || r.folder === 'rej').slice(-(G.scout.reports.length - 120));
   G.scout.reports = G.scout.reports.filter(r => !drop.includes(r));
 }
-// Knowledge from one match watched: the scout's rating, his region, and whether the player played.
+// Knowledge from one match watched: the scout's rating, how well he knows the country, and whether the player played.
 function watchGain(s, p, played) {
-  const reg = scoutRegion(s) === regionOf(p) ? 1.25 : ['Premier Division', 'Premier League', 'Championship'].includes(regionOf(p)) || regionOf(p) === 'Free agents' ? 1 : 0.85;
+  const reg = 0.85 + 0.45 * scoutKnows(s, p) / 100;
   return (12 + (s ? s.rating : 8) * 0.9) * reg * (played ? 1 : 0.35);
 }
 function logWatch(j, p, entry) {
   const s = scoutById(j.sid), r = scoutFile(p);
   const got = addKnowledge(p, watchGain(s, p, entry.rt != null), s ? s.name : '');
+  learnCountry(s, clubCountry(p) || p.nat, 1.5);
   r.seen.unshift({ ...entry, date: today().getTime(), by: s ? s.name : '', gain: got });
   r.seen = r.seen.slice(0, 12);
   j.n = (j.n || 0) + 1;
@@ -243,12 +295,13 @@ function matchesAssignment(p, a) {
 function weeklyScouting() {
   noteLeaguePlayers();
   G.scout.assign.forEach(a => {
-    const s = scoutById(a.sid), judge = s ? s.rating : staffAvg('Scout', 6);
+    const s = scoutById(a.sid), judge = s ? s.rating : staffAvg('Scout', 6), rk = s ? regionKnow(s, a.region) : 0;
     const pool = Object.values(G.players).filter(p => matchesAssignment(p, a) && knowOf(p) < 60);
     for (let k = 0; k < 2 && pool.length; k++) {
       const p = wpick(pool, x => Math.pow(1.08, x.ca - 50) * (1 + (x.pa - x.ca) / 20));
       pool.splice(pool.indexOf(p), 1);
-      const target = 26 + judge * 1.1 + rf(0, 6);
+      const target = 26 + judge * 1.1 + rf(0, 6) + rk * 0.08;
+      learnCountry(s, clubCountry(p) || p.nat, 1);
       addKnowledge(p, Math.max(0, target - knowOf(p)), s ? s.name : 'Assignment');
       scoutFile(p).seen.unshift({ date: today().getTime(), by: s ? s.name : '', opp: 'Assignment: ' + a.region, rt: null, note: 'First look', gain: 0 });
     }
@@ -260,7 +313,7 @@ function weeklyScouting() {
 }
 
 function addAssignment(region, pos, maxAge, weeks) {
-  const s = staffOf('Scout').filter(x => scoutLoad(x) === 0).sort((a, b) => (b.rating + (scoutRegion(b) === region ? 4 : 0)) - (a.rating + (scoutRegion(a) === region ? 4 : 0)))[0];
+  const s = staffOf('Scout').filter(x => scoutLoad(x) === 0).sort((a, b) => (b.rating + regionKnow(b, region) * 0.06) - (a.rating + regionKnow(a, region) * 0.06))[0];
   if (!s) return false;
   G.scout.assign.push({ id: G.nextId++, sid: s.id, region, pos, maxAge, left: weeks });
   return true;
@@ -270,6 +323,7 @@ function addAssignment(region, pos, maxAge, weeks) {
 function ensureScouting() {
   G.scout.jobs = G.scout.jobs || [];
   G.leagueSeen = G.leagueSeen || {};
+  [...(G.staff || []), ...(G.staffPool || [])].filter(s => s.role === 'Scout').forEach(s => { if (!s.nat) s.nat = 'ENG'; scoutCountries(s); });
   G.scout.reports.forEach(r => { r.folder = r.folder || 'new'; r.hist = r.hist || []; r.seen = r.seen || []; if (r.k == null && G.players[r.pid]) r.k = knowOf(G.players[r.pid]); });
   G.scout.assign.forEach(a => { if (!a.sid) { const s = staffOf('Scout').find(x => !G.scout.assign.some(b => b.sid === x.id)); if (s) a.sid = s.id; } });
 }
