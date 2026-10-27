@@ -21,8 +21,8 @@ function ensureForeignSquads({ newCareer = false } = {}) {
     const existingReserves = levelSquad(c.id, 'R').length;
     c.backgroundOnly = false;
     delete c.dummySquad;
-    c.foreignSquad = { catalogId, seeded: true, maxPlayers: legacyAuthored ? Math.max(17, c.squad.length + Math.max(0, 6 - existingReserves)) : 17 };
-    c.academy = { strength: data.academy, noAnnualIntake: true, basis: data.basis, estimate: true };
+    c.foreignSquad = { catalogId, seeded: true };
+    c.academy = { strength: data.academy, basis: data.basis, estimate: true };
     if (!legacyAuthored) { c.rep = data.rep; c.bal = Math.max(c.bal || 0, 50e6); c.tac = aiTactic(c.rep); c.tac.ip = data.shape; c.tac.oop = data.shape; }
     const targets = legacyAuthored ? [['R', 6]] : [['A', 11], ['R', 6]];
     for (const [level, target] of targets) {
@@ -56,30 +56,15 @@ function ensureForeignSquads({ newCareer = false } = {}) {
   G.foreignSquadVersion = 1;
 }
 
-// Reserve development is continuous training. Vacancies are filled from players
-// already in the career's free-agent market; this never generates a youth intake.
+// Overseas clubs keep the English structure: first team, reserves and U18s, a yearly top-up of both youth levels (rollover),
+// and generated depth players when a first team runs short (weeklyTransfers). Only the emergency call-up is kept here.
 function maintainForeignSquads() {
-  const free = squadOf('FA').filter(p => !p.inj).sort((a, b) => b.ca - a.ca);
   for (const c of Object.values(G.clubs).filter(c => c.foreignSquad)) {
     while (seniorSquad(c.id).length < 11) {
       const needKeeper = !seniorSquad(c.id).some(p => p.pos === 'GK');
       const p = levelSquad(c.id, 'R').filter(p => !needKeeper || p.pos === 'GK').sort((a, b) => b.ca - a.ca)[0];
       if (!p) break;
       p.lvl = 'A'; p.wage = Math.max(p.wage, wageFor(p, c.rep));
-    }
-    // Full 25-man squads are topped up to 22 from the free-agent pool; the original compact squads keep their 17.
-    while (c.squad.length < Math.min(c.foreignSquad.full ? 22 : 17, clubSquadMax(c))) {
-      const squad = squadOf(c.id), keepers = squad.filter(p => p.pos === 'GK').length;
-      const reserve = seniorSquad(c.id).length >= 11;
-      const needed = FORMATIONS[c.tac.ip].map(s => s[0]);
-      for (const p of seniorSquad(c.id)) { const at = needed.indexOf(p.pos); if (at >= 0) needed.splice(at, 1); }
-      const wanted = keepers < (reserve ? 2 : 1) ? 'GK' : needed[0];
-      let index = free.findIndex(p => (!wanted || p.pos === wanted) && (!reserve || p.age <= 24));
-      if (index < 0) index = free.findIndex(p => (!wanted || wanted !== 'GK' || p.pos === 'GK') && (!reserve || p.age <= 24));
-      if (index < 0) break;
-      const p = free.splice(index, 1)[0];
-      moveClub(p, c.id); p.lvl = reserve ? 'R' : 'A'; p.con = G.season + 2;
-      p.wage = wageFor(p, c.rep) * (reserve ? 0.5 : 1);
     }
   }
 }
@@ -130,14 +115,12 @@ function ensureOverseasFullSquads() {
       c.backgroundOnly = false; delete c.dummySquad;
       c.rep = data.rep; c.bal = Math.max(c.bal || 0, Math.round(20e6 + Math.pow(Math.max(0, data.rep - 50), 2) * 0.1e6));
       c.tac = aiTactic(c.rep); c.tac.ip = shape; c.tac.oop = shape;
-      c.academy = { strength: clamp(Math.round(4 + (data.rep - 55) * 0.4 + hash01(catalogId + ':academy') * 4), 3, 14), noAnnualIntake: true,
+      c.academy = { strength: clamp(Math.round(4 + (data.rep - 55) * 0.4 + hash01(catalogId + ':academy') * 4), 3, 14),
         basis: 'Strength estimated from club reputation; this is not an official academy ranking.', estimate: true };
-      c.foreignSquad = { catalogId, seeded: true, maxPlayers: OVERSEAS_FULL_SQUAD_SIZE };
+      c.foreignSquad = { catalogId, seeded: true };
     }
     if (!c.foreignSquad) continue;
     const need = Math.max(0, OVERSEAS_FULL_SQUAD_SIZE - seniorSquad(c.id).length);
-    c.foreignSquad.full = true;
-    c.foreignSquad.maxPlayers = Math.max(c.foreignSquad.maxPlayers || 0, c.squad.length + need);
     let added = 0;
     for (let i = 0; i < data.rows.length && added < need; i++) {
       const row = data.rows[i], id = `ov26:${catalogId}:${i}`;
@@ -151,4 +134,20 @@ function ensureOverseasFullSquads() {
     }
   }
   G.overseasSquadVersion = 1;
+}
+
+// Reserves and U18s for every overseas club, as at the English clubs: 20 of each. Older saves lose the compact-squad limits
+// (no annual intake, a 17/25/31-player cap) once, and the clubs then follow the same yearly rollover as the English clubs.
+const OVERSEAS_YOUTH_TARGET = 20;
+function ensureOverseasYouth() {
+  if (G.overseasYouthVersion === 1 || G.overseasSquadVersion !== 1) return;
+  const first = G.nextId;
+  for (const c of Object.values(G.clubs).filter(c => c.foreignSquad)) {
+    if (c.academy) delete c.academy.noAnnualIntake;
+    delete c.foreignSquad.maxPlayers; delete c.foreignSquad.full;
+    fillLevel(c, 'R', OVERSEAS_YOUTH_TARGET);
+    fillLevel(c, 'Y', OVERSEAS_YOUTH_TARGET);
+  }
+  for (const p of Object.values(G.players)) if (p.id >= first) G.know[p.id] = 10;
+  G.overseasYouthVersion = 1;
 }

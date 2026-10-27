@@ -17,7 +17,7 @@ The academy strength parameter is an original 1–20 estimate based on historica
 
 ## Other overseas clubs: virtual read-only squads (before v1.1.0)
 
-*Superseded: from v1.1.0 these 56 clubs have real 25-man squads (see the last section). The placeholder rules below still apply to older saves until they load once.*
+*Superseded: from v1.1.0 these 56 clubs have real squads, and from v1.2.0 reserves, U18s and a yearly intake (see the last section). The placeholder rules below still apply to older saves until they load once.*
 
 The other 56 clubs keep no player records. Their 25 squad rows are deterministic virtual identities with country-matched name pools and nationalities. They have no profiles and are neither scoutable nor transferable; they do not enter search, simulation, or saves. The generated country / other-EU / non-EU mix is Spain 14/8/3, Italy 8/10/7, Germany 8/10/7, and France 8/10/7.
 
@@ -68,7 +68,7 @@ The draft's 12-second live sample averaged 55.6 FPS with three frame intervals o
 
 The existing renderer invalidates the full entity-name index on every render, and save-worker posting still synchronously copies the whole career. Both remain performance costs as the player database expands. They were deliberately left for separate performance work; this feature does not claim to solve those pauses.
 
-## Full 25-man overseas squads (v1.1.0)
+## Full overseas squads and academies (v1.1.0, v1.2.0)
 
 All 76 overseas clubs now have a full 25-man first team. The 20 selected clubs keep their 11 first-team players and six reserves and gain 14 more first-team players (31 in total). The other 56 clubs stop being placeholders and receive 25 first-team players each, so they can be scouted, signed from and played in friendlies. `data/world/overseas/` holds the source tables and `js/core/world-full-squads-data.js` the compact game data.
 
@@ -82,6 +82,8 @@ Every name is fictional and unique across both files. `inspired_by` only records
 
 Names were cross-checked against about 128,000 real name keys: the Transfermarkt player profiles (about 92,000 players including retired ones), the 2025/26 FPL player list and every name in the game files. No generated name matches a real player's full name or their first + last name. To regenerate with that check, set `OVERSEAS_REAL_NAMES` to the colon-separated paths of `player_profiles.csv` and FPL `players_raw.csv`; without it, only the game files are checked. Run `python3 scripts/build-overseas-squads.py`; output is deterministic and the script fails if any club breaks its CA band, squad size, EU status, U21 flag or Non-EU limit.
 
-**How the game loads them.** `ensureOverseasFullSquads()` runs after the compact squads are seeded, in new careers and when an older save loads. Each player has a stable source ID (`ov26:<club>:<slot>`), so a repeated load never re-adds someone who was sold, retired or released. A converted club gets its reputation, a formation, an estimated academy strength (from reputation, not an official ranking), a manager and a starting balance. Ages advance with the career season, and players who would be 38 or older are not added. Free agents top squads up to 22 after departures; no overseas club gets an annual youth intake or generated players.
+**How the game loads them.** `ensureOverseasFullSquads()` runs after the compact squads are seeded, in new careers and when an older save loads. Each player has a stable source ID (`ov26:<club>:<slot>`), so a repeated load never re-adds someone who was sold, retired or released. A converted club gets its reputation, a formation, an estimated academy strength (from reputation, not an official ranking), a manager and a starting balance. Ages advance with the career season, and players who would be 38 or older are not added.
 
-**Cost.** A new career now holds 4,514 player records (was 2,834) and the save is about 3.8 MB (was 2.35 MB). In local headless Chromium, creating a new career took 230–310 ms (was 185–235 ms). These are laboratory observations, not phone measurements.
+**Same structure as the English clubs (v1.2.0).** `ensureOverseasYouth()` gives every overseas club 20 reserves and 20 U18s, generated with the club country's name mix (about three quarters home-grown). From then on they follow the English rules: no squad cap; each rollover U18s who turn 19 move to the reserves, reserves aged 23 or over step up or are released, and both youth levels are refilled to 18 and 20 with newly generated players; each week a first team below 22 is refilled from the reserves, free agents or a generated player. The older "no annual intake" and 17/25/31-player cap are removed from existing saves once. Overseas clubs still play no league fixtures and still do not buy players in the AI market (the English clubs do).
+
+**Cost.** A new career now holds about 7,400 player records (was 2,834 before v1.1.0) and the save is about 5.4 MB (was 2.35 MB). In local headless Chromium, creating a new career took 540–680 ms (was 185–235 ms). These are laboratory observations, not phone measurements.

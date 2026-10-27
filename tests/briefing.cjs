@@ -66,7 +66,7 @@ const assert = require('node:assert/strict');
     await report();
     check('Full report retains all ten departments', await page.locator('.brief-department').count(), 10);
     check('Opening the full report does not query AI', calls.length, 0);
-    await close(); await page.reload();
+    await close(); await page.evaluate(() => SaveStorage.flush()); await page.reload();
     check('Reload does not query enabled AI', calls.length, 0);
     await ask();
     check('Ask button calls both existing AI clients', calls.map(c => c.jev), [true, false]);

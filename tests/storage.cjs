@@ -56,7 +56,9 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     }));
     const legacy = await page.evaluate(async () => {
       G.manager = 'Legacy Å Manager'; G.week = 3; await saveGameAsync();
-      const game = await SaveStorage.request('load'), json = JSON.stringify(game);
+      // An older release's localStorage copy has no overseas reserves or U18s, and must fit the old 5 MB limit.
+      const slim = g => { for (const c of Object.values(g.clubs)) if (c.foreignSquad) c.squad = c.squad.filter(id => { if (g.players[id].lvl === 'A') return true; delete g.players[id]; return false; }); delete g.overseasYouthVersion; return g; };
+      const game = slim(await SaveStorage.request('load')), json = JSON.stringify(game);
       await SaveStorage.request('delete'); localStorage.setItem(SAVE_KEY, json); return json;
     });
     await page.reload(); await page.waitForFunction(() => G && G.manager === 'Legacy Å Manager');

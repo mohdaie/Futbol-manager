@@ -214,7 +214,7 @@ function rollover() {
   // Academy graduation: U18s who turn 19 move up to the reserves at every club.
   Object.values(G.players).forEach(p => { if (lvlOf(p) === 'Y' && p.age >= 19) { p.lvl = 'R'; p.youth = false; p.wage = Math.max(p.wage, 1500); } });
   // Computer clubs: reserves at 23 either step up or are released; then refill both youth levels.
-  domesticClubs().forEach(id => {
+  academyClubs().forEach(id => {
     const cl = G.clubs[id];
     if (id !== G.club) levelSquad(id, 'R').filter(p => p.age >= 23).forEach(p => {
       const worst = Math.min(...seniorSquad(id).map(x => x.ca));

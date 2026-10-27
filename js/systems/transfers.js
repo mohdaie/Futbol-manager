@@ -92,7 +92,7 @@ function moveClub(p, toId) {
   delete p.unset; p.treq = null; p.listed = false;
   removeFromClub(p);
   favPersonMoved(p, from, toId);
-  p.lvl = p.age <= 17 ? (destination.league === 'ECH' || destination.foreignSquad ? 'R' : 'Y') : 'A';
+  p.lvl = p.age <= 17 ? (destination.league === 'ECH' ? 'R' : 'Y') : 'A';
   addToClub(p, G.clubs[toId]);
 }
 
@@ -157,7 +157,7 @@ function weeklyTransfers() {
     agentPitch();
   }
   // keep computer squads at a playable size
-  domesticClubs().forEach(id => {
+  academyClubs().forEach(id => {
     if (id === G.club) return;
     const c = G.clubs[id];
     while (seniorSquad(id).length < 22) {
@@ -166,7 +166,7 @@ function weeklyTransfers() {
       const fa = squadOf('FA').filter(p => p.ca >= 55).sort((a, b) => b.ca - a.ca)[0];
       if (!squadSpace(c)) break;
       if (fa) { moveClub(fa, id); fa.wage = wageFor(fa, c.rep); fa.con = G.season + ri(1, 3); }
-      else { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (c.rep - 50) * 0.6 - 6, age: ri(20, 29), nat: pickNat(PL_NATS), club: id }); addToClub(p, c); G.know[p.id] = 40; }
+      else { const p = genPlayer({ pos: pick(SQUAD_TEMPLATE), ca: 60 + (c.rep - 50) * 0.6 - 6, age: ri(20, 29), nat: c.worldLeague ? youthNat(c) : pickNat(PL_NATS), club: id }); addToClub(p, c); G.know[p.id] = c.worldLeague ? 10 : 40; }
     }
   });
   while (squadOf('FA').length < 40) { const p = genFreeAgent(); G.know[p.id] = 20; }
