@@ -81,10 +81,35 @@ def nudge(r, delta):
         if 1 <= v <= 20 and not (r['position'] != 'GK' and k in GK_STATS):
             r[k] = str(v); n -= 1
 
+def name_tokens(s):
+    return [t for t in (fold(t) for t in re.split(r'[\s\-]+', s)) if t]
+
+def load_real_names():
+    """Real-player names to avoid. OVERSEAS_REAL_NAMES is a colon-separated list of CSV files: a
+    Transfermarkt player_profiles.csv (player_name, name_in_home_country) and/or an FPL players_raw.csv
+    (first_name, second_name, web_name). Returns (full-name keys, (first, last) keys)."""
+    import os
+    full, fl = set(), set()
+    csv.field_size_limit(10 ** 9)
+    def add(name):
+        t = name_tokens(re.sub(r' \(\d+\)$', '', name or ''))
+        if t:
+            full.add(''.join(t))
+            if len(t) > 1: fl.add((t[0], t[-1]))
+    for path in filter(None, os.environ.get('OVERSEAS_REAL_NAMES', '').split(':')):
+        with open(path, encoding='utf-8') as f:
+            for r in csv.DictReader(f):
+                for col in ('player_name', 'name_in_home_country', 'web_name'):
+                    add(r.get(col))
+                if r.get('first_name'): add(r['first_name'] + ' ' + r.get('second_name', ''))
+    return full, fl
+
 class Namer:
-    """Unique fictional names, checked against every name already in the game files."""
+    """Unique fictional names, checked against every name already in the game files and, when
+    OVERSEAS_REAL_NAMES is set, against real players (exact full name, or same first + last name)."""
     def __init__(self):
         self.used = set()
+        self.real_full, self.real_fl = load_real_names()
         text = ''
         for p in list((ROOT / 'js/core').glob('*.js')) + list((ROOT / 'data').rglob('*.json')):
             try:
@@ -103,6 +128,9 @@ class Namer:
                 l = rng.choice(last) + '-' + rng.choice(last)
             name = f'{f} {l}'
             key = fold(name)
+            t = name_tokens(name)
+            if key in self.real_full or (t[0], t[-1]) in self.real_fl:
+                continue
             if key not in self.used and key not in self.game_text:
                 self.used.add(key)
                 return name
@@ -133,7 +161,9 @@ DUAL = {
 AGE_CAP = {'GK': 37, None: 36}
 INSPIRED_FIX = {('Red Bulls', 'Nicolas Seiwald'): 'Nicolas Seiwald', ('Phocéens', 'Neal Maupay'): 'Neal Maupay'}
 # Basque-born players of African descent keep their names (Athletic's Basque-only rule is about origin, not surname).
-BASQUE_KEEP = {'Ousmane Diallo', 'Buba Sangaré'}
+BASQUE_KEEP = {'Ousmane Diallo'}
+# 'Buba Sangaré' is a real player, so that slot gets a new name from a West African pool instead.
+DIASPORA = {'Buba Sangaré': 'SEN'}
 CLUB_POOL = {'Lions of Bilbao': 'BASQUE'}
 
 def repair(clubs, namer):
@@ -171,6 +201,8 @@ def repair(clubs, namer):
             rng = random.Random(f'{club}:{r["squad_no"]}:name')
             if old in BASQUE_KEEP:
                 namer.used.add(fold(old))
+            elif old in DIASPORA:
+                r['name_in_game'] = namer.make(rng, r['nation'], DIASPORA[old])
             else:
                 r['name_in_game'] = namer.make(rng, r['nation'], CLUB_POOL.get(club))
         non_eu = sum(r['eu_status'] == 'Non-EU' for r in info['rows'])

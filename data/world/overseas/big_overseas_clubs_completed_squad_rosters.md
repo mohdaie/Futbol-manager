@@ -21,7 +21,7 @@ It is the repaired version of the original draft: see the change log at the end.
 ```csv
 club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_status,hg_status,u21_elig,reg_status,ca,pa,foot,ht_cm,wt_kg,fin,pas,dri,fir,cro,tck,mar,hea,vis,dec,pos,wor,cmp,ldr,pac,sta,str,agi,ref,han,one,kic,ant,otb,fla,tea,confidence,notes
 Castilla CF,13,Artem Bondar,Andriy Lunin,GK,-,27,UKR,Non-EU,Non-HG,No,Registered,81,83,Right,191,80,2,13,4,11,2,3,3,4,12,15,16,11,16,11,10,10,13,14,17,16,15,14,16,2,3,14,sure,-
-Castilla CF,25,Javier Toledo,Fran González,GK,-,20,ESP,EU,HGC,Yes,U21 Exempt,75,86,Right,199,89,2,10,3,9,2,3,3,5,10,13,14,10,14,9,11,10,15,13,16,15,15,13,14,2,2,13,sure,-
+Castilla CF,25,Andrés Ibáñez,Fran González,GK,-,20,ESP,EU,HGC,Yes,U21 Exempt,75,86,Right,199,89,2,10,3,9,2,3,3,5,10,13,14,10,14,9,11,10,15,13,16,15,15,13,14,2,2,13,sure,-
 Castilla CF,23,Bastien Giraud,Ferland Mendy,DL,-,31,FRA,EU,Non-HG,No,Registered,81,81,Left,180,73,6,13,14,14,12,17,16,13,11,15,16,16,14,11,17,16,16,15,2,2,2,2,16,13,9,15,sure,-
 Castilla CF,22,Moritz Engel,Antonio Rüdiger,DC,-,33,GER,EU,Non-HG,No,Registered,84,84,Right,190,85,5,13,9,12,5,18,17,17,11,16,17,17,15,17,16,15,18,12,2,2,2,2,17,7,6,16,sure,capped by band
 Castilla CF,35,Jaime Crespo,Raúl Asencio,DC,DR,23,ESP,EU,HGC,No,Registered,76,82,Right,184,77,4,13,9,12,6,15,15,15,11,14,15,15,14,11,14,14,15,12,2,2,2,2,15,6,5,15,sure,-
@@ -52,7 +52,7 @@ Blaugrana,6,Sergio Zamora,Gavi,MC,AMC,21,ESP,EU,HGC,Yes,U21 Exempt,80,88,Right,1
 Blaugrana,16,Martín Robles,Fermin López,MC,AMC,23,ESP,EU,HGC,No,Registered,78,84,Right,174,69,13,15,14,15,11,12,11,10,14,14,13,17,14,10,15,16,13,15,2,2,2,2,15,15,13,16,sure,-
 Blaugrana,20,Rubén Alcázar,Dani Olmo,AMC,AML/MC,28,ESP,EU,HGC,No,Registered,80,80,Right,179,72,15,16,16,16,13,9,8,9,16,15,10,15,15,12,14,14,12,15,2,2,2,2,15,16,16,16,sure,capped by band
 Blaugrana,7,Tomás Negrete,Ferran Torres,AML,AMR/ST,26,ESP,EU,HGN,No,Registered,78,81,Right,184,77,14,13,15,14,13,7,6,12,13,14,8,15,14,10,15,15,13,14,2,2,2,2,15,16,13,15,sure,-
-Blaugrana,30,David Gallardo,Toni Fernández,AMR,AMC/ST,18,ESP,EU,HGC,Yes,U21 Exempt,71,85,Left,172,65,12,13,16,14,11,5,4,6,13,12,6,12,12,8,15,12,9,15,2,2,2,2,13,13,15,13,sure,-
+Blaugrana,30,Adrián Montero,Toni Fernández,AMR,AMC/ST,18,ESP,EU,HGC,Yes,U21 Exempt,71,85,Left,172,65,12,13,16,14,11,5,4,6,13,12,6,12,12,8,15,12,9,15,2,2,2,2,13,13,15,13,sure,-
 Blaugrana,17,Gustavo Guimarães,Vitor Roque,ST,AML,21,BRA,Non-EU,Non-HG,Yes,U21 Exempt,77,85,Right,172,73,14,11,13,13,8,6,5,12,11,13,7,15,13,9,16,15,14,15,2,2,2,2,14,16,13,14,sure,-
 Blaugrana,18,Adrián Cabrera,Pau Víctor,ST,AMR/AML,24,ESP,EU,HGN,No,Registered,75,79,Right,184,76,14,12,13,14,9,6,5,12,12,13,7,14,14,9,14,14,13,14,2,2,2,2,14,15,12,15,sure,-
 ```
@@ -67,7 +67,7 @@ Colchoneros,13,Marc Soriano,Antonio Gomis,GK,-,23,ESP,EU,HGC,No,Registered,71,77
 Colchoneros,23,Fábio Neto,Reinildo Mandava,DL,DC,32,MOZ,Non-EU,Non-HG,No,Registered,77,77,Left,180,75,5,12,12,13,12,17,17,15,10,14,16,17,14,12,16,17,16,14,2,2,2,2,16,11,7,16,sure,-
 Colchoneros,20,Gilles Verhaegen,Axel Witsel,DC,DM,36,BEL,EU,Non-HG,No,Registered,75,75,Right,186,81,6,15,11,15,6,15,15,15,14,17,17,14,18,15,9,12,15,10,2,2,2,2,16,7,8,17,sure,-
 Colchoneros,3,Marcos Negrete,César Azpilicueta,DC,DR/DL,36,ESP,EU,HGN,No,Registered,75,75,Right,178,76,6,14,11,14,11,16,16,14,13,16,17,16,16,18,11,13,14,12,2,2,2,2,17,8,7,18,sure,-
-Colchoneros,16,Manuel Mancini,Nahuel Molina,DR,MR,28,ITA,EU,Non-HG,No,Registered,78,78,Right,175,70,10,14,15,14,16,14,14,11,13,14,14,17,13,11,18,18,13,16,2,2,2,2,15,15,13,16,sure,EU passport (dual national; was listed ARG); capped by band
+Colchoneros,16,Edoardo Carbone,Nahuel Molina,DR,MR,28,ITA,EU,Non-HG,No,Registered,78,78,Right,175,70,10,14,15,14,16,14,14,11,13,14,14,17,13,11,18,18,13,16,2,2,2,2,15,15,13,16,sure,EU passport (dual national; was listed ARG); capped by band
 Colchoneros,4,Matty Ashworth,Conor Gallagher,DM,MC,26,ENG,Non-EU,Non-HG,No,Registered,78,78,Right,182,74,11,14,13,14,10,15,14,12,13,15,14,19,14,13,15,19,15,14,2,2,2,2,15,14,10,18,sure,capped by band
 Colchoneros,5,Dan Lawson,Johnny Cardoso,DM,MC,24,USA,Non-EU,Non-HG,No,Registered,77,80,Right,186,79,8,14,12,14,8,16,15,14,13,15,15,16,15,11,13,16,15,13,2,2,2,2,16,10,9,16,sure,-
 Colchoneros,11,Damien Fournier,Thomas Lemar,MC,AMC/AML,30,FRA,EU,Non-HG,No,Registered,75,75,Left,172,63,11,16,16,17,13,10,9,6,16,15,12,14,15,9,13,13,10,16,2,2,2,2,15,13,16,15,sure,-
@@ -75,7 +75,7 @@ Colchoneros,18,Jonas Baert,Arthur Vermeeren,MC,DM,21,BEL,EU,Non-HG,Yes,U21 Exemp
 Colchoneros,17,Carlos Fajardo,Rodrigo Riquelme,AMC,AML/MC,26,ESP,EU,HGC,No,Registered,77,78,Right,174,68,13,15,16,15,13,8,7,7,15,14,9,15,14,9,15,15,11,16,2,2,2,2,15,15,15,15,sure,-
 Colchoneros,12,Daniel Sampaio,Samuel Lino,AML,ML/DL,26,POR,EU,Non-HG,No,Registered,78,78,Right,178,69,13,14,16,15,14,10,9,9,14,14,9,17,14,10,17,17,12,17,2,2,2,2,15,16,16,15,sure,EU passport (dual national; was listed BRA); capped by band
 Colchoneros,21,Cristian Rueda,Carlos Martín,AMR,ST/AML,24,ESP,EU,HGC,No,Registered,75,77,Right,180,72,13,13,14,14,12,7,6,11,12,13,8,15,13,9,15,15,13,15,2,2,2,2,14,15,13,14,sure,-
-Colchoneros,10,Matteo Serra,Ángel Correa,ST,AMR/AMC,31,ITA,EU,Non-HG,No,Registered,77,77,Right,171,70,15,14,16,15,11,7,6,9,14,14,7,16,15,12,15,15,12,16,2,2,2,2,15,16,15,16,sure,EU passport (dual national; was listed ARG)
+Colchoneros,10,Paolo Conti,Ángel Correa,ST,AMR/AMC,31,ITA,EU,Non-HG,No,Registered,77,77,Right,171,70,15,14,16,15,11,7,6,9,14,14,7,16,15,12,15,15,12,16,2,2,2,2,15,16,15,16,sure,EU passport (dual national; was listed ARG)
 ```
 
 ### Lions of Bilbao (Athletic Club)
@@ -94,7 +94,7 @@ Lions of Bilbao,24,Eneko Mugika,Beñat Prados,MC,DM/DR,25,ESP,EU,HGC,No,Register
 Lions of Bilbao,20,Koldo Lasa,Unai Gómez,MC,AMC,23,ESP,EU,HGC,No,Registered,75,76,Left,183,75,12,14,14,14,11,13,12,12,14,14,13,18,14,10,14,17,15,13,2,2,2,2,15,15,12,16,sure,-
 Lions of Bilbao,21,Asier Barrenetxea,Ander Herrera,MC,DM,36,ESP,EU,HGC,No,Registered,72,72,Right,182,73,9,16,13,15,10,13,12,8,16,16,14,14,16,15,10,12,11,12,2,2,2,2,16,11,12,17,sure,-
 Lions of Bilbao,7,Koldo Urrutia,Álex Berenguer,AML,AMR/ST,31,ESP,EU,HGN,No,Registered,75,75,Right,175,73,14,14,16,15,14,8,7,8,14,14,8,15,14,11,15,15,12,16,2,2,2,2,15,15,15,15,sure,-
-Lions of Bilbao,11,Buba Sangaré,Álvaro Djaló,AMR,AML/ST,26,ESP,EU,HGN,No,Registered,76,76,Right,175,70,14,13,16,15,13,6,5,8,13,13,7,14,13,9,17,15,12,17,2,2,2,2,14,15,16,14,sure,capped by band
+Lions of Bilbao,11,Yacouba Sylla,Álvaro Djaló,AMR,AML/ST,26,ESP,EU,HGN,No,Registered,76,76,Right,175,70,14,13,16,15,13,6,5,8,13,13,7,14,13,9,17,15,12,17,2,2,2,2,14,15,16,14,sure,capped by band
 Lions of Bilbao,12,Ander Elorza,Asier Villalibre,ST,-,28,ESP,EU,HGC,No,Registered,74,74,Left,184,86,15,10,12,13,6,5,4,16,9,13,6,14,13,11,13,14,18,11,2,2,2,2,15,16,9,15,sure,-
 Lions of Bilbao,19,Jon Etxeberria,Javier Martón,ST,-,27,ESP,EU,HGN,No,Registered,73,73,Right,183,76,15,10,12,13,6,5,4,15,9,13,6,15,13,9,14,14,15,12,2,2,2,2,14,16,9,14,sure,-
 ```
@@ -112,7 +112,7 @@ Yellow Submarine,2,Duarte Vieira,Logan Costa,DC,-,25,CPV,Non-EU,Non-HG,No,Regist
 Yellow Submarine,17,Héctor Ferrer,Kiko Femenía,DR,WBR,35,ESP,EU,HGN,No,Registered,72,72,Right,176,65,6,13,13,13,14,14,14,10,11,13,14,15,13,12,14,14,11,13,2,2,2,2,14,13,11,15,sure,-
 Yellow Submarine,14,Ivo Heredia,Ramón Terrats,DM,MC,25,ESP,EU,HGC,No,Registered,74,75,Left,180,72,7,15,13,14,9,15,14,11,14,15,15,16,14,10,13,15,13,13,2,2,2,2,15,10,10,16,sure,-
 Yellow Submarine,18,Martín Alcázar,Gerard Gumbau,MC,DM,31,ESP,EU,HGN,No,Registered,73,73,Left,188,77,8,15,12,14,10,14,13,12,14,14,14,15,14,11,11,14,15,11,2,2,2,2,15,10,10,16,sure,-
-Yellow Submarine,6,Mario Montero,Denis Suárez,MC,AMC/AML,32,ESP,EU,HGN,No,Registered,74,74,Right,176,72,11,16,16,16,12,9,8,6,16,14,11,13,15,10,12,12,10,15,2,2,2,2,14,13,16,15,sure,-
+Yellow Submarine,6,Jaime Casado,Denis Suárez,MC,AMC/AML,32,ESP,EU,HGN,No,Registered,74,74,Right,176,72,11,16,16,16,12,9,8,6,16,14,11,13,15,10,12,12,10,15,2,2,2,2,14,13,16,15,sure,-
 Yellow Submarine,16,Julián Robles,Álex Baena,AMC,AML/MC,25,ESP,EU,HGC,No,Registered,75,75,Right,174,70,14,16,16,16,14,9,8,7,17,15,10,16,15,11,14,15,11,15,2,2,2,2,15,15,16,16,sure,capped by band
 Yellow Submarine,22,Yeray Cordero,Ayoze Pérez,AML,ST/AMC,33,ESP,EU,HGN,No,Registered,75,75,Right,178,72,15,14,16,15,12,7,6,11,14,14,8,15,15,11,14,14,12,15,2,2,2,2,15,16,14,15,sure,capped by band
 Yellow Submarine,11,Soufiane Bennani,Ilias Akhomach,AMR,AML,22,MAR,Non-EU,HGN,No,Registered,74,75,Left,175,68,12,13,17,15,12,6,5,5,14,12,6,13,12,8,16,13,9,17,2,2,2,2,13,13,17,13,sure,-
@@ -128,7 +128,7 @@ Yellow Submarine,19,Seydou Fofana,Nicolas Pépé,ST,AMR,31,CIV,Non-EU,Non-HG,No,
 ```csv
 club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_status,hg_status,u21_elig,reg_status,ca,pa,foot,ht_cm,wt_kg,fin,pas,dri,fir,cro,tck,mar,hea,vis,dec,pos,wor,cmp,ldr,pac,sta,str,agi,ref,han,one,kic,ant,otb,fla,tea,confidence,notes
 Nerazzurri,13,Martín Vidal,Josep Martínez,GK,-,28,ESP,EU,Non-HG,No,Registered,78,78,Right,191,80,2,13,5,11,2,4,3,4,12,15,15,10,16,11,10,10,12,14,16,15,15,16,15,2,3,13,sure,-
-Nerazzurri,12,Filippo Bruni,Raffaele Di Gennaro,GK,-,32,ITA,EU,HGC,No,Registered,72,72,Right,187,82,2,10,3,9,2,3,3,4,9,14,14,10,14,10,8,9,12,13,14,14,14,13,14,2,2,12,sure,-
+Nerazzurri,12,Federico Pellegrini,Raffaele Di Gennaro,GK,-,32,ITA,EU,HGC,No,Registered,72,72,Right,187,82,2,10,3,9,2,3,3,4,9,14,14,10,14,10,8,9,12,13,14,14,14,13,14,2,2,12,sure,-
 Nerazzurri,30,Igor Rezende,Carlos Augusto,DL,DC/ML,27,BRA,Non-EU,Non-HG,No,Registered,80,80,Left,184,78,9,14,15,15,16,15,15,13,13,14,15,18,14,11,17,18,15,15,2,2,2,2,15,15,12,16,sure,capped by band
 Nerazzurri,15,Pietro Conti,Francesco Acerbi,DC,-,36,ITA,EU,HGN,No,Registered,76,76,Left,192,88,4,14,8,12,4,17,17,17,11,16,18,13,16,16,9,11,17,9,2,2,2,2,17,6,5,17,sure,-
 Nerazzurri,36,Roberto Cattaneo,Matteo Darmian,DR,DL/DC,36,ITA,EU,HGN,No,Registered,75,75,Right,183,70,7,14,13,14,13,16,16,13,12,16,17,17,15,14,13,14,13,13,2,2,2,2,17,12,8,18,sure,-
@@ -136,7 +136,7 @@ Nerazzurri,2,Bram Kuipers,Denzel Dumfries,DR,MR/AMR,30,NED,EU,Non-HG,No,Register
 Nerazzurri,21,Redon Dedja,Kristjan Asllani,DM,MC,24,ALB,Non-EU,HGN,No,Registered,79,80,Right,175,69,8,16,14,15,11,14,13,9,16,16,15,15,15,10,13,15,12,14,2,2,2,2,16,10,12,16,sure,-
 Nerazzurri,7,Piotr Gajewski,Piotr Zieliński,MC,AMC,32,POL,EU,HGN,No,Registered,78,78,Either,180,76,12,17,16,17,12,11,10,8,17,16,12,14,16,11,13,14,11,15,2,2,2,2,15,14,16,16,sure,-
 Nerazzurri,16,Riccardo Carbone,Davide Frattesi,AMC,MC,26,ITA,EU,HGN,No,Registered,80,80,Right,178,74,14,15,14,15,11,12,11,11,14,14,12,18,14,11,16,18,14,15,2,2,2,2,15,17,12,17,sure,capped by band
-Nerazzurri,14,Gabriele Bellini,Federico Chiesa,AML,AMR/ST,28,ITA,EU,HGN,No,Registered,80,80,Right,175,70,15,14,17,16,14,7,6,8,14,14,8,16,14,11,17,15,13,17,2,2,2,2,14,16,16,15,sure,capped by band
+Nerazzurri,14,Giacomo Sala,Federico Chiesa,AML,AMR/ST,28,ITA,EU,HGN,No,Registered,80,80,Right,175,70,15,14,17,16,14,7,6,8,14,14,8,16,14,11,17,15,13,17,2,2,2,2,14,16,16,15,sure,capped by band
 Nerazzurri,45,César Franco,Valentín Carboni,AML,AMC,21,ARG,Non-EU,HGC,Yes,U21 Exempt,77,85,Left,185,75,13,15,16,16,12,6,5,10,15,13,7,14,13,8,15,14,13,15,2,2,2,2,13,14,16,14,sure,-
 Nerazzurri,11,Fernando Montiel,Joaquín Correa,AMR,AML/ST,31,ARG,Non-EU,Non-HG,No,Registered,75,75,Right,188,77,14,14,16,16,12,5,4,9,14,13,7,12,14,10,15,13,13,15,2,2,2,2,14,15,15,14,sure,-
 Nerazzurri,47,Antoine Millet,Issiaka Kamate,AMR,WBR,21,FRA,EU,HGC,Yes,U21 Exempt,73,80,Left,186,75,11,13,15,14,13,8,7,9,13,12,7,14,12,7,16,14,13,15,2,2,2,2,13,13,14,14,sure,-
@@ -181,7 +181,7 @@ Partenopei,70,Antonio Moretti,Gianluca Gaetano,MC,AMC,26,ITA,EU,HGC,No,Registere
 Partenopei,81,Stefano Sala,Giacomo Raspadori,AMC,ST/AML,26,ITA,EU,HGN,No,Registered,77,77,Either,172,69,15,15,16,16,12,6,5,8,15,14,8,16,15,10,15,15,11,17,2,2,2,2,15,16,15,16,sure,capped by band
 Partenopei,23,Pietro Moretti,Alessio Zerbin,AML,WBL/ML,27,ITA,EU,HGC,No,Registered,73,73,Right,182,75,11,13,14,14,14,10,9,9,12,13,8,16,13,9,15,16,13,14,2,2,2,2,13,14,12,15,sure,-
 Partenopei,7,Alex Freitas,David Neres,AMR,AML,29,BRA,Non-EU,Non-HG,No,Registered,77,77,Left,175,69,14,14,17,16,13,6,5,6,15,13,7,13,14,9,16,13,10,18,2,2,2,2,14,14,18,13,sure,capped by band
-Partenopei,18,Gonzalo Bustamante,Giovanni Simeone,ST,-,31,ARG,Non-EU,Non-HG,No,Registered,75,75,Right,180,81,15,11,12,13,7,7,6,15,10,13,7,18,14,12,14,17,15,13,2,2,2,2,15,17,10,16,sure,-
+Partenopei,18,César Zabaleta,Giovanni Simeone,ST,-,31,ARG,Non-EU,Non-HG,No,Registered,75,75,Right,180,81,15,11,12,13,7,7,6,15,10,13,7,18,14,12,14,17,15,13,2,2,2,2,15,17,10,16,sure,-
 Partenopei,26,Hannes Gielen,Cyril Ngonge,ST,AMR,26,BEL,EU,Non-HG,No,Registered,75,76,Left,181,74,14,13,15,14,12,6,5,11,13,13,7,14,13,9,16,14,13,15,2,2,2,2,14,15,14,14,sure,-
 ```
 
@@ -190,19 +190,19 @@ Partenopei,26,Hannes Gielen,Cyril Ngonge,ST,AMR,26,BEL,EU,Non-HG,No,Registered,7
 
 ```csv
 club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_status,hg_status,u21_elig,reg_status,ca,pa,foot,ht_cm,wt_kg,fin,pas,dri,fir,cro,tck,mar,hea,vis,dec,pos,wor,cmp,ldr,pac,sta,str,agi,ref,han,one,kic,ant,otb,fla,tea,confidence,notes
-Lombardia AC,57,Simone Rossetti,Marco Sportiello,GK,-,34,ITA,EU,HGN,No,Registered,76,76,Right,192,87,2,12,4,10,2,3,3,4,11,15,15,10,15,12,9,10,13,14,16,15,15,15,15,2,3,13,sure,-
+Lombardia AC,57,Matteo De Luca,Marco Sportiello,GK,-,34,ITA,EU,HGN,No,Registered,76,76,Right,192,87,2,12,4,10,2,3,3,4,11,15,15,10,15,12,9,10,13,14,16,15,15,15,15,2,3,13,sure,-
 Lombardia AC,96,Pietro Amato,Lorenzo Torriani,GK,-,21,ITA,EU,HGC,Yes,U21 Exempt,73,83,Right,197,88,2,11,3,9,2,3,3,5,10,14,14,10,14,9,9,9,13,13,15,14,14,14,14,2,2,12,sure,-
 Lombardia AC,42,Riccardo Valentini,Filippo Terracciano,DL,DR/DM,23,ITA,EU,HGN,No,Registered,76,80,Right,186,76,7,13,13,13,13,15,15,12,12,14,15,17,13,10,16,17,14,14,2,2,2,2,15,12,10,16,sure,-
-Lombardia AC,31,Mario Simić,Strahinja Pavlović,DC,DL,25,SRB,Non-EU,Non-HG,No,Registered,79,81,Left,194,88,5,12,9,11,5,17,17,18,9,14,16,16,13,13,15,15,19,11,2,2,2,2,16,6,5,16,sure,-
+Lombardia AC,31,Dino Savić,Strahinja Pavlović,DC,DL,25,SRB,Non-EU,Non-HG,No,Registered,79,81,Left,194,88,5,12,9,11,5,17,17,18,9,14,16,16,13,13,15,15,19,11,2,2,2,2,16,6,5,16,sure,-
 Lombardia AC,28,Daniel Becker,Malick Thiaw,DC,-,24,GER,EU,Non-HG,No,Registered,78,81,Right,194,89,4,14,10,13,6,16,16,17,11,15,16,14,15,11,14,14,17,12,2,2,2,2,16,7,6,16,sure,-
-Lombardia AC,22,Bruno Duarte,Emerson Royal,DR,WBR,27,BRA,Non-EU,Non-HG,No,Registered,78,78,Right,181,79,7,13,14,13,14,16,15,13,11,14,15,17,13,11,16,17,15,14,2,2,2,2,15,12,11,16,sure,-
+Lombardia AC,22,Caio Nogueira,Emerson Royal,DR,WBR,27,BRA,Non-EU,Non-HG,No,Registered,78,78,Right,181,79,7,13,14,13,14,16,15,13,11,14,15,17,13,11,16,17,15,14,2,2,2,2,15,12,11,16,sure,-
 Lombardia AC,29,Anthony Bertrand,Youssouf Fofana,DM,MC,27,FRA,EU,Non-HG,No,Registered,80,81,Right,185,79,9,15,14,15,10,16,15,13,14,16,16,18,15,12,15,18,16,14,2,2,2,2,17,11,11,17,sure,-
 Lombardia AC,14,Kevin Hendriks,Tijjani Reijnders,MC,AMC/DM,27,NED,EU,Non-HG,No,Registered,81,81,Right,185,73,12,17,16,17,12,13,12,9,17,16,13,16,16,11,15,17,13,16,2,2,2,2,16,15,15,17,sure,capped by band
 Lombardia AC,80,Luke Nash,Yunus Musah,MC,MR/DM,23,USA,Non-EU,Non-HG,No,Registered,77,81,Right,178,75,8,15,16,15,11,14,13,9,14,14,13,18,14,10,17,18,15,16,2,2,2,2,15,13,14,16,sure,-
 Lombardia AC,8,Tom Radcliffe,Ruben Loftus-Cheek,AMC,MC/DM,30,ENG,Non-EU,Non-HG,No,Registered,78,78,Right,191,88,13,15,16,16,11,12,11,14,14,15,11,14,16,11,14,14,18,14,2,2,2,2,15,15,14,16,sure,-
 Lombardia AC,17,Patrick Kessler,Noah Okafor,AML,ST,26,SUI,Non-EU,Non-HG,No,Registered,77,79,Right,185,85,15,13,16,15,12,6,5,11,13,13,7,14,14,9,18,14,15,16,2,2,2,2,14,16,15,14,sure,-
 Lombardia AC,21,Yusuf Olawale,Samuel Chukwueze,AMR,AML,27,NGA,Non-EU,Non-HG,No,Registered,78,78,Left,172,70,13,13,18,15,13,5,4,5,14,12,6,13,13,8,18,13,10,19,2,2,2,2,13,14,18,12,sure,-
-Lombardia AC,7,Aitor Crespo,Álvaro Morata,ST,-,33,ESP,EU,Non-HG,No,Registered,79,79,Right,190,84,16,14,13,15,9,6,5,17,13,14,7,17,15,16,15,15,15,14,2,2,2,2,16,18,12,17,sure,-
+Lombardia AC,7,Álvaro Heredia,Álvaro Morata,ST,-,33,ESP,EU,Non-HG,No,Registered,79,79,Right,190,84,16,14,13,15,9,6,5,17,13,14,7,17,15,16,15,15,15,14,2,2,2,2,16,18,12,17,sure,-
 Lombardia AC,9,Domagoj Lazić,Luka Jović,ST,-,28,SRB,Non-EU,Non-HG,No,Registered,77,78,Right,182,78,16,11,13,14,6,5,4,15,11,13,6,14,14,10,14,14,15,13,2,2,2,2,15,16,11,14,sure,-
 ```
 
@@ -213,15 +213,15 @@ Lombardia AC,9,Domagoj Lazić,Luka Jović,ST,-,28,SRB,Non-EU,Non-HG,No,Registere
 club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_status,hg_status,u21_elig,reg_status,ca,pa,foot,ht_cm,wt_kg,fin,pas,dri,fir,cro,tck,mar,hea,vis,dec,pos,wor,cmp,ldr,pac,sta,str,agi,ref,han,one,kic,ant,otb,fla,tea,confidence,notes
 La Dea,28,Fábio Vilaça,Rui Patrício,GK,-,37,POR,EU,Non-HG,No,Registered,73,73,Left,190,84,2,11,3,9,2,3,3,4,9,14,15,9,15,15,7,8,12,12,15,15,14,13,15,2,2,13,sure,-
 La Dea,31,Michele Fontana,Francesco Rossi,GK,-,35,ITA,EU,HGC,No,Registered,68,68,Right,187,81,2,9,3,8,2,3,3,4,8,13,13,9,13,10,7,8,11,12,14,13,13,12,13,2,2,12,sure,-
-La Dea,22,Mattia Ferrara,Matteo Ruggeri,DL,ML/WBL,24,ITA,EU,HGC,No,Registered,76,76,Left,187,78,7,14,14,14,16,14,14,12,13,13,14,17,13,10,15,17,14,14,2,2,2,2,14,14,12,16,sure,capped by band
+La Dea,22,Salvatore Barone,Matteo Ruggeri,DL,ML/WBL,24,ITA,EU,HGC,No,Registered,76,76,Left,187,78,7,14,14,14,16,14,14,12,13,13,14,17,13,10,15,17,14,14,2,2,2,2,14,14,12,16,sure,capped by band
 La Dea,23,Stefan Vasić,Sead Kolašinac,DL,DC,33,BIH,Non-EU,Non-HG,No,Registered,75,75,Left,183,82,6,12,12,12,11,16,16,14,10,14,15,17,14,14,14,16,18,12,2,2,2,2,15,11,7,17,sure,-
 La Dea,5,Finley Pemberton,Ben Godfrey,DC,DR/DL,28,ENG,Non-EU,Non-HG,No,Registered,75,75,Right,183,79,4,11,9,11,6,16,15,15,9,13,15,15,13,10,16,15,16,13,2,2,2,2,15,6,5,15,sure,-
 La Dea,77,Andrea Greco,Davide Zappacosta,DR,DL/WBR,34,ITA,EU,HGN,No,Registered,74,74,Right,182,73,9,13,14,14,15,14,13,11,12,13,13,17,13,12,15,16,13,14,2,2,2,2,14,14,12,16,sure,-
 La Dea,45,Diego Sala,Marco Palestra,DR,WBR/MR,21,ITA,EU,HGC,Yes,U21 Exempt,73,76,Right,185,77,6,12,13,13,13,14,13,11,11,13,13,16,12,8,16,16,13,14,2,2,2,2,13,12,11,15,sure,-
-La Dea,6,Samuel Appiah,Ibrahim Sulemana,DM,MC,23,GHA,Non-EU,Non-HG,No,Registered,75,76,Right,180,75,6,13,12,13,7,16,15,12,11,14,15,18,13,10,14,17,15,13,2,2,2,2,15,9,8,16,sure,-
+La Dea,6,Samuel Amoah,Ibrahim Sulemana,DM,MC,23,GHA,Non-EU,Non-HG,No,Registered,75,76,Right,180,75,6,13,12,13,7,16,15,12,11,14,15,18,13,10,14,17,15,13,2,2,2,2,15,9,8,16,sure,-
 La Dea,44,Andrea Colombo,Marco Brescianini,MC,AMC/DM,26,ITA,EU,HGN,No,Registered,76,76,Left,188,78,12,14,13,14,11,14,13,13,13,14,13,17,13,11,14,17,15,13,2,2,2,2,14,14,11,16,sure,capped by band
 La Dea,10,Roko Radovanović,Lazar Samardžić,AMC,MC,24,SRB,Non-EU,Non-HG,No,Registered,76,76,Left,184,79,14,16,16,16,13,8,7,7,16,14,9,13,15,9,14,13,12,16,2,2,2,2,14,14,17,15,sure,capped by band
-La Dea,17,Alessandro Sala,Daniel Maldini,AML,AMC/ST,24,ITA,EU,HGN,No,Registered,74,76,Right,188,78,13,14,15,15,12,7,6,11,14,13,8,14,14,9,15,14,13,15,2,2,2,2,14,15,15,14,sure,-
+La Dea,17,Emanuele Mancini,Daniel Maldini,AML,AMC/ST,24,ITA,EU,HGN,No,Registered,74,76,Right,188,78,13,14,15,15,12,7,6,11,14,13,8,14,14,9,15,14,13,15,2,2,2,2,14,15,15,14,sure,-
 La Dea,7,Mario Alvarado,Juan Cuadrado,AMR,WBR/DR,36,COL,Non-EU,Non-HG,No,Registered,73,73,Right,179,72,11,14,16,15,15,11,10,6,14,13,9,14,14,13,13,12,10,16,2,2,2,2,14,14,17,14,sure,-
 La Dea,11,Giorgio Rizzo,Nicolò Zaniolo,AMR,AMC/ST,27,ITA,EU,HGN,No,Registered,75,75,Left,190,86,14,13,15,14,12,9,8,14,13,12,8,15,13,10,16,14,17,14,2,2,2,2,14,15,14,13,sure,-
 La Dea,9,Antonio De Luca,Mateo Retegui,ST,-,27,ITA,EU,Non-HG,No,Registered,76,76,Right,186,81,16,11,12,14,7,7,6,17,10,13,7,17,14,12,14,16,16,13,2,2,2,2,15,17,10,16,sure,capped by band
@@ -237,7 +237,7 @@ club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_stat
 Bavarians,18,Roee Ben-David,Daniel Peretz,GK,-,26,ISR,Non-EU,Non-HG,No,Registered,78,80,Right,190,86,2,12,4,10,2,3,3,4,11,15,15,10,15,11,9,10,13,14,16,16,16,15,15,2,3,13,sure,-
 Bavarians,26,Felix Friedrich,Sven Ulreich,GK,-,37,GER,EU,HGC,No,Registered,75,75,Right,192,87,2,10,3,9,2,3,3,4,9,14,15,10,15,13,8,9,13,13,15,15,15,14,15,2,2,13,sure,-
 Bavarians,21,Taro Inoue,Hiroki Ito,DL,DC,27,JPN,Non-EU,Non-HG,No,Registered,80,81,Left,188,81,6,15,12,14,14,16,16,15,13,15,16,16,15,12,15,16,15,13,2,2,2,2,16,12,9,17,sure,-
-Bavarians,3,Ji-hoon Lee,Kim Min-jae,DC,-,29,KOR,Non-EU,Non-HG,No,Registered,82,82,Right,190,84,5,13,10,12,5,18,17,17,11,15,17,16,14,14,16,15,18,13,2,2,2,2,17,6,5,17,sure,capped by band
+Bavarians,3,Hyun-woo Nam,Kim Min-jae,DC,-,29,KOR,Non-EU,Non-HG,No,Registered,82,82,Right,190,84,5,13,10,12,5,18,17,17,11,15,17,16,14,14,16,15,18,13,2,2,2,2,17,6,5,17,sure,capped by band
 Bavarians,28,Noah Sauer,Tarek Buchmann,DC,-,21,GER,EU,HGC,Yes,U21 Exempt,75,83,Right,188,81,4,13,9,12,5,15,15,15,10,14,15,14,14,9,14,14,15,12,2,2,2,2,15,6,5,15,sure,-
 Bavarians,23,Maxime Lacroix,Sacha Boey,DR,WBR,25,FRA,EU,Non-HG,No,Registered,80,82,Right,178,74,6,13,14,13,14,16,16,12,11,14,15,18,13,11,18,18,14,16,2,2,2,2,15,13,12,16,sure,-
 Bavarians,8,Jannik Köhler,Leon Goretzka,MC,DM/AMC,31,GER,EU,HGN,No,Registered,81,81,Right,189,82,14,16,14,16,11,15,14,16,15,15,14,17,15,14,15,17,17,13,2,2,2,2,16,16,12,17,sure,-
@@ -281,7 +281,7 @@ Black and Yellows,35,Kacper Majewski,Marcel Lotka,GK,-,25,POL,EU,Non-HG,No,Regis
 Black and Yellows,42,Robin Lang,Almugera Kabar,DL,WBL,20,GER,EU,HGC,Yes,U21 Exempt,74,82,Left,186,78,6,13,13,13,13,14,14,12,11,13,14,15,13,8,16,15,14,14,2,2,2,2,14,12,10,15,sure,-
 Black and Yellows,25,Marvin Lehmann,Niklas Süle,DC,DR,30,GER,EU,HGN,No,Registered,78,78,Right,195,95,5,14,10,13,6,16,16,17,11,15,16,13,15,12,14,13,19,10,2,2,2,2,16,7,6,15,sure,capped by band
 Black and Yellows,39,Giovanni Rossetti,Filippo Mané,DC,DR,21,ITA,EU,Non-HG,Yes,U21 Exempt,75,81,Right,188,80,4,12,9,12,5,15,15,15,10,14,15,14,13,9,14,14,15,12,2,2,2,2,15,6,5,15,sure,-
-Black and Yellows,2,Eduardo Albuquerque,Yan Couto,DR,WBR/MR,24,BRA,Non-EU,Non-HG,No,Registered,78,80,Right,168,62,8,14,16,15,16,13,12,7,14,13,12,16,13,9,18,16,9,18,2,2,2,2,14,15,16,15,sure,capped by band
+Black and Yellows,2,Vinícius Tavares,Yan Couto,DR,WBR/MR,24,BRA,Non-EU,Non-HG,No,Registered,78,80,Right,168,62,8,14,16,15,16,13,12,7,14,13,12,16,13,9,18,16,9,18,2,2,2,2,14,15,16,15,sure,capped by band
 Black and Yellows,23,Lars Becker,Emre Can,DM,DC/MC,32,GER,EU,HGN,No,Registered,77,78,Right,186,83,9,15,12,14,9,16,15,15,13,15,16,17,15,17,13,16,17,12,2,2,2,2,17,10,9,17,sure,-
 Black and Yellows,6,Kerem Yılmaz,Pascal Groß,MC,DM/AMC,35,TUR,Non-EU,HGN,No,Registered,77,77,Right,181,75,11,18,13,16,15,13,12,9,18,17,14,15,17,15,10,14,12,12,2,2,2,2,17,13,12,18,sure,-
 Black and Yellows,38,Tim Maier,Kjell Wätjen,MC,AMC,20,GER,EU,HGC,Yes,U21 Exempt,76,83,Right,183,74,9,15,14,15,10,12,11,8,15,14,12,15,14,9,14,15,12,14,2,2,2,2,15,12,13,16,sure,-
@@ -300,7 +300,7 @@ club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_stat
 Red Bulls,26,Siebe Gielen,Maarten Vandevoordt,GK,-,24,BEL,EU,Non-HG,No,Registered,77,81,Right,192,86,2,13,4,11,2,4,3,4,12,15,15,10,15,11,10,10,13,14,16,15,15,16,15,2,3,13,sure,-
 Red Bulls,1,David Ziegler,Leopold Zingerle,GK,-,32,GER,EU,HGN,No,Registered,70,70,Right,186,80,2,10,3,9,2,3,3,4,9,13,14,10,13,10,8,9,12,13,14,14,14,13,14,2,2,12,sure,-
 Red Bulls,16,Valentin Maier,Lukas Klostermann,DL,DC/DR,30,GER,EU,HGN,No,Registered,77,77,Right,189,83,5,13,12,13,12,16,16,15,11,14,16,16,14,13,17,16,16,13,2,2,2,2,16,11,7,16,sure,-
-Red Bulls,5,Tom Bellanger,El Chadaille Bitshiabu,DC,DL,21,FRA,EU,Non-HG,Yes,U21 Exempt,76,84,Left,196,96,4,13,9,12,5,15,15,16,10,13,15,14,13,9,14,13,19,10,2,2,2,2,15,6,5,15,sure,-
+Red Bulls,5,Nathan Lacroix,El Chadaille Bitshiabu,DC,DL,21,FRA,EU,Non-HG,Yes,U21 Exempt,76,84,Left,196,96,4,13,9,12,5,15,15,16,10,13,15,14,13,9,14,13,19,10,2,2,2,2,15,6,5,15,sure,-
 Red Bulls,22,Bruno Milošević,Kosta Nedeljković,DC,DR,20,SRB,Non-EU,Non-HG,Yes,U21 Exempt,74,81,Right,184,77,4,12,10,12,6,15,14,14,9,13,15,15,13,8,16,15,14,13,2,2,2,2,15,7,6,15,sure,-
 Red Bulls,3,Noud Franken,Lutsharel Geertruida,DR,DC/DM,26,NED,EU,Non-HG,No,Registered,78,78,Right,184,80,7,15,13,15,13,16,16,15,13,16,16,16,16,14,15,16,16,13,2,2,2,2,16,12,10,17,sure,capped by band
 Red Bulls,13,Marvin Lechner,Nicolas Seiwald,DM,MC,21,AUT,EU,Non-HG,Yes,U21 Exempt,77,83,Right,176,68,7,16,13,15,9,15,14,10,15,15,15,16,15,10,13,16,12,14,2,2,2,2,16,10,11,17,sure,-
@@ -309,7 +309,7 @@ Red Bulls,44,Petar Vuković,Kevin Kampl,MC,DM,35,SVN,EU,Non-HG,No,Registered,74,
 Red Bulls,18,Henri Herrmann,Assan Ouédraogo,MC,AMC,20,GER,EU,HGC,Yes,U21 Exempt,75,85,Right,191,82,11,15,15,15,10,13,12,12,15,14,12,16,14,9,15,16,15,14,2,2,2,2,15,14,14,16,sure,-
 Red Bulls,7,Jordy Van den Heuvel,Xavi Simons,AML,AMC/AMR,23,NED,EU,Non-HG,No,Registered,78,78,Right,179,70,15,16,18,17,14,8,7,8,17,15,8,16,16,12,17,16,12,18,2,2,2,2,15,17,18,16,sure,capped by band
 Red Bulls,24,Uroš Janković,Eljif Elmas,AMR,AMC/AML,26,MKD,Non-EU,Non-HG,No,Registered,77,77,Right,182,74,13,15,15,15,12,10,9,10,15,14,9,16,14,11,15,16,13,15,2,2,2,2,15,15,14,16,sure,-
-Red Bulls,14,Florian Kainz,Benjamin Šeško,ST,-,23,AUT,EU,Non-HG,No,Registered,78,78,Right,195,85,16,13,14,15,7,5,4,17,12,14,7,16,15,11,17,15,17,14,2,2,2,2,15,17,13,15,sure,capped by band
+Red Bulls,14,Valentin Lechner,Benjamin Šeško,ST,-,23,AUT,EU,Non-HG,No,Registered,78,78,Right,195,85,16,13,14,15,7,5,4,17,12,14,7,16,15,11,17,15,17,14,2,2,2,2,15,17,13,15,sure,capped by band
 Red Bulls,9,Jakob Thomsen,Yussuf Poulsen,ST,AMR,32,DEN,EU,Non-HG,No,Registered,74,74,Right,192,84,13,12,12,13,8,9,8,17,11,13,8,19,13,16,14,17,17,12,2,2,2,2,15,16,10,18,sure,-
 ```
 
@@ -343,11 +343,11 @@ Frankfurt Eagles,9,Luka Pavlović,Igor Matanović,ST,-,23,CRO,EU,Non-HG,No,Regis
 club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_status,hg_status,u21_elig,reg_status,ca,pa,foot,ht_cm,wt_kg,fin,pas,dri,fir,cro,tck,mar,hea,vis,dec,pos,wor,cmp,ldr,pac,sta,str,agi,ref,han,one,kic,ant,otb,fla,tea,confidence,notes
 Lutece SG,39,Illia Kravchuk,Matvei Safonov,GK,-,27,RUS,Non-EU,Non-HG,No,Registered,80,83,Right,192,85,2,13,4,10,2,3,3,4,11,14,15,10,15,13,9,10,14,14,16,15,15,14,15,2,3,13,sure,-
 Lutece SG,80,Fernando Cabrera,Arnau Tenas,GK,-,25,ESP,EU,Non-HG,No,Registered,76,80,Right,185,78,2,13,5,11,2,3,3,4,12,14,14,10,14,10,10,10,12,14,15,14,14,16,14,2,3,13,sure,-
-Lutece SG,35,Eduardo Queiroz,Lucas Beraldo,DL,DC,22,BRA,Non-EU,Non-HG,No,Registered,79,86,Left,182,76,5,15,12,14,10,15,15,13,13,15,15,14,16,10,14,14,13,13,2,2,2,2,15,9,9,16,sure,-
+Lutece SG,35,Lucas Pacheco,Lucas Beraldo,DL,DC,22,BRA,Non-EU,Non-HG,No,Registered,79,86,Left,182,76,5,15,12,14,10,15,15,13,13,15,15,14,16,10,14,14,13,13,2,2,2,2,15,9,9,16,sure,-
 Lutece SG,21,Kévin Aubry,Lucas Hernández,DC,DL,30,FRA,EU,HGN,No,Registered,81,81,Left,184,79,5,13,10,12,7,16,16,15,10,15,16,16,14,14,15,14,15,12,2,2,2,2,16,6,5,16,sure,-
 Lutece SG,3,Gaëtan Fabre,Presnel Kimpembe,DC,-,30,FRA,EU,HGC,No,Registered,78,78,Left,189,82,4,12,8,11,4,16,15,15,9,13,15,14,13,14,13,13,16,11,2,2,2,2,15,5,4,15,sure,-
 Lutece SG,42,Axel Poirier,Yoram Zague,DR,DL,20,FRA,EU,HGC,Yes,U21 Exempt,74,83,Right,176,68,6,12,13,12,13,14,13,10,10,12,13,15,12,8,16,15,11,15,2,2,2,2,13,12,11,14,sure,-
-Lutece SG,4,Daniel Pacheco,Manuel Ugarte,DM,MC,25,BRA,Non-EU,Non-HG,No,Registered,81,83,Right,182,77,5,13,11,13,6,17,15,12,11,15,15,18,14,11,14,18,15,13,2,2,2,2,17,8,7,17,sure,-
+Lutece SG,4,Jean Cardoso,Manuel Ugarte,DM,MC,25,BRA,Non-EU,Non-HG,No,Registered,81,83,Right,182,77,5,13,11,13,6,17,15,12,11,15,15,18,14,11,14,18,15,13,2,2,2,2,17,8,7,17,sure,-
 Lutece SG,33,Mathis Chauvin,Warren Zaïre-Emery,MC,DM/DR,20,FRA,EU,HGC,Yes,U21 Exempt,82,92,Right,178,74,11,15,14,15,10,14,13,10,15,15,14,18,15,12,15,18,14,14,2,2,2,2,15,14,12,17,sure,-
 Lutece SG,24,Gaëtan Blanchet,Senny Mayulu,MC,AMC,20,FRA,EU,HGC,Yes,U21 Exempt,74,84,Right,180,72,11,14,14,14,10,11,10,8,14,13,11,15,13,8,14,15,12,14,2,2,2,2,14,13,13,15,sure,-
 Lutece SG,19,Woo-jin Bae,Lee Kang-in,AMC,AMR/MC,25,KOR,Non-EU,Non-HG,No,Registered,81,83,Left,173,68,13,16,17,17,13,7,6,5,17,15,8,14,15,10,13,14,11,17,2,2,2,2,14,14,18,15,sure,-
@@ -365,15 +365,15 @@ club,squad_no,name_in_game,inspired_by,position,alt_positions,age,nation,eu_stat
 Monégasques,1,Adam Baran,Radosław Majecki,GK,-,26,POL,EU,Non-HG,No,Registered,76,76,Right,193,85,2,11,4,10,2,3,3,4,10,14,15,10,15,11,9,9,13,14,16,15,15,14,15,2,3,13,sure,-
 Monégasques,16,Dylan Giraud,Yann Liénard,GK,-,23,FRA,EU,HGC,No,Registered,72,75,Right,192,82,2,10,3,9,2,3,3,4,9,13,14,10,13,9,8,9,12,13,14,14,14,13,14,2,2,12,sure,-
 Monégasques,20,Guillaume Poirier,Christian Mawissa,DL,DC/DR,21,FRA,EU,Non-HG,Yes,U21 Exempt,74,82,Left,182,76,5,13,12,13,13,15,15,13,11,13,14,16,13,9,16,16,14,14,2,2,2,2,14,12,10,15,sure,-
-Monégasques,5,Bakary Konaté,Wilfried Singo,DC,DR,25,CIV,Non-EU,Non-HG,No,Registered,77,77,Right,190,81,6,13,12,13,11,16,16,17,11,14,16,16,14,12,17,16,17,14,2,2,2,2,16,8,8,16,sure,capped by band
+Monégasques,5,Idrissa Diakité,Wilfried Singo,DC,DR,25,CIV,Non-EU,Non-HG,No,Registered,77,77,Right,190,81,6,13,12,13,11,16,16,17,11,14,16,16,14,12,17,16,17,14,2,2,2,2,16,8,8,16,sure,capped by band
 Monégasques,4,Lukas Neumann,Thilo Kehrer,DC,DR/DL,29,GER,EU,Non-HG,No,Registered,76,76,Right,186,79,5,13,10,13,8,16,15,15,11,14,16,15,14,13,15,15,15,13,2,2,2,2,16,7,6,16,sure,-
 Monégasques,2,Jesse Bakker,Jordan Teze,DR,DC,26,NED,EU,Non-HG,No,Registered,76,76,Right,183,74,6,13,12,13,13,16,15,13,11,14,15,16,13,11,16,16,14,14,2,2,2,2,15,12,9,16,sure,-
-Monégasques,8,Anthony Barbier,Soungoutou Magassa,DM,DC,22,FRA,EU,HGC,No,Registered,76,81,Right,189,81,6,14,12,13,7,16,15,14,12,14,15,16,13,10,14,16,16,13,2,2,2,2,15,9,8,16,sure,-
+Monégasques,8,Antoine Perrot,Soungoutou Magassa,DM,DC,22,FRA,EU,HGC,No,Registered,76,81,Right,189,81,6,14,12,13,7,16,15,14,12,14,15,16,13,10,14,16,16,13,2,2,2,2,15,9,8,16,sure,-
 Monégasques,88,Tom Barbier,Edan Diop,MC,MR/DM,21,FRA,EU,HGC,Yes,U21 Exempt,74,80,Right,182,74,10,14,13,14,11,13,12,11,13,13,12,17,13,9,15,17,13,14,2,2,2,2,14,13,12,16,sure,-
 Monégasques,34,Enzo Arnaud,Mamadou Coulibaly,MC,DM,22,FRA,EU,HGC,No,Registered,74,77,Right,183,75,8,14,12,13,9,14,13,11,13,14,13,16,13,9,14,16,13,13,2,2,2,2,14,11,10,16,sure,-
 Monégasques,18,Naoki Ikeda,Takumi Minamino,MC,AMC/AML,31,JPN,Non-EU,Non-HG,No,Registered,77,77,Right,174,68,14,15,15,15,12,11,10,10,15,15,12,18,15,13,15,17,12,16,2,2,2,2,15,17,14,17,sure,capped by band
 Monégasques,37,Clément Carpentier,Malamine Efekele,AML,AMR,21,FRA,EU,HGC,Yes,U21 Exempt,74,77,Right,178,72,12,12,15,14,12,6,5,8,12,12,6,14,12,8,16,14,11,16,2,2,2,2,13,13,15,13,sure,-
-Monégasques,27,Ibrahima Yattara,Krépin Diatta,AMR,WBR/MR,27,SEN,Non-EU,Non-HG,No,Registered,76,76,Right,173,68,12,13,16,14,14,11,10,7,13,12,9,17,13,10,18,17,11,17,2,2,2,2,13,14,15,15,sure,-
+Monégasques,27,Karim Diallo,Krépin Diatta,AMR,WBR/MR,27,SEN,Non-EU,Non-HG,No,Registered,76,76,Right,173,68,12,13,16,14,14,11,10,7,13,12,9,17,13,10,18,17,11,17,2,2,2,2,13,14,15,15,sure,-
 Monégasques,36,Henri Schreiber,Breel Embolo,ST,-,29,SUI,Non-EU,Non-HG,No,Registered,77,77,Right,187,88,15,12,14,14,7,7,6,15,12,13,7,16,14,12,16,15,19,13,2,2,2,2,15,16,12,16,sure,capped by band
 Monégasques,9,Alexis Vasseur,George Ilenikhena,ST,-,19,FRA,EU,Non-HG,Yes,U21 Exempt,75,85,Left,185,79,15,10,13,13,6,4,3,14,9,12,6,14,12,7,16,14,15,14,2,2,2,2,14,16,11,13,sure,-
 ```
@@ -393,7 +393,7 @@ Phocéens,19,Dylan Lemaire,Geoffrey Kondogbia,DM,MC/DC,33,FRA,EU,Non-HG,No,Regis
 Phocéens,21,Jason Noël,Valentin Rongier,MC,DM,31,FRA,EU,HGN,No,Registered,76,76,Right,172,67,8,16,14,15,10,15,14,9,15,16,15,18,16,16,13,18,12,14,2,2,2,2,17,11,11,18,sure,capped by band
 Phocéens,7,Anas Djebbar,Ismaël Bennacer,MC,DM,28,ALG,Non-EU,Non-HG,No,Registered,76,76,Left,175,70,9,16,16,16,11,14,13,8,16,16,14,16,16,12,14,16,12,16,2,2,2,2,16,12,15,17,sure,capped by band
 Phocéens,11,Youssef Alaoui,Amine Harit,MC,AMC/AML,29,MAR,Non-EU,Non-HG,No,Registered,76,76,Right,180,67,11,15,17,16,12,9,8,6,16,14,10,14,14,10,15,14,10,17,2,2,2,2,14,14,17,15,sure,capped by band
-Phocéens,17,Connor Stanley,Jonathan Rowe,AML,AMR,23,ENG,Non-EU,Non-HG,No,Registered,75,76,Right,180,74,13,13,16,15,13,6,5,8,13,12,7,14,13,8,17,14,12,16,2,2,2,2,13,14,15,13,sure,-
+Phocéens,17,Tom Dalton,Jonathan Rowe,AML,AMR,23,ENG,Non-EU,Non-HG,No,Registered,75,76,Right,180,74,13,13,16,15,13,6,5,8,13,12,7,14,13,8,17,14,12,16,2,2,2,2,13,14,15,13,sure,-
 Phocéens,24,Patrick Mvondo,François Mughe,AMR,AML,22,CMR,Non-EU,HGC,No,Registered,73,76,Right,174,68,11,11,15,13,12,5,4,7,11,11,6,13,11,7,18,13,11,16,2,2,2,2,12,13,14,12,sure,-
 Phocéens,9,Nathan Vidal,Neal Maupay,ST,-,23,FRA,EU,Non-HG,No,Registered,76,80,Right,184,74,15,12,15,14,8,5,4,12,12,13,7,15,13,9,18,14,13,16,2,2,2,2,15,16,14,13,sure,capped by band
 Phocéens,14,Steve Mvondo,Faris Moumbagna,ST,-,26,CMR,Non-EU,Non-HG,No,Registered,74,75,Left,185,85,14,10,12,13,6,6,5,16,10,13,6,16,13,10,15,15,18,12,2,2,2,2,14,16,9,15,sure,-
@@ -437,7 +437,7 @@ Dogues,8,Nelson Alves,André Gomes,MC,AMC,32,POR,EU,Non-HG,No,Registered,73,73,R
 Dogues,6,Jean Mbarga,Ngal'ayel Mukau,MC,DM,21,COD,Non-EU,HGC,Yes,U21 Exempt,74,77,Right,188,78,7,14,12,13,8,14,13,12,12,13,13,16,13,8,14,16,15,13,2,2,2,2,14,11,10,16,sure,capped by band
 Dogues,17,Achraf Tazi,Osame Sahraoui,AML,AMR,25,MAR,Non-EU,Non-HG,No,Registered,74,74,Right,170,65,12,14,17,15,13,5,4,5,14,12,6,13,12,8,16,13,9,18,2,2,2,2,13,13,17,13,sure,capped by band
 Dogues,11,Karlo Ilić,Edon Zhegrova,AMR,AML,27,KOS,Non-EU,Non-HG,No,Registered,74,74,Left,181,72,14,13,17,15,13,4,4,6,14,12,6,12,13,8,16,12,11,17,2,2,2,2,13,14,18,12,sure,capped by band
-Dogues,27,Idrissa Touré,Mohamed Bayo,ST,-,28,GUI,Non-EU,Non-HG,No,Registered,73,73,Right,188,82,14,10,11,13,6,5,4,16,10,13,6,15,13,10,14,14,17,12,2,2,2,2,14,16,9,15,sure,-
+Dogues,27,Drissa Sidibé,Mohamed Bayo,ST,-,28,GUI,Non-EU,Non-HG,No,Registered,73,73,Right,188,82,14,10,11,13,6,5,4,16,10,13,6,15,13,10,14,14,17,12,2,2,2,2,14,16,9,15,sure,-
 Dogues,9,Asger Olesen,Matías Fernández-Pardo,ST,AML,21,DEN,EU,Non-HG,Yes,U21 Exempt,74,82,Right,184,76,14,11,14,14,8,5,4,12,11,12,6,14,12,8,16,13,12,15,2,2,2,2,13,15,13,13,sure,capped by band
 ```
 
