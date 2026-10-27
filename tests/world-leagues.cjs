@@ -24,7 +24,7 @@ check('Placeholder clubs cannot be used to start a career', `(()=>{const origina
 check('Adding background leagues to a legacy career preserves every player and fixture', `(()=>{
   const ids=Object.keys(G.clubs).filter(id=>!G.clubs[id].backgroundOnly),oldPlayers=JSON.stringify(G.players),oldFixtures=JSON.stringify(G.fixtures),next=G.nextId;
   G.clubs=Object.fromEntries(ids.map(id=>[id,G.clubs[id]]));for(const c of Object.values(G.clubs))delete c.worldLeague;delete G.worldLeagues;delete G.worldLeagueVersion;
-  ensureWorldLeagues();return JSON.stringify(G.players)===oldPlayers&&JSON.stringify(G.fixtures)===oldFixtures&&G.nextId===next&&Object.keys(G.clubs).length===130;
+  ensureWorldLeagues();return JSON.stringify(G.players)===oldPlayers&&JSON.stringify(G.fixtures)===oldFixtures&&G.nextId===next&&Object.keys(G.clubs).length===128;
 })()`);
 check('Existing careers refresh background crest palettes without changing selected clubs', `(()=>{const selected=['F0','F1','F2','F3'].map(id=>[id,G.clubs[id].c1,G.clubs[id].c2]),players=JSON.stringify(G.players);Object.values(G.clubs).filter(c=>c.backgroundOnly).forEach(c=>{c.c1='#A50044';c.c2='#F7CB46';});G.worldLeagueVersion=1;ensureWorldLeagues();return G.worldLeagueVersion===2&&JSON.stringify(G.players)===players&&Object.values(G.clubs).filter(c=>c.backgroundOnly).every(c=>{const e=WORLD_CLUBS.find(x=>x.id===c.id);return c.c1===e.c1&&c.c2===e.c2;})&&selected.every(([id,c1,c2])=>G.clubs[id].c1===c1&&G.clubs[id].c2===c2);})()`);
 check('Registry migration is idempotent and does not consume player IDs', `(()=>{const before=JSON.stringify(G);ensureWorldLeagues();ensureWorld();return before===JSON.stringify(G);})()`);

@@ -341,28 +341,6 @@
     "sourcePngSha256": "6305c0b662290477dba12e5cd778eb7c22b7f5454a80bb4cc31886e9e7b848df"
   },
   {
-    "id": "F11",
-    "name": "Lagos Stars",
-    "file": "F11.webp",
-    "primary": "#008751",
-    "secondary": "#FFFFFF",
-    "width": 256,
-    "height": 294,
-    "bytes": 25300,
-    "sourcePngSha256": "1f2a0aea39822c4d4c7182c0c2313e96de14456fac3321ba87bd195dfe3a1dac"
-  },
-  {
-    "id": "F12",
-    "name": "Selangor Harimau",
-    "file": "F12.webp",
-    "primary": "#E2001A",
-    "secondary": "#FFD100",
-    "width": 256,
-    "height": 294,
-    "bytes": 34892,
-    "sourcePngSha256": "65463e165d0fd32d5a9c75abbda8e313d3ed17086b3b91768b29828018e469c7"
-  },
-  {
     "id": "SKY",
     "name": "Sky Blues",
     "file": "SKY.webp",

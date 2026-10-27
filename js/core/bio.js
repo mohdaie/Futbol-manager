@@ -53,6 +53,27 @@ function linkBio(p, pool) {
 }
 
 // Makes sure every club has a manager and every player has personal details (new games and older saves).
+// Clubs taken out of the game (RETIRED_CLUBS): their squads leave with them. Loanees go back to their own
+// clubs, their own players out on loan stay where they are, open deals close, unplayed friendlies are dropped,
+// and old records keep the club's name (clubName).
+function removeRetiredClubs() {
+  if (typeof RETIRED_CLUBS === 'undefined') return;
+  Object.values(G.clubs).filter(c => c.foreign && !c.fa && RETIRED_CLUBS[c.ros] && c.id !== G.club).forEach(c => {
+    (G.retiredClubs ||= {})[c.id] = c.name;
+    Object.values(G.players).forEach(p => {
+      if (p.loan?.host === c.id && G.clubs[p.loan.parent] && typeof endLoan === 'function') endLoan(p, `${c.name} have left the game`);
+      else if (p.loan?.parent === c.id) { p.wage = p.loan.parentWage ?? p.wage; p.con = p.loan.parentContract ?? p.con; delete p.loan; }
+    });
+    const gone = new Set(c.squad.filter(id => G.players[id]?.club === c.id));
+    gone.forEach(id => { delete G.players[id]; delete G.know[id]; });
+    G.shortlist = (G.shortlist || []).filter(id => !gone.has(id));
+    G.pitches = (G.pitches || []).filter(x => !gone.has(x.pid));
+    if (G.scout) { G.scout.reports = G.scout.reports.filter(r => !gone.has(r.pid)); G.scout.jobs = (G.scout.jobs || []).filter(j => !gone.has(j.pid)); }
+    (G.deals || []).filter(d => !d.closed && (gone.has(d.pid) || d.from === c.id || d.to === c.id)).forEach(d => { d.closed = { ok: false, why: `${c.name} have left the game.`, date: Date.now() }; d.need = null; d.next = null; });
+    G.fixtures = (G.fixtures || []).filter(f => (f.h !== c.id && f.a !== c.id) || f.hg != null);
+    delete G.clubs[c.id];
+  });
+}
 function ensureWorld(options = {}) {
   G.know ||= {};
   ensureNewsBoxes();
@@ -74,6 +95,7 @@ function ensureWorld(options = {}) {
   if (typeof addEnglandExpansionPlayers === 'function') addEnglandExpansionPlayers();
   if (typeof ensurePremierLeagueRegistrations === 'function') ensurePremierLeagueRegistrations();
   ensureForeignSquads(options);
+  removeRetiredClubs();
   if (typeof applyEnglandPlayerNameOverrides === 'function') applyEnglandPlayerNameOverrides();
   if (typeof migrateEnglandCalibratedProfiles === 'function') migrateEnglandCalibratedProfiles();
   Object.values(G.clubs).forEach(c => { if (!c.fa && !c.backgroundOnly && !c.mgr) c.mgr = genManagerName(); if (c.tac && !c.tac.style && !c.fa) c.tac = aiTactic(c.rep); });

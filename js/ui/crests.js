@@ -1,6 +1,6 @@
 'use strict';
 /* Approved Armoury Shield artwork. Names take precedence so overseas crests
-   remain correct if the generated F0–F12 IDs are assigned in another order. */
+   remain correct if the generated F0–F10 IDs are assigned in another order. */
 const CLUB_CREST_NAMES = Object.freeze({
   'Gunners': 'GUN', 'Villans': 'VIL', 'Cherries': 'CHR', 'Bees': 'BEE',
   'Seagulls': 'GUL', 'Clarets': 'CLA', 'Blues': 'BLU', 'Eagles': 'EAG',
@@ -106,7 +106,6 @@ const CLUB_CREST_NAMES = Object.freeze({
   'Castilla CF': 'F0', 'Lutece SG': 'F1', 'Lombardia AC': 'F2', 'Rhein 04': 'F3',
   'Porto Norte': 'F4', 'Amstel FC': 'F5', 'Rio Atletico': 'F6', 'Pampas Juniors': 'F7',
   'Brussels Royal': 'F8', 'Tokyo Bay FC': 'F9', 'Oslo Vikings': 'F10',
-  'Lagos Stars': 'F11', 'Selangor Harimau': 'F12',
 });
 const CLUB_CREST_IDS = new Set(Object.values(CLUB_CREST_NAMES));
 

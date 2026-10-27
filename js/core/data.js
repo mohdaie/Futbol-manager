@@ -58,9 +58,9 @@ const FOREIGN = [
   { name: 'Brussels Royal', ros: 'AND', nat: 'BEL', rep: 70, c1: '#5B2C83', c2: '#FFFFFF' },
   { name: 'Tokyo Bay FC', ros: 'TOK', nat: 'JPN', rep: 66, c1: '#00205B', c2: '#E4002B' },
   { name: 'Oslo Vikings', ros: 'VAL', nat: 'NOR', rep: 62, c1: '#FFD200', c2: '#111111' },
-  { name: 'Lagos Stars', ros: 'REM', nat: 'NGA', rep: 60, c1: '#008751', c2: '#FFFFFF' },
-  { name: 'Selangor Harimau', ros: 'SEL', nat: 'MAS', rep: 58, c1: '#E2001A', c2: '#FFD100' },
 ];
+// Overseas clubs taken out of the game (roster code -> name). Older saves drop them on load (bio.js).
+const RETIRED_CLUBS = { REM: 'Lagos Stars', SEL: 'Selangor Harimau' };
 
 const NATIONS = {
   ENG: { n: 'England', r: 'Britain & Ireland', f: ['Harry', 'Jack', 'Oliver', 'George', 'Charlie', 'Alfie', 'Callum', 'Mason', 'Reece', 'Jordan', 'Tyler', 'Kieran', 'Ben', 'Lewis', 'Jamie', 'Connor', 'Ryan', 'Ethan', 'Noah', 'Josh'], l: ['Walker', 'Hughes', 'Bennett', 'Clarke', 'Turner', 'Wright', 'Barnes', 'Foster', 'Palmer', 'Mitchell', 'Hayes', 'Shaw', 'Cole', 'Ward', 'Holt', 'Rowe', 'Gibbs', 'Marsh', 'Doyle', 'Fletcher', 'Ashworth', 'Pickering', 'Lowe', 'Kirby'] },

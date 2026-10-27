@@ -12,7 +12,7 @@ const SHIRT = { GK: [1, 13, 31], DR: [2, 22, 32], DL: [3, 23, 33], DC: [4, 5, 15
 
 const club = id => G.clubs[id];
 const userClub = () => G.clubs[G.club];
-const clubName = id => (G.clubs[id] ? G.clubs[id].name : 'Free agent');
+const clubName = id => (G.clubs[id] ? G.clubs[id].name : G.retiredClubs?.[id] || 'Free agent');
 // "the Reds", but "Spurs", "Old Gold" and overseas names such as "La Dea" take no article. Takes a club or an id.
 const NO_ARTICLE = new Set(['SPU', 'OLD', 'POM', 'MID']);
 function theClub(c) {
