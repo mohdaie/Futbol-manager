@@ -844,3 +844,7 @@ The database builder and runtime share the calibrated weight vectors and CA calc
 Club selection, directory rows and profile headers display fictional club names. Real club names remain in `realName` metadata for identity matching. Browser regression checks cover the visible text and preserved metadata.
 
 Legacy-save migration recovers inspirations before supplemental additions and checks normalized inspirations as well as source IDs. Profiles missing physical measurements receive stable estimates saved with the profile baseline.
+
+### Version numbers from v1.0.0
+
+`GAME_VERSION` is `MAJOR.MINOR.PATCH`, starting at 1.0.0 and shown as `v1.0.0` on the title and Game Status. Bump PATCH for fixes, MINOR for new features and MAJOR for big changes, and keep every `?v=` in `index.html` in step. Releases before this were dated (`2026.10.27.2`); `versionNewer()` treats those as older than any 1.x.x, so the update check never mistakes the switch for a downgrade.
