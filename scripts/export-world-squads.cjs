@@ -1,5 +1,5 @@
-// Writes docs/world-squads/*.md: the squads of the 20 big overseas clubs (La Liga, Serie A, Bundesliga, Ligue 1)
-// with real inspiration, full attributes and the positions each club still lacks for a 25-man first team.
+// Writes docs/world-squads/BIG-CLUB-SQUAD-BRIEF.md: one self-contained brief for another AI to write the
+// missing first-team players of the 20 big overseas clubs (La Liga, Serie A, Bundesliga, Ligue 1).
 // Run: node scripts/export-world-squads.cjs
 const fs = require('node:fs'), path = require('node:path');
 const { createMatchQaRuntime } = require('./match-qa-runtime.cjs');
@@ -7,82 +7,179 @@ const rt = createMatchQaRuntime(20261027);
 rt.run("newGame('GUN','Squad export',1)");
 const data = JSON.parse(rt.run(`JSON.stringify((() => {
   const clubs = Object.values(G.clubs).filter(c => c.foreignSquad).map(c => ({
-    id: c.id, name: c.name, real: c.realName, league: c.worldLeague, leagueName: WORLD_LEAGUES[c.worldLeague].name, rep: c.rep, nat: c.nat,
-    shape: WORLD_SQUAD_DATA[(c.catalogId || '')]?.shape || '', c1: c.c1, c2: c.c2,
-    players: c.squad.map(id => G.players[id]).filter(Boolean).map(p => ({ name: fullName(p), insp: p.insp || '', pos: p.pos, alt: p.alt || [], age: p.age, nat: p.nat, natName: natName(p.nat), foot: p.foot, ht: p.ht, wt: p.wt, ca: Math.round(p.ca), pa: Math.round(p.pa), con: p.con, lvl: lvlOf(p), pers: p.pers, at: p.at.slice() })),
+    id: c.id, name: c.name, real: c.realName, league: c.worldLeague, rep: c.rep, nat: c.nat,
+    players: c.squad.map(id => G.players[id]).filter(Boolean).filter(p => lvlOf(p) === 'A').map(p => ({ name: fullName(p), insp: p.insp || '', pos: p.pos, alt: p.alt || [], age: p.age, nat: p.nat, foot: p.foot, ht: p.ht, wt: p.wt, ca: Math.round(p.ca), pa: Math.round(p.pa), at: p.at.slice() })),
   }));
-  return { clubs, attrs: ATTRS, template: SQUAD_TEMPLATE, season: G.season };
+  return { clubs, attrs: ATTRS, template: SQUAD_TEMPLATE, weights: WEIGHTS, countries: Object.entries(COUNTRY).map(([k, v]) => [k, v[0]]), season: G.season };
 })())`));
-const KEYS = data.attrs.map(a => a[0]);
-const GROUPS = [['Technical', 'fin pas dri fir cro tck mar hea'], ['Mental', 'vis dec pos wor cmp ldr ant otb fla tea'], ['Physical', 'pac sta str agi'], ['Goalkeeping', 'ref han one kic']].map(([n, k]) => [n, k.split(' ')]);
-const NAME = Object.fromEntries(data.attrs.map(a => [a[0], a[1]]));
+const KEYS = data.attrs.map(a => a[0]), NAME = Object.fromEntries(data.attrs.map(a => [a[0], a[1]])), UP = KEYS.map(k => k.toUpperCase());
 const POS_ORDER = ['GK', 'DL', 'DC', 'DR', 'DM', 'MC', 'AMC', 'AML', 'AMR', 'ST'];
 const TARGET = {}; data.template.forEach(p => { TARGET[p] = (TARGET[p] || 0) + 1; });
 const val = (p, k) => p.at[KEYS.indexOf(k)];
 const avg = a => a.reduce((t, v) => t + v, 0) / (a.length || 1);
 const fmt = (n, d = 1) => (Math.round(n * 10 ** d) / 10 ** d).toFixed(d);
-const esc = s => String(s).replace(/\|/g, '\\|');
 const sortPlayers = a => a.slice().sort((x, y) => POS_ORDER.indexOf(x.pos) - POS_ORDER.indexOf(y.pos) || y.ca - x.ca);
-const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const version = fs.readFileSync(path.resolve(__dirname, '../js/core/data.js'), 'utf8').match(/GAME_VERSION = '([^']+)'/)[1];
+const LEAGUE = { ES1: 'La Liga', IT1: 'Serie A', DE1: 'Bundesliga', FR1: 'Ligue 1' };
+const CSV_HEADER = ['club', 'slot', 'name_in_game', 'inspired_by', 'position', 'alt_positions', 'age', 'nation', 'foot', 'ht_cm', 'wt_kg', 'pa', ...KEYS, 'confidence', 'notes'].join(',');
 
-function gaps(first) {
+const clubs = data.clubs.map(c => {
+  const first = sortPlayers(c.players), xi = first.slice().sort((a, b) => b.ca - a.ca).slice(0, 11), xiAvg = avg(xi.map(p => p.ca));
   const have = {}; first.forEach(p => { have[p.pos] = (have[p.pos] || 0) + 1; });
-  return POS_ORDER.map(pos => ({ pos, have: have[pos] || 0, target: TARGET[pos] || 0, need: Math.max(0, (TARGET[pos] || 0) - (have[pos] || 0)) }));
-}
-const gapLine = g => g.filter(x => x.need).map(x => `${x.need} ${x.pos}`).join(', ') || 'none';
-
-function playerTable(ps, withInsp) {
-  const head = withInsp ? '| # | Name in game | Inspired by | Pos | Also plays | Age | Nation | Foot | Ht / Wt | CA | PA | Contract |\n|---:|---|---|---|---|---:|---|---|---|---:|---:|---:|' : '| # | Name in game | Pos | Age | Nation | Foot | Ht / Wt | CA | PA | Contract |\n|---:|---|---|---:|---|---|---|---:|---:|---:|';
-  return head + '\n' + ps.map((p, i) => withInsp
-    ? `| ${i + 1} | ${esc(p.name)} | ${esc(p.insp || '-')} | ${p.pos} | ${p.alt.join(', ') || '-'} | ${p.age} | ${p.natName} | ${p.foot} | ${p.ht} cm / ${p.wt} kg | ${p.ca} | ${p.pa} | ${p.con} |`
-    : `| ${i + 1} | ${esc(p.name)} | ${p.pos} | ${p.age} | ${p.natName} | ${p.foot} | ${p.ht} cm / ${p.wt} kg | ${p.ca} | ${p.pa} | ${p.con} |`).join('\n');
-}
-function attrTables(ps) {
-  return GROUPS.map(([g, keys]) => `**${g}**\n\n| Player | Pos | ${keys.map(k => NAME[k]).join(' | ')} |\n|---|---|${keys.map(() => '---:').join('|')}|\n` +
-    ps.map(p => `| ${esc(p.name)} | ${p.pos} | ${keys.map(k => val(p, k)).join(' | ')} |`).join('\n')).join('\n\n');
-}
-
-const outDir = path.resolve(__dirname, '../docs/world-squads');
-fs.mkdirSync(outDir, { recursive: true });
-const LEAGUES = [['ES1', 'La Liga', 'la-liga'], ['IT1', 'Serie A', 'serie-a'], ['DE1', 'Bundesliga', 'bundesliga'], ['FR1', 'Ligue 1', 'ligue-1']];
-const stamp = `Game version v${fs.readFileSync(path.resolve(__dirname, '../js/core/data.js'), 'utf8').match(/GAME_VERSION = '([^']+)'/)[1]}, fresh career, season ${data.season}/${String(data.season + 1).slice(2)} start.`;
-const all = [];
-
-for (const [lid, lname, file] of LEAGUES) {
-  const clubs = data.clubs.filter(c => c.league === lid);
-  let md = `# ${lname}: big-club squads and what is missing\n\n${stamp} Generated by \`scripts/export-world-squads.cjs\`; do not edit by hand.\n\n` +
-    `Attributes are on the game's 1-20 scale. CA/PA are the game's current and potential ability (0-100 scale as shown in the game). "Inspired by" is the real player each invented player is based on; the name in the game is a sound-alike.\n\n## Summary\n\n| Club in game | Real club | Reputation | First team now | Reserves now | Still needed for 25 first-team players | Squad average CA (XI) |\n|---|---|---:|---:|---:|---|---:|\n`;
-  const sections = [];
-  for (const c of clubs) {
-    const first = sortPlayers(c.players.filter(p => p.lvl === 'A')), res = sortPlayers(c.players.filter(p => p.lvl !== 'A'));
-    const xi = first.slice().sort((a, b) => b.ca - a.ca).slice(0, 11), xiAvg = avg(xi.map(p => p.ca)), g = gaps(first);
-    const missing = Math.max(0, 25 - first.length);
-    all.push({ c, first, res, xiAvg, g, lname });
-    md += `| ${c.name} | ${c.real} | ${c.rep} | ${first.length} | ${res.length} | ${missing} (${gapLine(g)}) | ${fmt(xiAvg)} |\n`;
-    const bench = Math.round(xiAvg - 5), fringe = Math.round(xiAvg - 12);
-    sections.push(`## ${c.name}\n\n- **Real club inspired by:** ${c.real}\n- **Club in game:** ${c.name} (${c.id}, ${c.nat}), reputation ${c.rep}\n- **First team in game:** ${first.length} players (${first.filter(p => p.insp).length} inspired by a real player)\n- **Reserves in game:** ${res.length} generic prospects (not inspired by real players); no U18 side\n- **Needed:** ${missing} more first-team players to reach 25\n\n` +
-      `### Position gaps against a 25-man first team\n\n| Position | Have | Target | Missing |\n|---|---:|---:|---:|\n${g.map(x => `| ${x.pos} | ${x.have} | ${x.target} | ${x.need} |`).join('\n')}\n\n` +
-      `### Suggested ability for the missing players\n\nCurrent XI averages CA ${fmt(xiAvg)}. The game gives a club's bench about 5 below its XI and its fringe players about 12 below: aim for CA about **${bench - 3}-${bench + 3}** for rotation players and **${fringe - 3}-${fringe + 3}** for the youngest depth, with PA 0-10 above CA for players under 24.\n\n` +
-      `### First team already in the game (${first.length})\n\n${playerTable(first, true)}\n\n### Full attributes: first team\n\n${attrTables(first)}\n\n### Reserves already in the game (${res.length}, not inspired by real players)\n\n${playerTable(res, false)}\n\n### Full attributes: reserves\n\n${attrTables(res)}\n`);
+  const left = {}; POS_ORDER.forEach(pos => { left[pos] = Math.max(0, (TARGET[pos] || 0) - (have[pos] || 0)); });
+  // A club with more than the template at some position (say four midfielders) would be asked for more than
+  // 25 - 11 players: take the extra slots off the positions that still lack the most, never the goalkeepers.
+  const order = ['MC', 'DM', 'AML', 'AMR', 'DC', 'DR', 'DL', 'ST', 'AMC'];
+  while (Object.values(left).reduce((t, n) => t + n, 0) > 25 - first.length) {
+    const pos = order.slice().sort((x, y) => left[y] - left[x] || order.indexOf(x) - order.indexOf(y))[0];
+    left[pos]--;
   }
-  md += `\n${sections.join('\n---\n\n')}`;
-  fs.writeFileSync(path.join(outDir, file + '.md'), md);
-}
+  const need = POS_ORDER.flatMap(pos => Array(left[pos]).fill(pos));
+  return { ...c, first, xiAvg, need, lo: Math.round(xiAvg - 12), hi: Math.round(xiAvg - 3) };
+}).sort((a, b) => Object.keys(LEAGUE).indexOf(a.league) - Object.keys(LEAGUE).indexOf(b.league) || b.rep - a.rep);
+const totalNeed = clubs.reduce((t, c) => t + c.need.length, 0), totalHave = clubs.reduce((t, c) => t + c.first.length, 0);
 
-// Reference sheet: what a typical player of each position looks like, from the 220 inspired first-team players.
-const firstAll = all.flatMap(x => x.first);
-let ref = `## Reference: average attributes by position\n\nAverages of the ${firstAll.length} inspired first-team players in these 20 clubs. Use them as the starting point for a missing player, then adjust for the real player's strengths.\n\n`;
-for (const [g, keys] of GROUPS) {
-  ref += `**${g}**\n\n| Position | Players | Avg CA | ${keys.map(k => NAME[k]).join(' | ')} |\n|---|---:|---:|${keys.map(() => '---:').join('|')}|\n` +
-    POS_ORDER.map(pos => { const ps = firstAll.filter(p => p.pos === pos); return ps.length ? `| ${pos} | ${ps.length} | ${fmt(avg(ps.map(p => p.ca)), 0)} | ${keys.map(k => fmt(avg(ps.map(p => val(p, k))))).join(' | ')} |` : ''; }).filter(Boolean).join('\n') + '\n\n';
+const weightTable = `| Position | Attributes counted and their weights |\n|---|---|\n${POS_ORDER.map(pos => `| ${pos} | ${Object.entries(data.weights[pos]).map(([k, w]) => `${k}×${w}`).join(', ')} |`).join('\n')}`;
+const refTable = `| Position | Players | Avg CA | ${UP.join(' | ')} |\n|---|---:|---:|${UP.map(() => '---:').join('|')}|\n` + POS_ORDER.map(pos => {
+  const ps = clubs.flatMap(c => c.first).filter(p => p.pos === pos);
+  return `| ${pos} | ${ps.length} | ${fmt(avg(ps.map(p => p.ca)), 0)} | ${KEYS.map(k => fmt(avg(ps.map(p => val(p, k))))).join(' | ')} |`;
+}).join('\n');
+
+let md = `# Big overseas clubs: brief for writing the missing squad players
+
+Game version v${version}, fresh career at the start of season ${data.season}/${String(data.season + 1).slice(2)}. Generated by \`scripts/export-world-squads.cjs\`; do not edit by hand.
+
+## How to use this file
+
+This file is a complete brief. Give it to an AI model and ask it to complete the clubs. **Work one club at a time**, because each club's answer is 14 long lines: send "Part 1: Rules", "Part 2: Reference", then one club from "Part 3", and ask for that club only. If the model has plenty of room, send a whole league.
+
+- ${clubs.length} clubs, each with ${totalHave / clubs.length} first-team players already in the game and **${totalNeed} still to write** (${totalNeed / clubs.length} per club, to reach 25). Where a club already has more than a normal 25-man squad at one position, its slot list has fewer players there.
+- The new players are real players of the real club, renamed with a sound-alike fictional name, with attributes written from how they play.
+- The answer for each club is 14 CSV lines in one code block, in the format in Part 1. Paste all the answers into one file when you are done.
+
+---
+
+# Part 1: Rules (send with every request)
+
+## The task
+
+You are helping fill out the first-team squads of fictional football clubs in a management game. Each club is based on a real club. A club already has some players in the game (listed in Part 3) and needs **exactly the number of extra players listed under its "Slots to fill"**, each with a stated position. For every slot:
+
+1. Choose a **real player** who is in the real club's first-team squad for the 2026/27 season (use the squad you know best if your knowledge stops earlier, and mark \`confidence\` as \`check\`). He must **not** already be listed for that club ("Already in the game").
+2. Give him a **fictional sound-alike name** (rules below).
+3. Write his **attributes** on the 1-20 scale, from how he plays.
+4. Fill in age, nationality, foot, height, weight and potential (PA).
+
+## Naming rule
+
+The name in the game must sound like the real player's name but must not be it, and must not be the real name of another footballer. Keep the nationality's flavour. Existing examples, to copy the pattern:
+
+| Real player | Name in the game |
+|---|---|
+| Thibaut Courtois | Thibault Courtens |
+| Vinicius Junior | Vinicio Junho |
+| Kylian Mbappé | Kyllian Mbakou |
+| Trent Alexander-Arnold | Trent Alexander-Arnott |
+| Federico Valverde | Federico Valdero |
+| Éder Militão | Eder Militino |
+| Dean Huijsen | Dean Huisman |
+| Rodrygo | Rodrigao |
+
+Change one or two letters or endings, drop accents, keep a one-word name as one word, and keep the first-name/surname split. Never use the real name unchanged.
+
+## Output format
+
+One CSV line per player, in one code block per club, with this exact header as the first line and then one line per slot, in slot order. No spaces after commas, no quotes, no commas inside fields.
+
+\`\`\`
+${CSV_HEADER}
+\`\`\`
+
+| Column | What to write |
+|---|---|
+| club | The club's name in the game, exactly as in the club heading (for example \`Castilla CF\`) |
+| slot | The slot id from "Slots to fill" (for example \`S1\`) |
+| name_in_game | Fictional name |
+| inspired_by | The real player's full name |
+| position | Natural position, **must equal the slot's position**: GK, DL, DC, DR, DM, MC, AMC, AML, AMR or ST |
+| alt_positions | Other positions he can play, separated by \`/\` (for example \`DM/DR\`), or \`-\` |
+| age | Age in July 2026 |
+| nation | The 3-letter nation code from the list below |
+| foot | \`Left\`, \`Right\` or \`Either\` |
+| ht_cm, wt_kg | Height in cm and weight in kg |
+| pa | Potential ability, 0-100 (see below) |
+| fin ... tea | The 26 attributes, 1-20 whole numbers, in the exact order of the header |
+| confidence | \`sure\` if you know he is in this club's 2026/27 first team, otherwise \`check\` |
+| notes | Optional, short, no commas (for example \`on loan\`) |
+
+## Attributes (1-20)
+
+The 26 columns are, in order: ${KEYS.map(k => `\`${k}\` ${NAME[k]}`).join(', ')}.
+
+- Scale: 20 is world-class at that skill, 15-17 is very strong, 10-12 is average for a professional, 5-7 is weak, 1-3 is almost absent.
+- Write them from how the player actually plays: his strengths, weaknesses, style and physique. Do not use or copy any ratings from video games or rating sites; these are original assessments.
+- Outfield players: the four goalkeeping attributes (\`ref han one kic\`) are all **2**.
+- Goalkeepers: attributes like \`fin\`, \`dri\`, \`cro\`, \`tck\`, \`mar\`, \`hea\`, \`otb\`, \`fla\` are very low (2-6); copy the pattern of the goalkeepers in Part 3.
+- Give each player a distinctive profile: a few attributes high, a few low. Do not make everyone similar.
+
+## Current ability (CA): your self-check
+
+The game computes CA from your attributes: take the position's weighted attributes, average them with the weights, multiply by 5 and round.
+
+\`CA = round( 5 × Σ(attribute × weight) ÷ Σ(weight) )\`, using his **natural position**:
+
+${weightTable}
+
+Each club in Part 3 has a **CA band** for its 14 new players. Work the CA out for each player and make sure it falls inside the band. Rotation players should sit near the top of the band and the youngest players near the bottom. If a player is clearly better than the band allows, tell the user in \`notes\` instead of breaking the band.
+
+## Potential (PA)
+
+PA is never below CA. Use about: 27 and over, CA to CA+2; 24-26, CA+1 to CA+5; 21-23, CA+3 to CA+9; 20 and under, CA+6 to CA+15. Cap at 96.
+
+## Other rules
+
+- Slots tell you the number of players at each position. Do not change the counts.
+- Do not use the same real player twice, and do not use players already listed for any club in Part 3.
+- Ages are in July 2026. Nation is the player's national team.
+- Keep the squad realistic: mixed ages, a young prospect or two, an ageing veteran if the real squad has one.
+- Return only the CSV code block for each club, plus a short list of any \`check\` players. No other commentary.
+
+## Nation codes
+
+${data.countries.map(([k, n]) => `${k} ${n}`).join(' · ')}
+
+---
+
+# Part 2: Reference
+
+## Average attributes by position
+
+Averages across the ${totalHave} players already written for these 20 clubs. Use them as a starting point for a missing player of the same position, then adjust for the real player's style.
+
+${refTable}
+
+Attribute columns: ${UP.map((u, i) => `${u} ${NAME[KEYS[i]]}`).join(', ')}.
+
+---
+
+# Part 3: Clubs
+
+${clubs.map(c => `- ${LEAGUE[c.league]}: **${c.name}** (${c.real}), ${c.first.length} written, ${c.need.length} to write`).join('\n')}
+
+`;
+
+for (const lg of Object.keys(LEAGUE)) {
+  md += `\n---\n\n## ${LEAGUE[lg]}\n`;
+  for (const c of clubs.filter(x => x.league === lg)) {
+    md += `\n### ${c.name}\n\n- **Club in the game:** ${c.name}\n- **Real club inspired by:** ${c.real}\n- **Reputation:** ${c.rep}\n- **CA band for the ${c.need.length} new players:** ${c.lo}-${c.hi} (the current best XI averages ${fmt(c.xiAvg)})\n\n` +
+      `**Already in the game (${c.first.length}). Do not use these real players again.**\n\n` +
+      `| Name in game | Inspired by | Pos | Alt | Age | Nation | Foot | Ht | Wt | CA | PA | ${UP.join(' | ')} |\n|---|---|---|---|---:|---|---|---:|---:|---:|---:|${UP.map(() => '---:').join('|')}|\n` +
+      c.first.map(p => `| ${p.name} | ${p.insp} | ${p.pos} | ${p.alt.join('/') || '-'} | ${p.age} | ${p.nat} | ${p.foot} | ${p.ht} | ${p.wt} | ${p.ca} | ${p.pa} | ${p.at.join(' | ')} |`).join('\n') +
+      `\n\n**Slots to fill (${c.need.length}).** Return one CSV line per slot, in this order:\n\n${c.need.map((pos, i) => `${i + 1}. \`S${i + 1}\` ${pos}`).join('\n')}\n`;
+  }
 }
-const totalMissing = all.reduce((t, x) => t + Math.max(0, 25 - x.first.length), 0);
-const totals = POS_ORDER.map(pos => ({ pos, need: all.reduce((t, x) => t + x.g.find(y => y.pos === pos).need, 0) }));
-const readme = `# Big overseas clubs: squads and gaps\n\n${stamp} Generated by \`scripts/export-world-squads.cjs\`.\n\n` +
-  `The 20 big clubs of La Liga, Serie A, the Bundesliga and Ligue 1 each have 11 first-team players, all inspired by real players, and 6 generic reserves. A full first team is 25. These files list what each club has now, which positions are missing, and the full attributes of every existing player to use as a reference when the missing players are written.\n\n` +
-  `| File | League | Clubs |\n|---|---|---|\n${LEAGUES.map(([id, n, f]) => `| [${f}.md](${f}.md) | ${n} | ${data.clubs.filter(c => c.league === id).map(c => `${c.name} (${c.real})`).join(', ')} |`).join('\n')}\n\n` +
-  `## Totals\n\n- Existing first-team players: **${firstAll.length}** (all inspired by real players)\n- Existing reserves: **${all.reduce((t, x) => t + x.res.length, 0)}** (generic)\n- First-team players still needed for 25 each: **${totalMissing}**\n- By position: ${totals.filter(t => t.need).map(t => `${t.pos} ${t.need}`).join(', ')}\n\n` +
-  `## Every club\n\n| League | Club in game | Real club | First team | Missing | Missing positions |\n|---|---|---|---:|---:|---|\n${all.map(x => `| ${x.lname} | ${x.c.name} | ${x.c.real} | ${x.first.length} | ${25 - x.first.length} | ${gapLine(x.g)} |`).join('\n')}\n\n` +
-  `${ref}## What each existing player record holds\n\nName in game, the real player he is inspired by, natural position and other positions, age, nationality, foot, height and weight, current and potential ability, contract end, and 26 attributes on a 1-20 scale: Technical (${GROUPS[0][1].map(k => NAME[k]).join(', ')}), Mental (${GROUPS[1][1].map(k => NAME[k]).join(', ')}), Physical (${GROUPS[2][1].map(k => NAME[k]).join(', ')}) and Goalkeeping (${GROUPS[3][1].map(k => NAME[k]).join(', ')}).\n`;
-fs.writeFileSync(path.join(outDir, 'README.md'), readme);
-console.log('Wrote', ['README.md', ...LEAGUES.map(l => l[2] + '.md')].join(', '), 'in', outDir, '| clubs', all.length, '| first team', firstAll.length, '| missing', totalMissing);
+const out = path.resolve(__dirname, '../docs/world-squads');
+fs.mkdirSync(out, { recursive: true });
+for (const f of fs.readdirSync(out)) if (f.endsWith('.md')) fs.unlinkSync(path.join(out, f));
+fs.writeFileSync(path.join(out, 'BIG-CLUB-SQUAD-BRIEF.md'), md);
+console.log('Wrote BIG-CLUB-SQUAD-BRIEF.md', `${(md.length / 1024).toFixed(0)} KB`, '| clubs', clubs.length, '| written', totalHave, '| to write', totalNeed);
