@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '2026.10.27.1';
+const GAME_VERSION = '2026.10.27.2';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -108,6 +108,8 @@ const natName = c => (COUNTRY[c] ? COUNTRY[c][0] : NATIONS[c] ? NATIONS[c].n : c
 const natRegion = c => (COUNTRY[c] ? COUNTRY[c][1] : NATIONS[c] ? NATIONS[c].r : 'Europe');
 const LEVELS = { A: 'First team', R: 'Reserves', Y: 'U18s' };
 
+// Where scouts come from (weights); each knows his home country best.
+const SCOUT_NATS = { ENG: 8, SCO: 2, IRL: 1, ESP: 2, POR: 2, FRA: 2, GER: 1, ITA: 1, NED: 1, BEL: 1, BRA: 2, ARG: 2, NGA: 1, GHA: 1, SEN: 1, JPN: 1, USA: 1 };
 const REGIONS = ['Everywhere', 'Premier League', 'Championship', 'Britain & Ireland', 'Europe', 'South America', 'Africa', 'Asia', 'North America', 'Free agents'];
 
 // Nationality mix for generated top-flight squads (weights).

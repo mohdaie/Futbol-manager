@@ -31,8 +31,10 @@ const assert = require('node:assert/strict');
     await page.locator('[data-a="startGame"]').click();
     const r = await page.evaluate(() => {
       const out = {};
+      // The stage tests need a blank network; country knowledge is checked on its own below.
+      staffOf('Scout').forEach(s => { s.cn = {}; s.cnv = (s.cnv || 0) + 1; });
       const others = Object.values(G.players).filter(p => p.club !== G.club && p.club !== 'FA');
-      const p = others.find(x => G.clubs[x.club].pl && lvlOf(x) === 'A' && x.ca > 70);
+      const p = others.find(x => G.clubs[x.club].pl && !inUserLeague(x) && lvlOf(x) === 'A' && x.ca > 70);
       const vis = (k) => { G.know[p.id] = k; return ATTRS.map((a, i) => { const s = seenAttr(p, i); return s.unk ? 'u' : s.ok ? 'x' : 'r'; }); };
       const grp = g => ATTRS.map((a, i) => i).filter(i => ATTRS[i][2] === g);
       const at10 = vis(10), at40 = vis(40), at60 = vis(60), at80 = vis(80), at90 = vis(90);
@@ -50,7 +52,7 @@ const assert = require('node:assert/strict');
       G.know[p.id] = 10;
       out.pid = p.id;
       out.foreign = others.find(x => !G.clubs[x.club].pl && lvlOf(x) === 'A').id;
-      out.video = others.find(x => x.id !== p.id && x.id !== out.foreign && G.clubs[x.club].pl).id;
+      out.video = others.find(x => x.id !== p.id && x.id !== out.foreign && G.clubs[x.club].pl && !inUserLeague(x)).id;
       return out;
     });
     check('Unscouted player shows no attributes', r.at10, true);
@@ -68,7 +70,9 @@ const assert = require('node:assert/strict');
     const cap = await page.evaluate(() => { const n = staffOf('Scout').length * SCOUT_LOAD; const pool = Object.values(G.players).filter(p => p.club !== G.club && p.club !== 'FA' && !G.scout.jobs.some(j => j.pid === p.id)); let ok = 0; for (let i = 0; i < 12; i++) if (scoutPlayer(pool[i]).ok) ok++; const jobs = G.scout.jobs.filter(j => j.mode === 'watch').length; G.scout.jobs = G.scout.jobs.slice(0, 3); return [jobs, n, ok]; });
     check('Each scout follows up to three players', cap[0], cap[1]);
     const run = await page.evaluate(({ pid, foreign, video }) => {
-      const k0 = [knowOf(G.players[pid]), knowOf(G.players[foreign])];
+      staffOf('Scout').forEach(s => { s.cn = genScoutCountries(s); s.cnv = (s.cnv || 0) + 1; });
+      [pid, foreign, video].forEach(id => { G.know[id] = 10; });
+      const k0 =[knowOf(G.players[pid]), knowOf(G.players[foreign])];
       let days = 0, vk = null;
       while (days < 15) { const res = advanceDay(); if (res === 'match') { playUserInstant(userFixture()); continue; } days++; if (days === 3) vk = knowOf(G.players[video]); }
       const f = G.scout.reports.find(x => x.pid === pid), ff = G.scout.reports.find(x => x.pid === foreign);
@@ -97,6 +101,61 @@ const assert = require('node:assert/strict');
     check('Older saves load with folders and jobs', old, [true, true]);
     const asg = await page.evaluate(() => { G.scout.jobs = []; G.scout.assign = []; addAssignment('Europe', 'Any', 30, 2); const before = G.scout.reports.length; weeklyScouting(); const fresh = G.scout.reports.slice(0, G.scout.reports.length - before).map(x => x.k); return fresh; });
     check('Assignments file first reports (Watched stage)', asg.length === 2 && asg.every(k => k >= 25 && k < 60), true);
+    const lg = await page.evaluate(() => {
+      const q = Object.values(G.players).find(x => inUserLeague(x) && lvlOf(x) === 'A');
+      delete G.know[q.id];
+      const exact = ATTRS.every((a, i) => seenAttr(q, i).ok) && seenOvr(q).txt === String(q.ca);
+      const k0 = knowOf(q);
+      scoutFileSheet(q.id);
+      const lockedInterest = [...document.querySelectorAll('#layer .fsec')].some(s => s.querySelector('h4')?.textContent === 'Full file' && s.querySelector('.lock'));
+      closeSheet(true);
+      noteLeaguePlayers();
+      const other = Object.keys(G.clubs).find(cid => G.clubs[cid].pl && !G.clubs[cid].fa && leagueOf(cid) !== leagueOf(G.club));
+      const from = q.club; q.club = other;
+      const kept = ATTRS.every((a, i) => seenAttr(q, i).ok);
+      q.club = from;
+      return { exact, k0, lockedInterest, kept };
+    });
+    check('League players: every attribute exact without scouting', lg.exact, true);
+    check('League players: file at 89%, interest still hidden', [lg.k0, lg.lockedInterest], [89, true]);
+    check('League players keep their attributes after leaving the league', lg.kept, true);
+    const net = await page.evaluate(() => {
+      staffOf('Scout').forEach(s => { s.cn = genScoutCountries(s); s.cnv = (s.cnv || 0) + 1; });
+      const sc = staffOf('Scout');
+      const shape = sc.every(s => s.nat && Object.keys(s.cn).length >= 2 && s.cn[s.nat] >= 55 && Object.values(s.cn).every(v => v > 0 && v <= 100));
+      const pool = Array.from({ length: 40 }, () => genStaffMember('Scout', 70));
+      const byRating = r => { const g = pool.filter(s => r ? s.rating >= 12 : s.rating <= 7); return g.length ? g.reduce((t, s) => t + Object.keys(s.cn).length, 0) / g.length : null; };
+      // One scout: an expert on Spain, nothing else.
+      const keep = G.staff; G.staff = G.staff.filter(s => s.role !== 'Scout');
+      const exp = { id: G.nextId++, role: 'Scout', name: 'Test Scout', age: 50, rating: 20, wage: 1000, nat: 'ESP', cn: { ESP: 100 } };
+      G.staff.push(exp);
+      const spain = Object.values(G.players).find(x => clubCountry(x) === 'ESP' && lvlOf(x) !== 'Y');
+      const spanishAbroad = Object.values(G.players).find(x => x.nat === 'ESP' && clubCountry(x) && clubCountry(x) !== 'ESP' && !inUserLeague(x) && x.club !== G.club);
+      const other = Object.values(G.players).find(x => clubCountry(x) && !['ESP'].includes(clubCountry(x)) && x.nat !== 'ESP' && !inUserLeague(x) && x.club !== G.club);
+      [spain, spanishAbroad, other].forEach(x => x && delete G.know[x.id]);
+      const res = { spain: spain ? knowOf(spain) : null, abroad: spanishAbroad ? knowOf(spanishAbroad) : null, other: other ? knowOf(other) : null,
+        physSeen: spain ? ATTRS.some((a, i) => a[2] === 'P' && seenAttr(spain, i).ok) : null, mentalHidden: spain ? ATTRS.every((a, i) => a[2] !== 'M' || seenAttr(spain, i).unk) : null };
+      exp.rating = 6; exp.cnv++;
+      res.weak = spain ? knowOf(spain) : null;
+      exp.rating = 20; exp.cn = { ESP: 30 }; exp.cnv++;
+      const g0 = watchGain(exp, spain, true);
+      exp.cn = { ESP: 100 }; exp.cnv++;
+      res.faster = watchGain(exp, spain, true) > g0;
+      exp.cn = { ESP: 30 };
+      learnCountry(exp, 'ESP', 1.5); res.learn = exp.cn.ESP > 30;
+      G.staff = keep;
+      return { shape, many: byRating(true), few: byRating(false), ...res };
+    });
+    console.log('network', JSON.stringify(net));
+    check('Scouts have a home country and more countries by %', net.shape, true);
+    check('Better scouts know more countries', net.many == null || net.few == null || net.many > net.few, true);
+    check('An expert on a country files its league players before watching', net.spain, 55);
+    check('Network files show physical attributes, not mental', [net.physSeen, net.mentalHidden], [true, true]);
+    check('Players of that nationality abroad are partly known', net.abroad > 10 && net.abroad < net.spain, true);
+    check('Other countries are not helped', net.other, 10);
+    check('A poor scout knows less of the same country', net.weak < net.spain, true);
+    check('Knowing the country speeds up watching', net.faster, true);
+    check('Working in a country raises knowledge', net.learn, true);
     check('No browser runtime errors', errors, []);
     console.log(JSON.stringify({ passed: checks.length, checks }, null, 2));
   } finally { await browser.close(); server.close(); }
