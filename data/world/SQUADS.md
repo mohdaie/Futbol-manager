@@ -65,3 +65,14 @@ New careers add 235 full records (+9.2%) rather than generating squads for all 7
 The draft's 12-second live sample averaged 55.6 FPS with three frame intervals over 50 ms and a longest interval of 117 ms. Live runs varied substantially, including the baseline; this does not establish an FPS improvement or guarantee smooth playback on phones. Real Android Chrome and iPhone Safari remain untested.
 
 The existing renderer invalidates the full entity-name index on every render, and save-worker posting still synchronously copies the whole career. Both remain performance costs as the player database expands. They were deliberately left for separate performance work; this feature does not claim to solve those pauses.
+
+## Full 25-man overseas squad databases (data only)
+
+`data/world/overseas/` holds complete squad data for all 76 overseas clubs. It is not yet loaded by the game, which still seeds 17 players at 20 clubs and virtual rows at the other 56.
+
+| File | Contents |
+| --- | --- |
+| `big_overseas_clubs_completed_squad_rosters.md` | The 14 added slots for each of the 20 big clubs (280 players), repaired from `big-clubs-draft.md`. The change log at the end lists each repair. |
+| `other_overseas_clubs_squad_rosters.md` | Generated 25-man squads for the other 56 clubs (1,400 players). |
+
+Every name is fictional and unique across both files. `inspired_by` only records the real-world archetype of the 280 big-club players and is `-` for generated players. Spanish clubs have at most three Non-EU players, and the Basque-only rule is applied at Athletic. Regenerate with `python3 scripts/build-overseas-squads.py`; output is deterministic and the script fails if any club breaks its CA band, squad size, EU status, U21 flag or Non-EU limit.
