@@ -51,13 +51,35 @@ ACT.lineupSubIn=ds=>{
   closeSheet(true);updateBoard(L);liveKeep(L);
   document.querySelector(`#liveWatchPlayers [data-id="${id}"]`)?.focus({preventScroll:true});
 };
+// Tokens are 60px wide and ~55px tall on a ~330px pitch: shapes with tucked-in full-backs or a holding midfielder
+// put several at nearly the same spot, so push overlapping tokens apart (along the axis that needs the smaller move).
+function spreadTokens(pts, minDx = 19, minDy = 16, [x0, x1, y0, y1] = [10, 90, 8, 88]) {
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  for (let pass = 0; pass < 40; pass++) {
+    let moved = false;
+    for (let a = 0; a < pts.length; a++) for (let b = a + 1; b < pts.length; b++) {
+      const A = pts[a], B = pts[b], dx = B[0] - A[0], dy = B[1] - A[1];
+      const ox = minDx - Math.abs(dx), oy = minDy - Math.abs(dy);
+      if (ox <= 0.01 || oy <= 0.01) continue;
+      moved = true;
+      if (ox / minDx <= oy / minDy) { const s = (dx < 0 ? -1 : 1) * ox / 2; A[0] = clamp(A[0] - s, x0, x1); B[0] = clamp(B[0] + s, x0, x1); }
+      else { const s = (dy < 0 ? -1 : 1) * oy / 2; A[1] = clamp(A[1] - s, y0, y1); B[1] = clamp(B[1] + s, y0, y1); }
+    }
+    if (!moved) break;
+  }
+  return pts;
+}
 function matchFormationsHtml(L) {
   const phase=L.formationPhase==='oop'?'oop':'ip';
   return `<div class="seg" aria-label="Formation phase"><button class="${phase==='ip'?'on':''}" data-a="matchFormationPhase" data-v="ip">With the ball</button><button class="${phase==='oop'?'on':''}" data-a="matchFormationPhase" data-v="oop">Without the ball</button></div><div class="match-formations">${L.M.sides.map((S,side)=>{
     const coords=positions({...S,fam:100},phase==='ip',.5,phase==='ip' ? 0.45 : 0.55),map=shapeMap(S.ip,S.oop),color=L.colors[side===L.bottom?0:1].f;
+    const spots=spreadTokens(S.on.map((id,i)=>{
+      const slot=FORMATIONS[phase==='ip'?S.ip:S.oop][phase==='ip'?i:map[i]],q=coords[i]||slot.slice(1),canonical=side===0?q:[1-q[0],1-q[1]],v=view(L,canonical[0]*PW,canonical[1]*PL);
+      return [8+v[0]/PW*84,7+v[1]/PL*81];
+    }));
     return `<section class="match-team" data-formation-side="${side}"><h3>${badge(S.cid,20)} ${esc(clubName(S.cid))} <small>Attacks ${liveAttackArrow(L,side)}</small></h3><p class="muted">${S.ip} with the ball · ${S.oop} without it</p><div class="tpitch match-team-pitch ${phase}" style="--team-color:${color};--team-ink:${isLight(color)?'#161222':'#fff'}"><div class="tp-lines"></div>${S.on.map((id,i)=>{
-      const slot=FORMATIONS[phase==='ip'?S.ip:S.oop][phase==='ip'?i:map[i]],q=coords[i]||slot.slice(1),canonical=side===0?q:[1-q[0],1-q[1]],v=view(L,canonical[0]*PW,canonical[1]*PL),p=G.players[id],label=pitchPosLabel(slot[0]);
-      return p?`<button class="tok" style="left:${8+v[0]/PW*84}%;top:${7+v[1]/PL*81}%" data-a="livePl" data-id="${id}" aria-label="${esc(fullName(p))}: ${label}"><span class="tk-c">${label}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${phase==='ip'?esc(roleName(S,i)):label}</span></button>`:`<span class="tok live-gap-token" style="left:${8+v[0]/PW*84}%;top:${7+v[1]/PL*81}%"><span class="tk-c">${label}</span><span class="tk-n">Empty</span></span>`;
+      const slot=FORMATIONS[phase==='ip'?S.ip:S.oop][phase==='ip'?i:map[i]],pos=`left:${spots[i][0].toFixed(2)}%;top:${spots[i][1].toFixed(2)}%`,p=G.players[id],label=pitchPosLabel(slot[0]);
+      return p?`<button class="tok" style="${pos}" data-a="livePl" data-id="${id}" aria-label="${esc(fullName(p))}: ${label}"><span class="tk-c">${label}</span><span class="tk-n">${esc(p.ln)}</span><span class="tk-r">${phase==='ip'?esc(roleName(S,i)):label}</span></button>`:`<span class="tok live-gap-token" style="${pos}"><span class="tk-c">${label}</span><span class="tk-n">Empty</span></span>`;
     }).join('')}</div></section>`;
   }).join('')}</div>`;
 }
