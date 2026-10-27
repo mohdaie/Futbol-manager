@@ -424,8 +424,8 @@ function draw(L) {
       const action = liveAction(L, si, i);
       const jump = action?.style === 'header' ? Math.sin(Math.PI * clamp((L.gt - action.t + 0.18) / 0.5, 0, 1)) * s * 0.35 : 0;
       const [vx, vy] = view(L, pr[0], pr[1]), x = X(vx), groundY = Y(vy), y = groundY - jump, gk = i === 0;
-      // The circle is his body (sim.js bodyRadius) at pitch scale, so contacts on screen match the physics.
-      const br = Math.max(3, bodyRadius(S, i) * s);
+      // Keep players legible on a phone while retaining their pitch-scale size when zoomed in.
+      const br = Math.max(5, bodyRadius(S, i) * s);
       if (x < -20 || x > W + 20 || y < -20 || y > H + 20) return;
       g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, groundY + br * 0.7, br * 0.9, br * 0.35, 0, 0, Math.PI * 2); g.fill();
       // Small alternating boots give runners weight without moving the body away
@@ -455,7 +455,7 @@ function draw(L) {
         g.fillStyle = gk ? '#1B1B1B' : col.s; g.beginPath();
         g.moveTo(x + cx * (br + 3), y + cy * (br + 3)); g.lineTo(x + cx * br * 0.7 - cy * br * 0.55, y + cy * br * 0.7 + cx * br * 0.55); g.lineTo(x + cx * br * 0.7 + cy * br * 0.55, y + cy * br * 0.7 - cx * br * 0.55); g.closePath(); g.fill();
       }
-      if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, br + 3, 0, Math.PI * 2); g.stroke(); }
+      if (L.own[0] === si && L.own[1] === i) { g.strokeStyle = '#2DE2EE'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, br + 3, 0, Math.PI * 2); g.stroke(); }
       if (L.sel && L.sel[0] === si && L.sel[1] === i) { g.strokeStyle = '#FFFFFF'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, br + 5, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = isLight(gk ? col.gk : col.f) ? '#111' : '#FFF';
       g.font = `700 ${Math.max(6, Math.round(br * 1.6))}px "Plus Jakarta Sans", system-ui, sans-serif`;

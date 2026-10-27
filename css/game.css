@@ -875,6 +875,13 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 .match-team-pitch .tk-c { background: var(--team-color) !important; color: var(--team-ink); font-size: 11px; }
 .match-stats { background: var(--stand); border: 1px solid var(--line); border-radius: 8px; padding: 9px; }
 .mscr .mctl { grid-template-columns: repeat(4,minmax(0,1fr)); }
+/* Larger touch targets for the match controls. */
+.mscr .feed li > span { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mscr .mctl { gap: 5px; }
+.mscr .mctl button { min-height: 44px; padding: 6px 2px; font-size: 11px; }
+@media (max-height: 700px) {
+  .mscr { min-height: 620px; }
+}
 @media(min-width:700px){ .match-formations { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
 
 /* Substitution decisions show live condition and mood for starters and bench. */
