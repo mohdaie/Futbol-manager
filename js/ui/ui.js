@@ -228,7 +228,7 @@ function playerHex(p) {
   const spokes = axes.map((_, i) => { const [x, y] = pt(i, R); return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="hx-ring"/>`; }).join('');
   const labels = axes.map(([n], i) => { const [x, y] = pt(i, R + 15); const anchor = Math.abs(x - cx) < 5 ? 'middle' : x > cx ? 'start' : 'end'; return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${n} <tspan>${Math.round(vals[i] * 20)}</tspan></text>`; }).join('');
   return `<svg class="hex" viewBox="0 0 340 192" role="img" aria-label="${axes.map(([n], i) => n + ' ' + Math.round(vals[i] * 20)).join(', ')}">${rings}${spokes}
-    <polygon points="${poly(i => R * clamp(vals[i], 0.06, 1))}" class="hx-shape ${mine || knowOf(p) >= 95 ? '' : 'est'}"/>${labels}</svg>`;
+    <polygon points="${poly(i => R * clamp(vals[i], 0.06, 1))}" class="hx-shape ${mine || attrKnow(p) >= 95 || leagueKnown(p) ? '' : 'est'}"/>${labels}</svg>`;
 }
 const formChips = arr => `<span class="form">${arr.slice(-5).map(r => `<i class="f${r}">${r}</i>`).join('')}</span>`;
 const empty = (t, d) => `<div class="empty"><b>${t}</b><p>${d}</p></div>`;

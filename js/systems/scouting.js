@@ -9,9 +9,22 @@
      knowledge (his rating, his home region, whether the player played). Video analysis is quick and cheap
      but stops at the Scouted stage. Assignments search a region and file first reports.
    - Every player watched has a file (G.scout.reports) with a grade, a recommendation, the matches watched,
-     notes and a history, kept in folders. */
+     notes and a history, kept in folders.
+   - Players in your league (and anyone who has played in it while you were there) are known from watching
+     the league: every attribute is exact and the file starts at 89%. Only the full file (90%) is hidden, which
+     holds his happiness, his role and whether he would join you. One scouting visit confirms it. */
 
-const knowOf = p => (p.club === G.club ? 100 : G.know[p.id] ?? 10);
+const LEAGUE_KNOW = 89;
+const inUserLeague = p => { const c = G.clubs[p.club]; return !!(c && c.pl && !c.fa && p.club !== G.club && leagueOf(c.id) === leagueOf(G.club)); };
+const knowOf = p => (p.club === G.club ? 100 : Math.max(G.know[p.id] ?? 10, inUserLeague(p) ? LEAGUE_KNOW : 0));
+// Knowledge used for attributes, ability and potential: a league file shows every attribute exactly.
+const leagueKnown = p => (G.leagueSeen || {})[p.id] || inUserLeague(p);
+const attrKnow = p => (leagueKnown(p) ? Math.max(90, knowOf(p)) : knowOf(p));
+// Weekly: remember the players seen in your league, so their file keeps its attributes after they leave it.
+function noteLeaguePlayers() {
+  const seen = G.leagueSeen ||= {};
+  Object.values(G.players).forEach(p => { if (inUserLeague(p)) { seen[p.id] = 1; G.know[p.id] = Math.max(G.know[p.id] ?? 10, LEAGUE_KNOW); } });
+}
 const regionOf = p => { const c = G.clubs[p.club]; if (!c) return 'Free agents'; if (c.pl) return G.flags.legacyLeagueSetup && leagueOf(c.id) === 'EPL' ? 'Premier Division' : leagueName(leagueOf(c.id)); if (c.fa) return 'Free agents'; return NATIONS[c.nat].r; };
 const KNOW_STAGES = [[0, 'Heard of'], [25, 'Watched'], [50, 'Scouted'], [75, 'Detailed'], [90, 'Full file']];
 const knowStage = k => KNOW_STAGES.filter(s => k >= s[0]).pop();
@@ -37,7 +50,7 @@ function attrConfirmAt(p, i) {
 
 // Attribute as the user sees it: exact once confirmed, a range while his stage is being scouted, "?" before.
 function seenAttr(p, i) {
-  const k = knowOf(p), v = p.at[i];
+  const k = attrKnow(p), v = p.at[i];
   if (k >= 90 || k >= attrConfirmAt(p, i)) return { lo: v, hi: v, txt: String(v), ok: true };
   if (k < ATTR_STAGE[ATTRS[i][2]]) return { lo: 1, hi: 20, txt: '?', unk: true };
   const w = 2;
@@ -50,7 +63,7 @@ function attrCell(p, i) {
   return s.unk ? '<b class="unk" title="Not scouted yet">?</b>' : `<b class="${attrClass(s.hi)}${s.ok ? '' : ' est'}"${s.ok ? '' : ' title="Estimate"'}>${s.txt}</b>`;
 }
 function seenOvr(p) {
-  const k = knowOf(p);
+  const k = attrKnow(p);
   if (k >= 90) return { v: p.ca, txt: String(p.ca) };
   if (k < 25) return { v: p.ca + Math.round((hash01(p.id + 'o') - 0.5) * 20), txt: '??' };
   const w = k < 50 ? 12 : k < 75 ? 6 : 2;
@@ -59,7 +72,7 @@ function seenOvr(p) {
 }
 const potKnown = p => p.club === G.club || knowOf(p) >= 75;
 function seenPot(p) {
-  const k = knowOf(p);
+  const k = attrKnow(p);
   const err = (hash01(p.id + 'p') - 0.5) * (100 - k) * 0.35;
   return stars(p.pa + err);
 }
@@ -70,7 +83,7 @@ function userBestAt(pos) {
 // Graded from what the scouts have seen, not from hidden numbers.
 function scoutGrade(p) {
   if (knowOf(p) < 25) return '?';
-  const so = seenOvr(p).v, pot = potKnown(p) ? p.pa + (hash01(p.id + 'p') - 0.5) * (100 - knowOf(p)) * 0.35 : so + (p.age <= 22 ? 4 : 0);
+  const so = seenOvr(p).v, pot = potKnown(p) ? p.pa + (hash01(p.id + 'p') - 0.5) * (100 - attrKnow(p)) * 0.35 : so + (p.age <= 22 ? 4 : 0);
   const score = so * 0.6 + pot * 0.4 - userBestAt(p.pos);
   return score > 5 ? 'A' : score > 0 ? 'B' : score > -6 ? 'C' : 'D';
 }
@@ -228,6 +241,7 @@ function matchesAssignment(p, a) {
 }
 // An assignment finds two players a week and files first reports (the Watched stage).
 function weeklyScouting() {
+  noteLeaguePlayers();
   G.scout.assign.forEach(a => {
     const s = scoutById(a.sid), judge = s ? s.rating : staffAvg('Scout', 6);
     const pool = Object.values(G.players).filter(p => matchesAssignment(p, a) && knowOf(p) < 60);
@@ -255,6 +269,7 @@ function addAssignment(region, pos, maxAge, weeks) {
 // Older saves: jobs list, folders and history on old reports, scouts on old assignments.
 function ensureScouting() {
   G.scout.jobs = G.scout.jobs || [];
+  G.leagueSeen = G.leagueSeen || {};
   G.scout.reports.forEach(r => { r.folder = r.folder || 'new'; r.hist = r.hist || []; r.seen = r.seen || []; if (r.k == null && G.players[r.pid]) r.k = knowOf(G.players[r.pid]); });
   G.scout.assign.forEach(a => { if (!a.sid) { const s = staffOf('Scout').find(x => !G.scout.assign.some(b => b.sid === x.id)); if (s) a.sid = s.id; } });
 }
