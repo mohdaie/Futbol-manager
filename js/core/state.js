@@ -22,7 +22,7 @@ function theClub(c) {
 }
 const TheClub = c => { const s = theClub(c); return s[0].toUpperCase() + s.slice(1); };
 const possessive = s => s + (/s$/i.test(s) ? "'" : "'s");
-const plClubs = () => leagueClubs('EPL');
+const plClubs = () => leagueClubs(topLeague());
 const squadOf = id => G.clubs[id].squad.map(pid => G.players[pid]).filter(Boolean);
 const seniorSquad = id => squadOf(id).filter(p => lvlOf(p) === 'A');
 const levelSquad = (id, l) => squadOf(id).filter(p => lvlOf(p) === l);
@@ -37,7 +37,7 @@ function assignNumber(c, p) {
 
 function addToClub(p, c) {
   if (!squadSpace(c, p)) throw new Error(squadLimitMessage(c));
-  if (c.league === 'ECH' && lvlOf(p) === 'Y') { p.lvl = 'R'; p.youth = false; }
+  if (leagueTier(c.league) === 2 && lvlOf(p) === 'Y') { p.lvl = 'R'; p.youth = false; }
   G.players[p.id] = p;
   p.club = c.id;
   assignNumber(c, p);
@@ -89,7 +89,7 @@ function genYouth(c, quality) {
   const pos = pick(SQUAD_TEMPLATE);
   const age = ri(15, 17);
   const pa = clamp(quality + gauss() * 9 + (R() < 0.06 ? 12 : 0), 45, 95);
-  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: c.worldLeague ? youthNat(c) : R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, lvl: c.league === 'ECH' ? 'R' : 'Y' });
+  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: c.worldLeague ? youthNat(c) : R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, lvl: leagueTier(c.league) === 2 ? 'R' : 'Y' });
   addToClub(p, c);
   p.wage = roundWage(rf(300, 900));
   p.con = G.season + 3;
@@ -138,14 +138,14 @@ const staffAvg = (role, dflt = 8) => { const s = staffOf(role); return s.length 
 
 function expectationFor(cid) {
   const order = leagueClubs(leagueOf(cid)).slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
-  const r = order.indexOf(cid);
-  if (leagueOf(cid) === 'ECH') return r < 3 ? { pos: 2, text: 'Win automatic promotion' } : r < 8 ? { pos: 6, text: 'Reach the promotion playoffs' } : r < 16 ? { pos: 12, text: 'Finish in the top half' } : { pos: 21, text: 'Avoid relegation' };
+  const r = order.indexOf(cid), n = order.length;
+  if (leagueTier(leagueOf(cid)) === 2) return r < 3 ? { pos: 2, text: 'Win automatic promotion' } : r < 8 ? { pos: 6, text: 'Reach the promotion playoffs' } : r < Math.round(n * 2 / 3) ? { pos: Math.round(n / 2), text: 'Finish in the top half' } : { pos: n - 3, text: 'Avoid relegation' };
   if (r < 2) return { pos: 1, text: 'Win the league' };
   if (r < 5) return { pos: 4, text: 'Qualify for the Champions Cup (top 4)' };
   if (r < 8) return { pos: 7, text: 'Qualify for Europe (top 7)' };
-  if (r < 12) return { pos: 10, text: 'Finish in the top half' };
-  if (r < 16) return { pos: 14, text: 'Comfortable mid-table finish' };
-  return { pos: 17, text: 'Avoid relegation' };
+  if (r < Math.round(n * 0.6)) return { pos: Math.round(n * 0.5), text: 'Finish in the top half' };
+  if (r < Math.round(n * 0.8)) return { pos: Math.round(n * 0.7), text: 'Comfortable mid-table finish' };
+  return { pos: n - 3, text: 'Avoid relegation' };
 }
 
 // Computer clubs: big clubs lean to pressing and possession, smaller clubs to counter-attack and long ball.
@@ -157,10 +157,13 @@ function aiTactic(rep = 70) {
 }
 
 function newGame(clubId, manager, avatar) {
-  if (!CLUBS.concat(CHAMPIONSHIP_CLUBS).some(c => c.id === clubId)) throw new Error('This club is not playable yet. Choose a Premier League or Championship club.');
+  // A career is played in one country's two divisions; every other country is a lightweight simulation (world-sim.js).
+  const english = CLUBS.concat(CHAMPIONSHIP_CLUBS).some(c => c.id === clubId), entry = english ? null : WORLD_CLUBS.find(e => e.id === clubId);
+  if (!english && !entry) throw new Error('This club is not playable yet. Choose a club from the league list.');
+  const country = english ? 'ENG' : LEAGUES[entry.league].country;
   G = {
-    createdAt: Date.now(),
-    leagues: ['EPL', 'ECH'], competitionVersion: 2, v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,
+    createdAt: Date.now(), country,
+    leagues: english ? ['EPL', 'ECH'] : [], competitionVersion: 2, v: 1, manager: manager || 'The Boss', avatar: avatar || 1, club: clubId, season: START_SEASON, week: 0, day: 0, nextId: 1,
     players: {}, clubs: {}, fixtures: [], news: [], know: {}, shortlist: [],
     scout: { assign: [], reports: [], jobs: [] }, pitches: [], offers: [], tHist: [],
     fin: null, board: null, staff: [], staffPool: [], tactics: null,
@@ -168,7 +171,7 @@ function newGame(clubId, manager, avatar) {
     ledger: null, ledgerPrev: null, balHist: [], history: [], trophies: [],
     settings: { speed: 2 }, seasonReview: null, gameOver: false, flags: {}, lastMatch: null, press: {},
   };
-  CLUBS.concat(CHAMPIONSHIP_CLUBS).forEach(c => {
+  if (english) CLUBS.concat(CHAMPIONSHIP_CLUBS).forEach(c => {
     const league = ENGLAND_MEMBERSHIP_2026.ECH.includes(c.id) ? 'ECH' : 'EPL';
     const cl = { ...c, squad: [], bal: Math.round(30e6 + Math.pow(Math.max(0, c.rep - 60), 2) * 0.25e6), tac: aiTactic(c.rep), pl: true, league };
     G.clubs[c.id] = cl;
@@ -197,10 +200,12 @@ function newGame(clubId, manager, avatar) {
     G.know[p.id] = c.pl ? 45 : c.fa ? 20 : 10;
   });
 
+  if (!english) { ensureWorldLeagues(); G.club = resolveCatalogClub(clubId).id; } // the registry holds every other club, so the career has a club to manage
   ensureWorld({ newCareer: true });
+  if (!english) { activateCountry(country); ensureWorld(); }
   G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
   setupUserClub();
-  addNews('club', 'Welcome to ' + theClub(clubId), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${lcFirst(G.board.target.text)}. The transfer budget is ${money(G.fin.tb)}.`, null);
+  addNews('club', 'Welcome to ' + theClub(G.club), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${lcFirst(G.board.target.text)}. The transfer budget is ${money(G.fin.tb)}.`, null);
   addNews('club', 'Pre-season begins', 'Set your training focus, review the squad and check the tactics screen before the opening match in mid-August. The summer transfer window is open until 1 September.');
   seasonOpeningStory();
   saveGame();

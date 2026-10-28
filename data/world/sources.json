@@ -108,6 +108,109 @@
         "Toulouse FC"
       ],
       "url": "https://github.com/openfootball/football.json/blob/e6744429ee395bc86f247348c6184bb08d4eb361/2026-27/fr.1.json"
+    },
+    "DE2": {
+      "name": "2. Bundesliga",
+      "country": "Germany",
+      "teams": [
+        "1. FC Heidenheim",
+        "1. FC Kaiserslautern",
+        "1. FC Magdeburg",
+        "1. FC Nürnberg",
+        "Arminia Bielefeld",
+        "Dynamo Dresden",
+        "Eintracht Braunschweig",
+        "Energie Cottbus",
+        "FC St. Pauli",
+        "Greuther Fürth",
+        "Hannover 96",
+        "Hertha BSC",
+        "Holstein Kiel",
+        "Karlsruher SC",
+        "SV Darmstadt 98",
+        "VfL Bochum",
+        "VfL Osnabrück",
+        "VfL Wolfsburg"
+      ]
+    },
+    "IT2": {
+      "name": "Serie B",
+      "country": "Italy",
+      "teams": [
+        "Ascoli Calcio",
+        "Benevento Calcio",
+        "Calcio Padova",
+        "Carrarese Calcio",
+        "Cesena FC",
+        "FC Empoli",
+        "FC Südtirol",
+        "Hellas Verona",
+        "Juve Stabia",
+        "LR Vicenza",
+        "Mantova 1911",
+        "Modena FC",
+        "Palermo FC",
+        "Pisa Sporting Club",
+        "SS Arezzo",
+        "UC Sampdoria",
+        "US Avellino 1912",
+        "US Catanzaro",
+        "US Cremonese",
+        "Virtus Entella"
+      ]
+    },
+    "ES2": {
+      "name": "Segunda División",
+      "country": "Spain",
+      "teams": [
+        "AD Ceuta FC",
+        "Albacete Balompié",
+        "Burgos CF",
+        "Cádiz CF",
+        "CD Castellón",
+        "CD Eldense",
+        "CD Leganés",
+        "CD Tenerife",
+        "CE Sabadell FC",
+        "Celta de Vigo B (Celta Fortuna)",
+        "Córdoba CF",
+        "FC Andorra",
+        "Girona FC",
+        "Granada CF",
+        "RCD Mallorca",
+        "Real Oviedo",
+        "Real Sociedad B",
+        "Real Valladolid",
+        "SD Eibar",
+        "Sporting Gijón",
+        "UD Almería",
+        "UD Las Palmas"
+      ]
+    },
+    "FR2": {
+      "name": "Ligue 2",
+      "country": "France",
+      "teams": [
+        "AS Saint-Étienne (ASSE)",
+        "Clermont Foot 63",
+        "Dijon FCO",
+        "En Avant Guingamp",
+        "FC Annecy",
+        "FC Metz",
+        "FC Nantes",
+        "FC Sochaux-Montbéliard (FCSM)",
+        "Grenoble Foot 38",
+        "Montpellier HSC",
+        "Nancy Lorraine",
+        "Pau FC",
+        "Red Star FC",
+        "Rodez AF",
+        "Stade de Reims",
+        "Stade Lavallois (Laval)",
+        "US Boulogne",
+        "USL Dunkerque"
+      ]
     }
-  }
+  },
+  "secondTierNote": "Second-division membership is the supplied 2026/27 projection (data/world/overseas/second-tier-clubs.md), not an official list. Real names are shown only in club metadata; the game displays fictional nicknames."
 }

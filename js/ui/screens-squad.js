@@ -24,7 +24,7 @@ SCREENS.squad = {
     const f = UI.f.squad, s = UI.f.sort, levels = clubLevels(userClub()), l = Object.hasOwn(levels, UI.f.lvl) ? UI.f.lvl : 'A';
     const list = levelSquad(G.club, l).filter(p => f === 'ALL' || POS_GROUP[p.pos] === f).sort(SORTS[s]);
     const xi = new Set(G.tactics.slots);
-    const note = { A: 'Picked for league matches. Reserves fill in only when fewer than 16 are fit.', R: userClub().league === 'ECH' ? 'Reserve squad within the combined 36-player limit. Move a player up when he is ready for minutes.' : 'Under-21 squad. Move a player up when he is ready for minutes.', Y: 'Academy players aged 15 to 18. At 19 they move up to the reserves.' }[l];
+    const note = { A: 'Picked for league matches. Reserves fill in only when fewer than 16 are fit.', R: leagueTier(userClub().league) === 2 ? 'Reserve squad within the combined 36-player limit. Move a player up when he is ready for minutes.' : 'Under-21 squad. Move a player up when he is ready for minutes.', Y: 'Academy players aged 15 to 18. At 19 they move up to the reserves.' }[l];
     return `<h1 class="h1">Squad <small>${squadOf(G.club).length}${Number.isFinite(clubSquadMax(userClub())) ? ' / ' + clubSquadMax(userClub()) : ''} players</small></h1>
       <div class="seg wide">${Object.entries(levels).map(([k, n]) => `<button class="${l === k ? 'on' : ''}" data-a="sqL" data-v="${k}">${n} <small>${levelSquad(G.club, k).length}</small></button>`).join('')}</div>
       ${userClub().league === 'EPL' ? `<div class="card"><div class="sec-h"><div><h3>Premier League registration</h3><span class="muted">${registeredPLIds(userClub()).size} / ${premierLeagueRegistrationLimit()} senior places used</span></div><button class="btn sm" data-a="go" data-s="registration">Manage</button></div><p class="muted">Choose your season list. Eligible Under-21 players do not use a place.</p></div>` : ''}
@@ -414,7 +414,7 @@ SCREENS.medical = {
 
 SCREENS.youth = {
   render() {
-    if (userClub().league === 'ECH') return `<h1 class="h1">Reserve development</h1><p class="muted">Championship clubs have first team and reserves only, with a combined maximum of 36 players. New prospects join the reserves when there is space.</p><div class="list">${levelSquad(G.club, 'R').map(p => playerRow(p)).join('')}</div>`;
+    if (leagueTier(userClub().league) === 2) return `<h1 class="h1">Reserve development</h1><p class="muted">${leagueName(userClub().league)} clubs have first team and reserves only, with a combined maximum of 36 players. New prospects join the reserves when there is space.</p><div class="list">${levelSquad(G.club, 'R').map(p => playerRow(p)).join('')}</div>`;
     const y = levelSquad(G.club, 'Y').sort((a, b) => b.pa - a.pa);
     const d = new Date(G.season + 1, 2, 15);
     return `<h1 class="h1">Youth academy</h1>

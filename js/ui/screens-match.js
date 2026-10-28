@@ -95,29 +95,38 @@ ACT.titleSpeed = ds => {
 };
 
 /* ---------- start ---------- */
-const START = { club: 'GUN', league: 'EPL', name: '', avatar: 1 };
+const START = { club: 'GUN', country: 'ENG', league: 'EPL', name: '', avatar: 1 };
 function startBadge(c, size) {
   return clubBadge(c, size);
 }
+const startCatalog = league => (league === 'EPL' ? CLUBS : league === 'ECH' ? CHAMPIONSHIP_CLUBS : WORLD_CLUBS.filter(c => c.league === league)).slice().sort((a, b) => b.rep - a.rep);
+// Expectation labels follow the club's place in the rep order, scaled to the size of the division.
+function startExpectation(league, i, n) {
+  const f = (i + 0.5) / n;
+  if (LEAGUES[league].tier === 2) return f < 0.17 ? 'Promotion contenders' : f < 0.42 ? 'Playoff contenders' : f < 0.75 ? 'Mid-table' : 'Survival';
+  return f < 0.1 ? 'Title favourites' : f < 0.25 ? 'Top four' : f < 0.4 ? 'Push for Europe' : f < 0.6 ? 'Top half' : f < 0.8 ? 'Mid-table' : 'Survival';
+}
+const startDifficulty = (i, n) => { const f = (i + 0.5) / n; return f < 0.25 ? 1 : f < 0.5 ? 2 : f < 0.75 ? 3 : 4; };
 SCREENS.start = {
   full: true,
   render() {
-    const catalog = START.league === 'ECH' ? CHAMPIONSHIP_CLUBS : CLUBS;
-    const order = catalog.slice().sort((a, b) => b.rep - a.rep);
-    const exp = i => (i < 2 ? 'Title favourites' : i < 5 ? 'Top four' : i < 8 ? 'Push for Europe' : i < 12 ? 'Top half' : i < 16 ? 'Mid-table' : 'Survival');
-    const diff = i => (i < 5 ? 1 : i < 10 ? 2 : i < 15 ? 3 : 4);
-    const sel = catalog.find(c => c.id === START.club) || order[0];
+    const country = COUNTRIES[START.country], lg = LEAGUES[START.league];
+    const order = startCatalog(START.league);
+    const sel = order.find(c => c.id === START.club) || order[0];
+    const others = Object.values(COUNTRIES).filter(c => c.id !== country.id).map(c => c.name).join(', ');
     return `<div class="start">
       <button class="link back" data-a="back">‹ Back</button>
-      <header class="st-hero"><div class="eyebrow">${seasonLabelRaw(START_SEASON)} · ${leagueName(START.league)}</div><h1 class="logo">Futbol<br>Manager</h1><p>Pick a club, build a squad, win the league.</p></header>
+      <header class="st-hero"><div class="eyebrow">${seasonLabelRaw(START_SEASON)} · ${lg.name}</div><h1 class="logo">Futbol<br>Manager</h1><p>Pick a club, build a squad, win the league.</p></header>
       ${hasSave() ? '<button class="btn pri wide" data-a="resume">Continue your career</button>' : ''}
       <div class="field"><label for="mgr">Manager name</label><input id="mgr" type="text" maxlength="28" placeholder="Your name" value="${esc(START.name)}" data-c="mgr"></div>
       <h2 class="lbl">Choose your manager</h2>
       ${avatarPicker(START.avatar, 'pickAvatar')}
-      <h2 class="lbl">Choose your league</h2><div class="seg">${Object.values(LEAGUES).map(r => `<button class="${START.league === r.id ? 'on' : ''}" data-a="pickLeague" data-id="${r.id}">${r.name}</button>`).join('')}</div><p class="muted">${START.league === 'ECH' ? '24 clubs · 46 league games · First team and reserves · 36 players maximum' : '20 clubs · 38 league games · First team, reserves and U18s'}</p>
-      <p class="muted">Also in the world: Spain (${WORLD_LEAGUES.ES1.teams}), Italy (${WORLD_LEAGUES.IT1.teams}), Germany (${WORLD_LEAGUES.DE1.teams}) and France (${WORLD_LEAGUES.FR1.teams}). Five clubs per country play friendlies and sell players; their leagues are not simulated.</p>
+      <h2 class="lbl">Choose your country</h2><div class="seg" data-seg="country">${Object.values(COUNTRIES).map(c => `<button class="${START.country === c.id ? 'on' : ''}" data-a="pickCountry" data-id="${c.id}">${c.name}</button>`).join('')}</div>
+      <h2 class="lbl">Choose your division</h2><div class="seg" data-seg="league">${country.tiers.map(id => `<button class="${START.league === id ? 'on' : ''}" data-a="pickLeague" data-id="${id}">${LEAGUES[id].name}</button>`).join('')}</div>
+      <p class="muted">${lg.teams} clubs · ${lg.matches} league games · ${country.name} has two full divisions with promotion and relegation</p>
+      <p class="muted">The leagues you do not pick (${others}) still play on in the background: fixtures, tables, transfers and promotion and relegation, with the same players you can scout.</p>
       <h2 class="lbl">Choose your club</h2>
-      <div class="clubs">${order.map((c, i) => `<button class="club ${START.club === c.id ? 'on' : ''}" data-a="pickClub" data-id="${c.id}" style="--k1:${c.c1}">${startBadge(c, 28)}<span class="grow"><b>${c.name}</b><small>${esc(c.city)} · ${START.league === 'ECH' ? (i < 4 ? 'Promotion contenders' : i < 10 ? 'Playoff contenders' : i < 18 ? 'Mid-table' : 'Survival') : exp(i)}</small></span><span class="diff d${diff(i)}" title="Difficulty">${['', 'Easy', 'Normal', 'Hard', 'Very hard'][diff(i)]}</span></button>`).join('')}</div>
+      <div class="clubs">${order.map((c, i) => `<button class="club ${START.club === c.id ? 'on' : ''}" data-a="pickClub" data-id="${c.id}" style="--k1:${c.c1}">${startBadge(c, 28)}<span class="grow"><b>${c.name}</b><small>${esc(c.city)} · ${startExpectation(START.league, i, order.length)}</small></span><span class="diff d${startDifficulty(i, order.length)}" title="Difficulty">${['', 'Easy', 'Normal', 'Hard', 'Very hard'][startDifficulty(i, order.length)]}</span></button>`).join('')}</div>
       <div class="st-go"><button class="btn pri wide big" data-a="startGame">Take charge of ${theClub(sel)}</button></div>
     </div>`;
   },
@@ -125,7 +134,8 @@ SCREENS.start = {
 const seasonLabelRaw = s => s + '/' + String(s + 1).slice(2);
 function rememberManagerName() { const field=document.getElementById('mgr');if(field)START.name=field.value; }
 document.addEventListener('input', e => { if(e.target.id==='mgr')START.name=e.target.value; });
-ACT.pickLeague = ds => { if (!LEAGUES[ds.id]) return; rememberManagerName(); START.league = ds.id; START.club = (ds.id === 'ECH' ? CHAMPIONSHIP_CLUBS : CLUBS)[0].id; render(); };
+ACT.pickCountry = ds => { if (!COUNTRIES[ds.id]) return; rememberManagerName(); START.country = ds.id; START.league = COUNTRIES[ds.id].tiers[0]; START.club = startCatalog(START.league)[0].id; render(); };
+ACT.pickLeague = ds => { if (!LEAGUES[ds.id] || LEAGUES[ds.id].country !== START.country) return; rememberManagerName(); START.league = ds.id; START.club = startCatalog(ds.id)[0].id; render(); };
 ACT.pickClub = ds => { rememberManagerName(); START.club = ds.id; render(); };
 ACT.pickAvatar = ds => { rememberManagerName(); START.avatar = +ds.v; render(); };
 CHG.mgr = v => { START.name = v; };
@@ -149,7 +159,7 @@ function conditionsCard(fx) {
   const notes = [W.d];
   if ((fx.t || '15:00') < '13:00') notes.push(KICKOFF_NOTES.early);
   if ((fx.t || '15:00') >= '19:00') notes.push(KICKOFF_NOTES.evening);
-  if (fx.tv && !fx.fr) notes.push('Televised: both clubs earn ' + money((fx.comp || leagueOf(fx.h)) === 'ECH' ? 50000 : TV_FEE) + ' extra.');
+  if (fx.tv && !fx.fr) notes.push('Televised: both clubs earn ' + money(leagueTier(fx.comp || leagueOf(fx.h)) === 2 ? 50000 : TV_FEE) + ' extra.');
   return `<div class="card"><h3>Conditions</h3>
     <div class="kv"><div><small>Kick-off</small><b>${fxWhen(fx)}</b></div><div><small>Weather</small><b>${wxLabel(fx.wx)}</b></div>
       <div><small>Your rest</small><b class="${us != null && us <= 3 ? 'warn' : ''}">${restTxt(us)}</b></div><div><small>Their rest</small><b class="${them != null && them <= 3 ? 'warn' : ''}">${restTxt(them)}</b></div></div>

@@ -396,7 +396,8 @@ function finishMatch(M) {
           p.discipline = { season: G.season, cards: { [comp]: legacy } };
         }
         const count = p.discipline.cards[comp] = (p.discipline.cards[comp] || 0) + 1;
-        const ban = count === 5 && games <= (comp === 'ECH' ? 23 : 19) ? 1 : count === 10 && games <= (comp === 'ECH' ? 37 : 32) ? 2 : count === 15 ? 3 : 0;
+        const second = leagueTier(comp) === 2, rounds = leagueRules(comp).matches;
+        const ban = count === 5 && games <= Math.floor(rounds / 2) ? 1 : count === 10 && games <= Math.round(rounds * (second ? 0.804 : 0.842)) ? 2 : count === 15 ? 3 : 0;
         if (ban) { p.ban += ban; if (S.user) addNews('club', pname(p) + ' suspended', `${fullName(p)} has collected ${count} league yellow cards and misses ${ban} match${ban === 1 ? '' : 'es'}.`, { t: 'player', pid: p.id }); }
       });
       S.reds.forEach(id => { const p = G.players[id]; if (p) { const e = M.log.find(e => e.t === 'red' && e.pid === id); p.ban += e?.second ? 1 : 3; p.st.rc++; } });
@@ -415,7 +416,7 @@ function finishMatch(M) {
 
   // money: TV for both, gate for the home side
   const hc = G.clubs[fx.h], ac = G.clubs[fx.a];
-  const tv = fx.fr ? 0 : (fx.comp || leagueOf(fx.h)) === 'ECH' ? 60000 + (fx.tv ? 50000 : 0) : 0.9e6 + (fx.tv ? TV_FEE : 0);
+  const tv = fx.fr ? 0 : leagueTier(fx.comp || leagueOf(fx.h)) === 2 ? 60000 + (fx.tv ? 50000 : 0) : 0.9e6 + (fx.tv ? TV_FEE : 0);
   const fans = fx.h === G.club ? G.board.fans : 60;
   const att = Math.round((fx.neutral ? 88000 : hc.cap) * clamp(0.82 + fans / 600 + ac.rep / 1000, 0.6, 1));
   const gate = Math.round(att * (25 + hc.rep * 0.35));

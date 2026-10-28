@@ -11,7 +11,7 @@ function parseCareerSave(text) {
     if (!c || !Array.isArray(c.squad) || c.squad.some(id => !game.players[id])) throw new Error('The squad database is incomplete.');
     if (c.backgroundOnly && (c.squad.length || c.id === game.club)) throw new Error('Placeholder clubs cannot own player records or be managed yet.');
     if (c.foreignSquad && c.id === game.club) throw new Error('Inactive overseas leagues cannot be managed yet.');
-    if (c.league === 'ECH' && (c.squad.length > 36 || c.squad.some(id => game.players[id].lvl === 'Y'))) throw new Error('Championship squads have first team and reserves only, with a 36-player maximum.');
+    if (c.league && /2$|^ECH$/.test(c.league) && (c.squad.length > 36 || c.squad.some(id => game.players[id].lvl === 'Y'))) throw new Error('Championship squads have first team and reserves only, with a 36-player maximum.');
   }
   return game;
 }

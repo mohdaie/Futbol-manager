@@ -129,7 +129,7 @@ function youthIntake() {
   for (let i = 0; i < n && squadSpace(c); i++) names.push(genYouth(c, q));
   if (!names.length) return;
   const star = names.slice().sort((a, b) => b.pa - a.pa)[0];
-  addStory('club', 'Youth intake arrives', `${names.length} new players join the ${c.league === 'ECH' ? 'reserves' : 'academy'}. Head of youth development highlights ${fullName(star)} (${star.pos}) as the pick of the group.`);
+  addStory('club', 'Youth intake arrives', `${names.length} new players join the ${leagueTier(c.league) === 2 ? 'reserves' : 'academy'}. Head of youth development highlights ${fullName(star)} (${star.pos}) as the pick of the group.`);
   if (typeof makeStory === 'function') storySimple(G.news[0], 'club', 'youth-intake', { count: names.length, star: fullName(star) }, [G.club]);
 }
 
@@ -156,7 +156,7 @@ function seasonEnd() {
   const table = leagueTable(), c = userClub();
   const managerChampions = managerSeasonRecords();
   const pos = table.findIndex(r => r.id === G.club) + 1, me = table[pos - 1];
-  for (const id of G.leagues) leagueTable(id).forEach((r, i, rows) => { const prize = (rows.length - i) * (id === 'ECH' ? .15e6 : 1.5e6); G.clubs[r.id].bal += prize; if (r.id === G.club) G.ledger.prize += prize; });
+  for (const id of G.leagues) leagueTable(id).forEach((r, i, rows) => { const prize = (rows.length - i) * (leagueTier(id) === 2 ? .15e6 : 1.5e6); G.clubs[r.id].bal += prize; if (r.id === G.club) G.ledger.prize += prize; });
   const pl = Object.values(G.players).filter(p => G.clubs[p.club] && G.clubs[p.club].pl && leagueOf(p.club) === leagueOf(G.club));
   const top = (arr, f) => arr.slice().sort((a, b) => f(b) - f(a))[0];
   const boot = top(pl, p => p.st.g + p.st.as * 0.01);
@@ -170,7 +170,7 @@ function seasonEnd() {
   G.history.unshift({ season: seasonLabel(), champ: table[0].id, pos, pts: me.pts, club: G.club, boot: review.boot && review.boot.name + ' (' + review.boot.v + ')' });
   if (table[0].id === G.club) G.trophies.push({ season: seasonLabel(), name: leagueName() + ' champions' });
   if (managerChampions[leagueOf(G.club)] === G.club) managerAddAward(`${leagueName()} champions · ${seasonLabel()}`, 250000);
-  else if (pos <= G.board.target.pos) managerOwnerBonus('owner', Math.round((G.clubs[G.club].league === 'ECH' ? 18000 : 90000) * (1 + (G.board.target.pos - pos) * 0.12)), 'The owner rewarded you for meeting the season objective.');
+  else if (pos <= G.board.target.pos) managerOwnerBonus('owner', Math.round((leagueTier(G.clubs[G.club].league) === 2 ? 18000 : 90000) * (1 + (G.board.target.pos - pos) * 0.12)), 'The owner rewarded you for meeting the season objective.');
   // Reputation follows this division's results before promotion/relegation.
   const repOrder = leagueClubs().slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
   table.forEach((r, i) => { const cl = G.clubs[r.id]; cl.rep = clamp(Math.round((cl.rep + (repOrder.indexOf(r.id) - i) * 0.4) * 10) / 10, 55, 95); });
@@ -224,7 +224,7 @@ function rollover() {
       const worst = Math.min(...seniorSquad(id).map(x => x.ca));
       if (p.ca >= worst) { p.lvl = 'A'; p.wage = wageFor(p, cl.rep); } else { moveClub(p, 'FA'); p.lvl = 'A'; p.con = 0; }
     });
-    if (cl.league === 'ECH') fillLevel(cl, 'R', Math.min(12, Math.max(0, 36 - seniorSquad(id).length)));
+    if (leagueTier(cl.league) === 2) fillLevel(cl, 'R', Math.min(12, Math.max(0, 36 - seniorSquad(id).length)));
     else { fillLevel(cl, 'R', 18); fillLevel(cl, 'Y', 20); }
   });
   Object.values(G.clubs).filter(x => x.foreign && !x.fa && !x.backgroundOnly && !x.foreignSquad).forEach(x => {

@@ -144,7 +144,7 @@ function newsLinks(n) {
 }
 
 function clubFixtures(cid) {
-  if (isSimClub(G.clubs[cid])) return `<div class="list">${worldClubFixtures(cid).map(f => worldFixtureRow(f, cid)).join('')}</div>`;
+  if (inSimLeague(G.clubs[cid])) return `<div class="list">${worldClubFixtures(cid).map(f => worldFixtureRow(f, cid)).join('')}</div>`;
   const list = G.fixtures.filter(f => f.h === cid || f.a === cid).sort(fxSort);
   return list.length ? `<div class="list">${list.map(f => fixtureLinks(f, cid)).join('')}</div>` : empty('No scheduled fixtures', 'This club plays no league fixtures in this career.');
 }
@@ -188,7 +188,7 @@ function worldTableCard(id) {
 SCREENS.clubs = {
   render() {
     const selected = UI.tab.clubLeague || 'all';
-    const groups = [['all', 'All clubs'], ...G.leagues.map(id => [id, leagueName(id)]), ...Object.values(WORLD_LEAGUES).map(l => [l.id, `${l.country} · ${l.name}`])];
+    const groups = [['all', 'All clubs'], ...G.leagues.map(id => [id, leagueName(id)]), ...Object.values(WORLD_LEAGUES).filter(l => G.worldLeagues?.[l.id]).map(l => [l.id, `${l.country} · ${l.name}`])];
     const clubs = Object.values(G.clubs).filter(c => selected === 'all' || c.worldLeague === selected || !c.worldLeague && c.league === selected);
     const definition = WORLD_LEAGUES[selected];
     return `<h1 class="h1">Club directory</h1><div class="chips wrap">${groups.map(([id, label]) => `<button class="chip ${selected === id ? 'on' : ''}" data-a="clubLeague" data-id="${id}">${esc(label)}</button>`).join('')}</div>
@@ -209,9 +209,11 @@ SCREENS.clubview = {
     if (c.backgroundOnly) {
       const slots = dummySquadSlots(c);
       if (section === 'squad') return heading + `<h2 class="h2">First team · ${slots.length} players</h2><div class="list">${slots.map(p => `<div class="row"><span class="pos">${p.pos}</span><span class="grow" data-no-links><b>${esc(p.name)}</b><small>${esc(p.nationality)}</small></span></div>`).join('')}</div>`;
-      if (section === 'fixtures') return heading + empty('No fixtures', 'This league is not simulated.');
+      if (section === 'fixtures') return heading + (inSimLeague(c) ? clubFixtures(c.id) : empty('No fixtures', 'This league is not simulated.'));
       if (section === 'transfers') return heading + empty('No transfers', 'This club is not in the transfer market.');
-      return heading + `<div class="card"><h3>Club details</h3><div class="kv"><div><small>Country</small><b>${esc(WORLD_LEAGUES[c.worldLeague].country)}</b></div><div><small>League</small><b>${esc(clubCompetitionLabel(c))}</b></div><div><small>City</small><b>${esc(c.city)}</b></div><div><small>First team</small><b>${slots.length} players</b></div></div></div><button class="btn wide" data-a="clubPage" data-id="${c.id}" data-section="squad">View squad</button>`;
+      const lightRows = inSimLeague(c) ? worldTable(c.worldLeague) : [], lightRow = lightRows.find(r => r.id === c.id);
+      const lightTile = lightRow ? `<div class="tiles"><button class="tile" data-a="worldLeaguePage" data-id="${c.worldLeague}"><small>League position</small><b>${lightRow.p ? ordinal(lightRows.indexOf(lightRow) + 1) : 'Pre-season'}</b><span>${lightRow.pts} points · ${lightRow.p} played</span></button><div class="tile"><small>W / D / L</small><b>${lightRow.w} / ${lightRow.d} / ${lightRow.l}</b><span>${lightRow.gf} scored · ${lightRow.ga} conceded</span></div></div>` : '';
+      return heading + lightTile + `<div class="card"><h3>Club details</h3><div class="kv"><div><small>Country</small><b>${esc(WORLD_LEAGUES[c.worldLeague].country)}</b></div><div><small>League</small><b>${esc(clubCompetitionLabel(c))}</b></div><div><small>City</small><b>${esc(c.city)}</b></div><div><small>First team</small><b>${slots.length} players</b></div></div></div><button class="btn wide" data-a="clubPage" data-id="${c.id}" data-section="squad">View squad</button>`;
     }
     if (section === 'squad') {
       const levels = c.fa || c.foreign && !c.foreignSquad ? '' : `<div class="seg">${Object.entries(clubLevels(c)).filter(([l]) => l === 'A' || levelSquad(c.id, l).length).map(([l, n]) => `<button class="${level === l ? 'on' : ''}" data-a="clubLevel" data-id="${c.id}" data-level="${l}">${n}</button>`).join('')}</div>`;
@@ -224,7 +226,7 @@ SCREENS.clubview = {
       return heading + `<h2 class="h2">Transfer activity</h2><div class="list">${deals.map(t => `<div class="row"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><b>${t.fee ? money(t.fee) : 'Free'}</b></div>`).join('') || empty('No transfers yet', 'Completed deals involving this club appear here.')}</div>`;
     }
     const tbl = leagueTable(leagueOf(c.id)), row = tbl.find(r => r.id === c.id), T = c.id === G.club ? G.tactics : c.tac;
-    const simFx = isSimClub(c) ? worldClubFixtures(c.id) : null, rowOf = simFx ? worldFixtureRow : fixtureLinks;
+    const simFx = inSimLeague(c) ? worldClubFixtures(c.id) : null, rowOf = simFx ? worldFixtureRow : fixtureLinks;
     const recent = simFx ? simFx.filter(f => f.hg != null).slice(-5).reverse() : G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && played(f)).sort(fxSort).slice(-5).reverse();
     const upcoming = simFx ? simFx.filter(f => f.hg == null).slice(0, 3) : G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && !played(f)).sort(fxSort).slice(0, 3);
     const leaders = seniorSquad(c.id).filter(x => x.st.a).sort((a, b) => b.st.g - a.st.g || avgRating(b) - avgRating(a)).slice(0, 3);
