@@ -10,8 +10,11 @@ const leagueRules = (id = leagueOf(G?.club)) => LEAGUES[id] || LEAGUES.EPL;
 const leagueName = (id = leagueOf(G?.club)) => leagueRules(id).name;
 const domesticClubs = () => Object.values(G.clubs).filter(c => c.pl && !c.foreign && !c.fa).map(c => c.id);
 const leagueClubs = (id = leagueOf(G.club)) => domesticClubs().filter(cid => leagueOf(cid) === id);
-const clubLevels = c => c?.backgroundOnly ? {} : Object.fromEntries((c?.foreignSquad ? ['A', 'R'] : leagueRules(c?.league || 'EPL').levels).map(k => [k, LEVELS[k]]));
-const clubSquadMax = c => c?.backgroundOnly ? 0 : c?.foreignSquad?.maxPlayers ?? leagueRules(c?.league || 'EPL').squadMax ?? Infinity;
+const overseasClubs = () => Object.values(G.clubs).filter(c => c.foreignSquad).map(c => c.id);
+// Clubs whose reserves, U18s and squad size the game maintains each season: the English clubs and the overseas clubs with squads.
+const academyClubs = () => domesticClubs().concat(overseasClubs());
+const clubLevels = c => c?.backgroundOnly ? {} : Object.fromEntries(leagueRules(c?.league || 'EPL').levels.map(k => [k, LEVELS[k]]));
+const clubSquadMax = c => c?.backgroundOnly ? 0 : leagueRules(c?.league || 'EPL').squadMax ?? Infinity;
 const squadSpace = (c, p) => !!c && !c.backgroundOnly && (p?.club === c.id && c.squad.includes(p.id) || c.squad.length < clubSquadMax(c));
 const squadLimitMessage = c => c?.backgroundOnly ? `${c.name} are not signing players.` : `${c.name} already have ${clubSquadMax(c)} players. Release or transfer someone before signing another player.`;
 function ensureCompetitions() {

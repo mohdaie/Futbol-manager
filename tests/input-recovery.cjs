@@ -20,7 +20,7 @@ const http = require('node:http'), fs = require('node:fs'), path = require('node
     await page.goto(base); await page.locator('[data-a=titleNew]').click(); await page.locator('[data-a=startGame]').click();
     await page.evaluate(async () => {
       G.manager = 'Latest database career'; await saveGameAsync();
-      const older = structuredClone(G); older.manager = 'Old migration backup'; localStorage.setItem(SAVE_KEY, JSON.stringify(older));
+      const slim = g => { for (const c of Object.values(g.clubs)) if (c.foreignSquad) c.squad = c.squad.filter(id => { if (g.players[id].lvl === 'A') return true; delete g.players[id]; return false; }); delete g.overseasYouthVersion; return g; }; const older = slim(structuredClone(G)); older.manager = 'Old migration backup'; localStorage.setItem(SAVE_KEY, JSON.stringify(older));
       go('settings'); SaveStorage.timeoutMs = 1500;
       const send = SaveStorage.worker.postMessage.bind(SaveStorage.worker);
       SaveStorage.worker.postMessage = data => { if (data.type !== 'save') send(data); };

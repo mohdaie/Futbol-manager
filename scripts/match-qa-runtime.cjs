@@ -11,7 +11,7 @@ function createMatchQaRuntime(seed = 20261021, fetcher = fetch) {
   rt.ctx.MATCH_QA_SEED = seed;
   // Host-only DOM/timer facade for the real playtime module. No UI is running.
   Object.assign(rt.ctx, { window: { addEventListener() {} }, document: { hidden: true, addEventListener() {}, getElementById() { return null; } }, setInterval() { return 0; } });
-  for (const file of ['js/core/rosters.js', 'js/core/profiles.js', 'js/core/england-rosters.js', 'js/core/england-calibrated-profiles.js', 'js/core/england-expansion.js', 'js/core/england-name-overrides.js', 'js/core/world-squads-data.js', 'js/core/players.js', 'js/core/england-players.js', 'js/core/world-squads.js', 'js/core/bio.js', 'js/systems/registration.js', 'js/core/state.js', 'js/core/playtime.js', 'js/core/calendar.js', 'js/engine/sim.js', 'js/systems/training.js', 'js/systems/transfer-terms.js']) {
+  for (const file of ['js/core/rosters.js', 'js/core/profiles.js', 'js/core/england-rosters.js', 'js/core/england-calibrated-profiles.js', 'js/core/england-expansion.js', 'js/core/england-name-overrides.js', 'js/core/world-squads-data.js', 'js/core/world-full-squads-data.js', 'js/core/players.js', 'js/core/england-players.js', 'js/core/world-squads.js', 'js/core/bio.js', 'js/systems/registration.js', 'js/core/state.js', 'js/core/playtime.js', 'js/core/calendar.js', 'js/engine/sim.js', 'js/systems/training.js', 'js/systems/world-sim.js', 'js/systems/transfer-terms.js']) {
     vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), rt.ctx, { filename: file });
   }
   rt.run('G={players:{}}'); // synthetic shape audit precedes newGame() in the CLI

@@ -37,7 +37,7 @@ function assignNumber(c, p) {
 
 function addToClub(p, c) {
   if (!squadSpace(c, p)) throw new Error(squadLimitMessage(c));
-  if ((c.league === 'ECH' || c.foreignSquad) && lvlOf(p) === 'Y') { p.lvl = 'R'; p.youth = false; }
+  if (c.league === 'ECH' && lvlOf(p) === 'Y') { p.lvl = 'R'; p.youth = false; }
   G.players[p.id] = p;
   p.club = c.id;
   assignNumber(c, p);
@@ -78,12 +78,18 @@ function genFreeAgent() {
   return p;
 }
 
+// Home-grown mix for overseas academies and generated depth players: mostly the club's own country, the rest from its league's usual sources.
+function youthNat(c) {
+  const prof = VIRTUAL_SQUAD_PROFILES[c.worldLeague];
+  return !prof || R() < 0.75 ? c.nat : pick(prof.eu.concat(prof.international));
+}
+
 function genYouth(c, quality) {
   if (!squadSpace(c) || c.academy?.noAnnualIntake) return null;
   const pos = pick(SQUAD_TEMPLATE);
   const age = ri(15, 17);
   const pa = clamp(quality + gauss() * 9 + (R() < 0.06 ? 12 : 0), 45, 95);
-  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, lvl: c.league === 'ECH' ? 'R' : 'Y' });
+  const p = genPlayer({ pos, ca: clamp(pa - rf(22, 35), 28, 60), pa, age, nat: c.worldLeague ? youthNat(c) : R() < 0.7 ? 'ENG' : pickNat(PL_NATS), club: c.id, lvl: c.league === 'ECH' ? 'R' : 'Y' });
   addToClub(p, c);
   p.wage = roundWage(rf(300, 900));
   p.con = G.season + 3;
@@ -103,7 +109,7 @@ function fillLevel(c, l, target) {
   for (let n = have.length; n < target && squadSpace(c); n++) {
     const pos = need.length ? need.shift() : pick(LEVEL_TEMPLATE);
     const age = l === 'Y' ? wpick([15, 16, 17], a => (a === 15 ? 2 : 4)) : wpick([18, 19, 20, 21], a => (a === 21 ? 2 : 4));
-    const nat = R() < 0.72 ? 'ENG' : pickNat(PL_NATS);
+    const nat = c.worldLeague ? youthNat(c) : R() < 0.72 ? 'ENG' : pickNat(PL_NATS);
     const pa = clamp(55 + (c.rep - 60) * 0.55 + gauss() * 8 + (R() < 0.05 ? 10 : 0), 45, 94);
     const ca = l === 'Y' ? clamp(pa - rf(24, 36) + (age - 15) * 2, 28, 58) : clamp(pa - rf(14, 26) + (age - 18) * 1.5, 38, 68);
     const p = genPlayer({ pos, ca, pa, age, nat, club: c.id, lvl: l });

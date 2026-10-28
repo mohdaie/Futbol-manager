@@ -61,7 +61,7 @@ const server = require('node:http').createServer((req, res) => {
     await act('go', { s: 'clubs' });
     check('Directory includes every world club and free agents', await page.locator('.main .row[data-a="clubPage"]').count(), await page.evaluate(() => Object.keys(G.clubs).length));
     await act('clubPage', { id: 'F0' });
-    check('Overseas dashboard explains its inactive league and transfer availability', await page.getByText(/League not simulated. Available for friendlies and transfers/).count(), 1);
+    check('Overseas dashboard explains its inactive league and transfer availability', await page.getByText(/Results are simulated in the background. Available for friendlies and transfers/).count(), 1);
     await act('clubPage', { id: 'F0', section: 'squad' });
     check('Overseas squad contains players', await page.locator('.player-main').count() > 10, true);
     await act('clubPage', { id: 'FA' }); await layout('Free agents');

@@ -84,6 +84,8 @@ function weeklyTraining(playedThisWeek) {
   Object.values(G.players).forEach(p => {
     const mine = userSet.has(p.id);
     const c = G.clubs[p.club];
+    // Simulated overseas clubs are developed once a season (world-sim.js), not every week.
+    if (!mine && typeof isSimClub === 'function' && isSimClub(c)) return;
     // condition, sharpness
     recoverTo(p, (G.week + 1) * 7);
     if (!playedThisWeek.has(p.id)) p.shp = Math.max(30, p.shp - (mine && T.intensity === 2 ? 2 : 4));

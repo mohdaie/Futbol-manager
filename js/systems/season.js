@@ -10,6 +10,7 @@ function advanceWeek() {
   const playedOutside = G.fixtures.filter(f => f.w === G.week && !played(f));
   playedOutside.forEach(f => quickSim(f));
   if (typeof worldAlertForResults === 'function') worldAlertForResults(playedOutside);
+  if (typeof simWorldWeek === 'function') simWorldWeek();
   const pw = new Set(G.flags.pw || []);
   G.flags.pw = [];
   weeklyTraining(pw);
@@ -190,6 +191,7 @@ function rollover() {
   if (typeof payInstalments === 'function') payInstalments(true);
   seasonFavourites();
   staffSeasonEnd();
+  if (typeof worldSimSeasonEnd === 'function') worldSimSeasonEnd();
   const S = G.season, c = userClub(), left = [];
   Object.values(G.players).forEach(p => {
     const cl = G.clubs[p.club];
@@ -214,8 +216,9 @@ function rollover() {
   // Academy graduation: U18s who turn 19 move up to the reserves at every club.
   Object.values(G.players).forEach(p => { if (lvlOf(p) === 'Y' && p.age >= 19) { p.lvl = 'R'; p.youth = false; p.wage = Math.max(p.wage, 1500); } });
   // Computer clubs: reserves at 23 either step up or are released; then refill both youth levels.
-  domesticClubs().forEach(id => {
+  academyClubs().forEach(id => {
     const cl = G.clubs[id];
+    if (typeof isSimClub === 'function' && isSimClub(cl)) { simYouthRollover(cl); return; }
     if (id !== G.club) levelSquad(id, 'R').filter(p => p.age >= 23).forEach(p => {
       const worst = Math.min(...seniorSquad(id).map(x => x.ca));
       if (p.ca >= worst) { p.lvl = 'A'; p.wage = wageFor(p, cl.rep); } else { moveClub(p, 'FA'); p.lvl = 'A'; p.con = 0; }
