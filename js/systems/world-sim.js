@@ -1,7 +1,8 @@
 'use strict';
 /* ===== world-sim.js =====
    Simulation-only overseas leagues. A league with `active: false` has no fixtures in G.fixtures and no match engine runs:
-   - results come from a team-strength model, one round at a time, into a compact table (G.worldLeagues[id].table);
+   - its fixtures are rebuilt from the club list (worldFixtureList) and played on their days; results come from a team-strength
+     model and are saved as one number per match, with a compact table (G.worldLeagues[id].table and .res);
    - clubs trade players in the transfer windows, with each other, with the English clubs and with free agents;
    - their players are developed in one batch at the end of the season instead of every week;
    - each club keeps its 25-man first team and only a few prospects, instead of full reserve and U18 teams.
@@ -12,9 +13,9 @@ const isSimClub = c => !!c?.foreignSquad && G.worldLeagues?.[c.worldLeague]?.act
 const simClubs = () => Object.values(G.clubs).filter(isSimClub);
 const simLeagueIds = () => Object.keys(G.worldLeagues || {}).filter(id => G.worldLeagues[id].active === false);
 
-/* ---------- results and tables ---------- */
-const worldRoundCache = new Map();
-// Double round robin (circle method) in a fixed order, so a round can be rebuilt from the club list alone.
+/* ---------- fixtures, results and tables ---------- */
+const worldRoundCache = new Map(), worldFixtureCache = new Map();
+// Double round robin (circle method) in a fixed order, so the whole season can be rebuilt from the club list alone.
 function worldRounds(ids) {
   const key = ids.join('|');
   if (worldRoundCache.has(key)) return worldRoundCache.get(key);
@@ -36,6 +37,31 @@ function worldRounds(ids) {
   return all;
 }
 
+// The season's fixtures in the order they are played, with the English calendar's weeks and kick-off slots. Nothing here is
+// saved: only the results are (G.worldLeagues[id].res, one number per match in this order).
+function worldFixtureList(id) {
+  const lg = G.worldLeagues[id], key = `${id}:${G.season}:${lg.clubs.join('|')}`;
+  if (worldFixtureCache.has(key)) return worldFixtureCache.get(key);
+  const list = [];
+  worldRounds(lg.clubs).forEach((pairs, r) => {
+    const sch = SCHEDULE[r];
+    if (!sch) return;
+    let slots = (sch.mid ? MIDWEEK_SLOTS : WEEKEND_SLOTS).map(x => x.slice());
+    if (!sch.mid && MIDWEEK_WEEKS.includes(sch.w)) slots = slots.map(x => (x[0] === 4 ? [5, '15:00', 0] : x)); // no Friday night after a midweek round
+    const rotate = (arr, k) => arr.length ? arr.map((_, i) => arr[(i + k) % arr.length]) : arr;
+    const tv = rotate(slots.filter(x => x[2]), r), rest = rotate(slots.filter(x => !x[2]), r);
+    pairs.map(([h, a], i) => ({ h, a, i })).sort((x, y) => (G.clubs[y.h].rep + G.clubs[y.a].rep + hash01(`${id}:${r}:${y.i}`) * 12) - (G.clubs[x.h].rep + G.clubs[x.a].rep + hash01(`${id}:${r}:${x.i}`) * 12))
+      .forEach((m, k) => {
+        const [d, t, onTv] = k < tv.length ? tv[k] : rest[k - tv.length] || rest[0];
+        list.push({ r, i: m.i, w: sch.w, d, t, tv: !!onTv, h: m.h, a: m.a, hg: null, ag: null });
+      });
+  });
+  list.sort((x, y) => (x.w * 7 + x.d) - (y.w * 7 + y.d) || x.t.localeCompare(y.t) || x.r - y.r || x.i - y.i);
+  if (worldFixtureCache.size > 12) worldFixtureCache.clear();
+  worldFixtureCache.set(key, list);
+  return list;
+}
+
 // Best XI strength: the better keeper and the ten best outfielders.
 function simStrength(c) {
   const squad = seniorSquad(c.id).filter(p => !p.inj);
@@ -50,33 +76,43 @@ function poisson(lambda) {
   do { k++; p *= R(); } while (p > limit);
   return k - 1;
 }
+// A new season, or a career saved before results were kept: start again from an empty table and replay what has fallen due.
 function ensureWorldSeason(lg) {
-  if (lg.table && lg.season === G.season) return;
-  lg.season = G.season; lg.next = 0; lg.last = null;
+  if (lg.table && lg.res && lg.season === G.season) return;
+  lg.season = G.season; lg.res = [];
+  delete lg.next; delete lg.last;
   lg.table = Object.fromEntries(lg.clubs.map(id => [id, [0, 0, 0, 0, 0, 0, 0]])); // played, won, drawn, lost, for, against, points
 }
-function playWorldRound(lg, r) {
-  const strength = {};
-  for (const id of lg.clubs) strength[id] = simStrength(G.clubs[id]);
-  const results = [];
-  for (const [h, a] of worldRounds(lg.clubs)[r] || []) {
-    const d = strength[h] - strength[a];
-    const hg = poisson(1.42 * Math.exp(0.03 * d + 0.1)), ag = poisson(1.08 * Math.exp(-0.03 * d));
-    const H = lg.table[h], A = lg.table[a];
+// Play, in order, every fixture of a league that `due` accepts. A result is one number: home goals * 10 + away goals.
+function playWorldFixtures(id, due) {
+  const lg = G.worldLeagues[id];
+  ensureWorldSeason(lg);
+  const list = worldFixtureList(id);
+  let strength = null;
+  while (lg.res.length < list.length && due(list[lg.res.length])) {
+    strength ||= Object.fromEntries(lg.clubs.map(cid => [cid, simStrength(G.clubs[cid])]));
+    const f = list[lg.res.length], d = strength[f.h] - strength[f.a];
+    const hg = Math.min(9, poisson(1.42 * Math.exp(0.03 * d + 0.1))), ag = Math.min(9, poisson(1.08 * Math.exp(-0.03 * d)));
+    const H = lg.table[f.h], A = lg.table[f.a];
     H[0]++; A[0]++; H[4] += hg; H[5] += ag; A[4] += ag; A[5] += hg;
     if (hg > ag) { H[1]++; A[3]++; H[6] += 3; } else if (hg < ag) { A[1]++; H[3]++; A[6] += 3; } else { H[2]++; A[2]++; H[6]++; A[6]++; }
-    results.push([h, a, hg, ag]);
+    lg.res.push(hg * 10 + ag);
   }
-  lg.last = { r, results };
 }
-// Called once a week: plays every round that has come due, however many weeks were skipped.
-function simWorldWeek() {
-  for (const id of simLeagueIds()) {
-    const lg = G.worldLeagues[id];
-    ensureWorldSeason(lg);
-    const rounds = worldRounds(lg.clubs);
-    while (lg.next < rounds.length && SCHEDULE[lg.next] && SCHEDULE[lg.next].w <= G.week) playWorldRound(lg, lg.next++);
-  }
+// Matches kick off on their day: called each day, and once a week so that skipped days and weeks catch up.
+function simWorldDay() { for (const id of simLeagueIds()) playWorldFixtures(id, f => f.w < G.week || f.w === G.week && f.d <= G.day); }
+function simWorldWeek() { for (const id of simLeagueIds()) playWorldFixtures(id, f => f.w <= G.week); }
+
+// A league's fixtures with their results, for the screens. Results from another season are ignored.
+function worldFixtures(id) {
+  const lg = G.worldLeagues[id], res = lg?.season === G.season && lg.res ? lg.res : [];
+  return worldFixtureList(id).map((f, k) => k < res.length ? { ...f, hg: Math.floor(res[k] / 10), ag: res[k] % 10 } : f);
+}
+const worldClubFixtures = cid => worldFixtures(G.clubs[cid].worldLeague).filter(f => f.h === cid || f.a === cid);
+// The round to show first: the latest one with a result, or the first round before the season starts.
+function worldLatestRound(id) {
+  const played = worldFixtures(id).filter(f => f.hg != null);
+  return played.length ? played[played.length - 1].r : 0;
 }
 function worldTable(id) {
   const lg = G.worldLeagues[id];
@@ -91,9 +127,7 @@ function worldSimSeasonEnd() {
   const keys = TRAINING_FOCUS[0].attrs;
   for (const id of simLeagueIds()) {
     const lg = G.worldLeagues[id];
-    ensureWorldSeason(lg);
-    const rounds = worldRounds(lg.clubs);
-    while (lg.next < rounds.length) playWorldRound(lg, lg.next++);
+    playWorldFixtures(id, () => true);
     const top = worldTable(id)[0];
     if (!top) continue;
     (lg.history ||= []).unshift({ season: seasonLabel(), champion: top.id, pts: top.pts });
