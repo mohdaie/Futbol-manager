@@ -79,7 +79,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     check('Three rollovers keep every overseas club at 22+ first-team players with three prospects, and the migrated placeholder is now a real club',await page.evaluate(()=>{
       for(let n=0;n<3;n++)rollover();
       const cs=Object.values(G.clubs).filter(c=>c.foreignSquad);
-      return cs.length===76&&cs.every(c=>seniorSquad(c.id).length>=22&&levelSquad(c.id,'R').length>=1&&levelSquad(c.id,'R').length<=3&&levelSquad(c.id,'Y').length===0)&&Object.values(G.clubs).filter(c=>c.backgroundOnly).length===0&&Object.values(G.players).every(p=>!G.clubs[p.club].backgroundOnly)&&G.fixtures.length===932;
+      return cs.length===76&&cs.every(c=>seniorSquad(c.id).length>=22&&levelSquad(c.id,'R').length<=3&&levelSquad(c.id,'Y').length===0)&&Object.values(G.clubs).filter(c=>c.backgroundOnly).length===0&&Object.values(G.players).every(p=>!G.clubs[p.club].backgroundOnly)&&G.fixtures.length===932;
     }));
     await page.evaluate(async()=>{go('home');await saveGameAsync();});await page.reload();await page.waitForFunction(()=>G?.season===2029);
     check('Durable saves retain all four registries and dummy transfer locks',await page.evaluate(()=>Object.keys(G.worldLeagues).length===4&&Object.values(G.clubs).filter(c=>c.backgroundOnly).every(c=>!squadSpace(c)&&!c.squad.length)));

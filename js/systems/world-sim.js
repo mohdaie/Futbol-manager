@@ -149,8 +149,10 @@ function simPlayerIndex() {
 }
 const SIM_DEAL_REST = 25; // weeks before the same player can move again
 const notableSimDeal = (c, from, fee) => fee >= 20e6 || c.rep >= 85 && fee >= 8e6 || from.pl;
+const onShortlist = p => !!p && (G.shortlist || []).includes(p.id);
 
-function simClubDeal(c, index) {
+// Choose a signing for a club without making it: its weakest starting position, a better player, a price it can pay.
+function simPickDeal(c, index, pending) {
   const pk = autoPick(c.id, c.tac.ip), slots = FORMATIONS[c.tac.ip];
   let worst = -1, wv = 999;
   pk.xi.forEach((id, i) => {
@@ -160,7 +162,7 @@ function simClubDeal(c, index) {
   if (worst < 0) return null;
   const pos = slots[worst][0], now = G.season * 60 + G.week;
   const candidates = (index[pos] || []).filter(p => {
-    if (p.club === c.id || p.ca <= wv + 2 || p.age > 31 || p.mv && now - p.mv < SIM_DEAL_REST) return false;
+    if (p.club === c.id || p.ca <= wv + 2 || p.age > 31 || p.mv && now - p.mv < SIM_DEAL_REST || pending.has(p.id)) return false;
     const from = G.clubs[p.club];
     return from.fa || from.rep <= c.rep + 4 && seniorSquad(from.id).length > 19;
   });
@@ -170,31 +172,97 @@ function simClubDeal(c, index) {
     if (G.players[p.id] !== p || (G.deals && typeof activeDeal === 'function' && activeDeal(p.id))) continue;
     const fee = from.fa ? 0 : roundMoney(askingPrice(p) * rf(0.95, 1.1));
     if (!from.fa && fee > c.bal * 0.4) continue;
-    try { moveClub(p, c.id); } catch { continue; }
-    if (!from.fa) from.bal += fee;
-    c.bal -= fee;
-    p.wage = wageFor(p, c.rep); p.con = G.season + ri(2, 4); p.mv = now;
-    G.know[p.id] ??= from.pl ? 45 : 10;
     return { p, from, fee };
   }
   return null;
 }
+// Make the signing, if it still stands: he is still there, the buyer still has the money and room, the seller is not stripped.
+function finishSimDeal(item) {
+  const c = G.clubs[item.to], p = G.players[item.pid], from = G.clubs[item.from];
+  if (!c || !p || !from || p.club !== item.from || p.club === G.club || p.loan || !squadSpace(c, p)) return false;
+  if (!from.fa && (c.bal < item.fee || seniorSquad(from.id).length <= 19)) return false;
+  if (G.deals && typeof activeDeal === 'function' && activeDeal(p.id)) return false;
+  try { moveClub(p, c.id); } catch { return false; }
+  if (!from.fa) from.bal += item.fee;
+  c.bal -= item.fee;
+  p.wage = wageFor(p, c.rep); p.con = G.season + ri(2, 4); p.mv = G.season * 60 + G.week;
+  G.know[p.id] ??= from.pl ? 45 : 10;
+  return true;
+}
 
-// Once a week while a window is open. Roughly three deals per club in the summer and one or two in January.
-function simTransferWeek() {
-  const state = windowState();
-  if (!state.open) return;
-  const chance = (state.label === 'Summer window' ? 0.3 : 0.16) * (1 + windowClosingPressure());
-  let index = null, headlines = 0;
-  for (const c of shuffle(simClubs())) {
-    if (R() > chance) continue;
-    index ||= simPlayerIndex();
-    const deal = simClubDeal(c, index);
-    if (!deal) continue;
-    const { p, from, fee } = deal;
-    if (!notableSimDeal(c, from, fee)) continue;
-    G.tHist.unshift({ date: today().getTime(), pid: p.id, name: fullName(p), from: from.id, to: c.id, fee });
+/* ---------- rumours ---------- */
+// A deal between computer clubs leaks first and completes a week or two later. Detail is for players on your shortlist:
+// the clubs, the fee and every step (leak, agreed, done or collapsed). Anyone else gets one vague line, without clubs or fee.
+const SIM_VAGUE = [
+  (n, p, nat) => `${n} (${p.age}, ${POS_NAME[p.pos]}) is attracting interest from clubs in ${nat}.`,
+  (n, p, nat) => `Hearing ${n} is on the radar of a ${nat} club. Early days.`,
+  (n, p, nat) => `Scouts from ${nat} have been watching ${n} closely.`,
+];
+function simShortlistPost(item, ev) {
+  const p = G.players[item.pid];
+  if (!p || !G.social || typeof post !== 'function' || typeof dealLine !== 'function') return;
+  const to = clubName(item.to), from = clubName(item.from), n = fullName(p), fee = item.fee ? money(item.fee) : '';
+  const V = { n, s: p.ln, to, from, fee, toP: possessive(to) }, s = item.id + ':' + ev;
+  const o = { pid: p.id, clubs: [item.to, item.from].filter(c => G.clubs[c] && !G.clubs[c].fa), deal: item.id };
+  const line = kind => dealLine(ev, kind, V, s);
+  if (ev === 'leak') post(pickAcc(accsOf([3, 4]), s).id, line('rumour'), { ...o, kind: 'rumour' });
+  if (ev === 'agreed') post(pickAcc(accsOf([1, 2], ['journalist']), s).id, line('journalist'), { ...o, kind: 'agreed', hot: 1.5 });
+  if (ev === 'done') post('off:' + item.to, line('club'), { ...o, kind: 'done', hot: 2, react: true });
+  if (ev === 'off') post(pickAcc(accsOf([1, 2], ['journalist']), s).id, line('journalist'), { ...o, kind: 'off' });
+}
+function simVagueRumour(item, ctx) {
+  const p = G.players[item.pid], buyer = G.clubs[item.to];
+  if (!p || !buyer || !G.social || typeof post !== 'function' || ctx.rumours <= 0 || hash01(item.id + 'v') > 0.5) return;
+  ctx.rumours--;
+  const text = SIM_VAGUE[Math.floor(hash01(item.id + 'w') * SIM_VAGUE.length)](fullName(p), p, natName(buyer.nat));
+  post(pickAcc(accsOf([3, 4], ['rumour', 'tabloid']), item.id + 'a').id, text, { pid: p.id, kind: 'rumour' });
+}
+
+function resolveSimDeals(state, ctx) {
+  const keep = [], now = G.season * 60 + G.week;
+  for (const item of G.simDeals ||= []) {
+    const p = G.players[item.pid];
+    if (!p) continue;
+    if (now < item.due) {
+      if (item.real && item.due - item.made === 2 && now === item.due - 1 && !item.mid) { item.mid = 1; if (onShortlist(p)) simShortlistPost(item, 'agreed'); }
+      keep.push(item);
+      continue;
+    }
+    const done = item.real && state.open && finishSimDeal(item);
+    if (!done) { if (onShortlist(p)) simShortlistPost(item, 'off'); continue; }
+    const c = G.clubs[item.to], from = G.clubs[item.from];
+    if (onShortlist(p)) simShortlistPost(item, 'done');
+    if (!notableSimDeal(c, from, item.fee) && !onShortlist(p)) continue;
+    G.tHist.unshift({ date: today().getTime(), pid: p.id, name: fullName(p), from: from.id, to: c.id, fee: item.fee });
     if (G.tHist.length > 120) G.tHist.length = 120;
-    if (headlines++ < 4) addNews('transfer', `${pname(p)} joins ${c.name}`, `${TheClub(c)} sign ${fullName(p)} (${p.age}, ${POS_NAME[p.pos]})${from.fa ? ' on a free transfer' : ' from ' + theClub(from) + (fee ? ' for ' + money(fee) : '')}.`, { t: 'player', pid: p.id });
+    if (notableSimDeal(c, from, item.fee) && ctx.headlines++ < 4) addNews('transfer', `${pname(p)} joins ${c.name}`, `${TheClub(c)} sign ${fullName(p)} (${p.age}, ${POS_NAME[p.pos]})${from.fa ? ' on a free transfer' : ' from ' + theClub(from) + (item.fee ? ' for ' + money(item.fee) : '')}.`, { t: 'player', pid: p.id });
   }
+  G.simDeals = keep;
+}
+
+// Once a week. While a window is open about 30% of clubs (summer) or 16% (January) start a signing; it completes after one
+// or two weeks, unless the rumour was false (15%) or something changed. When the window shuts, unfinished deals lapse.
+function simTransferWeek() {
+  const state = windowState(), ctx = { headlines: 0, rumours: 3 };
+  resolveSimDeals(state, ctx);
+  if (!state.open) { G.simDeals = []; return; }
+  const chance = (state.label === 'Summer window' ? 0.3 : 0.16) * (1 + windowClosingPressure());
+  const pending = new Set(G.simDeals.map(i => i.pid));
+  let index = null;
+  for (const c of shuffle(simClubs())) {
+    if (R() > chance || G.simDeals.length >= 80) continue;
+    index ||= simPlayerIndex();
+    const deal = simPickDeal(c, index, pending);
+    if (!deal) continue;
+    pending.add(deal.p.id);
+    startSimDeal(c, deal, ctx);
+  }
+}
+// The deal is agreed in principle: it leaks now and completes after one or two weeks (unless the rumour was false).
+function startSimDeal(c, deal, ctx) {
+  const now = G.season * 60 + G.week;
+  const item = { id: G.nextId++, pid: deal.p.id, to: c.id, from: deal.from.id, fee: deal.fee, made: now, due: now + ri(1, 2), real: R() < 0.85 };
+  (G.simDeals ||= []).push(item);
+  if (onShortlist(deal.p)) simShortlistPost(item, 'leak'); else simVagueRumour(item, ctx);
+  return item;
 }

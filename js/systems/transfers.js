@@ -153,8 +153,8 @@ function respondBid(n, choice) {
 
 function weeklyTransfers() {
   maintainForeignSquads();
+  if (typeof simTransferWeek === 'function') simTransferWeek();
   if (inWindow()) {
-    if (typeof simTransferWeek === 'function') simTransferWeek();
     aiMarket();
     aiBidsForUser();
     agentPitch();
