@@ -46,7 +46,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
         const players=Object.values(G.players);
         const ghost=players.filter(p=>!G.clubs[p.club]).length;
         const lightWithPlayers=Object.values(G.clubs).filter(c=>c.backgroundOnly&&c.squad.length).length;
-        const topSquads=Object.values(G.clubs).filter(c=>c.league===G.leagues[0]||c.worldLeague&&/1$|^EPL$/.test(c.worldLeague)).every(c=>c.backgroundOnly?false:seniorSquad(c.id).length>=18);
+        const badTop=Object.values(G.clubs).filter(c=>(c.worldLeague&&/1$|^EPL$/.test(c.worldLeague))&&(c.backgroundOnly||seniorSquad(c.id).length<18)).map(c=>c.id+':'+c.worldLeague+':'+!!c.backgroundOnly+':'+seniorSquad(c.id).length);window.__bad=badTop;const topSquads=Object.values(G.clubs).filter(c=>c.worldLeague&&/1$|^EPL$/.test(c.worldLeague)).every(c=>c.backgroundOnly?false:seniorSquad(c.id).length>=18);
         const bPromoted=Object.values(G.clubs).filter(c=>c.noPromotion&&(c.league||c.worldLeague)&&/1$/.test(c.league||c.worldLeague)).length;
         return{season:G.season,same:JSON.stringify(before)===JSON.stringify(after),moved,ghost,lightWithPlayers,topSquads,bPromoted,fx:G.fixtures.filter(f=>!f.fr).length,tables:G.leagues.every(id=>leagueClubs(id).length===LEAGUES[id].teams)};
       },[club,country]);
