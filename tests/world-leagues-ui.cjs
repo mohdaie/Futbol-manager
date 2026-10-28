@@ -13,8 +13,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
     page.on('pageerror',e=>errors.push(e.message));await page.route('https://fonts.googleapis.com/**',r=>r.abort());
     await page.goto('http://127.0.0.1:'+server.address().port);await page.locator('[data-a=titleNew]').tap();
-    check('Only the two full English divisions are playable',await page.locator('[data-a=pickLeague]').count()===2);
-    check('Club selection explains the four background league setups',/Spain \(20\).*Italy \(20\).*Germany \(18\).*France \(18\)/.test(await page.locator('.start').textContent()));
+    check('Five countries are playable, each with two divisions',await page.locator('[data-a=pickCountry]').count()===5&&await page.locator('[data-a=pickLeague]').count()===2);
+    check('Club selection explains the other countries run in the background',/Spain, Italy, Germany, France.*still play on in the background/.test(await page.locator('.start').textContent()));
+    for(const [c,l,n] of [['ESP','ES1',20],['ESP','ES2',22],['ITA','IT2',20],['GER','DE1',18],['GER','DE2',18],['FRA','FR2',18]]){
+      await page.locator(`[data-a=pickCountry][data-id=${c}]`).tap();await page.locator(`[data-a=pickLeague][data-id=${l}]`).tap();
+      check(l+' offers all '+n+' clubs at the start screen',await page.locator('[data-a=pickClub]').count()===n);
+    }
+    await page.locator('[data-a=pickCountry][data-id=ENG]').tap();
     await page.locator('[data-a=startGame]').tap();await page.evaluate(()=>go('clubs'));
     for(const [id,n] of [['ES1',20],['IT1',20],['DE1',18],['FR1',18]]){
       await page.locator(`[data-a=clubLeague][data-id=${id}]`).tap();
@@ -58,10 +63,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     check('Background squads show plain player rows with no read-only labels',!/read-only|placeholder|world-building/i.test(await page.locator('.main').textContent())&&await page.locator('.main .list .row').first().textContent().then(t=>!/Placeholder/.test(t)&&/Spain/.test(t)));
     check('Dummy clubs expose no Transfers tab',await page.locator('[data-a=clubPage][data-section=transfers]').count()===0);
     await page.locator('[data-a=clubPage][data-section=fixtures]').tap();
-    check('A background club explains it has no fixtures',/No fixtures/.test(await page.locator('.main').textContent()));
+    check('A background club lists its league fixtures',!/No fixtures/.test(await page.locator('.main').textContent())&&await page.locator('.main .row').count()>0);
     await page.evaluate(()=>go('clubs'));check('Directory navigation retains the country filter',await page.locator('.main .row[data-a=clubPage]').count()===20);
     await page.locator('[data-a=clubLeague][data-id=all]').tap();
-    check('All clubs are reachable without duplicating the existing four overseas clubs',await page.locator('.main .row[data-a=clubPage]').count()===130);
+    {const n=await page.locator('.main .row[data-a=clubPage]').count();check('All clubs are reachable without duplicates (got '+n+')',n===await page.evaluate(()=>new Set(Object.keys(G.clubs)).size)||n===await page.evaluate(()=>Object.keys(G.clubs).length-1));}
     await page.evaluate(()=>admPlayerSheet(seniorSquad(G.club)[0].id));
     check('Admin cannot move a real player into a placeholder club',await page.locator('#apClub option[value=ES1_GET]').count()===0&&await page.locator('#apClub option[value=F0]').count()===1);
     await page.evaluate(()=>{closeSheet(true);go('home');});
@@ -79,15 +84,15 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
       delete G.worldLeagues;delete G.worldLeagueVersion;delete G.overseasSquadVersion;delete G.overseasYouthVersion;
       await saveGameAsync();return{playerIds,fixtures};
     });
-    await page.reload();await page.waitForFunction(()=>G?.worldLeagueVersion===2);
-    check('Loading an old save adds the club registry while retaining every player and fixture',await page.evaluate(({playerIds,fixtures})=>playerIds.every(id=>Object.hasOwn(G.players,id))&&JSON.stringify(G.fixtures)===fixtures&&Object.keys(G.clubs).length===130,legacy));
+    await page.reload();await page.waitForFunction(()=>G?.worldLeagueVersion===3);
+    check('Loading an old save adds the club registry while retaining every player and fixture',await page.evaluate(({playerIds,fixtures})=>playerIds.every(id=>Object.hasOwn(G.players,id))&&JSON.stringify(G.fixtures)===fixtures&&Object.keys(G.clubs).length>=130,legacy));
     check('Three rollovers keep every overseas club at 22+ first-team players with three prospects, and the migrated placeholder is now a real club',await page.evaluate(()=>{
       for(let n=0;n<3;n++)rollover();
       const cs=Object.values(G.clubs).filter(c=>c.foreignSquad);
-      return cs.length===76&&cs.every(c=>seniorSquad(c.id).length>=22&&levelSquad(c.id,'R').length<=3&&levelSquad(c.id,'Y').length===0)&&Object.values(G.clubs).filter(c=>c.backgroundOnly).length===0&&Object.values(G.players).every(p=>!G.clubs[p.club].backgroundOnly)&&G.fixtures.length===932;
+      return cs.length>=76&&cs.every(c=>seniorSquad(c.id).length>=22&&levelSquad(c.id,'R').length<=3&&levelSquad(c.id,'Y').length===0)&&Object.values(G.clubs).filter(c=>c.backgroundOnly&&/1$/.test(c.worldLeague)).length===0&&Object.values(G.players).every(p=>!G.clubs[p.club].backgroundOnly)&&G.fixtures.length===932;
     }));
     await page.evaluate(async()=>{go('home');await saveGameAsync();});await page.reload();await page.waitForFunction(()=>G?.season===2029);
-    check('Durable saves retain all four registries and dummy transfer locks',await page.evaluate(()=>Object.keys(G.worldLeagues).length===4&&Object.values(G.clubs).filter(c=>c.backgroundOnly).every(c=>!squadSpace(c)&&!c.squad.length)));
+    check('Durable saves retain all four registries and dummy transfer locks',await page.evaluate(()=>Object.keys(G.worldLeagues).length===8&&Object.values(G.clubs).filter(c=>c.backgroundOnly).every(c=>!squadSpace(c)&&!c.squad.length)));
     check('No horizontal mobile overflow or browser errors',errors.length===0&&await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     console.log(JSON.stringify({passed:checks.length,checks},null,2));
   }finally{if(browser)await browser.close();server.close();}

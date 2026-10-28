@@ -6,7 +6,7 @@ for (const file of ['js/systems/transfers.js']) vm.runInContext(fs.readFileSync(
 rt.run('globalThis.CHECKPOINTS=[];globalThis.brainScore=()=>{};globalThis.agentPitch=()=>{};globalThis.aiMarket=()=>{};globalThis.aiBidsForUser=()=>{};');
 rt.run("newGame('GUN','Sim QA',1)");
 
-check('All four overseas leagues are simulation-only and every overseas club is a simulated club', `Object.values(G.worldLeagues).every(l=>l.active===false)&&simLeagueIds().length===4&&simClubs().length===76`);
+check('All four overseas leagues are simulation-only and every overseas club is a simulated club', `Object.values(G.worldLeagues).every(l=>l.active===false)&&simLeagueIds().length===8&&simClubs().length===76`);
 check('Simulated clubs have 25 first-team players and three prospects, with no reserve or U18 teams', `simClubs().every(c=>seniorSquad(c.id).length===25&&levelSquad(c.id,'R').length===3&&levelSquad(c.id,'Y').length===0)`);
 
 // Results and tables

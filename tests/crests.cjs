@@ -18,8 +18,9 @@ assert.ok(rt.run(fallback),'Championship fallback before career');
 const worldFallback=`(()=>{const img={matches:()=>true,dataset:{crestClub:'ES1_VIL',crestName:'Yellow Submarine'},getAttribute:()=>28};crestError({target:img});return img.outerHTML?.startsWith('<svg');})()`;
 assert.ok(rt.run(worldFallback),'World fallback before career');
 rt.run("newGame('WRE','Crest QA',1)");assert.ok(rt.run(fallback),'fallback in career');
-assert.ok(rt.run(`Object.values(G.clubs).filter(c=>!c.fa).length===129&&Object.values(G.clubs).filter(c=>!c.fa).every(c=>clubCrestKey(c))`));
-assert.ok(rt.run(`WORLD_CLUBS.every(c=>clubCrestKey(c))`));
+// The 129 original clubs have artwork; the 78 second-division clubs added later use the generated shield in their colours.
+assert.ok(rt.run(`Object.values(G.clubs).filter(c=>!c.fa).length===207&&Object.values(G.clubs).filter(c=>!c.fa&&clubCrestKey(c)).length===129&&Object.values(G.clubs).filter(c=>!c.fa&&!clubCrestKey(c)).every(c=>LEAGUES[c.worldLeague].tier===2&&clubBadge(c).startsWith('<svg'))`));
+assert.ok(rt.run(`WORLD_CLUBS.filter(c=>LEAGUES[c.league].tier===1).every(c=>clubCrestKey(c))&&WORLD_CLUBS.filter(c=>LEAGUES[c.league].tier===2).every(c=>!clubCrestKey(c))`));
 assert.ok(rt.run(worldFallback),'World fallback in career');
 assert.ok(rt.run(`clubCrestKey({id:'F99',name:'Yellow Submarine'})==='ES1_VIL'`),'Legacy foreign IDs resolve by name');
 assert.ok(rt.run(`clubCrestKey({id:'IT1_JUV',name:'Renamed overseas club'})==='IT1_JUV'`),'Stable world IDs survive renames');
