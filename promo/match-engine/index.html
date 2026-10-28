@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+:root{--bg0:#06020d;--bg1:#1b0a33;--cyan:#2de2f0;--violet:#8b5cf6;--magenta:#d946ef;--green:#35e08a;--amber:#ffb547;--ink:#ffffff;--soft:rgba(255,255,255,.78);--font-display:'Archivo Black','Inter',sans-serif;--font-body:'Inter',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg0)}
+#root{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;font-family:var(--font-body);color:var(--ink);background:radial-gradient(1200px 900px at 50% 45%,#2a1052 0%,var(--bg1) 38%,var(--bg0) 100%)}
+.fill{position:absolute;inset:0}
+#glowA{position:absolute;left:560px;top:150px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(45,226,240,.30),rgba(45,226,240,0) 65%)}
+#glowB{position:absolute;left:1000px;top:380px;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.40),rgba(139,92,246,0) 65%)}
+#grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:96px 96px}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--cyan);opacity:0;box-shadow:0 0 18px var(--cyan)}
+.word{position:absolute;left:0;top:0;width:1920px;height:1080px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);line-height:1;white-space:nowrap;letter-spacing:-.01em}
+.word .mask{display:inline-block;overflow:hidden;padding:30px 0 10px}
+.word .ch{display:inline-block;color:transparent;-webkit-text-stroke:3px rgba(45,226,240,.62);background:linear-gradient(180deg,rgba(45,226,240,.34),rgba(139,92,246,.10));-webkit-background-clip:text;background-clip:text}
+.head{position:absolute;top:92px}
+.head .k{font-weight:900;font-size:28px;letter-spacing:.16em;color:var(--cyan);margin-bottom:18px}
+.head h2{font-family:var(--font-display);font-size:62px;line-height:1.04;letter-spacing:-.01em;background:linear-gradient(90deg,#2de2f0,#8b5cf6 70%,#d946ef);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:6px}
+.head p{margin-top:16px;font-size:28px;line-height:1.3;color:var(--soft);font-weight:700}
+.phone{position:absolute;left:761px;top:123px;width:398px;height:834px;perspective:2400px}
+.tilt{position:absolute;inset:0}
+.device{position:absolute;inset:0;border-radius:64px;background:linear-gradient(145deg,#4a2a86,#150a2b 40%,#2a1450);padding:12px;box-shadow:0 0 0 2px rgba(45,226,240,.55),0 40px 120px rgba(0,0,0,.65),0 0 140px rgba(139,92,246,.45)}
+.screen{position:relative;width:374px;height:810px;border-radius:52px;overflow:hidden;background:#16082a}
+.stage{position:absolute;left:0;top:0;width:390px;height:844px;transform:scale(0.95897);transform-origin:0 0}
+.scr{position:absolute;inset:0;opacity:0;overflow:hidden}
+.scr img,.scr video{position:absolute;left:0;top:0;width:390px;height:844px;object-fit:cover}
+.ring{position:absolute;border-radius:14px;border:3px solid var(--cyan);box-shadow:0 0 0 3px rgba(45,226,240,.18),0 0 26px rgba(45,226,240,.65),inset 0 0 22px rgba(45,226,240,.18);opacity:0}
+.sweep{position:absolute;top:-100px;left:-300px;width:200px;height:1100px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);opacity:0}
+.glass{position:absolute;inset:0;border-radius:52px;background:linear-gradient(125deg,rgba(255,255,255,.14),rgba(255,255,255,0) 32%);pointer-events:none}
+.notch{position:absolute;left:50%;top:10px;width:96px;height:6px;margin-left:-48px;border-radius:3px;background:rgba(255,255,255,.18)}
+svg.leads{position:absolute;left:-700px;top:-300px;width:2000px;height:1500px;overflow:visible;pointer-events:none}
+svg.leads line{stroke:var(--cyan);stroke-width:3;stroke-linecap:round;opacity:0;filter:drop-shadow(0 0 6px rgba(45,226,240,.8))}
+svg.leads circle{fill:var(--cyan);opacity:0}
+.co{position:absolute;width:440px;padding:22px 26px 24px;border-radius:26px;background:linear-gradient(160deg,rgba(40,16,78,.94),rgba(18,7,38,.94));border:2px solid rgba(45,226,240,.6);box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 40px rgba(45,226,240,.18);opacity:0}
+.co .n{display:inline-block;min-width:44px;height:44px;line-height:44px;text-align:center;border-radius:22px;background:linear-gradient(135deg,var(--cyan),var(--violet));color:#0b0418;font-weight:900;font-size:26px;margin-bottom:10px}
+.co h3{font-weight:900;font-size:38px;line-height:1.08;letter-spacing:-.01em;color:#fff}
+.co p{margin-top:8px;font-weight:700;font-size:27px;line-height:1.25;color:var(--soft)}
+.panel{position:absolute;top:330px;height:630px;padding:30px 36px;border-radius:30px;background:linear-gradient(160deg,rgba(34,13,66,.92),rgba(14,5,30,.92));border:2px solid rgba(45,226,240,.45);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 60px rgba(45,226,240,.12)}
+.panel .pt{font-weight:900;font-size:34px;letter-spacing:-.005em}
+.panel .ps{font-weight:700;font-size:26px;color:var(--soft);margin-top:4px}
+.row{position:absolute;left:36px;width:828px;height:56px}
+.row .lb{position:absolute;left:0;top:10px;width:290px;font-weight:900;font-size:28px;white-space:nowrap}
+.row .tr{position:absolute;left:300px;top:20px;width:330px;height:16px;border-radius:8px;background:rgba(255,255,255,.12)}
+.row .bd{position:absolute;top:-6px;height:28px;border-radius:6px;background:rgba(45,226,240,.30);border:2px solid rgba(45,226,240,.7)}
+.row .mk{position:absolute;top:-8px;width:32px;height:32px;margin-left:-16px;border-radius:50%;background:var(--cyan);border:4px solid #fff;box-shadow:0 0 22px rgba(45,226,240,.9)}
+.row.out .mk{background:var(--amber);box-shadow:0 0 22px rgba(255,181,71,.9)}
+.row .vl{position:absolute;left:650px;top:8px;width:96px;text-align:right;font-weight:900;font-size:30px}
+.row .st{position:absolute;left:756px;top:10px;font-weight:900;font-size:26px;color:var(--cyan);white-space:nowrap}
+.row.out .st{color:var(--amber)}
+.legend{position:absolute;left:36px;bottom:24px;width:920px;font-weight:700;font-size:26px;color:var(--soft)}
+.legend b{color:var(--cyan)} .legend i{font-style:normal;color:var(--amber);font-weight:900}
+.bars{position:absolute;left:36px;width:940px}
+.bgrp{position:absolute;left:0;width:940px;height:200px}
+.bgrp .gt{font-weight:900;font-size:30px;margin-bottom:10px}
+.bar{position:relative;height:60px;margin-bottom:12px}
+.bar .bl{position:absolute;left:0;top:14px;font-weight:700;font-size:27px;width:300px;color:var(--soft)}
+.bar .bf{position:absolute;left:310px;top:8px;height:44px;border-radius:10px;background:linear-gradient(90deg,var(--violet),var(--cyan));transform-origin:0 50%}
+.bar.bad .bf{background:linear-gradient(90deg,#ff7a45,var(--amber))}
+.bar .bv{position:absolute;top:10px;font-weight:900;font-size:32px}
+.steps{position:absolute;left:36px;top:116px;width:828px;height:150px}
+.stp{position:absolute;top:0;width:150px;height:150px;border-radius:22px;background:rgba(45,226,240,.10);border:2px solid rgba(45,226,240,.5);text-align:center;padding-top:16px}
+.stp b{display:block;font-weight:900;font-size:30px}
+.stp span{display:block;margin-top:6px;font-weight:700;font-size:26px;line-height:1.15;color:var(--soft)}
+.stp em{display:block;font-style:normal;font-weight:900;font-size:26px;color:var(--cyan)}
+.kvs{position:absolute;left:36px;top:288px;width:828px;height:120px}
+.kv{position:absolute;top:0;width:195px;height:120px;text-align:center}
+.kv b{display:block;font-family:var(--font-display);font-size:60px;line-height:1.1;background:linear-gradient(90deg,#2de2f0,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.kv span{display:block;font-weight:700;font-size:26px;color:var(--soft);line-height:1.1}
+.guard{position:absolute;left:36px;top:432px;width:828px;height:172px;border-radius:22px;background:rgba(255,181,71,.10);border:2px solid rgba(255,181,71,.7);padding:18px 26px}
+.guard .g1{font-weight:900;font-size:30px;color:var(--amber)}
+.guard .g2{margin-top:6px;font-weight:900;font-size:40px}
+.guard .g3{margin-top:6px;font-weight:700;font-size:27px;color:var(--soft)}
+#tracker{position:absolute;left:480px;top:972px;width:960px;height:60px}
+#trline{position:absolute;left:30px;top:12px;width:900px;height:6px;border-radius:3px;background:rgba(255,255,255,.14)}
+#trfill{position:absolute;left:30px;top:12px;width:900px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--violet));transform-origin:0 50%}
+.node{position:absolute;top:0;width:170px;margin-left:-85px;text-align:center}
+.node i{display:block;margin:0 auto;width:24px;height:24px;border-radius:50%;background:#2a1552;border:3px solid rgba(255,255,255,.35)}
+.node b{display:block;margin-top:6px;font-size:26px;font-weight:900;color:rgba(255,255,255,.55)}
+#brand{position:absolute;right:120px;top:92px;text-align:right;font-weight:900;font-size:28px;letter-spacing:.16em;color:#fff}
+#brand span{color:var(--cyan)}
+#endcard{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#endcard .inner{position:absolute;left:960px;top:230px;width:900px}
+#endcard .small{font-weight:900;font-size:30px;letter-spacing:.18em;color:var(--cyan)}
+#endcard h1{font-family:var(--font-display);font-size:104px;line-height:1;white-space:nowrap;margin-top:18px;background:linear-gradient(90deg,#2de2f0,#8b5cf6 70%,#d946ef);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:10px}
+#endcard .tag{margin-top:20px;font-size:44px;font-weight:900;line-height:1.15}
+#endcard .chips{margin-top:34px;display:flex;flex-wrap:wrap;gap:16px}
+#endcard .chip{padding:12px 26px;border-radius:40px;font-size:28px;font-weight:900;background:rgba(45,226,240,.12);border:2px solid rgba(45,226,240,.6)}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="36.0" data-width="1920" data-height="1080">
+
+<div id="bg" class="clip fill" data-start="0" data-duration="36.0" data-track-index="0"><div id="glowA"></div><div id="glowB"></div><div id="grid"></div>
+<span class="dot" id="dot0" style="left:1006px;top:693px"></span>
+<span class="dot" id="dot1" style="left:1834px;top:919px"></span>
+<span class="dot" id="dot2" style="left:1033px;top:582px"></span>
+<span class="dot" id="dot3" style="left:1120px;top:721px"></span>
+<span class="dot" id="dot4" style="left:468px;top:309px"></span>
+<span class="dot" id="dot5" style="left:1726px;top:644px"></span>
+<span class="dot" id="dot6" style="left:1054px;top:764px"></span>
+<span class="dot" id="dot7" style="left:1337px;top:932px"></span>
+<span class="dot" id="dot8" style="left:461px;top:216px"></span>
+<span class="dot" id="dot9" style="left:994px;top:430px"></span>
+<span class="dot" id="dot10" style="left:370px;top:212px"></span>
+<span class="dot" id="dot11" style="left:1183px;top:949px"></span>
+<span class="dot" id="dot12" style="left:1500px;top:769px"></span>
+<span class="dot" id="dot13" style="left:165px;top:729px"></span>
+<span class="dot" id="dot14" style="left:891px;top:583px"></span>
+<span class="dot" id="dot15" style="left:1419px;top:876px"></span>
+</div>
+<div id="word0" class="word clip" data-layout-ignore data-start="0.0" data-duration="4.20" data-track-index="1" style="font-size:330px"><span class="mask"><span class="ch" id="w0c0">E</span></span><span class="mask"><span class="ch" id="w0c1">N</span></span><span class="mask"><span class="ch" id="w0c2">G</span></span><span class="mask"><span class="ch" id="w0c3">I</span></span><span class="mask"><span class="ch" id="w0c4">N</span></span><span class="mask"><span class="ch" id="w0c5">E</span></span></div>
+<div id="word1" class="word clip" data-layout-ignore data-start="4.0" data-duration="5.30" data-track-index="1" style="font-size:520px"><span class="mask"><span class="ch" id="w1c0">L</span></span><span class="mask"><span class="ch" id="w1c1">I</span></span><span class="mask"><span class="ch" id="w1c2">V</span></span><span class="mask"><span class="ch" id="w1c3">E</span></span></div>
+<div id="word2" class="word clip" data-layout-ignore data-start="9.1" data-duration="5.10" data-track-index="1" style="font-size:430px"><span class="mask"><span class="ch" id="w2c0">S</span></span><span class="mask"><span class="ch" id="w2c1">H</span></span><span class="mask"><span class="ch" id="w2c2">A</span></span><span class="mask"><span class="ch" id="w2c3">P</span></span><span class="mask"><span class="ch" id="w2c4">E</span></span></div>
+<div id="word3" class="word clip" data-layout-ignore data-start="14.0" data-duration="6.20" data-track-index="1" style="font-size:300px"><span class="mask"><span class="ch" id="w3c0">M</span></span><span class="mask"><span class="ch" id="w3c1">E</span></span><span class="mask"><span class="ch" id="w3c2">A</span></span><span class="mask"><span class="ch" id="w3c3">S</span></span><span class="mask"><span class="ch" id="w3c4">U</span></span><span class="mask"><span class="ch" id="w3c5">R</span></span><span class="mask"><span class="ch" id="w3c6">E</span></span></div>
+<div id="word4" class="word clip" data-layout-ignore data-start="20.0" data-duration="6.20" data-track-index="1" style="font-size:620px"><span class="mask"><span class="ch" id="w4c0">F</span></span><span class="mask"><span class="ch" id="w4c1">I</span></span><span class="mask"><span class="ch" id="w4c2">X</span></span></div>
+<div id="word5" class="word clip" data-layout-ignore data-start="26.0" data-duration="6.40" data-track-index="1" style="font-size:470px"><span class="mask"><span class="ch" id="w5c0">L</span></span><span class="mask"><span class="ch" id="w5c1">E</span></span><span class="mask"><span class="ch" id="w5c2">A</span></span><span class="mask"><span class="ch" id="w5c3">R</span></span><span class="mask"><span class="ch" id="w5c4">N</span></span></div>
+<div id="head0" class="head clip" data-start="0.4" data-duration="3.60" data-track-index="2" style="left:120px;width:560px"><div class="k">THE 2026/27 SEASON · FEATURE 02</div><h2>Built to play by football’s rules.</h2></div>
+<div id="head1" class="head clip" data-start="4.2" data-duration="4.80" data-track-index="2" style="left:120px;width:560px"><div class="k">01 · SIMULATE</div><h2>22 players. One ball.</h2><p>Every half second, every player decides and moves.</p></div>
+<div id="head2" class="head clip" data-start="9.2" data-duration="4.80" data-track-index="2" style="left:120px;width:560px"><div class="k">02 · SHAPE</div><h2>Tactics you can see.</h2><p>One shape with the ball, another without it.</p></div>
+<div id="head3" class="head clip" data-start="14.2" data-duration="5.80" data-track-index="2" style="left:900px;width:900px"><div class="k">03 · MEASURE</div><h2>Held to real-world numbers.</h2><p>Seeded test worlds, scored against real football.</p></div>
+<div id="head4" class="head clip" data-start="20.2" data-duration="5.80" data-track-index="2" style="left:120px;width:900px"><div class="k">04 · FIX</div><h2>Found a bug. Fixed it.</h2><p>A hidden home-side edge, caught by a symmetry test.</p></div>
+<div id="head5" class="head clip" data-start="26.2" data-duration="6.20" data-track-index="2" style="left:900px;width:900px"><div class="k">05 · LEARN</div><h2>Managers that learn.</h2><p>They learn from results and only go live after beating the rules.</p></div>
+<div id="brand" class="clip" data-start="0.6" data-duration="35.4" data-track-index="2">FUTBOL <span>MANAGER</span></div>
+<div id="p-score" class="panel clip" data-start="14.4" data-duration="5.8" data-track-index="3" style="left:900px;width:900px"><div class="pt">Engine scorecard vs real football</div><div class="ps">Seeded world 1 · 120 matches · today’s code</div>
+<div id="sr0" class="row out" style="top:124px"><div class="lb">Goals per match</div><div class="tr"><div class="bd" style="left:206px;width:41px"></div><div class="mk" id="sm0" data-x="151" style="left:0px"></div></div><div class="vl">1.83</div><div class="st">Below</div></div>
+<div id="sr1" class="row out" style="top:174px"><div class="lb">Shots per match</div><div class="tr"><div class="bd" style="left:158px;width:79px"></div><div class="mk" id="sm1" data-x="112" style="left:0px"></div></div><div class="vl">18.5</div><div class="st">Below</div></div>
+<div id="sr2" class="row" style="top:224px"><div class="lb">Passes per team</div><div class="tr"><div class="bd" style="left:99px;width:66px"></div><div class="mk" id="sm2" data-x="157" style="left:0px"></div></div><div class="vl">538</div><div class="st">In range</div></div>
+<div id="sr3" class="row" style="top:274px"><div class="lb">Yellow cards</div><div class="tr"><div class="bd" style="left:141px;width:47px"></div><div class="mk" id="sm3" data-x="178" style="left:0px"></div></div><div class="vl">3.77</div><div class="st">In range</div></div>
+<div id="sr4" class="row" style="top:324px"><div class="lb">Ground duels / team</div><div class="tr"><div class="bd" style="left:110px;width:55px"></div><div class="mk" id="sm4" data-x="161" style="left:0px"></div></div><div class="vl">59.2</div><div class="st">In range</div></div>
+<div id="sr5" class="row out" style="top:374px"><div class="lb">Offsides</div><div class="tr"><div class="bd" style="left:165px;width:24px"></div><div class="mk" id="sm5" data-x="154" style="left:0px"></div></div><div class="vl">3.27</div><div class="st">Below</div></div>
+<div id="sr6" class="row out" style="top:424px"><div class="lb">Fouls</div><div class="tr"><div class="bd" style="left:132px;width:33px"></div><div class="mk" id="sm6" data-x="196" style="left:0px"></div></div><div class="vl">27.8</div><div class="st">Above</div></div>
+<div id="sr7" class="row out" style="top:474px"><div class="lb">Home wins</div><div class="tr"><div class="bd" style="left:145px;width:40px"></div><div class="mk" id="sm7" data-x="119" style="left:0px"></div></div><div class="vl">38%</div><div class="st">Below</div></div>
+<div class="legend" id="sl"><b>Shaded = real football.</b> 3 of 8 in range · <i>5 outside</i></div></div>
+<div id="p-fix" class="panel clip" data-start="20.4" data-duration="5.8" data-track-index="3" style="left:120px;width:1000px"><div class="pt">Who wins when sides are identical?</div><div class="ps">Every fixture played both ways round, home bonus off.</div>
+<div class="bgrp" id="g1" style="top:110px"><div class="gt">Before: the home side moved first</div>
+<div class="bar bad"><span class="bl">Moved first</span><div class="bf" id="b1" style="width:480px"></div><span class="bv" id="v1" style="left:810px">48%</span></div>
+<div class="bar bad"><span class="bl">Moved second</span><div class="bf" id="b2" style="width:300px"></div><span class="bv" id="v2" style="left:630px">28–32%</span></div></div>
+<div class="bgrp" id="g2" style="top:290px"><div class="gt">After: both read the same half-second</div>
+<div class="bar"><span class="bl">Moved first</span><div class="bf" id="b3" style="width:430px"></div><span class="bv" id="v3" style="left:760px">42–44%</span></div>
+<div class="bar"><span class="bl">Moved second</span><div class="bf" id="b4" style="width:400px"></div><span class="bv" id="v4" style="left:730px">39–41%</span></div></div>
+<div class="legend" id="fl">The home side moved first, so the away side reacted late: a hidden ~15-point edge.</div></div>
+<div id="p-learn" class="panel clip" data-start="26.4" data-duration="6.0" data-track-index="3" style="left:900px;width:900px"><div class="pt">The AI Brain, from a real training run</div><div class="ps">Computer managers pick tactics at half-time and late on.</div><div class="steps">
+<div class="stp" id="st0" style="left:0px"><em>1</em><b>Record</b><span>every decision</span></div>
+<div class="stp" id="st1" style="left:169px"><em>2</em><b>Judge</b><span>by the result</span></div>
+<div class="stp" id="st2" style="left:338px"><em>3</em><b>Learn</b><span>per situation</span></div>
+<div class="stp" id="st3" style="left:507px"><em>4</em><b>Test</b><span>vs the rules</span></div>
+<div class="stp" id="st4" style="left:676px"><em>5</em><b>Release</b><span>you approve</span></div>
+</div><div class="kvs">
+<div class="kv" id="kv0" style="left:0px"><b>100</b><span>camp matches</span></div>
+<div class="kv" id="kv1" style="left:211px"><b>800</b><span>decisions judged</span></div>
+<div class="kv" id="kv2" style="left:422px"><b>263</b><span>of 360 situations</span></div>
+<div class="kv" id="kv3" style="left:633px"><b>20</b><span>trusted so far</span></div>
+</div><div class="guard" id="gd"><div class="g1">SAFETY GATE · 200 MATCHES, SIDES SWAPPED</div><div class="g2">Draft 1.33 · Rules 1.33 points a game</div><div class="g3">No clear difference yet, so it is not released.</div></div></div>
+<div id="phone" class="phone" data-layout-allow-occlusion><div id="tilt" class="tilt"><div class="device"><div class="screen"><div class="stage">
+<div class="scr" id="s-live1"><video id="vid1" class="clip" src="assets/live-match.mp4" muted playsinline data-start="1.0" data-duration="8.6" data-media-start="0"></video></div>
+<div class="scr" id="s-form"><img src="assets/tab-formation.png" alt="">
+<div class="ring" id="c4-ring" style="left:12px;top:270px;width:366px;height:300px"></div></div>
+<div class="scr" id="s-formw"><img src="assets/tab-formation-without.png" alt="">
+<div class="ring" id="c5-ring" style="left:12px;top:270px;width:366px;height:300px"></div></div>
+<div class="scr" id="s-stats"><img src="assets/tab-stats.png" alt=""></div>
+<div class="scr" id="s-live2"><video id="vid2" class="clip" src="assets/live-match.mp4" muted playsinline data-start="20.2" data-duration="6.4" data-media-start="9"></video></div>
+<div class="scr" id="s-brain"><img src="assets/adm-brain.png" alt=""></div>
+<div class="scr" id="s-end"><img src="assets/live-5.png" alt=""></div>
+<div class="sweep" id="sweep"></div></div><div class="glass"></div><div class="notch"></div></div></div></div>
+<svg class="leads" viewBox="-700 -300 2000 1500" id="leads">
+<line id="c1-lead" x1="-70.0" y1="417.0" x2="155.8" y2="386.0"/><circle id="c1-pt" cx="155.8" cy="386.0" r="7"/>
+<line id="c2-lead" x1="468.0" y1="147.0" x2="199.0" y2="108.9"/><circle id="c2-pt" cx="199.0" cy="108.9" r="7"/>
+<line id="c3-lead" x1="468.0" y1="517.0" x2="199.0" y2="621.9"/><circle id="c3-pt" cx="199.0" cy="621.9" r="7"/>
+<line id="c4-lead" x1="-70.0" y1="417.0" x2="23.5" y2="414.8"/><circle id="c4-pt" cx="23.5" cy="414.8" r="7"/>
+<line id="c5-lead" x1="468.0" y1="147.0" x2="374.5" y2="414.8"/><circle id="c5-pt" cx="374.5" cy="414.8" r="7"/>
+<line id="c6-lead" x1="-70.0" y1="517.0" x2="107.9" y2="453.1"/><circle id="c6-pt" cx="107.9" cy="453.1" r="7"/>
+</svg>
+<div id="c1-card" class="co clip" data-start="4.60" data-duration="3.90" data-track-index="5" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">1</span><h3>22 players + the ball</h3><p>Tracked every half second</p></div>
+<div id="c2-card" class="co clip" data-start="5.20" data-duration="3.90" data-track-index="5" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">2</span><h3>Weather and kick-off</h3><p>They change fitness and results</p></div>
+<div id="c3-card" class="co clip" data-start="6.00" data-duration="3.50" data-track-index="5" data-layout-allow-overlap style="left:468px;top:437px"><span class="n">3</span><h3>Real football events</h3><p>Offsides, fouls, cards, corners</p></div>
+<div id="c4-card" class="co clip" data-start="9.30" data-duration="2.50" data-track-index="5" data-layout-allow-overlap style="left:-510px;top:337px"><span class="n">4</span><h3>4-2-3-1 with the ball</h3><p>Roles stay in their lanes</p></div>
+<div id="c5-card" class="co clip" data-start="11.50" data-duration="3.00" data-track-index="5" data-layout-allow-overlap style="left:468px;top:67px"><span class="n">5</span><h3>4-4-2 without it</h3><p>The shape changes with possession</p></div>
+<div id="c6-card" class="co clip" data-start="12.10" data-duration="2.40" data-track-index="5" data-layout-allow-overlap style="left:-510px;top:437px"><span class="n">6</span><h3>Roles read the play</h3><p>Full-backs step in, wingers hold width</p></div>
+</div>
+<div id="tracker" class="clip" data-start="3.6" data-duration="28" data-track-index="2"><div id="trline"></div><div id="trfill"></div>
+<div class="node" id="nd0" style="left:30px"><i></i><b>Simulate</b></div>
+<div class="node" id="nd1" style="left:255px"><i></i><b>Shape</b></div>
+<div class="node" id="nd2" style="left:480px"><i></i><b>Measure</b></div>
+<div class="node" id="nd3" style="left:705px"><i></i><b>Fix</b></div>
+<div class="node" id="nd4" style="left:930px"><i></i><b>Learn</b></div>
+</div>
+<div id="endcard" class="clip" data-start="32.6" data-duration="3.4" data-track-index="6"><div class="inner"><div class="small" id="e1">FUTBOL MANAGER · 2026/27</div><h1 id="e2">MATCH ENGINE.</h1><div class="tag" id="e3">Measure it. Fix it.<br>Learn from it.</div><div class="chips" id="e4"><span class="chip">22 players</span><span class="chip">Real-world bands</span><span class="chip">Learns from results</span></div></div></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+const C = [{"id": "c1", "s": 4.8, "e": 8.0, "side": "L", "ring": false}, {"id": "c2", "s": 5.4, "e": 8.6, "side": "R", "ring": false}, {"id": "c3", "s": 6.2, "e": 9.0, "side": "R", "ring": false}, {"id": "c4", "s": 9.5, "e": 11.3, "side": "L", "ring": true}, {"id": "c5", "s": 11.7, "e": 14.0, "side": "R", "ring": true}, {"id": "c6", "s": 12.3, "e": 14.0, "side": "L", "ring": false}];
+const WORDS = [[0.0, 4.2, 6], [4.0, 9.3, 4], [9.1, 14.2, 5], [14.0, 20.2, 7], [20.0, 26.2, 3], [26.0, 32.4, 5]];
+const NODES = [4.0, 9.0, 14.0, 20.0, 26.0];
+
+const EASE = "expo.out";
+tl.fromTo("#glowA", { x: -80, y: 0 }, { x: 160, y: 60, duration: 36, ease: "sine.inOut" }, 0);
+tl.fromTo("#glowB", { x: 80, y: 0 }, { x: -200, y: -80, duration: 36, ease: "sine.inOut" }, 0);
+for (let i = 0; i < 16; i++) {
+  const s = (i * 1.7) % 29, d = 5 + (i % 4);
+  tl.fromTo("#dot" + i, { opacity: 0, y: 0 }, { opacity: 0.8, y: -120 - (i % 5) * 30, duration: d / 2, ease: "sine.out" }, s);
+  tl.to("#dot" + i, { opacity: 0, y: -260 - (i % 5) * 30, duration: d / 2, ease: "sine.in" }, s + d / 2);
+}
+WORDS.forEach(([s, e, n], i) => {
+  for (let j = 0; j < n; j++) {
+    tl.fromTo("#w" + i + "c" + j, { yPercent: 115, rotation: 6 }, { yPercent: 0, rotation: 0, duration: 0.8, ease: "expo.out" }, s + 0.07 * j);
+    tl.to("#w" + i + "c" + j, { yPercent: -115, duration: 0.45, ease: "power3.in" }, e - 0.55 + 0.04 * j);
+  }
+  tl.fromTo("#word" + i, { x: 60 }, { x: -60, duration: e - s, ease: "none" }, s);
+});
+tl.fromTo("#head0", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 0.4);
+tl.to("#head0", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 3.55);
+tl.fromTo("#head1", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 4.2);
+tl.to("#head1", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 8.55);
+tl.fromTo("#head2", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 9.2);
+tl.to("#head2", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 13.55);
+tl.fromTo("#head3", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 14.2);
+tl.to("#head3", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 19.55);
+tl.fromTo("#head4", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 20.2);
+tl.to("#head4", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 25.55);
+tl.fromTo("#head5", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: EASE }, 26.2);
+tl.to("#head5", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 31.95);
+tl.fromTo("#brand", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 0.6);
+tl.to("#brand", { opacity: 0, duration: 0.3 }, 19.9);
+tl.to("#brand", { opacity: 1, duration: 0.4 }, 26.0);
+/* phone: entrance, float, sway, slides between scenes */
+tl.set("#phone", { x: 0, y: 0 }, 0);
+tl.fromTo("#tilt", { y: 1100, rotationX: 28, rotationY: -42, scale: 0.7 }, { y: 0, rotationX: 0, rotationY: 0, scale: 1, duration: 1.7, ease: "expo.out" }, 0.2);
+for (let t = 1.9, k = 0; t < 33; t += 2.6, k++) tl.to("#phone", { y: k % 2 ? 12 : -14, duration: 2.6, ease: "sine.inOut" }, t);
+for (let t = 1.9, k = 0; t < 32.9; t += 3.3, k++) tl.to("#tilt", { rotationY: k % 2 ? -7 : 7, rotationX: k % 2 ? 2 : -2, duration: 3.3, ease: "sine.inOut" }, t);
+tl.to("#phone", { x: -480, duration: 1.1, ease: "expo.inOut" }, 13.8);
+tl.to("#phone", { x: 480, duration: 1.1, ease: "expo.inOut" }, 19.8);
+tl.to("#phone", { x: -480, duration: 1.1, ease: "expo.inOut" }, 25.8);
+tl.to("#phone", { x: -330, duration: 1.1, ease: "expo.inOut" }, 32.4);
+tl.to("#tilt", { scale: 0.86, duration: 1.1, ease: "expo.inOut" }, 32.4);
+/* screens */
+const SCR = [["live1", 0.9, 9.2], ["form", 9.2, 11.4], ["formw", 11.4, 14.0], ["stats", 14.0, 20.2], ["live2", 20.2, 26.2], ["brain", 26.2, 32.5], ["end", 32.5, 37]];
+SCR.forEach(([id, s, e], i) => {
+  const first = i === 0, last = i === SCR.length - 1;
+  tl.fromTo("#s-" + id, { opacity: 0 }, { opacity: 1, duration: first ? 0.7 : 0.35, ease: "power2.out" }, first ? s : s - 0.15);
+  if (!last) tl.to("#s-" + id, { opacity: 0, duration: 0.2, ease: "none" }, e + 0.2);
+  if (!first) tl.fromTo("#sweep", { x: -300, opacity: 0.9 }, { x: 760, opacity: 0, duration: 0.7, ease: "power2.inOut" }, s - 0.1);
+});
+/* callouts */
+C.forEach((c) => {
+  const dir = c.side === "L" ? -1 : 1;
+  tl.fromTo("#" + c.id + "-card", { opacity: 0, x: 60 * dir, scale: 0.92 }, { opacity: 1, x: 0, scale: 1, duration: 0.55, ease: "back.out(1.5)" }, c.s - 0.2);
+  if (c.ring) {
+    tl.fromTo("#" + c.id + "-ring", { opacity: 0, scale: 1.25 }, { opacity: 1, scale: 1, duration: 0.4, ease: EASE }, c.s);
+    tl.to("#" + c.id + "-ring", { scale: 1.035, duration: 0.45, yoyo: true, repeat: 1, ease: "sine.inOut" }, c.s + 0.5);
+    tl.to("#" + c.id + "-ring", { opacity: 0, duration: 0.3 }, c.e);
+  }
+  tl.fromTo("#" + c.id + "-lead", { opacity: 0, strokeDasharray: 700, strokeDashoffset: 700 }, { opacity: 1, strokeDashoffset: 0, duration: 0.45, ease: "power2.out" }, c.s);
+  tl.fromTo("#" + c.id + "-pt", { opacity: 0, scale: 0.2, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, c.s + 0.35);
+  tl.to("#" + c.id + "-card", { opacity: 0, x: 40 * dir, duration: 0.35, ease: "power2.in" }, c.e);
+  tl.to("#" + c.id + "-lead", { opacity: 0, duration: 0.3 }, c.e);
+  tl.to("#" + c.id + "-pt", { opacity: 0, duration: 0.3 }, c.e);
+});
+/* scoreboard */
+tl.fromTo("#p-score", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.7, ease: EASE }, 14.4);
+tl.to("#p-score", { opacity: 0, x: 60, duration: 0.4, ease: "power2.in" }, 19.75);
+for (let i = 0; i < 8; i++) {
+  const el = document.querySelector("#sm" + i), x = +el.dataset.x;
+  tl.fromTo("#sr" + i, { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.5, ease: EASE }, 15.0 + i * 0.22);
+  tl.fromTo("#sm" + i, { x: 0 }, { x: x, duration: 0.9, ease: "power3.out" }, 15.3 + i * 0.22);
+}
+tl.fromTo("#sl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 16.6);
+/* fix */
+tl.fromTo("#p-fix", { opacity: 0, x: -80 }, { opacity: 1, x: 0, duration: 0.7, ease: EASE }, 20.4);
+tl.to("#p-fix", { opacity: 0, x: -60, duration: 0.4, ease: "power2.in" }, 25.75);
+tl.fromTo("#g1", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 21.0);
+tl.fromTo("#g2", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 23.0);
+[["b1","v1",21.3],["b2","v2",21.6],["b3","v3",23.3],["b4","v4",23.6]].forEach(([b, v, t]) => {
+    tl.fromTo("#" + b, { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power3.out" }, t);
+  tl.fromTo("#" + v, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, t + 0.4);
+});
+tl.fromTo("#fl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 22.2);
+/* learn */
+tl.fromTo("#p-learn", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.7, ease: EASE }, 26.4);
+tl.to("#p-learn", { opacity: 0, x: 60, duration: 0.4, ease: "power2.in" }, 31.95);
+for (let i = 0; i < 5; i++) tl.fromTo("#st" + i, { opacity: 0, y: 30, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 27.0 + i * 0.28);
+for (let i = 0; i < 4; i++) tl.fromTo("#kv" + i, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: EASE }, 28.0 + i * 0.2);
+tl.fromTo("#gd", { opacity: 0, y: 30, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "back.out(1.4)" }, 29.0);
+/* tracker */
+tl.fromTo("#tracker", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: EASE }, 3.6);
+tl.fromTo("#trfill", { scaleX: 0 }, { scaleX: 0, duration: 0.01 }, 3.6);
+NODES.forEach((t, i) => {
+  tl.to("#trfill", { scaleX: i / (NODES.length - 1), duration: 0.6, ease: "power2.inOut" }, t);
+  tl.to("#nd" + i + " i", { backgroundColor: "#2de2f0", borderColor: "#ffffff", scale: 1.35, duration: 0.35, ease: "back.out(2)" }, t + 0.1);
+  tl.to("#nd" + i + " b", { color: "#ffffff", duration: 0.3 }, t + 0.1);
+});
+tl.to("#tracker", { opacity: 0, y: 20, duration: 0.5, ease: "power2.in" }, 32.0);
+/* end card */
+tl.to("#brand", { opacity: 0, duration: 0.3 }, 32.5);
+["e1", "e2", "e3", "e4"].forEach((id, i) => tl.fromTo("#" + id, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.7, ease: EASE }, 33.2 + i * 0.2));
+tl.set({}, {}, 36.0);
+window.__timelines = window.__timelines || {};
+window.__timelines["main"] = tl;
+
+</script></body></html>
