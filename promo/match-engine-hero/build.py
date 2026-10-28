@@ -20,28 +20,28 @@ def loc(x, y):  # stage css -> phone-local
 GAP = 0.2
 # name, file, word, ...
 clips = [('concede','clip-concede.mp4'),('tactics','clip-tactics.mp4'),('subs','clip-subs.mp4'),
-         ('equal','clip-equaliser.mp4'),('red','clip-red.mp4'),('shout','clip-shout.mp4')]
+         ('equal','clip-equaliser.mp4'),('rs','clip-redshout.mp4')]
 S = {}  # start times
 t = 3.4
 for n,f in clips:
     p = 'assets/'+f
     if not os.path.exists(p): continue
     d = dur(p); S[n] = (round(t,2), round(d,2)); t += d + GAP
-MOVE = (round(t,2), 3.3); t += 3.3 + GAP
-END = round(t,2); DUR = round(END+4.0,2)
-print('schedule', S, MOVE, END, DUR)
+END = round(t+0.1,2); DUR = round(END+4.0,2)
+print('schedule', S, END, DUR)
 
 # clip-relative event times (seconds into each cut clip), measured from the cuts
 EV = json.load(open('events.json'))
 def ev(n, k): return S[n][0] + EV[n][k]
 
 words = [('MATCH DAY.',0.0,3.6,168,'')]
-def addw(txt,n,sz,cls='',pad=(0.0,0.2)): words.append((txt,S[n][0]-0.2,S[n][0]+S[n][1]+pad[1],sz,cls))
-addw('SHOCK','concede',330); addw('REACT','tactics',330); words[-1]=(words[-1][0],words[-1][1],S['subs'][0]+S['subs'][1]+0.1,330,'')
-addw('GOAL','equal',400)
-if 'red' in S: addw('RED CARD','red',270,'red')
-addw('DEMAND','shout',300)
-words.append(('SIGN',MOVE[0]-0.2,MOVE[0]+MOVE[1]+0.2,420,''))
+def addw(txt,s_,e_,sz,cls=''): words.append((txt,s_,e_,sz,cls))
+addw('SHOCK',S['concede'][0]-0.2,S['concede'][0]+S['concede'][1]+0.2,330)
+addw('REACT',S['tactics'][0]-0.2,S['subs'][0]+S['subs'][1]+0.1,330)
+addw('GOAL',S['equal'][0]-0.2,S['equal'][0]+S['equal'][1]+0.2,400)
+addw('RED CARD',S['rs'][0]-0.2,ev('rs','sheet')-0.1,270,'red')
+addw('DEMAND',ev('rs','sheet')-0.2,ev('rs','resume')+0.3,300)
+addw('PUSH',ev('rs','resume')+0.2,END-0.1,380)
 
 heads = [  # kicker, headline, start, end
  ('THE 2026/27 SEASON · FEATURE 02','Match day. Your call.',0.5,3.3),
@@ -50,19 +50,17 @@ heads = [  # kicker, headline, start, end
  ('FRESH LEGS','Make the change.',S['subs'][0]+0.1,S['subs'][0]+S['subs'][1]),
  ('MINUTE 31','You hit back!',S['equal'][0]+0.2,S['equal'][0]+S['equal'][1]),
 ]
-if 'red' in S: heads.append(('MOMENTUM','They are down to ten.',S['red'][0]+0.2,S['red'][0]+S['red'][1]))
-heads += [('FIRE THEM UP','Demand more.',S['shout'][0]+0.2,S['shout'][0]+S['shout'][1]),
-          ('AFTER THE WHISTLE','Then make your move.',MOVE[0]+0.1,MOVE[0]+MOVE[1])]
+heads += [('MINUTE '+str(EV['rs']['min']),'They are down to ten.',S['rs'][0]+0.2,ev('rs','sheet')-0.1),
+          ('FIRE THEM UP','Demand more.',ev('rs','sheet')-0.1,ev('rs','resume')+0.2),
+          ('THEN WATCH THEM GO','Your team pushes on.',ev('rs','resume')+0.3,END-0.5)]
 
 # callouts (wide shots only): id, side, slot-y(frame), start, end, title, sub, target(stage pt)
 C = [
  ('c1','L',560, ev('concede','goal')+1.1, S['tactics'][0]-0.05, '0–1. Now what?','The pressure is on.',(195,40)),
  ('c2','R',330, S['tactics'][0]+0.2, S['tactics'][0]+2.0, 'Switch the shape.','Gegenpress. Attack. High line.',(195,260)),
- ('c3','R',560, ev('equal','goal')+2.3, ev('equal','goal')+4.5, 'You equalise.','It is level at 1–1.',(195,40)),
- ('c4','L',700, S['shout'][0]+2.6, S['shout'][0]+S['shout'][1]+1.2, 'Demand more.','Your voice on the touchline.',(195,640)),
+ ('c3','R',560, ev('equal','goal')+1.8, ev('equal','goal')+3.6, 'You equalise.','It is level at 1–1.',(195,40)),
+ ('c5','L',560, ev('rs','card')+1.4, ev('rs','card')+3.4, 'Ten men.','The game just changed.',(195,40)),
 ]
-if 'red' in S:
-    C.insert(3,('c5','L',560,S['red'][0]+EV['red']['card']+1.4,S['red'][0]+EV['red']['card']+3.6,'Ten men.','The game just changed.',(195,40)))
 
 html=[]; A=html.append
 A('''<!doctype html>
@@ -130,12 +128,11 @@ for i,(w,s,e,fs,cls) in enumerate(words):
 # phone
 A('<div id="phone" data-layout-allow-occlusion><div id="tilt" class="tilt"><div class="device"><div class="screen"><div class="stage">')
 A('<div class="scr" id="s-title"><img src="assets/title-hero.png" alt=""></div>')
+A('<div class="scr" id="s-title2"><img src="assets/title-hero.png" alt=""></div>')
 for n,f in clips:
     if n not in S: continue
     s,d=S[n]
     A(f'<div class="scr" id="s-{n}"><video id="v-{n}" class="clip" src="assets/{f}" muted playsinline data-start="{s}" data-duration="{d}" data-media-start="0"></video></div>')
-A('<div class="scr" id="s-m1"><img src="assets/a02-results.png" alt=""></div>')
-A('<div class="scr" id="s-m2"><img src="assets/b01_final_after.png" alt=""><div class="cover"><img src="assets/a03-player.png" alt=""></div></div>')
 A('<div class="sweep" id="sweep"></div></div><div class="glass"></div><div class="notch"></div></div></div></div>')
 # leads + callouts
 A('<svg class="leads" viewBox="-700 -300 2000 1500">')
@@ -163,8 +160,7 @@ J.append('const EASE = "expo.out";')
 J.append(f'const WORDS = {json.dumps([(w[1],w[2],len(w[0])) for w in words])};')
 J.append(f'const C = {json.dumps([dict(id=c[0],s=c[3],e=c[4],side=c[1]) for c in C])};')
 J.append(f'const PX0={PX}, PY0={PY}, K={K:.5f}, BZ={BZ};')
-J.append(f'const S = {json.dumps({k:v for k,v in S.items()})}; const MOVE = {json.dumps(MOVE)}; const END = {END}; const GOAL1 = {ev("concede","goal"):.2f}; const GOAL2 = {ev("equal","goal"):.2f}; const SHOUT = {ev("shout","tap"):.2f};')
-J.append(f'const RED = {(ev("red","card") if "red" in S else -1):.2f};')
+J.append(f'const S = {json.dumps({k:v for k,v in S.items()})}; const END = {END}; const GOAL1 = {ev("concede","goal"):.2f}; const GOAL2 = {ev("equal","goal"):.2f}; const RED = {ev("rs","card"):.2f}; const TAP = {ev("rs","tap"):.2f}; const SHEET = {ev("rs","sheet"):.2f}; const RESUME = {ev("rs","resume"):.2f};')
 J.append(r'''
 const fp = (sx, sy) => [PX0 + BZ + sx * K + 0, PY0 + BZ + sy * K];   // stage point -> frame point
 /* camera: focus a stage point at scale s, centred on the frame */
@@ -208,9 +204,7 @@ cam(0, 0.01, 1.25, 195, 422, 0); camHome(0.2, 2.6);
 /* float + sway between moves */
 for (let t = 2.4, k = 0; t < END; t += 2.6, k++) tl.to("#phone", { y: k % 2 ? 10 : -12, duration: 2.6, ease: "sine.inOut" }, t);
 /* screens */
-const SC = [["title", 0.9, S.concede[0]], ["concede", S.concede[0], S.concede[0] + S.concede[1]], ["tactics", S.tactics[0], S.tactics[0] + S.tactics[1]], ["subs", S.subs[0], S.subs[0] + S.subs[1]], ["equal", S.equal[0], S.equal[0] + S.equal[1]]];
-if (S.red) SC.push(["red", S.red[0], S.red[0] + S.red[1]]);
-SC.push(["shout", S.shout[0], S.shout[0] + S.shout[1]]); SC.push(["m1", MOVE[0], MOVE[0] + 1.5]); SC.push(["m2", MOVE[0] + 1.5, END + 5]);
+const SC = [["title", 0.9, S.concede[0]], ["concede", S.concede[0], S.concede[0] + S.concede[1]], ["tactics", S.tactics[0], S.tactics[0] + S.tactics[1]], ["subs", S.subs[0], S.subs[0] + S.subs[1]], ["equal", S.equal[0], S.equal[0] + S.equal[1]], ["rs", S.rs[0], S.rs[0] + S.rs[1]], ["title2", END - 0.2, END + 5]];
 SC.forEach(([id, s, e], i) => {
   const first = i === 0, last = i === SC.length - 1;
   tl.fromTo("#s-" + id, { opacity: 0 }, { opacity: 1, duration: first ? 0.6 : 0.25, ease: "power2.out" }, first ? s : s - 0.12);
@@ -242,25 +236,20 @@ flash(GOAL2 + 0.02, "#ffffff", 0.5); confetti(GOAL2 + 0.05); shake(GOAL2 + 0.1, 
 camHome(GOAL2 + 1.6, 0.8);
 tl.set("#tilt", { rotationY: 0 }, GOAL2 + 1.8);
 /* ---- RED CARD ---- */
-if (S.red) {
-  tl.to("#phone", { x: -80, duration: 0.7, ease: "power3.inOut" }, S.red[0] - 0.2);
-  tl.to("#tilt", { rotationY: 20, duration: 0.7, ease: "power3.inOut" }, S.red[0] - 0.2);
-  cam(RED - 0.3, 0.45, 1.55, 195, 330, 3, "power3.out"); shake(RED + 0.05, 14); flash(RED + 0.05, "#ff4d5e", 0.4);
-  camHome(RED + 1.0, 0.8, 0);
-  tl.to("#phone", { x: 0, duration: 0.7, ease: "power3.inOut" }, RED + 1.0);
-  tl.to("#tilt", { rotationY: 0, duration: 0.7, ease: "power3.inOut" }, RED + 1.0);
-}
-/* ---- DEMAND MORE: dive on the shouts sheet ---- */
-cam(S.shout[0] + 0.5, 0.7, 1.7, 195, 600, 0);
-camHome(SHOUT + 0.8, 0.8);
-tl.to("#tilt", { rotationY: -14, duration: 0.9, ease: "power2.inOut" }, SHOUT + 0.8);
-tl.to("#tilt", { rotationY: 0, duration: 0.9, ease: "power2.inOut" }, SHOUT + 2.0);
-/* ---- THE MOVE: whip to the transfers screen ---- */
-tl.to("#tilt", { rotationY: 180, duration: 0.55, ease: "power3.in" }, MOVE[0] - 0.55);
-tl.to("#tilt", { rotationY: 360, duration: 0.55, ease: "power3.out" }, MOVE[0]);
-tl.set("#tilt", { rotationY: 0 }, MOVE[0] + 0.56);
-cam(MOVE[0] + 1.6, 0.5, 1.45, 195, 252, 0, "power3.out"); confetti(MOVE[0] + 1.7); flash(MOVE[0] + 1.7, "#35e08a", 0.3);
-camHome(MOVE[0] + 2.6, 0.6);
+tl.to("#phone", { x: -50, duration: 0.7, ease: "power3.inOut" }, S.rs[0] - 0.2);
+tl.to("#tilt", { rotationY: 16, duration: 0.7, ease: "power3.inOut" }, S.rs[0] - 0.2);
+cam(RED - 0.3, 0.45, 1.55, 195, 330, 3, "power3.out"); shake(RED + 0.05, 14); flash(RED + 0.05, "#ff4d5e", 0.4);
+camHome(RED + 1.0, 0.8, 0);
+tl.to("#phone", { x: 0, duration: 0.7, ease: "power3.inOut" }, RED + 1.0);
+tl.to("#tilt", { rotationY: 0, duration: 0.7, ease: "power3.inOut" }, RED + 1.0);
+/* ---- DEMAND MORE: dive on the shouts sheet, tap ---- */
+cam(SHEET + 0.1, 0.8, 1.7, 195, 600, 0);
+camHome(RESUME - 0.1, 0.8);
+/* ---- THE TEAM PUSHES ON: follow the players, swing around the phone ---- */
+tl.to("#tilt", { rotationY: -18, rotationX: 4, duration: 1.4, ease: "power2.inOut" }, RESUME + 0.4);
+cam(RESUME + 0.5, 1.6, 1.45, 195, 330, -2, "power2.inOut");
+tl.to("#tilt", { rotationY: 12, rotationX: -3, duration: 1.8, ease: "power2.inOut" }, RESUME + 2.0);
+cam(RESUME + 2.2, 1.6, 1.15, 195, 330, 2, "power2.inOut");
 /* callouts */
 C.forEach((c) => {
   const dir = c.side === "L" ? -1 : 1;
