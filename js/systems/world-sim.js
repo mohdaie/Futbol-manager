@@ -80,8 +80,9 @@ function simWorldWeek() {
 }
 function worldTable(id) {
   const lg = G.worldLeagues[id];
-  if (!lg?.table) return [];
-  return Object.entries(lg.table).map(([cid, t]) => ({ id: cid, p: t[0], w: t[1], d: t[2], l: t[3], gf: t[4], ga: t[5], pts: t[6] }))
+  if (!lg) return [];
+  // Before the first round of a season there is no table yet: every club is on zero.
+  return Object.entries(lg.table && lg.season === G.season ? lg.table : Object.fromEntries(lg.clubs.map(cid => [cid, [0, 0, 0, 0, 0, 0, 0]]))).map(([cid, t]) => ({ id: cid, p: t[0], w: t[1], d: t[2], l: t[3], gf: t[4], ga: t[5], pts: t[6] }))
     .sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || x.id.localeCompare(y.id));
 }
 
