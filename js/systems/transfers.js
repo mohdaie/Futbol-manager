@@ -91,6 +91,8 @@ function moveClub(p, toId) {
   if (destination.fa) delete p.sellOn;
   delete p.unset; p.treq = null; p.listed = false;
   removeFromClub(p);
+  // Simulated clubs skip weekly training, so a player leaving one for a club that trains starts fresh.
+  if (typeof isSimClub === 'function' && isSimClub(G.clubs[from]) && !isSimClub(destination)) { p.cond = 100; p.shp = Math.max(p.shp, 60); p.rd = null; }
   favPersonMoved(p, from, toId);
   p.lvl = p.age <= 17 ? (destination.league === 'ECH' ? 'R' : 'Y') : 'A';
   addToClub(p, G.clubs[toId]);
@@ -152,6 +154,7 @@ function respondBid(n, choice) {
 function weeklyTransfers() {
   maintainForeignSquads();
   if (inWindow()) {
+    if (typeof simTransferWeek === 'function') simTransferWeek();
     aiMarket();
     aiBidsForUser();
     agentPitch();

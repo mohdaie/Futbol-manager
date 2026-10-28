@@ -158,6 +158,12 @@ ACT.fixturePage = ds => {
   sheet(`<h3 class="sh-t">Match preview</h3><div class="vs-names">${clubLink(f.h)}<span>v</span>${clubLink(f.a)}</div><p class="muted">${fxWhen(f)}${G.clubs[f.h].ground ? ' · ' + esc(G.clubs[f.h].ground) : ''}</p><div class="btns">${clubLink(f.h, 'View ' + esc(clubName(f.h)), 'btn')}${clubLink(f.a, 'View ' + esc(clubName(f.a)), 'btn')}${f.w === G.week && (f.h === G.club || f.a === G.club) ? '<button class="btn" data-a="go" data-s="prematch">Match preparation</button>' : ''}</div>`, { key: 'fixture:' + f.id, restore: () => ACT.fixturePage(ds), valid: () => !!G?.fixtures.find(x => x.id === f.id) });
 };
 
+// Standings of a simulation-only league (world-sim.js), and its past champions.
+function worldTableCard(id) {
+  const lg = G.worldLeagues?.[id], rows = lg?.table ? worldTable(id) : [];
+  if (!rows.length || !rows[0].p) return lg?.history?.length ? `<p class="muted">Last champions: ${lg.history.slice(0, 3).map(h => esc(clubName(h.champion)) + ' (' + esc(h.season) + ')').join(', ')}</p>` : '';
+  return `<div class="card"><h3>${esc(WORLD_LEAGUES[id].name)} table</h3><div class="list">${rows.map((r, i) => `<button class="row act" data-a="clubPage" data-id="${r.id}"><span class="rd">${i + 1}</span><span class="grow"><b>${esc(clubName(r.id))}</b><small>${r.p} played · ${r.w}-${r.d}-${r.l} · GD ${r.gf - r.ga >= 0 ? '+' : ''}${r.gf - r.ga}</small></span><b>${r.pts}</b></button>`).join('')}</div>${lg.history?.length ? `<p class="muted">Last champions: ${lg.history.slice(0, 3).map(h => esc(clubName(h.champion)) + ' (' + esc(h.season) + ')').join(', ')}</p>` : ''}</div>`;
+}
 SCREENS.clubs = {
   render() {
     const selected = UI.tab.clubLeague || 'all';
@@ -165,10 +171,12 @@ SCREENS.clubs = {
     const clubs = Object.values(G.clubs).filter(c => selected === 'all' || c.worldLeague === selected || !c.worldLeague && c.league === selected);
     const definition = WORLD_LEAGUES[selected];
     return `<h1 class="h1">Club directory</h1><div class="chips wrap">${groups.map(([id, label]) => `<button class="chip ${selected === id ? 'on' : ''}" data-a="clubLeague" data-id="${id}">${esc(label)}</button>`).join('')}</div>
-      <p class="muted">${definition ? `${definition.country} · ${definition.name} · ${clubs.length} clubs · ${clubs.filter(c => c.foreignSquad).length} open to friendlies and transfers. League not simulated.` : 'Browse league clubs, overseas teams and free agents.'}</p>
+      <p class="muted">${definition ? `${definition.country} · ${definition.name} · ${clubs.length} clubs · ${clubs.filter(c => c.foreignSquad).length} open to friendlies and transfers. ${G.worldLeagues[selected]?.active === false ? 'Results are simulated in the background.' : ''}` : 'Browse league clubs, overseas teams and free agents.'}</p>
+      ${worldTableCard(selected)}
       <div class="list">${clubs.map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.fa ? 'Unattached players' : esc(clubCompetitionLabel(c))} · ${(c.backgroundOnly ? dummySquadSlots(c).length : c.squad.length) + ' players'}</small></span><span class="chev">›</span></button>`).join('')}</div>`;
   },
 };
+ACT.worldLeaguePage = ds => { UI.tab.clubLeague = WORLD_LEAGUES[ds.id] ? ds.id : 'all'; go('clubs'); };
 ACT.clubLeague = ds => { UI.tab.clubLeague = ds.id === 'all' || LEAGUES[ds.id] || WORLD_LEAGUES[ds.id] ? ds.id : 'all'; render(); };
 SCREENS.clubview = {
   render(p) {
@@ -185,7 +193,7 @@ SCREENS.clubview = {
       return heading + `<div class="card"><h3>Club details</h3><div class="kv"><div><small>Country</small><b>${esc(WORLD_LEAGUES[c.worldLeague].country)}</b></div><div><small>League</small><b>${esc(clubCompetitionLabel(c))}</b></div><div><small>City</small><b>${esc(c.city)}</b></div><div><small>First team</small><b>${slots.length} players</b></div></div></div><button class="btn wide" data-a="clubPage" data-id="${c.id}" data-section="squad">View squad</button>`;
     }
     if (section === 'squad') {
-      const levels = c.fa || c.foreign && !c.foreignSquad ? '' : `<div class="seg">${Object.entries(clubLevels(c)).map(([l, n]) => `<button class="${level === l ? 'on' : ''}" data-a="clubLevel" data-id="${c.id}" data-level="${l}">${n}</button>`).join('')}</div>`;
+      const levels = c.fa || c.foreign && !c.foreignSquad ? '' : `<div class="seg">${Object.entries(clubLevels(c)).filter(([l]) => l === 'A' || levelSquad(c.id, l).length).map(([l, n]) => `<button class="${level === l ? 'on' : ''}" data-a="clubLevel" data-id="${c.id}" data-level="${l}">${n}</button>`).join('')}</div>`;
       const players = squadOf(c.id).filter(x => c.fa || c.foreign && !c.foreignSquad || lvlOf(x) === level).sort(SORTS.pos);
       return heading + levels + `<p class="muted">${players.length} players · tap a player to view his profile</p><div class="list">${players.map(x => playerRow(x)).join('') || empty('No players', 'There are no players in this squad.')}</div>`;
     }
@@ -198,7 +206,9 @@ SCREENS.clubview = {
     const recent = G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && played(f)).sort(fxSort).slice(-5).reverse();
     const upcoming = G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && !played(f)).sort(fxSort).slice(0, 3);
     const leaders = seniorSquad(c.id).filter(x => x.st.a).sort((a, b) => b.st.g - a.st.g || avgRating(b) - avgRating(a)).slice(0, 3);
-    return heading + `${row ? `<div class="tiles"><button class="tile" data-a="go" data-s="table"><small>League position</small><b>${row.p ? ordinal(tbl.indexOf(row) + 1) : 'Pre-season'}</b><span>${row.pts} points · ${row.p} played</span></button><div class="tile"><small>W / D / L</small><b>${row.w} / ${row.d} / ${row.l}</b><span>${row.gf} scored · ${row.ga} conceded</span></div></div><div class="card"><h3>Recent form</h3>${row.form.length ? formChips(row.form) : '<p class="muted">No matches yet.</p>'}</div>` : `<p class="note">${c.fa ? 'Free agents have no club or league fixtures.' : c.foreignSquad ? 'League not simulated. Available for friendlies and transfers.' : 'League not simulated. Browse the squad and transfer activity.'}</p>`}
+    const simRows = isSimClub(c) ? worldTable(c.worldLeague) : [], simRow = simRows.find(r => r.id === c.id);
+    const simTiles = simRow && !row ? `<div class="tiles"><button class="tile" data-a="worldLeaguePage" data-id="${c.worldLeague}"><small>League position</small><b>${simRow.p ? ordinal(simRows.indexOf(simRow) + 1) : 'Pre-season'}</b><span>${simRow.pts} points · ${simRow.p} played</span></button><div class="tile"><small>W / D / L</small><b>${simRow.w} / ${simRow.d} / ${simRow.l}</b><span>${simRow.gf} scored · ${simRow.ga} conceded</span></div></div>` : '';
+    return heading + `${simTiles}${row ? `<div class="tiles"><button class="tile" data-a="go" data-s="table"><small>League position</small><b>${row.p ? ordinal(tbl.indexOf(row) + 1) : 'Pre-season'}</b><span>${row.pts} points · ${row.p} played</span></button><div class="tile"><small>W / D / L</small><b>${row.w} / ${row.d} / ${row.l}</b><span>${row.gf} scored · ${row.ga} conceded</span></div></div><div class="card"><h3>Recent form</h3>${row.form.length ? formChips(row.form) : '<p class="muted">No matches yet.</p>'}</div>` : `<p class="note">${c.fa ? 'Free agents have no club or league fixtures.' : simTiles ? 'Results are simulated in the background. Available for friendlies and transfers.' : c.foreignSquad ? 'League not simulated. Available for friendlies and transfers.' : 'League not simulated. Browse the squad and transfer activity.'}</p>`}
       ${!c.fa ? `<div class="card"><h3>Club details</h3><div class="kv">${c.ground ? `<div><small>Stadium</small><b>${esc(c.ground)}</b></div>` : ''}${c.cap ? `<div><small>Capacity</small><b>${c.cap.toLocaleString('en-GB')}</b></div>` : ''}<div><small>Reputation</small><b>${Math.round(c.rep)} / 100</b></div><div><small>Squad size</small><b>${c.squad.length}</b></div></div></div>${T ? `<div class="card"><h3>Current approach</h3><div class="kv"><div><small>With / without the ball</small><b>${esc(T.ip)} / ${esc(T.oop)}</b></div><div><small>Style</small><b>${styleOf(T) ? esc(styleName(styleOf(T))) : 'Custom'}</b></div></div></div>` : ''}` : ''}
       ${c.academy ? `<div class="card"><h3>Academy development</h3><p><b>${c.academy.strength} / 20</b></p><p class="muted">${esc(WORLD_SQUAD_DATA[c.foreignSquad?.catalogId]?.basis || c.academy.basis)} Reserves and U18s develop through training, and new academy players arrive every summer.</p></div>` : ''}
       ${leaders.length ? `<h2 class="h2">Season performers</h2><div class="list">${leaders.map(x => playerRow(x, `<span class="stat"><b>${x.st.g}</b><small>goals · ${x.st.a} apps</small></span>`)).join('')}</div>` : ''}

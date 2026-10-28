@@ -145,6 +145,8 @@ function ensureOverseasYouth() {
   for (const c of Object.values(G.clubs).filter(c => c.foreignSquad)) {
     if (c.academy) delete c.academy.noAnnualIntake;
     delete c.foreignSquad.maxPlayers; delete c.foreignSquad.full;
+    // Simulation-only leagues keep a few prospects; a playable league gets the full English-sized youth teams.
+    if (typeof isSimClub === 'function' && isSimClub(c)) { fillLevel(c, 'R', typeof WORLD_PROSPECTS === 'number' ? WORLD_PROSPECTS : 3); continue; }
     fillLevel(c, 'R', OVERSEAS_YOUTH_TARGET);
     fillLevel(c, 'Y', OVERSEAS_YOUTH_TARGET);
   }

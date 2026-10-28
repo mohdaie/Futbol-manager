@@ -74,7 +74,7 @@ function ensureWorld(options = {}) {
   if (typeof addEnglandExpansionPlayers === 'function') addEnglandExpansionPlayers();
   if (typeof ensurePremierLeagueRegistrations === 'function') ensurePremierLeagueRegistrations();
   ensureForeignSquads(options);
-  if (typeof ensureOverseasFullSquads === 'function') { ensureOverseasFullSquads(); ensureOverseasYouth(); }
+  if (typeof ensureOverseasFullSquads === 'function') { ensureOverseasFullSquads(); ensureOverseasYouth(); if (typeof ensureSimTier === 'function') ensureSimTier(); }
   if (typeof applyEnglandPlayerNameOverrides === 'function') applyEnglandPlayerNameOverrides();
   if (typeof migrateEnglandCalibratedProfiles === 'function') migrateEnglandCalibratedProfiles();
   Object.values(G.clubs).forEach(c => { if (!c.fa && !c.backgroundOnly && !c.mgr) c.mgr = genManagerName(); if (c.tac && !c.tac.style && !c.fa) c.tac = aiTactic(c.rep); });
