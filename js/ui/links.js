@@ -144,9 +144,30 @@ function newsLinks(n) {
 }
 
 function clubFixtures(cid) {
+  if (isSimClub(G.clubs[cid])) return `<div class="list">${worldClubFixtures(cid).map(f => worldFixtureRow(f, cid)).join('')}</div>`;
   const list = G.fixtures.filter(f => f.h === cid || f.a === cid).sort(fxSort);
-  return list.length ? `<div class="list">${list.map(f => fixtureLinks(f, cid)).join('')}</div>` : empty('No scheduled fixtures', 'Overseas leagues are not simulated in this career.');
+  return list.length ? `<div class="list">${list.map(f => fixtureLinks(f, cid)).join('')}</div>` : empty('No scheduled fixtures', 'This club plays no league fixtures in this career.');
 }
+// A fixture of a simulation-only league (world-sim.js): a result or a kick-off time, with no match report behind it.
+function worldFixtureRow(f, cid) {
+  const home = f.h === cid, opp = home ? f.a : f.h, done = f.hg != null;
+  const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg, result = done ? 'r' + (us > them ? 'W' : us < them ? 'L' : 'D') : '';
+  return `<div class="row"><span class="rd">${f.r + 1}</span><span class="grow"><b>${clubLink(opp, badge(opp, 20) + ' ' + esc(clubName(opp)))}</b><small>${home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}</small></span><span class="res ${result}">${done ? f.hg + '–' + f.ag : 'TBC'}</span></div>`;
+}
+// One matchweek of a simulation-only league, with buttons to step through the season.
+function worldRoundCard(id) {
+  const lg = G.worldLeagues?.[id];
+  if (!lg || lg.active !== false) return '';
+  const last = worldRounds(lg.clubs).length - 1, r = clamp(UI.tab.worldRound?.[id] ?? worldLatestRound(id), 0, last);
+  const list = worldFixtures(id).filter(f => f.r === r).sort(fxSort);
+  return `<div class="card"><h3>Matchweek ${r + 1} of ${last + 1}</h3><div class="list">${list.map(f => `<div class="row"><span class="grow"><b>${clubLink(f.h, esc(clubName(f.h)))}</b> <span class="muted">v</span> <b>${clubLink(f.a, esc(clubName(f.a)))}</b><small>${fxWhen(f)}</small></span><span class="res">${f.hg != null ? f.hg + '–' + f.ag : 'TBC'}</span></div>`).join('')}</div><div class="btns"><button class="btn sm" data-a="worldRound" data-id="${id}" data-d="-1" ${r <= 0 ? 'disabled' : ''}>‹ Previous</button><button class="btn sm" data-a="worldRound" data-id="${id}" data-d="1" ${r >= last ? 'disabled' : ''}>Next ›</button></div></div>`;
+}
+ACT.worldRound = ds => {
+  const lg = G.worldLeagues?.[ds.id]; if (!lg) return;
+  const last = worldRounds(lg.clubs).length - 1, cur = clamp(UI.tab.worldRound?.[ds.id] ?? worldLatestRound(ds.id), 0, last);
+  UI.tab.worldRound = { ...(UI.tab.worldRound || {}), [ds.id]: clamp(cur + (+ds.d || 0), 0, last) };
+  render();
+};
 function fixtureLinks(f, cid) {
   const home = f.h === cid, opp = home ? f.a : f.h;
   const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg, result = played(f) ? 'r' + (f.winner ? f.winner === cid ? 'W' : 'L' : us > them ? 'W' : us < them ? 'L' : 'D') : '';
@@ -172,7 +193,7 @@ SCREENS.clubs = {
     const definition = WORLD_LEAGUES[selected];
     return `<h1 class="h1">Club directory</h1><div class="chips wrap">${groups.map(([id, label]) => `<button class="chip ${selected === id ? 'on' : ''}" data-a="clubLeague" data-id="${id}">${esc(label)}</button>`).join('')}</div>
       <p class="muted">${definition ? `${definition.country} · ${definition.name} · ${clubs.length} clubs · ${clubs.filter(c => c.foreignSquad).length} open to friendlies and transfers. ${G.worldLeagues[selected]?.active === false ? 'Results are simulated in the background.' : ''}` : 'Browse league clubs, overseas teams and free agents.'}</p>
-      ${worldTableCard(selected)}
+      ${worldTableCard(selected)}${worldRoundCard(selected)}
       <div class="list">${clubs.map(c => `<button class="row act" data-a="clubPage" data-id="${c.id}">${badge(c.id, 28)}<span class="grow"><b>${esc(c.name)}</b><small>${c.fa ? 'Unattached players' : esc(clubCompetitionLabel(c))} · ${(c.backgroundOnly ? dummySquadSlots(c).length : c.squad.length) + ' players'}</small></span><span class="chev">›</span></button>`).join('')}</div>`;
   },
 };
@@ -203,8 +224,9 @@ SCREENS.clubview = {
       return heading + `<h2 class="h2">Transfer activity</h2><div class="list">${deals.map(t => `<div class="row"><span class="grow"><b>${playerLink(t.pid, t.name)}</b><small>${fmtDate(t.date, false)} · ${clubLink(t.from)} → ${clubLink(t.to)}</small></span><b>${t.fee ? money(t.fee) : 'Free'}</b></div>`).join('') || empty('No transfers yet', 'Completed deals involving this club appear here.')}</div>`;
     }
     const tbl = leagueTable(leagueOf(c.id)), row = tbl.find(r => r.id === c.id), T = c.id === G.club ? G.tactics : c.tac;
-    const recent = G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && played(f)).sort(fxSort).slice(-5).reverse();
-    const upcoming = G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && !played(f)).sort(fxSort).slice(0, 3);
+    const simFx = isSimClub(c) ? worldClubFixtures(c.id) : null, rowOf = simFx ? worldFixtureRow : fixtureLinks;
+    const recent = simFx ? simFx.filter(f => f.hg != null).slice(-5).reverse() : G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && played(f)).sort(fxSort).slice(-5).reverse();
+    const upcoming = simFx ? simFx.filter(f => f.hg == null).slice(0, 3) : G.fixtures.filter(f => (f.h === c.id || f.a === c.id) && !played(f)).sort(fxSort).slice(0, 3);
     const leaders = seniorSquad(c.id).filter(x => x.st.a).sort((a, b) => b.st.g - a.st.g || avgRating(b) - avgRating(a)).slice(0, 3);
     const simRows = isSimClub(c) ? worldTable(c.worldLeague) : [], simRow = simRows.find(r => r.id === c.id);
     const simTiles = simRow && !row ? `<div class="tiles"><button class="tile" data-a="worldLeaguePage" data-id="${c.worldLeague}"><small>League position</small><b>${simRow.p ? ordinal(simRows.indexOf(simRow) + 1) : 'Pre-season'}</b><span>${simRow.pts} points · ${simRow.p} played</span></button><div class="tile"><small>W / D / L</small><b>${simRow.w} / ${simRow.d} / ${simRow.l}</b><span>${simRow.gf} scored · ${simRow.ga} conceded</span></div></div>` : '';
@@ -212,7 +234,7 @@ SCREENS.clubview = {
       ${!c.fa ? `<div class="card"><h3>Club details</h3><div class="kv">${c.ground ? `<div><small>Stadium</small><b>${esc(c.ground)}</b></div>` : ''}${c.cap ? `<div><small>Capacity</small><b>${c.cap.toLocaleString('en-GB')}</b></div>` : ''}<div><small>Reputation</small><b>${Math.round(c.rep)} / 100</b></div><div><small>Squad size</small><b>${c.squad.length}</b></div></div></div>${T ? `<div class="card"><h3>Current approach</h3><div class="kv"><div><small>With / without the ball</small><b>${esc(T.ip)} / ${esc(T.oop)}</b></div><div><small>Style</small><b>${styleOf(T) ? esc(styleName(styleOf(T))) : 'Custom'}</b></div></div></div>` : ''}` : ''}
       ${c.academy ? `<div class="card"><h3>Academy development</h3><p><b>${c.academy.strength} / 20</b></p><p class="muted">${esc(WORLD_SQUAD_DATA[c.foreignSquad?.catalogId]?.basis || c.academy.basis)} Reserves and U18s develop through training, and new academy players arrive every summer.</p></div>` : ''}
       ${leaders.length ? `<h2 class="h2">Season performers</h2><div class="list">${leaders.map(x => playerRow(x, `<span class="stat"><b>${x.st.g}</b><small>goals · ${x.st.a} apps</small></span>`)).join('')}</div>` : ''}
-      ${c.pl || c.foreignSquad && (recent.length || upcoming.length) ? `<h2 class="h2">Recent results</h2>${recent.length ? `<div class="list">${recent.map(f => fixtureLinks(f, c.id)).join('')}</div>` : '<p class="muted">No matches played yet.</p>'}<h2 class="h2">Upcoming fixtures</h2>${upcoming.length ? `<div class="list">${upcoming.map(f => fixtureLinks(f, c.id)).join('')}</div>` : '<p class="muted">No fixtures remaining.</p>'}` : ''}
+      ${c.pl || c.foreignSquad && (recent.length || upcoming.length) ? `<h2 class="h2">Recent results</h2>${recent.length ? `<div class="list">${recent.map(f => rowOf(f, c.id)).join('')}</div>` : '<p class="muted">No matches played yet.</p>'}<h2 class="h2">Upcoming fixtures</h2>${upcoming.length ? `<div class="list">${upcoming.map(f => rowOf(f, c.id)).join('')}</div>` : '<p class="muted">No fixtures remaining.</p>'}` : ''}
       <div class="btns">${c.managerId ? `<button class="btn" data-a="managerProfile" data-id="${c.managerId}">View manager profile</button>` : ''}${c.foreignSquad && inPreseason() && !G.fixtures.some(f => f.fr && (f.h === c.id || f.a === c.id)) ? `<button class="btn" data-a="friendlyArrange" data-id="${c.id}">Arrange friendly</button>` : ''}<button class="btn" data-a="clubPage" data-id="${c.id}" data-section="squad">View squad</button><button class="btn" data-a="go" data-s="clubs">All clubs</button>${c.id === G.club ? '<button class="btn" data-a="go" data-s="club">Your club facilities & history</button>' : ''}</div>`;
   },
 };

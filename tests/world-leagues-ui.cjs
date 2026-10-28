@@ -21,7 +21,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
       check(id+' lists its complete club membership',await page.locator('.main .row[data-a=clubPage]').count()===n);
     }
     await page.locator('[data-a=clubLeague][data-id=ES1]').tap();
-    await page.locator('[data-a=clubPage][data-id=ES1_BAR]').tap();
+    await page.locator('.row[data-a=clubPage][data-id=ES1_BAR]').tap();
     check('Selected clubs explain academy quality and the yearly academy intake',/Academy development/.test(await page.locator('.main').textContent())&&/new academy players arrive every summer/.test(await page.locator('.main').textContent()));
     check('A selected club can be arranged directly as a friendly opponent',await page.locator('[data-a=friendlyArrange][data-id=ES1_BAR]').count()===1);
     await page.locator('[data-a=friendlyArrange][data-id=ES1_BAR]').tap();
@@ -35,17 +35,22 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     check('A reserve profile shows its real inspirational figure and transfer action',/Inspirational figure/.test(await page.locator('#layer .sheet').textContent())&&await page.locator('#layer .sheet [data-a=offer]').count()===1);
     await page.evaluate(()=>{closeSheet(true);G.week=SCHEDULE[7].w;simWorldWeek();UI.tab.clubLeague='ES1';go('clubs');});
     check('A simulated league shows its table with a row for every club, and the directory still lists every club',await page.locator('.main .card h3').first().textContent().then(t=>/La Liga table/.test(t))&&await page.locator('.main .card .row[data-a=clubPage]').count()===20&&await page.locator('.main > .list > .row[data-a=clubPage]').count()===20);
-    await page.locator('[data-a=clubPage][data-id=ES1_BAR]').first().tap();
+    check('The league page shows a matchweek card with its results and previous and next buttons',await page.evaluate(()=>{const c=[...document.querySelectorAll('.main .card h3')].find(h=>/^Matchweek \d+ of 38$/.test(h.textContent));return !!c&&c.parentElement.querySelectorAll('.row').length===10&&[...c.parentElement.querySelectorAll('.row .res')].every(x=>/^\d–\d$/.test(x.textContent))&&!!c.parentElement.querySelector('[data-a=worldRound][data-d="-1"]')&&!!c.parentElement.querySelector('[data-a=worldRound][data-d="1"]');}));
+    await page.locator('[data-a=worldRound][data-d="1"]').first().tap();
+    check('Next steps to the following matchweek, whose fixtures have no result yet',await page.evaluate(()=>{const c=[...document.querySelectorAll('.main .card h3')].find(h=>/^Matchweek \d+ of 38$/.test(h.textContent));return !!c&&+c.textContent.match(/\d+/)[0]===UI.tab.worldRound.ES1+1&&[...c.parentElement.querySelectorAll('.row .res')].every(x=>x.textContent==='TBC');}));
+    await page.locator('.row[data-a=clubPage][data-id=ES1_BAR]').first().tap();
     check('A simulated club page shows its league position and explains that results are simulated',/League position/.test(await page.locator('.main').textContent())&&/\d+(st|nd|rd|th)/.test(await page.locator('.main .tile b').first().textContent())&&/simulated in the background/.test(await page.locator('.main').textContent()));
-    await page.evaluate(()=>{G.week=0;delete G.worldLeagues.ES1.table;closeSheet(true);go('clubs');});
+    await page.locator('.chip[data-a=clubPage][data-section=fixtures]').tap();
+    check('The club fixtures tab lists all 38 league matches, with results for the weeks already played',await page.locator('.main .list .row').count()===38&&await page.locator('.main .list .row .res.rW, .main .list .row .res.rD, .main .list .row .res.rL').count()>=7&&await page.locator('.main .list .row .res', {hasText:'TBC'}).count()>=20);
+    await page.evaluate(()=>{G.week=0;delete G.worldLeagues.ES1.table;delete G.worldLeagues.ES1.res;closeSheet(true);go('clubs');});
     await page.evaluate(()=>{closeSheet(true);go('clubs');});
-    await page.locator('[data-a=clubPage][data-id=ES1_GET]').tap();await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
+    await page.locator('.row[data-a=clubPage][data-id=ES1_GET]').tap();await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();
     check('Clubs outside the original twenty show 25 real, scoutable first-team players and a Transfers tab',await page.locator('.main .list [data-a=player]').count()===25&&await page.locator('[data-a=clubPage][data-section=transfers]').count()===1);
     // The previous release's placeholder state is rebuilt so the placeholder rules and the old-save migration stay covered.
     await page.evaluate(()=>{go('clubs');const c=G.clubs.ES1_GET;for(const id of c.squad.slice()){delete G.players[id];delete G.know[id];}
       Object.assign(c,{backgroundOnly:true,rep:70,bal:0,squad:[],dummySquad:{size:25,transferable:false}});delete c.foreignSquad;delete c.academy;delete c.mgr;Object.values(G.agents||{}).forEach(a=>{delete a.rel?.ES1_GET;});});
-    check('Club directory hides real names while retaining metadata',!/Getafe CF/.test(await page.locator('[data-a=clubPage][data-id=ES1_GET]').textContent())&&await page.evaluate(()=>G.clubs.ES1_GET.realName==='Getafe CF'));
-    await page.locator('[data-a=clubPage][data-id=ES1_GET]').tap();
+    check('Club directory hides real names while retaining metadata',!/Getafe CF/.test(await page.locator('.row[data-a=clubPage][data-id=ES1_GET]').textContent())&&await page.evaluate(()=>G.clubs.ES1_GET.realName==='Getafe CF'));
+    await page.locator('.row[data-a=clubPage][data-id=ES1_GET]').tap();
     check('Club header hides the real name',!/Getafe CF/.test(await page.locator('.clubhead').textContent()));
     check('A placeholder club has a working dashboard with its league and country',/La Liga/.test(await page.locator('.main').textContent())&&/Spain/.test(await page.locator('.main').textContent()));
     await page.locator('.chip[data-a=clubPage][data-section=squad]').tap();

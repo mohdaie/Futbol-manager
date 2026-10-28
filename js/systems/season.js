@@ -55,6 +55,7 @@ function advanceDay() {
   const playedOutside = G.fixtures.filter(f => f.w === G.week && (f.d ?? 5) === G.day && !played(f) && !isUserFx(f)).sort(fxSort);
   playedOutside.forEach(f => quickSim(f));
   if (typeof worldAlertForResults === 'function') worldAlertForResults(playedOutside);
+  if (typeof simWorldDay === 'function') simWorldDay();
   DAY_JOBS.forEach(([d, k, fn]) => { if (d === G.day) dayJob(k, fn); });
   scoutDay();
   dealsDay();

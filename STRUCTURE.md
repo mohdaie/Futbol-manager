@@ -36,7 +36,7 @@ js/systems/ai.js           Jev and DeepSeek clients: settings, calls, budget gua
 js/systems/brain.js        learning engine for computer managers, engine versions, DeepSeek press library
 js/systems/brain-cloud.js  private incremental cloud uploads, legacy import, offline queue and retry checkpoints
 js/systems/season.js       weekly turn, monthly awards, youth intake, board, season end
-js/systems/world-sim.js    Simulation-only overseas leagues: strength-model results and tables, all-club transfer windows,
+js/systems/world-sim.js    Simulation-only overseas leagues: fixture lists, strength-model results and tables, all-club transfer windows,
                            season-end development batch, prospects instead of reserve/U18 teams (isSimClub)
 js/systems/lab.js          Admin "Run test season": league averages against targets, results by style and by tactic fit
 js/ui/crests.js            shared club artwork renderer and generated shield fallback
