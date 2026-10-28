@@ -149,7 +149,7 @@ function conditionsCard(fx) {
   const notes = [W.d];
   if ((fx.t || '15:00') < '13:00') notes.push(KICKOFF_NOTES.early);
   if ((fx.t || '15:00') >= '19:00') notes.push(KICKOFF_NOTES.evening);
-  if (fx.tv && !fx.fr) notes.push('Televised: both clubs earn ' + money((fx.comp || leagueOf(fx.h)) === 'ECH' ? 50000 : TV_FEE) + ' extra.');
+  if (fx.tv && !fx.fr) notes.push('Televised: both clubs earn ' + money(leagueTier(fx.comp || leagueOf(fx.h)) === 2 ? 50000 : TV_FEE) + ' extra.');
   return `<div class="card"><h3>Conditions</h3>
     <div class="kv"><div><small>Kick-off</small><b>${fxWhen(fx)}</b></div><div><small>Weather</small><b>${wxLabel(fx.wx)}</b></div>
       <div><small>Your rest</small><b class="${us != null && us <= 3 ? 'warn' : ''}">${restTxt(us)}</b></div><div><small>Their rest</small><b class="${them != null && them <= 3 ? 'warn' : ''}">${restTxt(them)}</b></div></div>

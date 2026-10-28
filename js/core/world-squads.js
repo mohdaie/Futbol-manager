@@ -111,13 +111,7 @@ function ensureOverseasFullSquads() {
     if (!c) continue;
     if (c.backgroundOnly) {
       // A placeholder becomes a real club that can play friendlies and trade players, like the 20 selected clubs.
-      const shape = OVERSEAS_SHAPES[Math.floor(hash01(catalogId + ':shape') * OVERSEAS_SHAPES.length)];
-      c.backgroundOnly = false; delete c.dummySquad;
-      c.rep = data.rep; c.bal = Math.max(c.bal || 0, Math.round(20e6 + Math.pow(Math.max(0, data.rep - 50), 2) * 0.1e6));
-      c.tac = aiTactic(c.rep); c.tac.ip = shape; c.tac.oop = shape;
-      c.academy = { strength: clamp(Math.round(4 + (data.rep - 55) * 0.4 + hash01(catalogId + ':academy') * 4), 3, 14),
-        basis: 'Strength estimated from club reputation; this is not an official academy ranking.', estimate: true };
-      c.foreignSquad = { catalogId, seeded: true };
+      materializeClub(c, catalogId, data.rep);
     }
     if (!c.foreignSquad) continue;
     const need = Math.max(0, OVERSEAS_FULL_SQUAD_SIZE - seniorSquad(c.id).length);
@@ -152,4 +146,79 @@ function ensureOverseasYouth() {
   }
   for (const p of Object.values(G.players)) if (p.id >= first) G.know[p.id] = 10;
   G.overseasYouthVersion = 1;
+}
+
+/* ---------- clubs that gain or lose their players ---------- */
+// A placeholder club (no players, a strength rating) becomes a club with a squad record: friendlies, trades and scouting.
+function materializeClub(c, catalogId, rep = c.rep) {
+  const shape = OVERSEAS_SHAPES[Math.floor(hash01(catalogId + ':shape') * OVERSEAS_SHAPES.length)];
+  c.backgroundOnly = false; delete c.dummySquad; delete c.lw;
+  c.rep = rep; c.bal = Math.max(c.bal || 0, Math.round(20e6 + Math.pow(Math.max(0, rep - 50), 2) * 0.1e6));
+  c.tac = aiTactic(c.rep); c.tac.ip = shape; c.tac.oop = shape;
+  c.academy = { strength: clamp(Math.round(4 + (rep - 55) * 0.4 + hash01(catalogId + ':academy') * 4), 3, 14),
+    basis: 'Strength estimated from club reputation; this is not an official academy ranking.', estimate: true };
+  c.foreignSquad = { catalogId, seeded: true };
+}
+
+// Fictional names for generated players: country pools (world-names.js), never a name already in the career.
+let worldNamesUsed = null;
+function worldNameSet() {
+  if (!worldNamesUsed || worldNamesUsed.size < Object.keys(G.players).length * 0.5) worldNamesUsed = new Set(Object.values(G.players).map(fullName));
+  return worldNamesUsed;
+}
+function genWorldName(nat) {
+  const used = worldNameSet(), pool = WORLD_NAME_POOLS[nat] || WORLD_NAME_POOLS.ENG;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const first = pick(pool[0]);
+    let last = pick(pool[1]);
+    if (attempt > 20) last += WORLD_DOUBLE_SURNAME.has(nat) ? ' ' + pick(pool[1]) : '-' + pick(pool[1]);
+    const name = first + ' ' + last;
+    if (!used.has(name)) { used.add(name); return [first, last]; }
+  }
+  return [pick(pool[0]), pick(pool[1])];
+}
+const setWorldName = (p, nat = p.nat) => { const [first, last] = genWorldName(nat); p.fn = first; p.ln = last; };
+
+// A generated first team for a club. The English divisions use their usual scale of ability; overseas clubs use the band
+// of their reputation (as in the squad tables: floor = 66 + 0.65 x (reputation - 80), ten points wide).
+function generateClubSquad(c, size = 25) {
+  const english = c.nat === 'ENG', lo = 66 + 0.65 * (c.rep - 80), hi = lo + 9, top = 60 + (c.rep - 50) * 0.6;
+  // Only the positions the club still lacks (all of them for a new club).
+  const missing = SQUAD_TEMPLATE.slice(0, size), have = seniorSquad(c.id);
+  have.forEach(p => { const i = missing.indexOf(p.pos); if (i >= 0) missing.splice(i, 1); });
+  missing.forEach((pos, k) => {
+    const n = have.length + k, starter = n < 11, youngster = n >= size - 3;
+    const age = youngster ? ri(17, 21) : clamp(Math.round(gauss() * (starter ? 3.3 : 3.9) + (starter ? 28.4 : 26.6)), starter ? 21 : 19, 36);
+    let ca = english ? (starter ? top + gauss() * 2.6 : top - 5 + gauss() * 3) : (starter ? hi - Math.abs(gauss() * 2.6) : lo + Math.abs(gauss() * 3.4));
+    if (youngster) ca = (english ? top - 14 : lo) + rf(0, 3);
+    ca = clamp(ca, 38, 90);
+    const pa = ca + (age <= 19 ? rf(9, 16) : age <= 21 ? rf(5, 12) : age <= 24 ? rf(2, 7) : age <= 28 ? rf(0, 3) : 0);
+    const p = genPlayer({ pos, ca, pa, age, nat: english && R() < 0.72 ? 'ENG' : youthNat(c), club: c.id, lvl: 'A' });
+    setWorldName(p);
+    addToClub(p, c);
+    p.con = G.season + ri(1, 4);
+  });
+}
+// Fill a club's first team: its sourced English identities if it is an English club and they are still unowned, then generated players.
+function fillClubSquad(c, size) {
+  if (c.nat === 'ENG' && ENGLAND_ROSTERS_2026[c.id]) {
+    const owned = new Set(Object.values(G.players).map(p => p.identity?.id).filter(Boolean));
+    const people = new Set(Object.values(G.players).filter(p => p.insp).map(p => worldIdentityKey(p.insp)));
+    ENGLAND_ROSTERS_2026[c.id].filter(row => !owned.has(row[9]) && !people.has(worldIdentityKey(row[5]))).slice(0, size).forEach(row => {
+      const p = playerFromEnglandIdentity(row, c.id); p.age += Math.max(0, G.season - START_SEASON); p.con = G.season + 2; addToClub(p, c);
+    });
+  }
+  if (seniorSquad(c.id).length < size) generateClubSquad(c, size);
+}
+// A club with players becomes a placeholder again: the players are released and the club keeps a strength rating.
+function dissolveClub(c) {
+  const squad = squadOf(c.id), top = squad.filter(p => lvlOf(p) === 'A').sort((a, b) => b.ca - a.ca).slice(0, 11);
+  const strength = top.length ? top.reduce((t, p) => t + p.ca, 0) / top.length : lightStrength(c.rep);
+  for (const p of squad) {
+    if (p.loan) delete p.loan; // a loanee becomes permanent rather than returning to a club with no squad
+    moveClub(p, 'FA'); p.con = 0; p.lvl = 'A'; p.wage = 0; p.listed = false;
+  }
+  c.squad = []; c.backgroundOnly = true; c.dummySquad = { size: 25, transferable: false };
+  c.lw = Math.round(strength * 10) / 10;
+  delete c.foreignSquad; delete c.academy;
 }

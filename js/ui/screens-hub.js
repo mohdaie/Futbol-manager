@@ -332,7 +332,7 @@ SCREENS.competitions = {
         <div class="list">${list.map(f => `<div class="row fxr ${f.h === G.club || f.a === G.club ? 'me' : ''}"><span class="fxt">${fxWhen(f).replace(/ \d+ \w+ ·/, '')}</span><span class="grow r">${esc(clubName(f.h))}</span>${badge(f.h, 18)}<button class="res" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '–' + f.ag : 'v'}</button>${badge(f.a, 18)}<span class="grow">${esc(clubName(f.a))}</span></div>`).join('') || empty('No fixtures', 'There are no scheduled fixtures for this competition.')}</div>`;
     } else {
       content = `<div class="tablewrap"><table class="tbl"><thead><tr><th>#</th><th class="l">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>
-        ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${competition === 'ECH' ? (i < 2 ? 'z1' : i < 6 ? 'z2' : i >= 21 ? 'z4' : '') : (i < 4 ? 'z1' : i < 6 ? 'z2' : i === 6 ? 'z3' : i >= 17 ? 'z4' : '')}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td></tr>`).join('')}
+        ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${tableZone(competition, i, tbl.length)}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td></tr>`).join('')}
         </tbody></table></div>${leagueRulesHtml(competition)}`;
     }
     return `<h1 class="h1">Competitions</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p>
@@ -343,15 +343,18 @@ SCREENS.competitions = {
 ACT.homeCompetition = ds => { UI.tab.homeCompetition = ds.id; UI.tab.homeCompetitionRound = null; render(); };
 CHG.competitionRound = v => { UI.tab.homeCompetitionRound = +v; render(); };
 
+// Colour band of a league table row: second divisions mark promotion and playoff places, top flights the top four and a
+// seventh place; the bottom three are always relegation places.
+const tableZone = (competition, i, n) => (leagueTier(competition) === 2 ? (i < 2 ? 'z1' : i < 6 ? 'z2' : i >= n - 3 ? 'z4' : '') : (i < 4 ? 'z1' : i < 6 ? 'z2' : i === 6 ? 'z3' : i >= n - 3 ? 'z4' : ''));
 SCREENS.table = {
   render() {
     const competition = LEAGUES[UI.tab.comp] && G.leagues.includes(UI.tab.comp) ? UI.tab.comp : leagueOf(G.club);
     const tbl = leagueTable(competition);
     return `<h1 class="h1">${leagueName(competition)}</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p>${G.leagues.length > 1 ? `<div class="seg">${G.leagues.map(id => `<button class="${competition === id ? 'on' : ''}" data-a="leagueView" data-id="${id}">${leagueName(id)}</button>`).join('')}</div>` : ''}<button class="btn sm" data-a="go" data-s="clubs">Browse all clubs</button>
       <div class="tablewrap"><table class="tbl"><thead><tr><th>#</th><th class="l">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th><th class="hide-s">Form</th></tr></thead><tbody>
-      ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${competition === 'ECH' ? (i < 2 ? 'z1' : i < 6 ? 'z2' : i >= 21 ? 'z4' : '') : (i < 4 ? 'z1' : i < 6 ? 'z2' : i === 6 ? 'z3' : i >= 17 ? 'z4' : '')}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td><td class="hide-s">${formChips(r.form)}</td></tr>`).join('')}
+      ${tbl.map((r, i) => `<tr class="${r.id === G.club ? 'me' : ''} ${tableZone(competition, i, tbl.length)}"><td>${i + 1}</td><td class="l"><span class="tc">${badge(r.id, 18)}${esc(G.clubs[r.id].name)}</span></td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga}</td><td><b>${r.pts}</b></td><td class="hide-s">${formChips(r.form)}</td></tr>`).join('')}
       </tbody></table>${leagueRulesHtml(competition)}</div>
-      <div class="legend">${competition === 'ECH' ? '<span class="lz z1">Automatic promotion</span><span class="lz z2">Promotion playoffs</span>' : '<span class="lz z1">Top four</span>'}<span class="lz z4">Bottom three</span></div>`;
+      <div class="legend">${leagueTier(competition) === 2 ? '<span class="lz z1">Automatic promotion</span><span class="lz z2">Promotion playoffs</span>' : '<span class="lz z1">Top four</span>'}<span class="lz z4">Bottom three</span></div>`;
   },
 };
 

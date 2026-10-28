@@ -58,6 +58,7 @@ function ensureWorld(options = {}) {
   ensureNewsBoxes();
   ensureCompetitions();
   ensureWorldLeagues();
+  if (typeof ensureEnglandSim === 'function') ensureEnglandSim();
   // Older saves: add the inspirational figure to the first-team players who came from the real squads, by name.
   if (!G.flags.insp && typeof ROSTERS !== 'undefined') {
     const by = {};

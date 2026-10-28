@@ -69,12 +69,12 @@ const MANAGER_INCOME_NAMES = { salary: 'Club salary', win: 'Match bonus', owner:
 function managerSalaryFor(c) {
   if (!c) return 0;
   const rep = Math.max(45, +c.rep || 55), league = c.league || (c.pl ? leagueOf(c.id) : '');
-  const factor = league === 'EPL' ? 1.1 : league === 'ECH' ? 0.42 : c.backgroundOnly ? 0.22 : 0.32;
+  const factor = league && leagueTier(league) === 1 ? 1.1 : league ? 0.42 : c.backgroundOnly ? 0.22 : 0.32;
   return roundWage((1500 + rep * rep * 8) * factor);
 }
 function managerCountry(c) {
   if (c.nat && NATIONS[c.nat]) return c.nat;
-  return c.league === 'EPL' || c.league === 'ECH' ? 'ENG' : 'ENG';
+  return LEAGUES[c.league]?.country ? COUNTRIES[LEAGUES[c.league].country].nat : 'ENG';
 }
 function managerNameFor(nat, seed) {
   const N = NATIONS[nat] || NATIONS.ENG;
@@ -185,7 +185,7 @@ function managerOwnerBonus(kind, amount, detail) {
 function managerMatchBonus(fx) {
   if (!fx || (fx.h !== G.club && fx.a !== G.club) || fx.fr) return;
   const us = fx.h === G.club ? fx.hg : fx.ag, them = fx.h === G.club ? fx.ag : fx.hg;
-  if (us > them) managerOwnerBonus('win', G.clubs[G.club].league === 'ECH' ? 1800 : 5000, `Win bonus for the ${us}–${them} result.`);
+  if (us > them) managerOwnerBonus('win', leagueTier(G.clubs[G.club].league) === 2 ? 1800 : 5000, `Win bonus for the ${us}–${them} result.`);
 }
 function managerAddAward(name, amount = 0) {
   const p = userManagerProfile();

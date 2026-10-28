@@ -26,6 +26,14 @@ const SCHEDULE = (() => {
   return out;
 })();
 const SEASON_WEEKS = typeof ENGLAND_FIXTURES_2026 !== 'undefined' ? Math.max(...Object.values(ENGLAND_FIXTURES_2026).flat().map(f => f[1])) + 3 : SCHEDULE[37].w + 3;
+// A second division plays up to 46 rounds, so it uses the Championship's calendar (weekend and midweek rounds from the same
+// template); every other league uses SCHEDULE. Both give a round's week and whether it is a midweek round.
+const SCHEDULE_SECOND = (() => {
+  const template = typeof ENGLAND_FIXTURES_2026 !== 'undefined' && ENGLAND_FIXTURES_2026.ECH;
+  if (!template) return SCHEDULE;
+  return Array.from({ length: 46 }, (_, r) => { const first = template.find(f => f[0] === r); return { w: first[1], mid: first[2] < 4 }; });
+})();
+const scheduleOf = competition => (typeof leagueTier === 'function' && leagueTier(competition) === 2 ? SCHEDULE_SECOND : SCHEDULE);
 const roundWeek = r => SCHEDULE[r].w;
 
 function seasonStart(season) {
@@ -116,11 +124,13 @@ function genFixtures(ids, competition = leagueOf(ids[0])) {
   const out = [];
   all.forEach((m, r) => {
     const scheduled = template?.filter(f => f[0] === r), first = scheduled?.[0];
-    const sch = first ? { w: first[1], mid: first[2] < 4 } : SCHEDULE[r];
+    const sch = first ? { w: first[1], mid: first[2] < 4 } : scheduleOf(competition)[r];
     if (!sch) throw new Error('No calendar slots for league round ' + (r + 1));
     let slots = scheduled ? scheduled.map(f => [f[2], f[3], +(f[3] !== '15:00')]) : (sch.mid ? MIDWEEK_SLOTS : WEEKEND_SLOTS).map(s => s.slice());
     // no Friday night straight after a midweek round
     if (!sch.mid && MIDWEEK_WEEKS.includes(sch.w)) slots = slots.map(s => (s[0] === 4 ? [5, '15:00', 0] : s));
+    // a league of more than 20 clubs plays more than ten matches a round
+    while (slots.length < m.length) slots.push(sch.mid ? [1, '19:45', 0] : [5, '15:00', 0]);
     const tvSlots = shuffle(slots.filter(s => s[2])), otherSlots = shuffle(slots.filter(s => !s[2]));
     const byPull = m.slice().sort((x, y) => (G.clubs[y[0]].rep + G.clubs[y[1]].rep + rf(0, 12)) - (G.clubs[x[0]].rep + G.clubs[x[1]].rep + rf(0, 12)));
     byPull.forEach(([h, a], i) => {
@@ -166,7 +176,7 @@ function leagueTable(competition = leagueOf(G.club)) {
     else if (f.hg < f.ag) { a.w++; h.l++; a.pts += 3; h.form.push('L'); a.form.push('W'); }
     else { h.d++; a.d++; h.pts++; a.pts++; h.form.push('D'); a.form.push('D'); }
   });
-  const base = (x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || (competition === 'ECH' ? y.w - x.w : 0);
+  const base = (x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || (leagueTier(competition) === 2 ? y.w - x.w : 0);
   const rows = Object.values(T).sort(base), groups = [];
   rows.forEach(row => { const group = groups[groups.length - 1]; if (group && !base(group[0], row)) group.push(row); else groups.push([row]); });
   return groups.flatMap(group => {
@@ -175,8 +185,8 @@ function leagueTable(competition = leagueOf(G.club)) {
       h2h[f.h].pts += f.hg > f.ag ? 3 : f.hg === f.ag ? 1 : 0;
       h2h[f.a].pts += f.ag > f.hg ? 3 : f.hg === f.ag ? 1 : 0; h2h[f.a].away += f.ag;
     });
-    group.forEach(r => { r.tieKey = [r.pts, r.gf - r.ga, r.gf, ...(competition === 'ECH' ? [r.w] : []), h2h[r.id].pts, ...(competition === 'EPL' ? [h2h[r.id].away] : [])].join(':'); });
-    return group.sort((a, b) => h2h[b.id].pts - h2h[a.id].pts || (competition === 'EPL' ? h2h[b.id].away - h2h[a.id].away : 0) || a.id.localeCompare(b.id));
+    group.forEach(r => { r.tieKey = [r.pts, r.gf - r.ga, r.gf, ...(leagueTier(competition) === 2 ? [r.w] : []), h2h[r.id].pts, ...(leagueTier(competition) === 1 ? [h2h[r.id].away] : [])].join(':'); });
+    return group.sort((a, b) => h2h[b.id].pts - h2h[a.id].pts || (leagueTier(competition) === 1 ? h2h[b.id].away - h2h[a.id].away : 0) || a.id.localeCompare(b.id));
   });
 }
 const tablePos = cid => leagueTable(leagueOf(cid)).findIndex(r => r.id === cid) + 1;

@@ -10,6 +10,8 @@
 
 const WORLD_PROSPECTS = 3;
 const isSimClub = c => !!c?.foreignSquad && G.worldLeagues?.[c.worldLeague]?.active === false;
+// Any club of a simulated league, including the placeholder clubs of a second division that have no players.
+const inSimLeague = c => !!c?.worldLeague && G.worldLeagues?.[c.worldLeague]?.active === false;
 const simClubs = () => Object.values(G.clubs).filter(isSimClub);
 const simLeagueIds = () => Object.keys(G.worldLeagues || {}).filter(id => G.worldLeagues[id].active === false);
 
@@ -44,10 +46,11 @@ function worldFixtureList(id) {
   if (worldFixtureCache.has(key)) return worldFixtureCache.get(key);
   const list = [];
   worldRounds(lg.clubs).forEach((pairs, r) => {
-    const sch = SCHEDULE[r];
+    const sch = scheduleOf(id)[r];
     if (!sch) return;
     let slots = (sch.mid ? MIDWEEK_SLOTS : WEEKEND_SLOTS).map(x => x.slice());
     if (!sch.mid && MIDWEEK_WEEKS.includes(sch.w)) slots = slots.map(x => (x[0] === 4 ? [5, '15:00', 0] : x)); // no Friday night after a midweek round
+    while (slots.length < pairs.length) slots.push(sch.mid ? [1, '19:45', 0] : [5, '15:00', 0]); // more than ten matches a round
     const rotate = (arr, k) => arr.length ? arr.map((_, i) => arr[(i + k) % arr.length]) : arr;
     const tv = rotate(slots.filter(x => x[2]), r), rest = rotate(slots.filter(x => !x[2]), r);
     pairs.map(([h, a], i) => ({ h, a, i })).sort((x, y) => (G.clubs[y.h].rep + G.clubs[y.a].rep + hash01(`${id}:${r}:${y.i}`) * 12) - (G.clubs[x.h].rep + G.clubs[x.a].rep + hash01(`${id}:${r}:${x.i}`) * 12))
@@ -64,6 +67,7 @@ function worldFixtureList(id) {
 
 // Best XI strength: the better keeper and the ten best outfielders.
 function simStrength(c) {
+  if (c.backgroundOnly) return c.lw ?? lightStrength(c.rep); // a club without players has a rating instead
   const squad = seniorSquad(c.id).filter(p => !p.inj);
   const gk = squad.filter(p => p.pos === 'GK').sort((a, b) => b.ca - a.ca)[0];
   const field = squad.filter(p => p.pos !== 'GK').sort((a, b) => b.ca - a.ca).slice(0, 10);
@@ -132,8 +136,9 @@ function worldSimSeasonEnd() {
     if (!top) continue;
     (lg.history ||= []).unshift({ season: seasonLabel(), champion: top.id, pts: top.pts });
     lg.history.length = Math.min(lg.history.length, 10);
-    addNews('league', `${WORLD_LEAGUES[id].name} champions`, `${TheClub(top.id)} win the ${seasonLabel()} ${WORLD_LEAGUES[id].name} with ${top.pts} points.`);
+    if (leagueTier(id) === 1) addNews('league', `${WORLD_LEAGUES[id].name} champions`, `${TheClub(top.id)} win the ${seasonLabel()} ${WORLD_LEAGUES[id].name} with ${top.pts} points.`);
   }
+  simPromotionRelegation();
   // One batch for the whole season in place of 38 weekly training passes.
   for (const p of Object.values(G.players)) {
     const c = G.clubs[p.club];
@@ -299,4 +304,54 @@ function startSimDeal(c, deal, ctx) {
   (G.simDeals ||= []).push(item);
   if (onShortlist(deal.p)) simShortlistPost(item, 'leak'); else simVagueRumour(item, ctx);
   return item;
+}
+
+/* ---------- promotion and relegation in the simulated countries ---------- */
+// The playoff for the last promotion place: places 3-6 of the second division, semifinals 3rd v 6th and 4th v 5th, then a final.
+// A win is more likely for the stronger club but never certain.
+function simPlayoff(ids) {
+  const beats = (a, b) => R() < 1 / (1 + Math.exp(-(simStrength(G.clubs[a]) - simStrength(G.clubs[b])) / 6));
+  const tie = (a, b) => (beats(a, b) ? a : b);
+  if (ids.length < 4) return ids[0];
+  return tie(tie(ids[0], ids[3]), tie(ids[1], ids[2]));
+}
+// Three clubs swap divisions in each simulated country each season: the bottom three of the top flight go down, the top two of
+// the second division (not reserve teams) and the playoff winner come up. A club that goes up gets a squad; a club that goes
+// down releases its players, who join the free agents, and keeps only a strength rating. Free agents are trimmed afterwards.
+function simPromotionRelegation() {
+  for (const code of Object.keys(COUNTRIES)) {
+    const [t1, t2] = COUNTRIES[code].tiers, top = G.worldLeagues?.[t1], low = G.worldLeagues?.[t2];
+    if (!top || !low || top.active !== false || low.active !== false) continue;
+    const topTable = worldTable(t1), lowTable = worldTable(t2).filter(r => !G.clubs[r.id].noPromotion);
+    const down = topTable.slice(-LEAGUES[t1].relegated).map(r => r.id);
+    const auto = lowTable.slice(0, LEAGUES[t2].automatic).map(r => r.id);
+    const up = auto.concat(simPlayoff(lowTable.slice(auto.length, 6).map(r => r.id)));
+    if (up.length !== down.length) continue;
+    for (const id of down) {
+      const c = G.clubs[id];
+      dissolveClub(c); c.worldLeague = t2; c.rep = clamp(c.rep - 1.5, 40, 95);
+    }
+    for (const id of up) {
+      const c = G.clubs[id];
+      c.worldLeague = t1; c.rep = clamp(c.rep + 1.5, 40, 95);
+      materializeClub(c, id, c.rep);
+      fillClubSquad(c, 25);
+      fillLevel(c, 'R', WORLD_PROSPECTS);
+      c.squad.forEach(pid => { G.know[pid] ??= 10; });
+    }
+    top.clubs = top.clubs.filter(id => !down.includes(id)).concat(up);
+    low.clubs = low.clubs.filter(id => !up.includes(id)).concat(down);
+    // Clubs without players drift a little each season.
+    for (const id of low.clubs) { const c = G.clubs[id]; if (c.backgroundOnly) c.lw = Math.round(clamp(c.lw + gauss() * 1.1 + (lightStrength(c.rep) - c.lw) * 0.25, 38, 80) * 10) / 10; }
+    addNews('league', `${WORLD_LEAGUES[t1].name}: promotion and relegation`, `${up.map(id => clubName(id)).join(', ')} go up to the ${WORLD_LEAGUES[t1].name}; ${down.map(id => clubName(id)).join(', ')} drop into the ${WORLD_LEAGUES[t2].name}.`);
+  }
+  trimFreeAgents();
+}
+// Released players pile up in the free-agent pool: keep the best and youngest, and anyone you are following.
+function trimFreeAgents(keep = 160) {
+  const fa = squadOf('FA');
+  if (fa.length <= keep) return;
+  const protectedIds = new Set([...(G.shortlist || []), ...(G.deals || []).map(d => d.pid), ...(G.pitches || []).map(x => x.pid), ...(G.scout?.reports || []).map(r => r.pid)]);
+  fa.sort((a, b) => (b.ca + Math.max(0, b.pa - b.ca) * 0.5 - Math.max(0, b.age - 28)) - (a.ca + Math.max(0, a.pa - a.ca) * 0.5 - Math.max(0, a.age - 28)))
+    .slice(keep).filter(p => !protectedIds.has(p.id)).forEach(p => { removeFromClub(p); delete G.players[p.id]; delete G.know[p.id]; });
 }

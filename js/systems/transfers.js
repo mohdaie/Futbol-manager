@@ -94,7 +94,7 @@ function moveClub(p, toId) {
   // Simulated clubs skip weekly training, so a player leaving one for a club that trains starts fresh.
   if (typeof isSimClub === 'function' && isSimClub(G.clubs[from]) && !isSimClub(destination)) { p.cond = 100; p.shp = Math.max(p.shp, 60); p.rd = null; }
   favPersonMoved(p, from, toId);
-  p.lvl = p.age <= 17 ? (destination.league === 'ECH' ? 'R' : 'Y') : 'A';
+  p.lvl = p.age <= 17 ? (leagueTier(destination.league) === 2 ? 'R' : 'Y') : 'A';
   addToClub(p, G.clubs[toId]);
 }
 

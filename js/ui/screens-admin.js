@@ -266,7 +266,7 @@ ACT.admBulk = ds => {
     fresh: () => { mine.forEach(p => { p.cond = 100; }); return 'Everyone at full condition.'; },
     happy: () => { mine.forEach(p => { p.mor = 85; }); return 'Squad morale set to 85.'; },
     sharp: () => { mine.forEach(p => { p.shp = 100; }); return 'Everyone fully sharp.'; },
-    youth: () => { let n = 0; for (let i = 0; i < 3; i++) if (genYouth(userClub(), 60 + G.board.facYouth * 1.6)) n++; return `${n} ${userClub().league === 'ECH' ? 'reserve' : 'U18'} players added${n < 3 ? ': squad limit reached' : ''}.`; },
+    youth: () => { let n = 0; for (let i = 0; i < 3; i++) if (genYouth(userClub(), 60 + G.board.facYouth * 1.6)) n++; return `${n} ${leagueTier(userClub().league) === 2 ? 'reserve' : 'U18'} players added${n < 3 ? ': squad limit reached' : ''}.`; },
     reveal: () => { Object.keys(G.players).forEach(id => { G.know[id] = 100; }); return 'Every player fully scouted.'; },
     fa: () => { for (let i = 0; i < 10; i++) { const p = genFreeAgent(); G.know[p.id] = 20; } return '10 free agents added.'; },
     healAll: () => { Object.values(G.players).forEach(p => { p.inj = null; }); return 'All injuries healed.'; },
