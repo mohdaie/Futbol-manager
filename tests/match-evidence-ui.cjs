@@ -27,10 +27,12 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       const restored = await evidenceLoad(fx.evidence);
       const roundtrip = JSON.stringify(restored) === before;
       G.matchAnalyses = [{ fid: fx.id, at: Date.now(), text: 'Complete test report\nBoth teams: movement, decisions and keeper approach.', model: 'test', auditVersion: 3, movementFrames: raw.frameCount, movementClips: 2 }];
-      UI.tab.adm = 'match'; ADM.matchAnalystFid = fx.id; go('admin');
       await saveGameAsync();
-      return { parity, roundtrip, compressed: !!fx.evidence.encoding, frames: raw.frameCount, rawBytes: before.length, compressedBytes: JSON.stringify(fx.evidence).length };
+      return { fid: fx.id, parity, roundtrip, compressed: !!fx.evidence.encoding, frames: raw.frameCount, rawBytes: before.length, compressedBytes: JSON.stringify(fx.evidence).length };
     });
+    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/'); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
+    await toAdmin();
+    await page.evaluate(fid => { UI.tab.adm = 'match'; ADM.matchAnalystFid = fid; render(); }, result.fid);
     assert(result.parity); checks.push('Simulation worker and main thread record identical movement and decisions');
     assert(result.roundtrip && result.compressed); checks.push('Lossless background compression restores every frame and action');
     await page.locator('[data-a="matchAnalystCopy"]').click();

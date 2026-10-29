@@ -81,8 +81,10 @@ const server = require('node:http').createServer((req, res) => {
     check('Planning does not mutate tactic or squad', r.immutable);
     check('All 64 formation pairings remain finite on both flanks and goals', r.finite);
 
+    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/'); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
+    await toAdmin();
     const before = await page.evaluate(() => { window.shapeBefore = JSON.stringify({ tactics: G.tactics, fixtures: G.fixtures, players: G.players, ai: G.ai }); return true; });
-    await page.evaluate(() => { go('admin'); UI.tab.adm = 'eng'; render(); });
+    await page.evaluate(() => { UI.tab.adm = 'eng'; render(); });
     await page.locator('[data-a="go"][data-s="shapedemo"]').click();
     await page.waitForFunction(() => document.getElementById('shapeReadout')?.textContent.includes('Build-up'));
     await page.locator('[data-a="shapePlay"]').click();

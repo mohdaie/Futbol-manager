@@ -62,7 +62,8 @@ function render(reset) {
   const focus = focused ? { tag:focused.tagName, id:focused.id, data:{...focused.dataset}, value:focused.value, start:focused.selectionStart, end:focused.selectionEnd } : null;
   const keep = !reset && main ? main.scrollTop : 0;
   let scr;
-  if (UI.s === 'title') scr = SCREENS.title;
+  if (window.ADMIN_PAGE) { if (!['admin', 'shapedemo'].includes(UI.s)) UI.s = 'admin'; scr = SCREENS[UI.s]; } // the /admin page shows only the admin tools
+  else if (UI.s === 'title') scr = SCREENS.title;
   else if (!G) scr = SCREENS.start;
   else if (G.gameOver) scr = SCREENS.sacked;
   else if (G.seasonReview && UI.s !== 'review') { UI.s = 'review'; scr = SCREENS.review; }
@@ -290,13 +291,45 @@ ACT.tab = ds => { UI.tab[ds.key] = ds.v; render(); };
 // Continue: the calendar moves day by day (dayrun.js).
 
 async function boot() {
+  if (window.ADMIN_PAGE) await adminTakeOver();
   if (typeof SaveStorage !== 'undefined') await SaveStorage.ready;
   loadGame();
-  UI.s = 'title';
-  if (G) restoreScreen();
+  UI.s = window.ADMIN_PAGE ? 'admin' : 'title';
+  if (G && !window.ADMIN_PAGE) restoreScreen();
   try { render(true); } catch (e) { UI.s = G ? 'home' : 'title'; UI.p = {}; render(true); } // a screen that no longer fits the save
   initViewHistory();
-  if (UI.s === 'title') checkForUpdate();
+  if (UI.s === 'title' && !window.ADMIN_PAGE) checkForUpdate();
   if (typeof SaveStorage !== 'undefined' && SaveStorage.error) toast('Save storage could not be opened. Your existing backup has been kept; export your career before leaving.');
 }
 window.addEventListener('DOMContentLoaded', boot);
+// The /admin page edits this browser's career. Two tabs must never write the same save, so when the admin page
+// opens it asks every game tab to save and pause, then reads the latest career (adminTakeOver).
+let ADMIN_CHANNEL = null;
+try { if (typeof BroadcastChannel !== 'undefined') ADMIN_CHANNEL = new BroadcastChannel('futbol-admin'); } catch (e) { /* no BroadcastChannel */ }
+function showAdminPause() {
+  if (document.getElementById('adminPause')) return;
+  const box = document.createElement('div');
+  box.id = 'adminPause'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-labelledby', 'adminPauseT');
+  box.style.cssText = 'position:fixed;inset:0;z-index:100;background:rgba(14,4,32,.97);color:#fff;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;padding:24px;text-align:center';
+  box.innerHTML = '<h2 id="adminPauseT" class="h1">Paused</h2><p class="muted">The admin page is open on this device. This tab stopped saving so it cannot overwrite admin changes.</p><button class="btn pri" id="adminResume">Reload and continue</button>';
+  document.body.append(box);
+  document.getElementById('adminResume').onclick = () => location.reload();
+}
+if (ADMIN_CHANNEL && !window.ADMIN_PAGE) {
+  ADMIN_CHANNEL.onmessage = async e => {
+    if (e.data !== 'admin-open') return;
+    try { captureLiveCheckpoint(); await SaveStorage.flush(); } catch (err) { /* the admin page reads the last good save */ }
+    SaveStorage.pause(); showAdminPause(); ADMIN_CHANNEL.postMessage('paused');
+  };
+}
+async function adminTakeOver() {
+  if (ADMIN_CHANNEL) {
+    await new Promise(done => {
+      const give = setTimeout(done, 500);
+      ADMIN_CHANNEL.onmessage = e => { if (e.data === 'paused') { clearTimeout(give); setTimeout(done, 150); } };
+      ADMIN_CHANNEL.postMessage('admin-open');
+    });
+  }
+  await SaveStorage.ready;
+  if (!SaveStorage.blocked) { try { SaveStorage.cached = await SaveStorage.request('load'); } catch (e) { /* keep the copy read at start-up */ } }
+}

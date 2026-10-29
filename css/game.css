@@ -216,7 +216,7 @@ img.crest-art { object-fit: contain; max-width: none; vertical-align: middle; }
 .seg.wide { width: 100%; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .field label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); }
-select, input[type=text], input[type=search], textarea { width: 100%; padding: 7.5px 8.5px; border-radius: 7.5px; border: 1px solid var(--line); background: var(--night); color: var(--chalk); min-height: 33.5px; }
+select, input[type=text], input[type=search], input[type=password], textarea { width: 100%; padding: 7.5px 8.5px; border-radius: 7.5px; border: 1px solid var(--line); background: var(--night); color: var(--chalk); min-height: 33.5px; }
 textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; word-break: break-all; resize: vertical; }
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8.5px; }
 .transfer-result-sort { margin: 8px 0; }
