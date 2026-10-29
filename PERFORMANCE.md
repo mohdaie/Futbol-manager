@@ -284,3 +284,21 @@ Coach individual training recommendations now use their player IDs for profile l
 ## Release 2026.10.23.28: use player IDs across player links
 
 ID-backed player mentions in news, coach and staff advice, pre-match warnings, live commentary, match scorers and other player records now link to the exact profile. Generic text with a duplicate player name remains readable without opening an ambiguous chooser. Navigation and link suites force duplicate names and verify both safe generic text and exact ID-backed links.
+
+## Release 1.7.1 defending: midfield goal-side of the ball
+
+With the ball 25–35 m from goal the block's midfield line, placed a fixed distance in front of the back line, stood behind the ball and left the space in front of the defence empty. Midfield rows (and wide midfielders and wingers within 40 m of goal; the Inside Forward stays up as the counter outlet) now stay at least 2.5 m goal-side of the ball and no closer than 2 m to the back line. In their own third, markers look up to 15 m for a man and stay closer to him outside the box.
+
+Measured with `scripts/realism/league.cjs` on seeded worlds 1, 2 and 3 (120 computer fixtures each, detailed model), before and after:
+
+| Metric | 1.7.0 | 1.7.1 |
+| --- | ---: | ---: |
+| Attackers within 25 m of goal with no defender within 5 m | 23.0% | 18.0% |
+| Same, no defender within 8 m | 7.3% | 6.2% |
+| Defenders goal-side of the ball (ball within 35 m of goal) | 2.71 | 3.07 |
+| One-on-one shots per team | 2.06 | 1.68 |
+| Goals | 1.60 | 1.49 |
+| Shots / on target | 17.9 / 6.1 | 16.4 / 5.3 |
+| xG | 1.48 | 1.33 |
+
+Goals in computer fixtures were already below the real-football target (about 2.8) before this change and fall slightly further; scoring is to be recalibrated separately. Defending, engine QA (`--strict`) and the release suites above pass.
