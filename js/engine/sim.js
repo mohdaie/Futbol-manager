@@ -1513,7 +1513,7 @@ function targets(M, all) {
         }
       } else if (defRole <= 3) {
         // Marking: stay goal-side of the nearest attacker in his zone, tighter with Marking (and the instruction).
-        let m = -1, md = 144;
+        let m = -1, md = by > 2 / 3 ? 225 : 144; // he looks further for a man when the ball is in his own third
         for (let k = 1; k < T.length; k++) { const q = T[k]; if (!q) continue; const dx = q.x - X, dy = q.y - Y, d2 = dx * dx + dy * dy; if (d2 < md) { md = d2; m = k; } }
         if (m > 0) {
           const q = T[m], qy = s === 0 ? q.y / PL : 1 - q.y / PL, danger = qy > 0.55; // near our goal (their attack)
@@ -1523,7 +1523,7 @@ function targets(M, all) {
           const lead = clamp((ac(S, i, 'mar') - 4) * 0.06, 0, 1), px = q.x + q.vx * lead, py = q.y + q.vy * lead;
           const L = hyp(gx - px, gy - py) || 1, t2 = Math.max(1, tight);
           const mx = px + (gx - px) / L * t2, my = py + (gy - py) / L * t2;
-          const w = clamp((box ? 0.78 : danger ? 0.55 : 0.35) + ac(S, i, 'pos') * 0.02 + (ac(S, i, 'tea') - 10) * 0.012 + bh(S, i, 'mk') * 0.15, 0.2, box ? 0.97 : 0.92);
+          const w = clamp((box ? 0.78 : danger ? 0.68 : 0.35) + ac(S, i, 'pos') * 0.02 + (ac(S, i, 'tea') - 10) * 0.012 + bh(S, i, 'mk') * 0.15, 0.2, box ? 0.97 : 0.92);
           X += (mx - X) * w; Y += (my - Y) * w;
           if (defRole === 1 && by < .8) Y = clamp(Y, lineY - 1.5, lineY + 1.5);
           // A midfielder tracks his runner up to the back line and passes him on (4.7); dropping behind it would

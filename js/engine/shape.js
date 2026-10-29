@@ -199,7 +199,13 @@ function blockPlan(T, bx, by) {
     let x = 0.5 + (slot[1] - 0.5) * (wide && role === 'Inside Forward' && !low ? 0.5 : width) + shift;
     const far = (slot[1] - 0.5) * (bx - 0.5) < 0;
     if (far) x = lerp(x, 0.5 + shift * 0.5, Math.abs(bx - 0.5) * 0.35);
-    return [clamp(x, 0.06, 0.94), clamp(backY - band * gap, 0.06, 0.95)];
+    let y = backY - band * gap;
+    // 4.6: the midfield line is goal-side of the ball. Set only from the back line, it stood behind a ball at the edge
+    // of the box and left the space in front of the defence empty. Near goal the wide midfielders and wingers drop
+    // with it to pick up overlapping full-backs; the Inside Forward stays up as the counter outlet.
+    const near = (1 - by) * 105 < 40, tracks = row === 2 || row === 3 || (wide && near && role !== 'Inside Forward');
+    if (tracks) y = Math.max(y, Math.min(by + 2.5 / 105, backY - 2 / 105));
+    return [clamp(x, 0.06, 0.94), clamp(y, 0.06, 0.95)];
   });
   return { positions: pos, phase, rest: { back: [], screen: [] } };
 }
