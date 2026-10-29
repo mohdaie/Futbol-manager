@@ -302,3 +302,9 @@ Measured with `scripts/realism/league.cjs` on seeded worlds 1, 2 and 3 (120 comp
 | xG | 1.48 | 1.33 |
 
 Goals in computer fixtures were already below the real-football target (about 2.8) before this change and fall slightly further; scoring is to be recalibrated separately. Defending, engine QA (`--strict`) and the release suites above pass.
+
+## Release 1.7.2 goal net
+
+After a goal the engine moved the ball and every player to the kick-off on the next half-second frame, so the 2D view drew the ball streaking from the goal to the centre spot (a 53 m gold trail). A shot struck across goal could also end outside the side netting. Now, past the goal line a goal is caught by the net (`netPoint` in `js/engine/sim.js`): it stays between the posts and under the bar and the net takes its pace (at most 1.8 m deep). The ball rests in the net for 4 s of the celebration before the kick-off is set; playback drops it to the ground there, and the trail is cleared on any cut of more than 6 m.
+
+Checked by driving the live renderer through simulated goals: the ball stays inside the net from arrival until the kick-off and the longest trail is the shot itself (about 10 m, previously 53 m). Engine QA (`--strict`) and the release suites above pass.
