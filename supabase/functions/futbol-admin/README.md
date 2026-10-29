@@ -16,6 +16,8 @@ It stores the AI settings and the Jev / DeepSeek API keys in Supabase.
 | `DELETE /secret?service=jev` | Removes a key. |
 | `POST /test` | `{ service }` sends one tiny request with the saved key. |
 | `GET /usage` | AI call totals from `futbol_manager_ai_requests`. |
+| `POST /report` | Anonymous play statistics from the game (`js/systems/telemetry.js`): `{ kind: open\|play\|career\|match, device, session, version, data }`. Validated and rate-limited by `futbol_play_report`. |
+| `GET /players?days=30` | The admin Dashboard: players per day, new and returning players, minutes, matches and results, clubs, devices and versions (`futbol_play_dashboard`, Malaysia time). |
 
 Tables (`20261029120000_futbol_admin.sql`): `futbol_admin_settings` and `futbol_admin_secrets`. Row-level security is on
 with no policies, and anon / authenticated have no grants, so only the edge functions (service role) can read them.

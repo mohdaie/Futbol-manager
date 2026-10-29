@@ -422,6 +422,7 @@ SCREENS.settings = {
       <div class="card"><h3>Match camera</h3><p class="muted">Follow keeps the ball in view with a mini-map. Full pitch shows everything at once.</p><div class="seg">${[['follow', 'Follow'], ['full', 'Full pitch']].map(([k, n]) => `<button class="${(G.settings.cam || 'follow') === k ? 'on' : ''}" data-a="setCam" data-v="${k}">${n}</button>`).join('')}</div></div>
       <div class="card"><h3>Match highlights</h3><p class="muted">How much of a match you watch: key chances only, extended build-up, or every move.</p><div class="seg">${[['key', 'Key'], ['ext', 'Extended'], ['full', 'Full']].map(([k, n]) => `<button class="${(G.settings.hl || 'ext') === k ? 'on' : ''}" data-a="setHl" data-v="${k}">${n}</button>`).join('')}</div></div>
       <div class="card"><h3>Default match speed</h3><div class="seg">${[1, 2, 4].map(s => `<button class="${G.settings.speed === s ? 'on' : ''}" data-a="speed" data-v="${s}">${s}x</button>`).join('')}</div></div>
+      <div class="card"><h3>Anonymous play statistics</h3><p class="muted">Helps improve the game: how often it is played, minutes played, match results and the club you manage, with a random id for this browser. No names, saves or personal data.</p><div class="seg">${[[1, 'Share'], [0, 'Off']].map(([k, n]) => `<button class="${+statsOn() === k ? 'on' : ''}" data-a="setStats" data-v="${k}">${n}</button>`).join('')}</div></div>
       <div class="card"><h3>Save game</h3><p class="muted">Autosaves stay on this device. Clearing site data removes them. Keep a save file as a backup or import it on another device.</p>
         <p id="saveStatus" role="status" class="${SaveStorage.error ? 'bad' : 'muted'}">${SaveStorage.error ? 'Saving failed. Export a backup before leaving.' : 'Automatic saving on this device.'}</p>
         <div class="btns"><button class="btn" data-a="saveNow">Save now</button>${window.showSaveFilePicker ? `<button class="btn" data-a="savePhone">${SaveStorage.file ? 'Update phone file' : 'Save to phone'}</button>` : ''}<button class="btn" data-a="downloadSave">Download save file</button><button class="btn" data-a="exportSave">Export save code</button><button class="btn" data-a="importOpen">Import save</button></div>
@@ -430,6 +431,7 @@ SCREENS.settings = {
   },
 };
 ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to Manager ' + ds.v + '.'); render(); };
+ACT.setStats = ds => { statsSetOn(ds.v === '1'); render(); };
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
 ACT.setMgrName = () => { const v = document.getElementById('setMgr').value.trim().slice(0, 40); if (!v) return toast('Enter a name first.'); G.manager = v; saveGame(); toast('Manager name saved.'); render(); };
 ACT.setCam = ds => { if (!['follow', 'full'].includes(ds.v)) return; G.settings.cam = ds.v; saveGame(); render(); };

@@ -12,6 +12,7 @@ const assert = require('node:assert/strict');
     settings: async () => structuredClone(db.settings), saveSettings: async (id, v) => { db.settings[id] = v; },
     secrets: async () => ({ ...db.secrets }), saveSecret: async (n, v) => { db.secrets[n] = v; }, deleteSecret: async n => { delete db.secrets[n]; },
     usage: async () => ({ month: [], total: [], features: [], days: [] }),
+    report: async row => { db.reports = (db.reports || []).concat(row); }, players: async days => ({ days }),
   };
   const probe = async (name, key) => ({ ok: key === 'good-key-123', detail: name });
   const call = (method, path, body, origin = ORIGIN) => handleAdmin(new Request('https://x.test/functions/v1/futbol-admin' + path, { method, headers: { ...(origin ? { Origin: origin } : {}), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }), store, probe);
@@ -50,6 +51,14 @@ const assert = require('node:assert/strict');
   r = await read(await call('DELETE', '/secret?service=ds'));
   check('key can be removed', [db.secrets.deepseek, r.body.keys.ds.set], [undefined, false]);
   check('usage is served', (await call('GET', '/usage')).status, 200);
+  const id = 'a'.repeat(32), sid = 'b'.repeat(32);
+  r = await call('POST', '/report', { kind: 'match', device: id, session: sid, version: '1.7.3', data: { gf: 2, ga: 1, res: 'W' } });
+  check('a play report is stored and answered with no body', [r.status, db.reports.length, db.reports[0].p_kind, db.reports[0].p_data.res], [204, 1, 'match', 'W']);
+  check('unknown report kinds are refused', (await call('POST', '/report', { kind: 'spam', device: id, session: sid })).status, 400);
+  check('reports need a random device id', (await call('POST', '/report', { kind: 'open', device: 'someone@example.com', session: sid })).status, 400);
+  check('oversized report data is refused', (await call('POST', '/report', { kind: 'open', device: id, session: sid, data: { x: 'y'.repeat(2000) } })).status, 400);
+  check('reports from other origins are refused', (await call('POST', '/report', { kind: 'open', device: id, session: sid }, 'https://evil.example')).status, 403);
+  check('the dashboard clamps the period', (await read(await call('GET', '/players?days=9999'))).body, { days: 180 });
   check('unknown path is 404', (await call('GET', '/nope')).status, 404);
 
   // Relays use the server key only when the game sends none.

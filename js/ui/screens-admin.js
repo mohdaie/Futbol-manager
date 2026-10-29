@@ -9,19 +9,25 @@ function adminAllowed() { return !!window.ADMIN_PAGE; }
 
 const ADM = { club: null, q: '', qClub: 'ALL', test: null, confirm: '' };
 
-const ADMIN_TAB_LIST = [['svc', 'AI keys'], ['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['match', 'Match Analyst'], ['data', 'Data']];
+const ADMIN_TAB_LIST = [['dash', 'Dashboard'], ['svc', 'AI keys'], ['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['match', 'Match Analyst'], ['data', 'Data']];
+const ADMIN_NO_SAVE = ['dash', 'svc']; // tabs backed by the server, usable without a career in this browser
 SCREENS.admin = {
   full: true,
   render() {
     if (!adminAllowed()) return `<h1 class="h1">Admin</h1>${empty('Moved', 'The admin tools now live on the /admin page.')}`;
-    const t = UI.tab.adm || (G ? 'over' : 'svc'), needsSave = t !== 'svc' && !G;
+    const t = UI.tab.adm || 'dash', needsSave = !ADMIN_NO_SAVE.includes(t) && !G;
     return `<div class="main admin-page"><h1 class="h1">Admin</h1>
-      <div class="banner open"><b>${G ? 'Live editing' : 'No career in this browser'}</b><span>${G ? 'Changes apply to the career saved in this browser at once. Close the game tab while you edit, and export a backup in the game\'s Settings first if you want to undo.' : 'The save tools need a career. Start one in the game, then reload this page. AI keys and settings still work.'}</span></div>
-      ${tabs('adm', G ? ADMIN_TAB_LIST : ADMIN_TAB_LIST.filter(x => x[0] === 'svc'), needsSave ? 'svc' : t)}
-      ${needsSave ? ADMIN_TABS.svc() : ADMIN_TABS[t]()}
+      <div class="banner open"><b>${G ? 'Live editing' : 'No career in this browser'}</b><span>${G ? 'Changes apply to the career saved in this browser at once. Close the game tab while you edit, and export a backup in the game\'s Settings first if you want to undo.' : 'The save tools need a career. Start one in the game, then reload this page. The dashboard, AI keys and settings still work.'}</span></div>
+      ${tabs('adm', G ? ADMIN_TAB_LIST : ADMIN_TAB_LIST.filter(x => ADMIN_NO_SAVE.includes(x[0])), needsSave ? 'dash' : t)}
+      ${needsSave ? ADMIN_TABS.dash() : ADMIN_TABS[t]()}
       <p class="muted">Futbol Manager admin · <a href="./" data-nolink>Back to the game</a></p></div>`;
   },
-  after() { if ((UI.tab.adm || (G ? 'over' : 'svc')) === 'svc' || !G) admSvcLoad(); },
+  after() {
+    if (!adminAllowed()) return; // the services and dashboard code is only on the admin page
+    const t = UI.tab.adm || 'dash';
+    if (t === 'svc') admSvcLoad();
+    if (t === 'dash' || (!G && !ADMIN_NO_SAVE.includes(t))) admDashLoad();
+  },
 };
 
 const num = (id, v, step = 1, attrs = '') => `<input id="${id}" type="number" inputmode="decimal" step="${step}" value="${v}" ${attrs}>`;

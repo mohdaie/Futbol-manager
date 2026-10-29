@@ -209,6 +209,7 @@ function newGame(clubId, manager, avatar) {
   addNews('club', 'Pre-season begins', 'Set your training focus, review the squad and check the tactics screen before the opening match in mid-August. The summer transfer window is open until 1 September.');
   seasonOpeningStory();
   saveGame();
+  if (typeof statsEvent === 'function') statsEvent('career', statsCareer());
 }
 
 function setupUserClub() {
