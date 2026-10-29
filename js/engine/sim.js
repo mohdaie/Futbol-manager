@@ -247,7 +247,7 @@ function looseBall(M) { const B = M.sim.B; B.os = -1; B.oi = -1; B.fl = null; }
 /* ---------- restarts ---------- */
 function kickOff(M, s) {
   const sim = M.sim;
-  sim.momentum = null; sim.counterpress = null;
+  sim.momentum = null; sim.counterpress = null; sim.kickOffAt = null;
   sim.poss = s; // a restart is not an open-play turnover
   sim.rs = { k: 'ko', s, x: PW / 2, y: PL / 2, w: 3 };
   looseBall(M); Object.assign(sim.B, { x: PW / 2, y: PL / 2, z: 0, vx: 0, vy: 0, vz: 0 });
@@ -695,8 +695,17 @@ function playOption(M, s, i, op, press) {
 function flightPoint(fl, t) {
   const duration = Math.max(0.05, fl.arr - fl.t0), u = clamp((t - fl.t0) / duration, 0, 1);
   const arc = fl.k === 'shot' ? fl.kind === 'chip' ? 2.2 : fl.kind === 'free kick' ? 0.9 : 0.15 : 9.8 * duration * duration / 8;
-  return [fl.x0 + (fl.tx - fl.x0) * u + (fl.curve || 0) * Math.sin(Math.PI * u), fl.y0 + (fl.ty - fl.y0) * u,
+  const point = [fl.x0 + (fl.tx - fl.x0) * u + (fl.curve || 0) * Math.sin(Math.PI * u), fl.y0 + (fl.ty - fl.y0) * u,
     fl.k === 'shot' ? (fl.z0 || 0) * (1 - u) + (fl.az || 0) * u + arc * 4 * u * (1 - u) : 0.1 * (1 - u) + arc * 4 * u * (1 - u)];
+  return fl.k === 'shot' && fl.res === 'goal' ? netPoint(fl.s, point) : point;
+}
+// 7.6: past the goal line a goal is caught by the net. It stays between the posts and under the bar, and the
+// net takes its pace (it never reaches the back of the 2 m net, and a shot struck across goal cannot leave by the side).
+const NET_DEPTH = 1.8;
+function netPoint(s, point) {
+  const gy = goalY(s), depth = (point[1] - gy) * fwdY(s);
+  if (!(depth > 0)) return point;
+  return [clamp(point[0], PW / 2 - 3.5, PW / 2 + 3.5), gy + fwdY(s) * NET_DEPTH * (1 - Math.exp(-depth / 1.2)), Math.min(point[2], 2.3)];
 }
 // The ball leaves the player's foot: speed and height by the kind of ball, aimed with some error.
 function kick(M, s, i, k, tx, ty, j, o = {}) {
@@ -978,7 +987,11 @@ function shotArrives(M, fl) {
     onPitch(O).forEach(z => bumpRating(O, z.p.id, z.pos === 'GK' ? -0.35 : LINE[z.pos] <= 2 ? -0.22 : -0.05));
     mark(M, 'goal', s);
     M.sim.celebrate = 35; // celebration and the walk back for the kick-off
-    return kickOff(M, 1 - s);
+    // The ball rests in the net through the celebration; the kick-off is set once the replay has seen it there.
+    const [x, y] = flightPoint(fl, fl.arr), B = M.sim.B;
+    looseBall(M); Object.assign(B, { x, y, z: 0, vx: 0, vy: 0, vz: 0 });
+    M.sim.kickOffAt = { s: 1 - s, t: M.sim.t + 4 };
+    return;
   }
   if (fl.res === 'save') {
     S.st.sot++; pstat(S, i, 'sot'); pstat(O, 0, 'sv');
@@ -1840,7 +1853,11 @@ function chase(M) {
 function tickSim(M) {
   const sim = M.sim, B = sim.B;
   sim.t += TICK;
-  if (sim.celebrate > 0) { sim.celebrate -= TICK; recordFrame(M); return; }
+  if (sim.celebrate > 0) {
+    sim.celebrate -= TICK;
+    if (sim.kickOffAt && sim.t >= sim.kickOffAt.t) kickOff(M, sim.kickOffAt.s);
+    recordFrame(M); return;
+  }
   if (sim.rs) restartTick(M);
   else {
     const own = owner(M);

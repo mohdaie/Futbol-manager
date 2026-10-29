@@ -292,9 +292,11 @@ function setFrame(L, p, snap) {
     L.ball.y = clamp(carrier.y + Math.sin(fa) * d, 0.05, PL - 0.05);
     L.ball.z = 0;
   }
-  const shot = (q.marks || []).filter(m => m.k === 'sfx' && t >= m.t && t <= m.t + m.flight).pop();
+  // A goal stays drawn in the net (dropping to the ground) until the frames have it resting there.
+  const shot = (q.marks || []).filter(m => m.k === 'sfx' && t >= m.t && t <= m.t + m.flight + (m.res === 'goal' ? TICK : 0)).pop();
   if (shot) {
     const point = flightPoint({ ...shot, k: 'shot', t0: shot.t, arr: shot.t + shot.flight }, t);
+    if (t > shot.t + shot.flight) point[2] *= Math.max(0, 1 - (t - shot.t - shot.flight) / 0.3);
     [L.ball.x, L.ball.y, L.ball.z] = point;
     const keeper = shot.keeper, g = L.dots[1 - shot.s]?.[0];
     if (keeper && g) { const u = clamp((t - keeper.start) / Math.max(0.05, keeper.end - keeper.start), 0, 1); g.x = keeper.x0 + (keeper.tx - keeper.x0) * u; g.y = keeper.y0 + (keeper.ty - keeper.y0) * u; }
@@ -401,6 +403,7 @@ function draw(L) {
   // The ball's trail while it travels (the last 0.6 s of play); gold for a shot.
   if (L.own[0] < 0 && L.gt != null) {
     const tr = L.trail || (L.trail = []), last = tr[tr.length - 1];
+    if (last && hyp(L.ball.x - last.x, L.ball.y - last.y) > 6) tr.length = 0; // a cut (restart, kick-off) is not a ball in flight
     if (!last || last.t !== L.gt) tr.push({ x: L.ball.x, y: L.ball.y, z: L.ball.z || 0, t: L.gt });
     while (tr.length && (L.gt - tr[0].t > 0.6 || tr[0].t > L.gt)) tr.shift();
     const shot = L.shotT != null && L.gt - L.shotT < 1.6 && L.gt >= L.shotT;
