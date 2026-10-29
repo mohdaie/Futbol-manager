@@ -94,12 +94,11 @@ const assert = require('node:assert/strict');
     const waitMin = async target => { for (let k = 0; k < 120; k++) { if (await page.evaluate(t => { G.settings.hl = 'key'; G.settings.speed = 4; if (LIVE.paused && !LIVE.done) { closeSheet(true); LIVE.paused = false; LIVE.overlay = null; } return LIVE.M.min >= t; }, target)) return; await page.waitForTimeout(500); } throw new Error('match did not reach minute ' + target); };
     await waitMin(min + 4);
     const before = await page.evaluate(() => ({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-') }));
-    // The match can advance after the preceding evaluate() and before reload.
-    // Compare with the checkpoint at actual page exit, not an earlier clock sample.
-    await page.evaluate(() => window.addEventListener('pagehide', () => {
-      sessionStorage.setItem('test:live-exit', JSON.stringify({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-') }));
-    }, { once: true }));
-    await page.evaluate(async () => { LIVE.paused = true; liveKeep(); await SaveStorage.flush(); });
+    // A worker minute already in flight can land after liveKeep, so compare with the checkpoint that was saved, not a later clock sample.
+    await page.evaluate(async () => {
+      LIVE.paused = true; liveKeep(); await SaveStorage.flush();
+      sessionStorage.setItem('test:live-exit', JSON.stringify({ min: G.live.M.min, score: G.live.M.sides.map(S => S.st.g).join('-') }));
+    });
     await page.reload();
     await page.waitForFunction(() => typeof LIVE !== 'undefined' && LIVE && UI.s === 'match');
     const after = await page.evaluate(() => ({ min: LIVE.M.min, score: LIVE.M.sides.map(S => S.st.g).join('-'), paused: LIVE.paused, s: UI.s }));

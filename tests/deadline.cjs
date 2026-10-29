@@ -54,7 +54,7 @@ const assert = require('node:assert/strict');
         .map(p => startDeal(p, 'bid', { lim: { fee: 1e9, wage: 1e6 }, fee: roundMoney(askingPrice(p)), approach: 'open', opened: true, next: dayAbs() + 5 }).id);
       // Answer outstanding decisions from the setup's time skip before pressing Continue.
       pendingTransferDecisions().forEach(d => { if(d.need.k==='offer')answerOffer(d,'reject');else dealWalk(d); });
-      return { date: fmtDate(today(), false), mine, t0: G.tHist.length, s0: G.social.length };
+      return { date: fmtDate(today(), false), mine, t0: G.tHist.length, s0: G.social.map(x => x.id) };
     });
     check('Calendar reaches deadline day', pre.date.startsWith('1 Sep'), true);
     await page.evaluate(() => { G.settings.speed = 4; go('home'); ACT.continue(); });
@@ -78,7 +78,7 @@ const assert = require('node:assert/strict');
       // Answer anything urgent like a manager who wants deals done, then let the day finish.
       const answer = () => G.deals.filter(d => d.need && dealOpen(d)).forEach(d => { if (d.need.k === 'final') completeIn(d); else if (d.need.k === 'offer') answerOffer(d, 'reject'); else if (d.need.k === 'finalout') blockOut(d); else if (['bidlimit', 'notforsale', 'agentfee', 'wagelimit'].includes(d.need.k)) dealRaise(d, d.need.k === 'wagelimit' ? d.need.wage : d.need.k === 'agentfee' ? d.agentFee : d.need.fee); });
       while (!G.dd.done) { answer(); deadlineHour(); }
-      const day = { h: G.dd.h, deals: G.tHist.length - pre.t0, posts: G.social.length - pre.s0, ticker: G.social.some(p => p.kind === 'ticker'), shut: G.news.some(n => n.title === 'The window has shut') };
+      const day = { h: G.dd.h, deals: G.tHist.length - pre.t0, posts: G.social.filter(x => !pre.s0.includes(x.id)).length, ticker: G.social.some(p => p.kind === 'ticker'), shut: G.news.some(n => n.title === 'The window has shut') };
       const openMine = pre.mine.map(id => G.deals.find(d => d.id === id)).filter(d => dealOpen(d) && WINDOW_STAGES.includes(d.stage)).length;
       const step = () => { const r = advanceDay(); if (r === 'match') playUserInstant(userFixture()); };
       let g = 0; while (inWindow() && g++ < 5) step();
