@@ -12,6 +12,7 @@ const CORS = {
 const json = (status, data) => new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 export const SERVICES = { jev: 'jev', ds: 'deepseek' }; // settings id -> secret name
+const REPORT_KINDS = new Set(['open', 'play', 'career', 'match']);
 const FEATURES = { jev: ['engine', 'briefing', 'manager', 'react', 'transfer', 'advice'], ds: ['briefing', 'second', 'press', 'talks', 'report', 'staff', 'agents', 'news', 'match'] };
 const allOn = list => Object.fromEntries(list.map(k => [k, true]));
 const MODELS = { jev: /^jev-[a-z0-9.-]{1,60}$/, ds: /^(deepseek-flash|deepseek-v4-pro)$/ };
@@ -37,7 +38,8 @@ export function cleanSettings(id, raw, base = DEFAULTS[id]) {
   return out;
 }
 
-/* store: { settings(): {id: value}, saveSettings(id, value), secrets(): {name: value}, saveSecret(name, value), deleteSecret(name), usage() }
+/* store: { settings(): {id: value}, saveSettings(id, value), secrets(): {name: value}, saveSecret(name, value), deleteSecret(name), usage(),
+            report(row), players(days) }
    probe: async (name, key) => { ok, status, ms, detail } */
 export async function handleAdmin(req, store, probe) {
   const url = new URL(req.url), path = url.pathname.replace(/\/+$/, '');
@@ -57,6 +59,16 @@ export async function handleAdmin(req, store, probe) {
     }
     if (req.method === 'GET' && path.endsWith('/state')) return json(200, { settings: await merged(), keys: await keyInfo() });
     if (req.method === 'GET' && path.endsWith('/usage')) return json(200, await store.usage());
+    // Anonymous play statistics from the game (js/systems/telemetry.js); the database function validates and rate-limits.
+    if (req.method === 'POST' && path.endsWith('/report')) {
+      const b = await req.json().catch(() => null);
+      if (!b || !REPORT_KINDS.has(b.kind) || !/^[0-9a-f]{32}$/.test(b.device) || !/^[0-9a-f]{32}$/.test(b.session)) return json(400, { error: 'Bad report.' });
+      const data = b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : {};
+      if (JSON.stringify(data).length > 1500) return json(400, { error: 'Bad report.' });
+      await store.report({ p_kind: b.kind, p_device: b.device, p_session: b.session, p_version: String(b.version || '?').slice(0, 20), p_data: data });
+      return new Response(null, { status: 204, headers: CORS });
+    }
+    if (req.method === 'GET' && path.endsWith('/players')) return json(200, await store.players(num(url.searchParams.get('days'), 1, 180, 30)));
     if (req.method === 'PUT' && path.endsWith('/settings')) {
       const body = await req.json(), cur = await merged();
       for (const id of Object.keys(SERVICES)) if (body && body[id]) await store.saveSettings(id, cleanSettings(id, body[id], cur[id]));

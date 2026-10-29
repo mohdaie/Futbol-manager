@@ -107,3 +107,65 @@ ACT.svcUsage = async () => {
   ADM_SVC.usageBusy = false; render();
 };
 
+
+/* ---------- Dashboard: anonymous play statistics (js/systems/telemetry.js, futbol-admin GET /players) ---------- */
+const ADM_DASH = { data: null, error: '', loading: false, days: 30, metric: 'players' };
+const DASH_METRICS = [['players', 'Players'], ['new', 'New players'], ['minutes', 'Minutes played'], ['matches', 'Matches'], ['sessions', 'Sessions']];
+async function admDashLoad(force) {
+  if (ADM_DASH.loading || (ADM_DASH.data && !force) || (ADM_DASH.error && !force)) return;
+  ADM_DASH.loading = true; ADM_DASH.error = '';
+  if (UI.s === 'admin' && force) render();
+  try { ADM_DASH.data = await admApi('/players?days=' + ADM_DASH.days); } catch (e) { ADM_DASH.error = e.message; }
+  ADM_DASH.loading = false;
+  if (UI.s === 'admin') render();
+}
+const dashN = n => Number(n || 0).toLocaleString('en-GB');
+const dashDay = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const dashTile = (label, value, sub = '') => `<div><small>${label}</small><b>${value}</b>${sub ? `<small class="dash-sub">${sub}</small>` : ''}</div>`;
+// One series, one hue: bars from the baseline, a light grid, labels in text colours, a tooltip on each bar.
+function dashChart(rows, key, label) {
+  const W = 420, H = 180, padL = 30, padB = 20, padT = 8, n = rows.length || 1, max = Math.max(1, ...rows.map(r => +r[key] || 0));
+  const step = Math.pow(10, Math.floor(Math.log10(max))), top = Math.ceil(max / step) * step, ticks = [0, top / 2, top];
+  const bw = (W - padL) / n, gap = Math.min(2, bw * 0.2), y = v => padT + (H - padT - padB) * (1 - v / top);
+  const every = Math.ceil(n / 8);
+  return `<svg class="dash-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)} per day">
+    ${ticks.map(t => `<line x1="${padL}" x2="${W}" y1="${y(t)}" y2="${y(t)}" class="dash-grid"/><text x="${padL - 6}" y="${y(t) + 3}" text-anchor="end" class="dash-ax">${dashN(Math.round(t))}</text>`).join('')}
+    ${rows.map((r, i) => { const v = +r[key] || 0, x = padL + i * bw + gap / 2, h = Math.max(v ? 2 : 0, y(0) - y(v)), w = Math.max(1, bw - gap), rad = Math.min(4, w / 2, h);
+      return `<g class="dash-bar"><rect x="${padL + i * bw}" y="${padT}" width="${bw}" height="${H - padT - padB}" fill="transparent"/>${v ? `<path d="M${x},${y(0)} v${-(h - rad)} q0,${-rad} ${rad},${-rad} h${w - 2 * rad} q${rad},0 ${rad},${rad} v${h - rad} z"/>` : ''}<title>${dashDay(r.day)}: ${dashN(v)} ${esc(label.toLowerCase())}</title>${i % every === 0 ? `<text x="${padL + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle" class="dash-ax">${dashDay(r.day)}</text>` : ''}</g>`; }).join('')}
+  </svg>`;
+}
+const dashList = (obj, name = k => k) => Object.entries(obj || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="row sm"><span class="grow"><b>${esc(name(k))}</b></span><span class="stat"><b>${dashN(v)}</b></span></div>`).join('') || '<p class="muted">None yet.</p>';
+
+ADMIN_TABS.dash = () => {
+  const D = ADM_DASH.data;
+  const head = `<div class="card"><h3>Players dashboard</h3><p class="muted">Anonymous statistics from every player's game: a random id per browser, no names or saves. Days are Malaysia time. Players can turn this off in the game's Settings, so the numbers are a minimum.</p>
+    <div class="seg">${[7, 30, 90].map(d => `<button class="${ADM_DASH.days === d ? 'on' : ''}" data-a="dashDays" data-v="${d}">${d} days</button>`).join('')}</div>
+    <div class="btns"><button class="btn sm" data-a="dashReload" ${ADM_DASH.loading ? 'disabled' : ''}>${ADM_DASH.loading ? 'Loading…' : 'Refresh'}</button></div></div>`;
+  if (ADM_DASH.error) return head + `<div class="card"><p class="bad">Could not load: ${esc(ADM_DASH.error)}</p></div>`;
+  if (!D) return head + '<div class="card"><p class="muted" role="status">Loading…</p></div>';
+  const P = D.players, T = D.totals, rows = D.daily || [], days = D.days, active = Math.max(1, P.period);
+  const metric = DASH_METRICS.find(m => m[0] === ADM_DASH.metric) || DASH_METRICS[0];
+  const results = T.matches ? `${T.wins}W ${T.draws}D ${T.losses}L · ${Math.round(100 * T.wins / T.matches)}% won` : 'No matches yet';
+  return head + `<div class="card"><div class="kv dash-kv">
+      ${dashTile('Players today', dashN(P.today), dashN(P.newToday) + ' new')}
+      ${dashTile('Last 7 days', dashN(P.week))}
+      ${dashTile(`Last ${days} days`, dashN(P.period), dashN(P.newPeriod) + ' new · ' + dashN(P.returning) + ' came back')}
+      ${dashTile('All time', dashN(P.allTime))}
+      ${dashTile('Minutes played', dashN(T.minutes), Math.round(T.minutes / active) + ' per player')}
+      ${dashTile('Sessions', dashN(T.sessions), (T.sessions / active).toFixed(1) + ' per player')}
+      ${dashTile('Matches', dashN(T.matches), dashN(T.watched) + ' watched · ' + dashN(T.instant) + ' instant')}
+      ${dashTile('Results', results, T.matches ? (T.goalsFor / T.matches).toFixed(1) + ' scored · ' + (T.goalsAgainst / T.matches).toFixed(1) + ' conceded per match' : '')}
+    </div></div>
+    <div class="card"><h3>${metric[1]} per day</h3>
+      <div class="seg">${DASH_METRICS.map(([k, n]) => `<button class="${metric[0] === k ? 'on' : ''}" data-a="dashMetric" data-v="${k}">${n}</button>`).join('')}</div>
+      ${dashChart(rows, metric[0], metric[1])}</div>
+    <div class="card"><h3>By day</h3><div class="tablewrap"><table class="tbl"><tr><th>Day</th><th>Players</th><th>New</th><th>Sessions</th><th>Minutes</th><th>Matches</th><th>New careers</th></tr>
+      ${rows.slice().reverse().map(r => `<tr><td>${dashDay(r.day)}</td><td>${dashN(r.players)}</td><td>${dashN(r.new)}</td><td>${dashN(r.sessions)}</td><td>${dashN(r.minutes)}</td><td>${dashN(r.matches)}</td><td>${dashN(r.careers)}</td></tr>`).join('')}</table></div></div>
+    <div class="card"><h3>Clubs managed</h3><p class="muted">Players per club in the period.</p><div class="list">${(D.clubs || []).map(c => `<div class="row sm"><span class="grow"><b>${esc(c.name)}</b><small>${esc(c.country || '')}</small></span><span class="stat"><b>${dashN(c.players)}</b></span></div>`).join('') || '<p class="muted">None yet.</p>'}</div></div>
+    <div class="card"><h3>Countries</h3><div class="list">${dashList(D.countries)}</div></div>
+    <div class="card"><h3>Devices</h3><div class="list">${dashList(D.devices, k => k[0].toUpperCase() + k.slice(1))}</div></div>
+    <div class="card"><h3>Game versions</h3><div class="list">${dashList(D.versions, k => 'v' + k)}</div></div>`;
+};
+ACT.dashReload = () => admDashLoad(true);
+ACT.dashDays = ds => { ADM_DASH.days = +ds.v; ADM_DASH.data = null; admDashLoad(true); };
+ACT.dashMetric = ds => { ADM_DASH.metric = ds.v; render(); };

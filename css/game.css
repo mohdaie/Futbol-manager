@@ -922,3 +922,11 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 .pmini { display: block; margin-bottom: 2px; font-family: var(--f-paper); font-variant: small-caps; font-weight: 800; font-size: 11px; letter-spacing: .02em; color: #9FB4E0; }
 .pmini.p-club { color: #F08A8A; } .pmini.p-match { color: #F2C65A; } .pmini.p-transfer { color: #7FD39A; } .pmini.p-life { color: #F39A78; } .pmini.p-league { color: #9FB4E0; }
 @media (max-width: 360px) { .paper .mast small { display: none; } .paper .phead { font-size: 24px; } .paper.p-match .phead { font-size: 26px; } }
+/* Admin players dashboard */
+.dash-kv { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.dash-kv .dash-sub { text-transform: none; letter-spacing: 0; font-size: 11px; font-weight: 500; }
+.dash-chart { width: 100%; height: auto; display: block; margin-top: 10px; }
+.dash-chart .dash-grid { stroke: var(--line); stroke-width: 1; }
+.dash-chart .dash-ax { fill: var(--mute); font-size: 11px; font-family: var(--f-body); }
+.dash-chart .dash-bar path { fill: var(--amber); }
+.dash-chart .dash-bar:hover path { fill: var(--chalk); }

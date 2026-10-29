@@ -40,6 +40,11 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       if (p === '/settings') { Object.assign(db.settings, Object.fromEntries(Object.entries(body).map(([k, v]) => [k, { ...db.settings[k], ...v }]))); return ok({ settings: db.settings }); }
       if (p === '/test') return ok({ ok: true, ms: 120, detail: 'Key accepted.' });
       if (p === '/usage') return ok({ month: [{ provider: 'ds', calls: 3, fails: 0, input: 10, output: 5, ms: 90, cost: 0.001, installs: 2 }], total: [], features: [], days: [] });
+      if (p === '/report') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' } });
+      if (p === '/players') return ok({ days: 30, today: '2026-10-29', players: { today: 4, week: 9, period: 12, allTime: 15, newToday: 2, newPeriod: 7, returning: 5 },
+        totals: { sessions: 40, minutes: 960, careers: 8, matches: 30, watched: 18, instant: 12, wins: 15, draws: 7, losses: 8, goalsFor: 51, goalsAgainst: 33 },
+        daily: Array.from({ length: 30 }, (_, i) => ({ day: '2026-10-' + String(i + 1).padStart(2, '0'), players: i % 5, new: i % 2, sessions: i % 7, minutes: i * 3, matches: i % 4, careers: i % 3 })),
+        clubs: [{ name: 'Spurs Test', country: 'ENG', players: 3 }], countries: { ENG: 10, ESP: 2 }, devices: { phone: 8, computer: 4 }, versions: { '1.7.3': 12 } });
       return route.fulfill({ status: 404, body: '{}' });
     });
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
@@ -48,8 +53,18 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     // ---- /admin with no career in this browser
     const admin = await open();
     await admin.goto(base + '/admin/');
-    await admin.waitForSelector('#svc-ds-model, .card .tag');
-    check('without a career only AI keys is offered', [await admin.locator('.tabs button').allTextContents(), (await admin.locator('.banner').textContent()).includes('No career')], [['AI keys'], true]);
+    await admin.waitForSelector('.dash-kv');
+    check('without a career the dashboard and AI keys are offered', [await admin.locator('.tabs button').allTextContents(), (await admin.locator('.banner').textContent()).includes('No career')], [['Dashboard', 'AI keys'], true]);
+    const dashText = (await admin.locator('.main').innerText()).toLowerCase();
+    check('the dashboard opens first with players today, the period, minutes and results', ['Players today', '4', '12', '960', '15W 7D 8L', 'Spurs Test', 'Phone'].map(t => dashText.includes(t.toLowerCase())), Array(7).fill(true));
+    check('the daily chart has a bar for each day', await admin.locator('.dash-chart .dash-bar').count(), 30);
+    await admin.locator('[data-a=dashMetric][data-v=minutes]').click();
+    check('the chart switches measure', (await admin.locator('.main').innerText()).includes('Minutes played per day'), true);
+    await admin.locator('[data-a=dashDays][data-v="7"]').click();
+    await admin.waitForFunction(() => !ADM_DASH.loading);
+    check('the period is requested from the server', calls.some(c => c[1] === '/players' && c[0] === 'GET'), true);
+    check('the dashboard has no sideways scrolling at 390px', await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    check('the admin page sends no play reports', calls.some(c => c[1] === '/report'), false);
 
     // ---- the game: settings hold everything a player needs, and there is no Admin
     const game = await open();
@@ -60,7 +75,19 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     check('More still lists Settings', (await game.locator('.main').innerText()).includes('Settings'), true);
     await game.evaluate(() => go('settings'));
     const settingsText = await game.locator('.main').innerText();
-    check('Settings has name, portrait, camera, highlights, speed, saving and new game', ['Manager name', 'Manager portrait', 'Match camera', 'Match highlights', 'Default match speed', 'Save game', 'New game'].map(t => settingsText.includes(t)), Array(7).fill(true));
+    await game.evaluate(() => { statsTick(); STATS.sec = 200; statsTick(); });
+    await game.waitForFunction(() => true);
+    await new Promise(r => setTimeout(r, 300));
+    const reports = calls.filter(c => c[1] === '/report').map(c => c[2]);
+    check('the game reports a session and played time anonymously', [reports.some(r => r.kind === 'open' && /^[0-9a-f]{32}$/.test(r.device) && r.data.form), reports.some(r => r.kind === 'play' && r.data.sec === 200), JSON.stringify(reports).includes('Test Boss')], [true, true, false]);
+    check('a new career is reported with its club', reports.some(r => r.kind === 'career' && r.data.club), true);
+    await game.locator('[data-a=setStats][data-v="0"]').click();
+    const before = calls.filter(c => c[1] === '/report').length;
+    await game.evaluate(() => { STATS.sec = 300; statsTick(); statsEvent('open'); });
+    await new Promise(r => setTimeout(r, 300));
+    check('turning statistics off in Settings stops all reports', [calls.filter(c => c[1] === '/report').length - before, await game.evaluate(() => statsOn())], [0, false]);
+    await game.locator('[data-a=setStats][data-v="1"]').click();
+    check('Settings has name, portrait, camera, highlights, speed, saving, statistics and new game', ['Manager name', 'Manager portrait', 'Match camera', 'Match highlights', 'Default match speed', 'Save game', 'Anonymous play statistics', 'New game'].map(t => settingsText.includes(t)), Array(8).fill(true));
     await game.fill('#setMgr', 'Test Boss'); await game.locator('[data-a=setMgrName]').click();
     await game.locator('[data-a=setCam][data-v=full]').click(); await game.locator('[data-a=setHl][data-v=key]').click(); await game.locator('[data-a=speed][data-v="4"]').click();
     check('settings are applied to the career', await game.evaluate(() => [G.manager, G.settings.cam, G.settings.hl, G.settings.speed]), ['Test Boss', 'full', 'key', 4]);
@@ -70,7 +97,7 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     // ---- /admin with the career: every tab, and AI keys
     await admin.reload();
     await admin.waitForFunction(() => window.ADMIN_PAGE && G && UI.s === 'admin');
-    check('the admin page offers every admin tab', await admin.locator('.tabs button').allTextContents(), ['AI keys', 'Overview', 'Clubs', 'Players', 'Time', 'Engine', 'AI Brain', 'AI Staff', 'Match Analyst', 'Data']);
+    check('the admin page offers every admin tab', await admin.locator('.tabs button').allTextContents(), ['Dashboard', 'AI keys', 'Overview', 'Clubs', 'Players', 'Time', 'Engine', 'AI Brain', 'AI Staff', 'Match Analyst', 'Data']);
     check('it opens the career from this browser', await admin.evaluate(() => G.manager), 'Test Boss');
     check('no game navigation is shown', await admin.locator('.tabs2, .bottombar').count(), 0);
     for (const t of ['over', 'club', 'play', 'time', 'eng', 'brain', 'staff', 'match', 'data']) {

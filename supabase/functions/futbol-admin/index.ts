@@ -23,6 +23,8 @@ const store = {
   },
   async deleteSecret(name: string) { await rest('/futbol_admin_secrets?name=eq.' + encodeURIComponent(name), { method: 'DELETE' }); },
   async usage() { return await rest('/rpc/futbol_ai_usage_overview', { method: 'POST', body: '{}' }); },
+  async report(row: Record<string, unknown>) { await rest('/rpc/futbol_play_report', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(row) }); },
+  async players(days: number) { return await rest('/rpc/futbol_play_dashboard', { method: 'POST', body: JSON.stringify({ p_days: Math.round(days) }) }); },
 };
 
 // One tiny, cheap request to confirm a saved key works.

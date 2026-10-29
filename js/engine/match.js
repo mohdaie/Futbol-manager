@@ -352,6 +352,7 @@ function finishMatch(M) {
   if (M.extra) fx.extra = true;
   if (M.penalties) fx.penalties = M.penalties;
   if (M.winner) fx.winner = M.winner;
+  if (typeof statsMatch === 'function') statsMatch(M, fx);
   fx.goals = [].concat(...M.sides.map((S, si) => S.goals.map(g => [si, g.min, g.pid, g.pen ? 1 : 0]))).sort((a, b) => a[1] - b[1]);
   // Compact stats for every league match (analyst reports): [possession %, shots, on target, xG, passes, completed, crosses, corners, set-piece goals], and each side's style.
   const totPos = M.sides[0].st.pos + M.sides[1].st.pos || 1;
