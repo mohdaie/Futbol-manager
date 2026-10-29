@@ -27,7 +27,7 @@ function assistantBriefingReport(facts = clubBriefingFacts(), b = clubBriefingSt
       ${facts.events.length ? `<h3 class="lbl">Recent events</h3><div class="list">${facts.events.map(e => `<button class="row act" data-a="news" data-id="${e.id.slice(5)}"><span class="grow">${esc(e.title)}</span><span>›</span></button>`).join('')}</div>` : ''}
       ${facts.departments.map(d => `<div class="brief-department"><b>${esc(d.name)} <small class="${d.status === 'healthy' ? 'good' : d.status === 'attention' ? 'warnc' : ''}">${BRIEF_STATUS[d.status]}</small></b><p>${esc(d.evidence)}</p><button class="link" data-a="briefDept" data-id="${d.id}">${d.action} →</button></div>`).join('')}
     </details>
-    <div class="brief-footer"><small role="status">${BRIEF_PENDING === b ? 'Updating assistant briefing…' : source}${!aiReady('jev', 'briefing') && !aiReady('ds', 'briefing') ? ' · AI is off or not configured' : ''}</small><button class="link" data-a="briefAI">AI settings</button></div>
+    <div class="brief-footer"><small role="status">${BRIEF_PENDING === b ? 'Updating assistant briefing…' : source}${!aiReady('jev', 'briefing') && !aiReady('ds', 'briefing') ? ' · AI is off or not configured' : ''}</small>${adminAllowed() ? '<button class="link" data-a="briefAI">AI settings</button>' : ''}</div>
   </section>`;
 }
 function assistantBriefingCard(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
@@ -60,7 +60,7 @@ ACT.briefDept = ds => {
   if (d.screen === 'transfers') UI.tab.tr = d.tab || 'deals';
   go(d.screen);
 };
-ACT.briefAI = () => { UI.tab.adm = !aiReady('jev', 'briefing') ? 'jev' : 'ds'; go('admin'); };
+ACT.briefAI = () => toast('AI is configured on the /admin page.');
 
 SCREENS.home = {
   render() {

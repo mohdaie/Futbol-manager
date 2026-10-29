@@ -25,14 +25,16 @@ async function sourceOf(install) {
 }
 const JEV_PRICE_IN = 0.042; // US$ per 1M input tokens; output is free
 
-export async function handleJev(req, fetcher = fetch, record = async () => {}) {
+// serverKey() supplies the key saved in /admin when the game sends none (Server key mode).
+export async function handleJev(req, fetcher = fetch, record = async () => {}, serverKey = async () => null) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-jev' });
   if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json(405, { error: 'Use POST.' });
   if (!new URL(req.url).pathname.endsWith('/v1/systemone')) return json(404, { error: 'Unknown endpoint.' });
-  const authorization = req.headers.get('Authorization') || '';
-  if (!/^Bearer\s+\S+$/i.test(authorization)) return json(401, { error: 'Add your Jev API key in the game.' });
+  let authorization = req.headers.get('Authorization') || '';
+  if (!authorization) { const saved = await serverKey().catch(() => null); if (saved) authorization = 'Bearer ' + saved; }
+  if (!/^Bearer\s+\S+$/i.test(authorization)) return json(401, { error: 'No API key is set. Save one in /admin.' });
   let body;
   try {
     const text = await req.text();

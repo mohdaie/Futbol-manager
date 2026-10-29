@@ -25,17 +25,15 @@ Unwatched computer fixtures use an event-based engine. Your watched matches and 
 - Training, medical centre, youth academy, finances, staff, board and fans, news and inbox.
 - A live match with 2D, Formation, Line up and Match stats tabs for both teams, commentary, substitutions, shouts and half-time team talks, plus instant results. Teams change ends at half-time; live condition and fatigue are in Line up.
 - A real fixture calendar: Friday to Monday and midweek kick-off times, TV games, cup weekends and international breaks. Rest days, weather and kick-off time affect fitness, injuries and results.
-- **Admin page** (More → Admin): edit clubs and players, move time forward, tune the match engine, connect Jev and DeepSeek, and the **AI Brain**, a learning engine for computer managers with versions you approve.
+- **Admin page** at `/admin/` (not in the game): API keys, AI settings and AI usage, stored in Supabase. Editing clubs, players, time and the match engine works on a career save, so it stays inside the game and is hidden from players: add `?admin` to the game address, then More → Admin. The **AI Brain** (a learning engine for computer managers, with versions you approve) is there too.
 
 The full design, file map and how to extend it are in [STRUCTURE.md](STRUCTURE.md).
 
 ## AI services (optional)
 
-Set them up in Admin → Jev AI and Admin → DeepSeek. Keys are stored only in your browser, never in the game save.
+Set them up on the `/admin/` page (`https://mohdaie.github.io/Futbol-manager/admin/`). Keys are saved in Supabase and used by the `futbol-jev` and `futbol-deepseek` relays; they never reach the player's browser or save. Players get the settings you save (on or off, model, features, budget) when the game opens. See [supabase/functions/futbol-admin/README.md](supabase/functions/futbol-admin/README.md).
 
-- **DeepSeek** accepts calls straight from the browser.
-- **Jev (TypeSafe)** does not accept direct browser calls, so it needs a small proxy server, for example a Supabase Edge Function.
-- AI calls are blocked inside the Claude artifact preview, but they work when the game is served from GitHub Pages or any normal host.
+There is no sign-in on the admin page yet, so treat the address as private.
 
 ## Assets
 

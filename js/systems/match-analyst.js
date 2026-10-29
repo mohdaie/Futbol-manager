@@ -256,7 +256,7 @@ ACT.matchAnalystCopy = async ds => {
 ACT.matchAnalystRun = async () => {
   const fx = matchAnalystFixtures().find(f => f.id === +(document.getElementById('maFixture')?.value || ADM.matchAnalystFid || G.lastMatch));
   if (!fx) return toast('Choose a completed match first.');
-  if (!aiReady('ds', 'match')) return toast('Enable DeepSeek and Match analysis officer in Admin settings first.');
+  if (!aiReady('ds', 'match')) return toast('Enable DeepSeek and Match analysis officer on the /admin page first.');
   ADM.matchAnalystFid = fx.id; ADM.matchAnalystJob = { busy: true, phase: 'Preparing match and rulebook…' }; render();
   try {
     const recording = await evidenceLoad(fx.evidence);

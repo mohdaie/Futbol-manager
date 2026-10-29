@@ -879,9 +879,6 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 .mscr .feed li > span { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mscr .mctl { gap: 5px; }
 .mscr .mctl button { min-height: 44px; padding: 6px 2px; font-size: 11px; }
-@media (max-height: 700px) {
-  .mscr { min-height: 620px; }
-}
 @media(min-width:700px){ .match-formations { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
 
 /* Substitution decisions show live condition and mood for starters and bench. */

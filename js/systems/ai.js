@@ -1,6 +1,7 @@
 'use strict';
 /* ===== ai.js =====
-   Connection layer for the two AI services, configured on the admin page.
+   Connection layer for the two AI services. Settings and API keys are managed on the /admin page
+   and stored in Supabase; the game only reads the non-secret settings and calls the relays in Server key mode.
    - Jev (TypeSafe): fast structured decisions (choice / score / yes-no). No text.
    - DeepSeek: written text (press questions, player replies, reports, news).
    Settings live in their own browser storage key, never inside the game save,
@@ -9,6 +10,7 @@
 const AI_KEY = 'futbol-manager:ai';
 const DS_RELAY_URL = 'https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-deepseek';
 const JEV_RELAY_URL = 'https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-jev';
+const ADMIN_API_URL = 'https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-admin';
 
 // Prices in US$ per 1M tokens, checked Oct 2026. DeepSeek peak = Mon-Fri 01:00-04:00 and 06:00-10:00 UTC.
 const AI_PRICES = {
@@ -56,6 +58,32 @@ function aiCfg() {
   } catch (e) { /* storage blocked: keep defaults for this session */ }
   return AICFG;
 }
+// Settings from /admin (Supabase). The API keys never reach the browser: a service with a saved server key runs
+// in 'proxy' (Server key) mode through its relay, and a service without one stays off. The last good copy is
+// kept in the AI storage key so the game still works offline.
+function aiApplyServer(srv) {
+  if (!srv || !srv.settings || !srv.keys) return false;
+  const cfg = aiCfg();
+  [['jev', JEV_RELAY_URL], ['ds', DS_RELAY_URL]].forEach(([k, relay]) => {
+    const c = cfg[k], s = srv.settings[k] || {};
+    c.key = ''; c.mode = 'proxy'; c.proxy = relay;
+    c.on = !!(srv.keys[k] && s.on);
+    ['model', 'timeout', 'budget'].forEach(f => { if (s[f] != null) c[f] = s[f]; });
+    if (k === 'ds') ['thinking', 'maxTokens', 'temp'].forEach(f => { if (s[f] != null) c[f] = s[f]; });
+    c.feat = { ...(s.feat || {}) };
+  });
+  aiSave();
+  return true;
+}
+async function aiLoadServerConfig() {
+  try {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 6000);
+    const res = await fetch(ADMIN_API_URL + '/config', { signal: ctl.signal, cache: 'no-store' }).finally(() => clearTimeout(timer));
+    if (res.ok) aiApplyServer(await res.json());
+  } catch (e) { /* offline or blocked: keep the last saved settings */ }
+}
+if (typeof document !== 'undefined') aiLoadServerConfig();
+
 function aiSave() { try { localStorage.setItem(AI_KEY, JSON.stringify(aiCfg())); return true; } catch (e) { return false; } }
 
 const monthKey = () => new Date().toISOString().slice(0, 7);
@@ -133,7 +161,7 @@ async function jevAsk(state, questions, note = 'request', opts = {}) {
   const headers = c.mode === 'proxy' ? {} : { Authorization: 'Bearer ' + c.key };
   const t0 = performance.now();
   try {
-    const res = await aiFetch(url, { model: c.model, state, questions, ...(c.mode === 'relay' ? { meta: aiMeta(note) } : {}) }, headers, opts.timeout || c.timeout);
+    const res = await aiFetch(url, { model: c.model, state, questions, ...(c.mode !== 'direct' ? { meta: aiMeta(note) } : {}) }, headers, opts.timeout || c.timeout);
     const ms = Math.round(performance.now() - t0), inTok = (res.usage && res.usage.input_tokens) || 0;
     aiRecord('jev', true, ms, inTok, (res.usage && res.usage.output_tokens) || 0, inTok * AI_PRICES.jev.in / 1e6, note);
     return { ...res, ms };
@@ -149,7 +177,7 @@ async function dsChat(messages, note = 'request', opts = {}) {
   const body = { model: c.model, messages, max_tokens: opts.maxTokens || c.maxTokens, thinking: { type: c.thinking ? 'enabled' : 'disabled' } };
   if (!c.thinking) body.temperature = c.temp;
   if (opts.json) body.response_format = { type: 'json_object' };
-  if (c.mode === 'relay') body.meta = aiMeta(note);
+  if (c.mode !== 'direct') body.meta = aiMeta(note);
   const t0 = performance.now();
   try {
     const res = await aiFetch(base + '/chat/completions', body, headers, c.timeout);
