@@ -32,8 +32,10 @@ const SaveStorage = {
     // Live frames and callback functions are transient, never career records.
     return { ...game, live: game.live ? { ...game.live, M: cleanMatch(game.live.M) } : null };
   },
+  // The /admin page edits this career, so a game tab stops writing (it already flushed) until it is reloaded.
+  pause() { this.paused = true; clearTimeout(this.timer); },
   enqueue(game) {
-    if (this.replacing) return false;
+    if (this.replacing || this.paused) return false;
     this.current = game; this.dirty++;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.flush().catch(() => {}), 150);
@@ -41,6 +43,7 @@ const SaveStorage = {
   },
   async flush() {
     await this.ready;
+    if (this.paused) return true;
     if (this.blocked) throw this.error || new Error('Save storage could not be opened safely.');
     clearTimeout(this.timer);
     if (this.brainTimer) { clearTimeout(this.brainTimer); this.brainTimer = 0; await this.request('saveBrain', this.brainCurrent); }

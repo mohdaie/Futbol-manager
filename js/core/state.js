@@ -345,6 +345,7 @@ function saveGame() {
 // Clock checkpoints (playtime, brain) skip the full-career copy. A pending full save already carries the clock.
 function saveClock() {
   if (!G) return false;
+  if (typeof SaveStorage !== 'undefined' && SaveStorage.paused) return false;
   if (typeof SaveStorage === 'undefined' || SaveStorage.blocked || !SaveStorage.worker) return saveGame();
   if (SaveStorage.dirty > SaveStorage.written) return true;
   syncPlaytime();

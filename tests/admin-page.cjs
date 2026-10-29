@@ -1,4 +1,5 @@
-// /admin page and the game's use of server settings, with the Supabase API mocked. Run: node tests/admin-page.cjs
+// The /admin page (the whole admin, running on this browser's career), Settings, and the game's use of
+// server AI settings, with the Supabase API mocked. Run: node tests/admin-page.cjs
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http');
@@ -13,6 +14,12 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
   });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + server.address().port;
+
+  // Both pages must load the same game code, in the same order (the admin page adds one file at the end).
+  const scripts = f => [...fs.readFileSync(path.join(root, f), 'utf8').matchAll(/<script src="(js\/[^"?]+)/g)].map(m => m[1]);
+  check('admin page loads every game script, in order, plus admin-services.js', scripts('admin/index.html'), [...scripts('index.html'), 'js/ui/admin-services.js']);
+  check('admin page resolves URLs from the game root', fs.readFileSync(path.join(root, 'admin/index.html'), 'utf8').includes('<base href="../">'), true);
+
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox', '--disable-dev-shm-usage'] } : {}) });
   try {
     const feat = k => Object.fromEntries(k.map(x => [x, true]));
@@ -32,60 +39,86 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       if (p.startsWith('/secret') && req.method() === 'DELETE') { db.keys[new URL(req.url()).searchParams.get('service')] = false; return ok({ keys: keyInfo() }); }
       if (p === '/settings') { Object.assign(db.settings, Object.fromEntries(Object.entries(body).map(([k, v]) => [k, { ...db.settings[k], ...v }]))); return ok({ settings: db.settings }); }
       if (p === '/test') return ok({ ok: true, ms: 120, detail: 'Key accepted.' });
-      if (p === '/usage') return ok({ month: [{ provider: 'ds', calls: 3, fails: 0, cost: 0.001, installs: 2 }], total: [], features: [], days: [] });
+      if (p === '/usage') return ok({ month: [{ provider: 'ds', calls: 3, fails: 0, input: 10, output: 5, ms: 90, cost: 0.001, installs: 2 }], total: [], features: [], days: [] });
       return route.fulfill({ status: 404, body: '{}' });
     });
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+    const open = async () => { const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message)); page.on('dialog', d => d.accept()); await page.route('https://fonts.googleapis.com/**', r => r.abort()); await mock(page); return page; };
 
-    // ---- /admin page
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
-    page.on('pageerror', e => errors.push(e.message)); page.on('dialog', d => d.accept());
-    await mock(page);
-    await page.goto(base + '/admin/');
-    await page.waitForSelector('#svc-jev');
-    check('both services are listed with no key', [await page.locator('.card h2').allTextContents()].map(a => a.slice(0, 2))[0], ['Jev (TypeSafe)', 'DeepSeek']);
-    check('the key field is a password input', await page.locator('#ds-key').getAttribute('type'), 'password');
-    await page.fill('#ds-key', 'sk-test-key-9876');
-    await page.locator('#svc-ds button:has-text("Save key")').click();
-    await page.waitForSelector('#svc-ds .pill.ok');
-    check('saving a key shows only its last four characters', (await page.locator('#svc-ds .pill').first().textContent()), 'Key saved ••••9876');
-    check('the saved key is not in the page', (await page.content()).includes('sk-test-key'), false);
-    check('the key field is cleared after saving', await page.inputValue('#ds-key'), '');
-    await page.locator('#svc-ds button:has-text("Test saved key")').click();
-    await page.waitForSelector('#ds-res .res.ok');
-    check('test reports success', (await page.locator('#ds-res .res').textContent()).startsWith('Connected'), true);
-    await page.check('#ds-on'); await page.selectOption('#ds-model', 'deepseek-v4-pro'); await page.fill('#ds-temp', '1.2'); await page.uncheck('.ds-feat[data-k=press]');
-    await page.locator('#svc-ds button:has-text("Save settings")').click();
-    await page.waitForFunction(() => document.querySelector('#svc-ds .pill:nth-of-type(2)')?.textContent === 'On in the game');
+    // ---- /admin with no career in this browser
+    const admin = await open();
+    await admin.goto(base + '/admin/');
+    await admin.waitForSelector('#svc-ds-model, .card .tag');
+    check('without a career only AI keys is offered', [await admin.locator('.tabs button').allTextContents(), (await admin.locator('.banner').textContent()).includes('No career')], [['AI keys'], true]);
+
+    // ---- the game: settings hold everything a player needs, and there is no Admin
+    const game = await open();
+    await game.goto(base + '/');
+    await game.locator('[data-a="titleNew"]').click(); await game.locator('[data-a="startGame"]').click();
+    await game.evaluate(() => go('more'));
+    check('More has no Admin entry', (await game.locator('.main').innerText()).includes('Admin'), false);
+    check('More still lists Settings', (await game.locator('.main').innerText()).includes('Settings'), true);
+    await game.evaluate(() => go('settings'));
+    const settingsText = await game.locator('.main').innerText();
+    check('Settings has name, portrait, camera, highlights, speed, saving and new game', ['Manager name', 'Manager portrait', 'Match camera', 'Match highlights', 'Default match speed', 'Save game', 'New game'].map(t => settingsText.includes(t)), Array(7).fill(true));
+    await game.fill('#setMgr', 'Test Boss'); await game.locator('[data-a=setMgrName]').click();
+    await game.locator('[data-a=setCam][data-v=full]').click(); await game.locator('[data-a=setHl][data-v=key]').click(); await game.locator('[data-a=speed][data-v="4"]').click();
+    check('settings are applied to the career', await game.evaluate(() => [G.manager, G.settings.cam, G.settings.hl, G.settings.speed]), ['Test Boss', 'full', 'key', 4]);
+    check('the in-game admin screen is gone', await game.evaluate(() => { go('admin'); return document.getElementById('app').innerText.includes('Moved') && !document.getElementById('app').innerText.includes('Overview'); }), true);
+    await game.evaluate(async () => { go('home'); saveGame(); await SaveStorage.flush(); });
+
+    // ---- /admin with the career: every tab, and AI keys
+    await admin.reload();
+    await admin.waitForFunction(() => window.ADMIN_PAGE && G && UI.s === 'admin');
+    check('the admin page offers every admin tab', await admin.locator('.tabs button').allTextContents(), ['AI keys', 'Overview', 'Clubs', 'Players', 'Time', 'Engine', 'AI Brain', 'AI Staff', 'Match Analyst', 'Data']);
+    check('it opens the career from this browser', await admin.evaluate(() => G.manager), 'Test Boss');
+    check('no game navigation is shown', await admin.locator('.tabs2, .bottombar').count(), 0);
+    for (const t of ['over', 'club', 'play', 'time', 'eng', 'brain', 'staff', 'match', 'data']) {
+      await admin.evaluate(t => { UI.tab.adm = t; render(); }, t);
+      check('tab ' + t + ' renders', (await admin.locator('.main').innerText()).length > 40, true);
+    }
+    check('saving tools are not in the admin Data tab', (await admin.locator('.main').innerText()).includes('Delete save'), false);
+    await admin.evaluate(() => { UI.tab.adm = 'svc'; render(); });
+    await admin.waitForSelector('#svc-ds-key');
+    check('the key field is a password input', await admin.locator('#svc-ds-key').getAttribute('type'), 'password');
+    await admin.fill('#svc-ds-key', 'sk-test-key-9876');
+    await admin.locator('[data-a=svcKeySave][data-svc=ds]').click();
+    await admin.waitForFunction(() => document.body.innerText.includes('Key saved ••••9876'));
+    check('the saved key is not in the page', (await admin.content()).includes('sk-test-key'), false);
+    await admin.locator('[data-a=svcTest][data-svc=ds]').click();
+    await admin.waitForSelector('.aitest.ok');
+    check('test reports success', (await admin.locator('.aitest').textContent()).startsWith('Connected'), true);
+    await admin.check('#svc-ds-on'); await admin.selectOption('#svc-ds-model', 'deepseek-v4-pro'); await admin.fill('#svc-ds-temp', '1.2'); await admin.uncheck('.svc-ds-feat[data-k=press]');
+    await admin.locator('[data-a=svcSave][data-svc=ds]').click();
+    await admin.waitForFunction(() => document.body.innerText.includes('On in the game'));
     const saved = calls.filter(c => c[1] === '/settings').at(-1)[2].ds;
     check('settings are sent as entered', [saved.on, saved.model, saved.temp, saved.feat.press, saved.feat.news], [true, 'deepseek-v4-pro', 1.2, false, true]);
-    await page.locator('#svc-ds button:has-text("Remove key")').click();
-    await page.waitForFunction(() => document.querySelector('#svc-ds .pill')?.textContent === 'No key');
-    check('removing a key updates the card', await page.locator('#svc-ds .pill').first().textContent(), 'No key');
-    await page.locator('#usageBtn').click(); await page.waitForSelector('#usageOut table');
-    check('usage loads', (await page.locator('#usageOut').textContent()).includes('DeepSeek'), true);
-    check('no sideways scrolling at 390px', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    check('admin page has no errors', errors, []);
+    await admin.locator('[data-a=svcUsage]').click(); await admin.waitForFunction(() => document.body.innerText.includes('3 calls'));
+    check('usage loads', true, true);
+    await admin.locator('[data-a=svcKeyDel][data-svc=ds]').click();
+    await admin.waitForFunction(() => !document.body.innerText.includes('••••9876'));
+    check('removing a key updates the card', (await admin.locator('.card .tag').first().textContent()).trim(), 'No key');
+    check('no sideways scrolling at 390px', await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 
-    // ---- the game takes its AI settings from the server and hides the save tools from players
+    // ---- opening the admin page pauses open game tabs, so two tabs never write one save
+    check('an open game tab pauses when the admin page opens', await game.locator('#adminPause').count(), 1);
+    check('a paused game tab stops saving', await game.evaluate(() => [SaveStorage.paused, saveGame()]), [true, false]);
+    await admin.evaluate(() => { UI.tab.adm = 'data'; render(); ACT.admMoney({ v: String(10e6) }); });
+    const bal = await admin.evaluate(() => Math.round(userClub().bal));
+    await admin.waitForFunction(() => SaveStorage.dirty === SaveStorage.written && SaveStorage.dirty > 0, null, { timeout: 15000 });
+    check('the admin edit is written to the career', await admin.evaluate(() => SaveStorage.error), null);
+    await game.locator('#adminResume').click();
+    await game.waitForFunction(() => typeof G !== 'undefined' && G && document.getElementById('adminPause') === null);
+    check('after resuming, the game sees the admin edit', await game.evaluate(() => Math.round(userClub().bal)), bal);
+
+    // ---- the game takes its AI settings from the server
     db.keys.ds = true; db.last4.ds = '9876'; db.settings.ds.on = true; db.settings.ds.model = 'deepseek-v4-pro'; db.settings.ds.feat.press = false; db.settings.jev.on = true; // jev has no key
-    const game = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
-    game.on('pageerror', e => errors.push(e.message));
-    await game.route('https://fonts.googleapis.com/**', r => r.abort());
-    await mock(game);
-    await game.goto(base + '/');
+    await game.reload();
     await game.waitForFunction(() => typeof aiCfg === 'function' && aiCfg().ds.mode === 'proxy');
     check('a service with a server key runs in Server key mode with the admin settings', await game.evaluate(() => { const c = aiCfg().ds; return [c.on, c.mode, c.key, c.model, c.feat.press, aiReady('ds', 'second'), aiReady('ds', 'press')]; }), [true, 'proxy', '', 'deepseek-v4-pro', false, true, false]);
     check('a service without a server key stays off', await game.evaluate(() => [aiCfg().jev.on, aiReady('jev', 'engine')]), [false, false]);
     check('no API key is stored in the browser', await game.evaluate(() => /"key":"[^"]/.test(localStorage.getItem(AI_KEY))), false);
-    check('save tools are open on localhost for development', await game.evaluate(() => adminAllowed()), true);
-    check('on a public host the save tools are hidden until ?admin', await game.evaluate(() => {
-      const real = Object.getOwnPropertyDescriptor(window, 'location');
-      const fake = h => { try { sessionStorage.removeItem('futbol-admin'); } catch (e) {} const src = adminAllowed.toString().replace(/location\.hostname/g, JSON.stringify(h)); return new Function('return ' + src)()(); };
-      const hidden = fake('mohdaie.github.io'); sessionStorage.setItem('futbol-admin', '1'); const shown = fake('mohdaie.github.io'); sessionStorage.removeItem('futbol-admin');
-      return [hidden, shown];
-    }).then(([hidden]) => hidden), false);
-    check('game page has no errors', errors, []);
-    await game.close();
+    check('no page errors', errors, []);
     console.log(JSON.stringify({ passed: checks.length, checks }, null, 1));
   } finally { await browser.close(); server.close(); }
 })().catch(e => { console.error(e); process.exit(1); });

@@ -23,9 +23,14 @@ const server = require('node:http').createServer((req, res) => {
     await page.goto('http://127.0.0.1:' + server.address().port);
     await page.locator('[data-a="titleNew"]').click(); await page.locator('[data-a="startGame"]').click();
     await page.evaluate(() => {
-      Object.assign(aiCfg().jev, { on: true, mode: 'proxy', proxy: 'https://engineqa.test', feat: { engine: true } });
+      Object.assign(aiCfg().jev, { on: true, mode: 'proxy', proxy: 'https://engineqa.test', feat: { engine: true } }); aiSave();
+    });
+    // The admin tools live on the /admin page, which opens the career saved in this browser.
+    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/'); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
+    await toAdmin();
+    await page.evaluate(() => {
       window.qaOriginal = JSON.stringify({ tactics: G.tactics, players: G.players, fixtures: G.fixtures, tune: G.tune });
-      go('admin'); UI.tab.adm = 'eng'; render();
+      UI.tab.adm = 'eng'; render();
     });
     check('Opening Admin engine makes no AI call', calls.length === 0);
     await page.locator('[data-a="admEngineQa"]:not([data-jev])').click();

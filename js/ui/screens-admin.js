@@ -1,29 +1,27 @@
 'use strict';
 /* ===== screens-admin.js =====
-   Save tools: edit clubs and players, move time forward, tune the match engine,
-   and run maintenance on the save. Hidden from players (see adminAllowed). API keys, AI settings
-   and AI usage moved to the /admin page. */
+   The admin tools: edit clubs and players, move time forward, tune the match engine, run the AI Brain
+   and the match analyst, and manage AI keys and settings (admin-services.js). They are not part of the game:
+   they run on the /admin page (admin/index.html), which loads this same code against the career saved in
+   this browser. In the game itself the screen is unreachable (adminAllowed is false). No sign-in yet. */
 
-// The server-side admin (API keys, AI settings, usage) lives on the /admin page and Supabase.
-// What remains here edits the player's own save, so it is hidden from players: open the game with ?admin
-// (remembered for the tab) or run it on localhost. Replace this with a real check when sign-in exists.
-try { if (/[?&#]admin\b/.test(location.search + location.hash)) sessionStorage.setItem('futbol-admin', '1'); } catch (e) { /* storage blocked */ }
-function adminAllowed() {
-  try { if (sessionStorage.getItem('futbol-admin') === '1') return true; } catch (e) { /* storage blocked */ }
-  return /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-}
+function adminAllowed() { return !!window.ADMIN_PAGE; }
 
 const ADM = { club: null, q: '', qClub: 'ALL', test: null, confirm: '' };
 
+const ADMIN_TAB_LIST = [['svc', 'AI keys'], ['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['match', 'Match Analyst'], ['data', 'Data']];
 SCREENS.admin = {
+  full: true,
   render() {
-    if (!adminAllowed()) return `<h1 class="h1">Admin</h1>${empty('No access', 'You do not have permission to open this page.')}`;
-    const t = UI.tab.adm || 'over';
-    return `<h1 class="h1">Admin</h1>
-      <div class="banner open"><b>Live editing</b><span>Changes apply to this save at once. Export a backup in Settings first if you want to undo.</span></div>
-      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['match', 'Match Analyst'], ['data', 'Data']], t)}
-      ${ADMIN_TABS[t]()}`;
+    if (!adminAllowed()) return `<h1 class="h1">Admin</h1>${empty('Moved', 'The admin tools now live on the /admin page.')}`;
+    const t = UI.tab.adm || (G ? 'over' : 'svc'), needsSave = t !== 'svc' && !G;
+    return `<div class="main admin-page"><h1 class="h1">Admin</h1>
+      <div class="banner open"><b>${G ? 'Live editing' : 'No career in this browser'}</b><span>${G ? 'Changes apply to the career saved in this browser at once. Close the game tab while you edit, and export a backup in the game\'s Settings first if you want to undo.' : 'The save tools need a career. Start one in the game, then reload this page. AI keys and settings still work.'}</span></div>
+      ${tabs('adm', G ? ADMIN_TAB_LIST : ADMIN_TAB_LIST.filter(x => x[0] === 'svc'), needsSave ? 'svc' : t)}
+      ${needsSave ? ADMIN_TABS.svc() : ADMIN_TABS[t]()}
+      <p class="muted">Futbol Manager admin · <a href="./" data-nolink>Back to the game</a></p></div>`;
   },
+  after() { if ((UI.tab.adm || (G ? 'over' : 'svc')) === 'svc' || !G) admSvcLoad(); },
 };
 
 const num = (id, v, step = 1, attrs = '') => `<input id="${id}" type="number" inputmode="decimal" step="${step}" value="${v}" ${attrs}>`;
@@ -42,8 +40,7 @@ const ADMIN_TABS = {
         <div><small>Players in world</small><b>${all.length}</b></div><div><small>Free agents</small><b>${squadOf('FA').length}</b></div>
         <div><small>Fixtures played</small><b>${G.fixtures.filter(played).length} / ${G.fixtures.length}</b></div><div><small>Save size</small><b>${Math.round(size / 1024)} KB</b></div>
         <div><small>Engine tuning</small><b>${G.tune && Object.keys(G.tune).length ? Object.keys(G.tune).length + ' custom values' : 'Defaults'}</b></div><div><small>News items</small><b>${G.news.length}</b></div>
-      </div>
-      <div class="card"><h3>Manager name</h3><div class="two">${fld('Name', `<input id="adMgr" type="text" value="${esc(G.manager)}">`)}<div class="field"><label>&nbsp;</label><button class="btn" data-a="admMgr">Save name</button></div></div></div>`;
+      </div>`;
   },
 
   club() {
@@ -105,9 +102,7 @@ const ADMIN_TABS = {
       <div class="card"><h3>World</h3><div class="btns">
         <button class="btn" data-a="admBulk" data-k="reveal">Reveal every player (scouting 100%)</button><button class="btn" data-a="admBulk" data-k="fa">Add 10 free agents</button>
         <button class="btn" data-a="admBulk" data-k="healAll">Heal injuries in every club</button><button class="btn" data-a="admBulk" data-k="readNews">Mark all news read</button>
-        <button class="btn ${c2('clearNews')}" data-a="admConfirm" data-k="clearNews">${ADM.confirm === 'clearNews' ? 'Tap again to clear' : 'Clear news feed'}</button></div></div>
-      <div class="card danger"><h3>Save</h3><div class="btns"><button class="btn" data-a="go" data-s="settings">Export or import a save</button>
-        <button class="btn ${c2('wipe')}" data-a="admConfirm" data-k="wipe">${ADM.confirm === 'wipe' ? 'Tap again to delete the save' : 'Delete save and restart'}</button></div></div>`;
+        <button class="btn ${c2('clearNews')}" data-a="admConfirm" data-k="clearNews">${ADM.confirm === 'clearNews' ? 'Tap again to clear' : 'Clear news feed'}</button></div></div>`;
   },
 };
 
@@ -146,7 +141,6 @@ function labReportHtml(T) {
 }
 
 /* ---------- overview & clubs ---------- */
-ACT.admMgr = () => { G.manager = val('adMgr').trim() || G.manager; saveGame(); toast('Manager name saved.'); render(); };
 CHG.admClub = v => { ADM.club = v; ADM.confirm = ''; render(); };
 ACT.admClubSave = ds => {
   const c = G.clubs[ds.id];
@@ -289,7 +283,6 @@ ACT.admConfirm = ds => {
   if (ADM.confirm !== ds.k) { ADM.confirm = ds.k; return render(); }
   ADM.confirm = '';
   if (ds.k === 'clearNews') { G.news = []; saveGame(); toast('News cleared.'); return render(); }
-  if (ds.k === 'wipe') { deleteSave(); G = null; UI.tab = {}; go('start'); }
 };
 
 /* ---------- AI Brain: learning engine for computer managers ---------- */

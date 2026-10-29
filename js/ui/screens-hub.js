@@ -27,7 +27,7 @@ function assistantBriefingReport(facts = clubBriefingFacts(), b = clubBriefingSt
       ${facts.events.length ? `<h3 class="lbl">Recent events</h3><div class="list">${facts.events.map(e => `<button class="row act" data-a="news" data-id="${e.id.slice(5)}"><span class="grow">${esc(e.title)}</span><span>›</span></button>`).join('')}</div>` : ''}
       ${facts.departments.map(d => `<div class="brief-department"><b>${esc(d.name)} <small class="${d.status === 'healthy' ? 'good' : d.status === 'attention' ? 'warnc' : ''}">${BRIEF_STATUS[d.status]}</small></b><p>${esc(d.evidence)}</p><button class="link" data-a="briefDept" data-id="${d.id}">${d.action} →</button></div>`).join('')}
     </details>
-    <div class="brief-footer"><small role="status">${BRIEF_PENDING === b ? 'Updating assistant briefing…' : source}${!aiReady('jev', 'briefing') && !aiReady('ds', 'briefing') ? ' · AI is off or not configured' : ''}</small>${adminAllowed() ? '<button class="link" data-a="briefAI">AI settings</button>' : ''}</div>
+    <div class="brief-footer"><small role="status">${BRIEF_PENDING === b ? 'Updating assistant briefing…' : source}${!aiReady('jev', 'briefing') && !aiReady('ds', 'briefing') ? ' · AI is off or not configured' : ''}</small></div>
   </section>`;
 }
 function assistantBriefingCard(facts = clubBriefingFacts(), b = clubBriefingState(facts)) {
@@ -60,7 +60,6 @@ ACT.briefDept = ds => {
   if (d.screen === 'transfers') UI.tab.tr = d.tab || 'deals';
   go(d.screen);
 };
-ACT.briefAI = () => toast('AI is configured on the /admin page.');
 
 SCREENS.home = {
   render() {
@@ -242,7 +241,6 @@ ACT.facilityTab = ds => { if (!['club', 'finance', 'board'].includes(ds.v)) retu
 SCREENS.more = {
   render() {
     const items = [['settings', 'Settings', 'Save, speed and new game']];
-    if (adminAllowed()) items.push(['admin', 'Admin', 'Edit the game world and tune the engine']);
     items.push(['gamestatus', 'Game status', 'Your career, playtime and one-more-match level']);
     return hubMenu('More', items);
   },
@@ -420,6 +418,9 @@ SCREENS.settings = {
       ${G.flags.legacyRosterProfiles ? '<div class="card"><h3>Updated player database</h3><p class="muted">New careers use the revised individual player profiles. This existing career keeps its trained attributes and development. Export your save before starting a new career if you want to keep it.</p></div>' : ''}
       <div class="card"><button class="btn pri wide" data-a="returnTitle">Save &amp; return to title</button></div>
       <div class="card"><h3>Manager portrait</h3>${avatarPicker(G.avatar || 1, 'setAvatar')}</div>
+      <div class="card"><h3>Manager name</h3><div class="two"><div class="field"><label for="setMgr">Name</label><input id="setMgr" type="text" maxlength="40" value="${esc(G.manager)}" autocomplete="off"></div><div class="field"><label>&nbsp;</label><button class="btn" data-a="setMgrName">Save name</button></div></div></div>
+      <div class="card"><h3>Match camera</h3><p class="muted">Follow keeps the ball in view with a mini-map. Full pitch shows everything at once.</p><div class="seg">${[['follow', 'Follow'], ['full', 'Full pitch']].map(([k, n]) => `<button class="${(G.settings.cam || 'follow') === k ? 'on' : ''}" data-a="setCam" data-v="${k}">${n}</button>`).join('')}</div></div>
+      <div class="card"><h3>Match highlights</h3><p class="muted">How much of a match you watch: key chances only, extended build-up, or every move.</p><div class="seg">${[['key', 'Key'], ['ext', 'Extended'], ['full', 'Full']].map(([k, n]) => `<button class="${(G.settings.hl || 'ext') === k ? 'on' : ''}" data-a="setHl" data-v="${k}">${n}</button>`).join('')}</div></div>
       <div class="card"><h3>Default match speed</h3><div class="seg">${[1, 2, 4].map(s => `<button class="${G.settings.speed === s ? 'on' : ''}" data-a="speed" data-v="${s}">${s}x</button>`).join('')}</div></div>
       <div class="card"><h3>Save game</h3><p class="muted">Autosaves stay on this device. Clearing site data removes them. Keep a save file as a backup or import it on another device.</p>
         <p id="saveStatus" role="status" class="${SaveStorage.error ? 'bad' : 'muted'}">${SaveStorage.error ? 'Saving failed. Export a backup before leaving.' : 'Automatic saving on this device.'}</p>
@@ -430,6 +431,9 @@ SCREENS.settings = {
 };
 ACT.setAvatar = ds => { G.avatar = +ds.v; saveGame(); toast('Portrait changed to Manager ' + ds.v + '.'); render(); };
 ACT.speed = ds => { G.settings.speed = +ds.v; saveGame(); render(); };
+ACT.setMgrName = () => { const v = document.getElementById('setMgr').value.trim().slice(0, 40); if (!v) return toast('Enter a name first.'); G.manager = v; saveGame(); toast('Manager name saved.'); render(); };
+ACT.setCam = ds => { if (!['follow', 'full'].includes(ds.v)) return; G.settings.cam = ds.v; saveGame(); render(); };
+ACT.setHl = ds => { if (!['key', 'ext', 'full'].includes(ds.v)) return; G.settings.hl = ds.v; saveGame(); render(); };
 ACT.saveNow = async () => toast(await saveGameAsync() ? 'Game saved on this device.' : 'Saving failed. Export a backup before leaving.');
 ACT.returnTitle = async () => {
   const game = G, screen = UI.s;

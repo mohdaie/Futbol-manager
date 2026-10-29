@@ -25,13 +25,13 @@ Unwatched computer fixtures use an event-based engine. Your watched matches and 
 - Training, medical centre, youth academy, finances, staff, board and fans, news and inbox.
 - A live match with 2D, Formation, Line up and Match stats tabs for both teams, commentary, substitutions, shouts and half-time team talks, plus instant results. Teams change ends at half-time; live condition and fatigue are in Line up.
 - A real fixture calendar: Friday to Monday and midweek kick-off times, TV games, cup weekends and international breaks. Rest days, weather and kick-off time affect fitness, injuries and results.
-- **Admin page** at `/admin/` (not in the game): API keys, AI settings and AI usage, stored in Supabase. Editing clubs, players, time and the match engine works on a career save, so it stays inside the game and is hidden from players: add `?admin` to the game address, then More → Admin. The **AI Brain** (a learning engine for computer managers, with versions you approve) is there too.
+- **Admin page** at `/admin/` (not in the game): edit clubs and players, move time forward, tune the match engine, run the **AI Brain** (a learning engine for computer managers, with versions you approve), staff and match-analyst tools, and manage the Jev and DeepSeek keys, AI settings and usage. It runs the same game code on the career saved in this browser. Opening it pauses any open game tab so two tabs never write one save. **More → Settings** holds everything a player needs: manager name and portrait, match camera, highlights and speed, saving, backups, import and new game.
 
 The full design, file map and how to extend it are in [STRUCTURE.md](STRUCTURE.md).
 
 ## AI services (optional)
 
-Set them up on the `/admin/` page (`https://mohdaie.github.io/Futbol-manager/admin/`). Keys are saved in Supabase and used by the `futbol-jev` and `futbol-deepseek` relays; they never reach the player's browser or save. Players get the settings you save (on or off, model, features, budget) when the game opens. See [supabase/functions/futbol-admin/README.md](supabase/functions/futbol-admin/README.md).
+Set them up on the `/admin/` page (AI keys tab) (`https://mohdaie.github.io/Futbol-manager/admin/`). Keys are saved in Supabase and used by the `futbol-jev` and `futbol-deepseek` relays; they never reach the player's browser or save. Players get the settings you save (on or off, model, features, budget) when the game opens. See [supabase/functions/futbol-admin/README.md](supabase/functions/futbol-admin/README.md).
 
 There is no sign-in on the admin page yet, so treat the address as private.
 
