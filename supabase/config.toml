@@ -9,3 +9,7 @@ verify_jwt = false
 [functions.futbol-brain]
 # Uses a random installation credential, hashed server-side; no public data reads.
 verify_jwt = false
+
+[functions.futbol-admin]
+# Open for now (no sign-in yet). Keys are write-only; see futbol-admin/README.md.
+verify_jwt = false

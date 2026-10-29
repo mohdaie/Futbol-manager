@@ -21,7 +21,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
    const applied=subs.length===2&&subs.every(e=>M.sides[0].on.includes(e.pid)&&!M.sides[0].on.includes(e.out)&&M.sim.P[0].some(p=>p?.id===e.pid));
    const matchingEvents=subs.length===M.log.filter(e=>e.t==='sub').length;
    const currentDecisionUpdated=M.dec[0][1].src==='jev'&&M.dec[0][1].changed&&M.dec[0][1].f.min===71&&M.dec[0][1].requestedF.min===70;
-   const parity=M.rng===local.rng&&JSON.stringify(M.sides)===JSON.stringify(local.sides)&&JSON.stringify(M.log)===JSON.stringify(local.log);
+   // Underscore keys (such as _box) are derived caches the worker result leaves out; only real state must match.
+   const noCache=(k,v)=>k[0]==='_'?undefined:v;
+   const parity=M.rng===local.rng&&JSON.stringify(M.sides,noCache)===JSON.stringify(local.sides,noCache)&&JSON.stringify(M.log)===JSON.stringify(local.log);
    const last=await Simulation.request('minute',Simulation.input(M));
    return {queuedWithoutAnnouncement,signatureDetectsQueuedReply,applied,matchingEvents,currentDecisionUpdated,parity,oldSideUntouched:captured.subs===0,noRepeat:!last.events.some(e=>e.t==='sub')&&last.match.sides[0].subs===2};
   });

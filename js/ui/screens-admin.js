@@ -1,11 +1,17 @@
 'use strict';
 /* ===== screens-admin.js =====
-   Admin page: edit clubs and players, move time forward, tune the match engine,
-   and run maintenance on the save. Open from More > Admin. */
+   Save tools: edit clubs and players, move time forward, tune the match engine,
+   and run maintenance on the save. Hidden from players (see adminAllowed). API keys, AI settings
+   and AI usage moved to the /admin page. */
 
-// Access control hook. Everyone is allowed for now.
-// To restrict later, return true only for you (for example after a login or PIN check).
-function adminAllowed() { return true; }
+// The server-side admin (API keys, AI settings, usage) lives on the /admin page and Supabase.
+// What remains here edits the player's own save, so it is hidden from players: open the game with ?admin
+// (remembered for the tab) or run it on localhost. Replace this with a real check when sign-in exists.
+try { if (/[?&#]admin\b/.test(location.search + location.hash)) sessionStorage.setItem('futbol-admin', '1'); } catch (e) { /* storage blocked */ }
+function adminAllowed() {
+  try { if (sessionStorage.getItem('futbol-admin') === '1') return true; } catch (e) { /* storage blocked */ }
+  return /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+}
 
 const ADM = { club: null, q: '', qClub: 'ALL', test: null, confirm: '' };
 
@@ -15,7 +21,7 @@ SCREENS.admin = {
     const t = UI.tab.adm || 'over';
     return `<h1 class="h1">Admin</h1>
       <div class="banner open"><b>Live editing</b><span>Changes apply to this save at once. Export a backup in Settings first if you want to undo.</span></div>
-      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['jev', 'Jev AI'], ['ds', 'DeepSeek'], ['match', 'Match Analyst'], ['usage', 'AI usage'], ['data', 'Data']], t)}
+      ${tabs('adm', [['over', 'Overview'], ['club', 'Clubs'], ['play', 'Players'], ['time', 'Time'], ['eng', 'Engine'], ['brain', 'AI Brain'], ['staff', 'AI Staff'], ['match', 'Match Analyst'], ['data', 'Data']], t)}
       ${ADMIN_TABS[t]()}`;
   },
 };
@@ -286,129 +292,6 @@ ACT.admConfirm = ds => {
   if (ds.k === 'wipe') { deleteSave(); G = null; UI.tab = {}; go('start'); }
 };
 
-/* ---------- AI services (Jev, DeepSeek) ---------- */
-const AI_INFO = {
-  jev: { name: 'Jev (TypeSafe)', role: 'Makes fast decisions for the game: picks an option, scores something, or answers yes/no. It does not write text.', console: 'console.typesafe.ai/keys', docs: 'docs.typesafe.ai' },
-  ds: { name: 'DeepSeek', role: 'Writes game text and provides an on-demand Match Analysis Officer that reviews match evidence against the rulebook and engine source.', console: 'platform.deepseek.com/api_keys', docs: 'api-docs.deepseek.com' },
-};
-ADMIN_TABS.jev = () => aiTab('jev');
-ADMIN_TABS.ds = () => aiTab('ds');
-
-function aiTab(svc) {
-  const c = aiCfg()[svc], I = AI_INFO[svc], u = aiUsage(svc), est = aiSeasonEstimate(), T = (ADM.aiTest || {})[svc];
-  const masked = c.key ? '•••• ' + c.key.slice(-4) : 'none saved';
-  const pricing = svc === 'jev'
-    ? `<div class="kvrow"><span>Input</span><b>$0.042 per 1M tokens</b></div><div class="kvrow"><span>Output</span><b>Free</b></div><div class="kvrow"><span>Speed</span><b>about 70-500 ms</b></div><div class="kvrow tot"><span>Estimated full season</span><b>~$${est.jevCost.toFixed(2)} (${est.jevCalls} calls)</b></div>`
-    : `<div class="kvrow"><span>deepseek-flash input</span><b>$0.15 off-peak / $0.30 peak per 1M</b></div><div class="kvrow"><span>deepseek-flash output</span><b>$0.60 off-peak / $1.20 peak per 1M</b></div><div class="kvrow"><span>Cached input</span><b>$0.003-0.006 per 1M</b></div><div class="kvrow"><span>Right now</span><b>${dsPeak() ? 'Peak hours' : 'Off-peak (half price)'}</b></div><div class="kvrow tot"><span>Estimated full season</span><b>~$${est.dsCostLow.toFixed(2)}-${est.dsCostHigh.toFixed(2)} (${est.dsCalls} calls)</b></div>`;
-  const rec = svc === 'jev'
-    ? '<b>Recommended: jev-latest.</b> Jev 1.13 and 1.14 cost the same, so the stable alias is the best choice. Pin a version once you have tuned the game around its answers.'
-    : '<b>Recommended: deepseek-flash with thinking off.</b> It is the cheapest DeepSeek model and is good enough for short football text. Thinking mode makes replies slower and several times more expensive, and this game does not need it.';
-  return `<div class="card"><h3>${I.name}</h3><p class="muted">${I.role}</p>
-      ${svc === 'jev' ? '<p class="note">Test connection uses the key and settings currently entered below. If Direct mode is blocked by your browser or the API, choose Personal relay with your own relay URL.</p>' : ''}
-      <label class="tgl"><input id="ai-on" type="checkbox" ${c.on ? 'checked' : ''}><span>Use ${svc === 'jev' ? 'Jev' : 'DeepSeek'} in the game</span></label>
-      <div class="field"><label>Connection</label><div class="seg">${[['direct', 'Direct'], ['relay', 'Personal relay'], ['proxy', 'Server key']].map(([k, n]) => `<button class="${c.mode === k ? 'on' : ''}" data-a="aiMode" data-svc="${svc}" data-v="${k}">${n}</button>`).join('')}</div></div>
-      ${c.mode !== 'proxy' ? fld(`API key <small>(saved: ${esc(masked)})</small>`, `<input id="ai-key" type="password" autocomplete="off" placeholder="Paste a new key to replace it">`) + `<p class="muted">Get a key at ${I.console}. ${c.mode === 'relay' ? 'Your saved key is sent securely through your own relay to the AI service. Use only a relay you control.' : 'Your personal key stays in this browser. Direct requests may be blocked by the API.'}</p>` : ''}
-      ${c.mode !== 'direct' ? fld('Relay base URL', `<input id="ai-proxy" type="url" value="${esc(c.proxy)}" placeholder="https://your-project.supabase.co/functions/v1/futbol-${svc === 'jev' ? 'jev' : 'deepseek'}">`) + `<p class="muted">${c.mode === 'relay' ? 'Personal relay forwards your own saved key. It must be deployed before testing.' : 'Your server supplies the API key; the browser does not send one.'}</p>` : ''}
-      <div class="two">
-        ${fld('Model', selectHtml('ai-model', svc === 'jev' ? JEV_MODELS : DS_MODELS, c.model, ''))}
-        ${fld('Timeout (ms)', num('ai-timeout', c.timeout, 500, 'min="500"'))}
-        ${svc === 'ds' && c.mode === 'direct' ? fld('Base URL', `<input id="ai-base" type="text" value="${esc(c.base)}">`) : ''}
-        ${svc === 'ds' ? fld('Max reply length (tokens)', num('ai-max', c.maxTokens, 50, 'min="50" max="4000"')) + fld('Creativity (temperature 0-2)', num('ai-temp', c.temp, 0.1, 'min="0" max="2"')) : ''}
-        ${fld('Monthly budget (US$)', num('ai-budget', c.budget, 0.5, 'min="0"'))}
-      </div>
-      ${svc === 'ds' ? `<label class="tgl"><input id="ai-think" type="checkbox" ${c.thinking ? 'checked' : ''}><span>Thinking mode (slower, costs more; not recommended)</span></label>` : ''}
-      <h4 class="lbl">Use it for</h4>
-      ${AI_FEATURES[svc].map(([k, n]) => `<label class="tgl"><input type="checkbox" class="ai-feat" data-k="${k}" ${c.feat[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}
-      <p class="note">Connected now: ${svc === 'jev' ? 'computer managers' : 'second opinions, the press question library, staff advice, and the on-demand Match Analysis Officer (More → Admin → Match Analyst)'}${svc === 'jev' ? ' (see the AI Brain and AI Staff tabs)' : ''}. Usage by feature is on the AI usage tab. Other ticks are saved for features still to come.</p>
-      <div class="btns"><button class="btn pri" data-a="aiSave" data-svc="${svc}">Save settings</button><button class="btn" data-a="aiTest" data-svc="${svc}" ${T?.pending ? 'disabled' : ''}>${T?.pending ? 'Testing…' : 'Test connection'}</button>${c.key ? `<button class="btn ghost" data-a="aiClearKey" data-svc="${svc}">Remove key</button>` : ''}</div>
-      ${T ? `<div class="aitest ${T.ok ? 'ok' : 'bad'}">${T.html}</div>` : ''}</div>
-    <div class="card"><h3>This month</h3><div class="kv">
-      <div><small>Calls</small><b>${u.calls}${u.fails ? ` <em class="tag bad">${u.fails} failed</em>` : ''}</b></div><div><small>Average speed</small><b>${u.calls ? Math.round(u.ms / u.calls) + ' ms' : '-'}</b></div>
-      <div><small>Tokens in / out</small><b>${u.inTok.toLocaleString('en-GB')} / ${u.outTok.toLocaleString('en-GB')}</b></div><div><small>Cost</small><b>$${u.cost.toFixed(4)} of $${c.budget}</b></div></div>
-      ${bar(c.budget ? u.cost / c.budget * 100 : 0, u.cost >= c.budget ? 'bad' : u.cost > c.budget * 0.8 ? 'warn' : 'good')}
-      <div class="list">${aiCfg().log.filter(l => l.svc === svc).slice(0, 8).map(l => `<div class="row sm"><span class="grow"><b>${l.ok ? 'OK' : 'Failed'} · ${esc(l.note)}</b><small>${new Date(l.t).toLocaleString('en-GB')} · ${l.ms} ms · ${l.inTok}/${l.outTok} tok · $${l.cost.toFixed(5)}</small></span></div>`).join('') || '<p class="muted">No calls yet.</p>'}</div></div>
-    <div class="card"><h3>Price and choice</h3><p class="muted">${rec}</p>${pricing}<p class="muted">Prices checked October 2026 at ${I.docs}. The estimate assumes AI decisions in every league match plus your own press, talks and reports.</p></div>`;
-}
-
-/* ---------- AI usage: tokens and cost for Jev and DeepSeek ---------- */
-// This device's own count (every call, any connection mode) and the cloud log kept by the relays (by feature and day).
-ADMIN_TABS.usage = () => {
-  const U = aiCfg().usage, months = Object.keys(U).sort().reverse().slice(0, 6), C = ADM.usage;
-  const svcName = k => (k === 'jev' ? 'Jev' : 'DeepSeek'), tok = n => Number(n || 0).toLocaleString('en-GB'), usd = n => '$' + Number(n || 0).toFixed(4);
-  const local = months.map(m => ['jev', 'ds'].filter(k => U[m][k]).map(k => { const u = U[m][k]; return `<div class="row sm"><span class="grow"><b>${m} · ${svcName(k)}</b><small>${u.calls} calls${u.fails ? `, ${u.fails} failed` : ''} · ${tok(u.inTok)} in / ${tok(u.outTok)} out tokens</small></span><span class="stat"><b>${usd(u.cost)}</b></span></div>`; }).join('')).join('');
-  const prov = p => (p === 'jev' ? 'Jev' : 'DeepSeek');
-  const cloud = !C ? '<p class="muted">Not loaded yet.</p>' : C.error ? `<p class="bad">${esc(C.error)}</p>` : !C.data ? '<p class="muted">Loading…</p>' : (() => {
-    const d = C.data, maxDay = Math.max(1e-9, ...d.days.map(x => +x.tokens));
-    return `<h4 class="lbl">This month</h4><div class="kv">${d.month.map(x => `<div><small>${prov(x.provider)}</small><b>${x.calls} calls · ${usd(x.cost)}</b><small>${tok(x.input)} in / ${tok(x.output)} out${+x.cache ? ` · ${tok(x.cache)} cached` : ''} · ${x.ms} ms avg${+x.fails ? ` · ${x.fails} failed` : ''}</small></div>`).join('') || '<div><small>No calls this month</small><b>-</b></div>'}</div>
-      <h4 class="lbl">All time</h4><div class="kv">${d.total.map(x => `<div><small>${prov(x.provider)}</small><b>${x.calls} calls · ${usd(x.cost)}</b><small>${tok(x.input)} in / ${tok(x.output)} out</small></div>`).join('') || '<div><small>None yet</small><b>-</b></div>'}</div>
-      <h4 class="lbl">By feature (last 30 days)</h4><div class="list">${d.features.map(x => `<div class="row sm"><span class="grow"><b>${esc(x.feature)}</b><small>${prov(x.provider)} · ${x.calls} calls · ${tok(x.tokens)} tokens</small></span><span class="stat"><b>${usd(x.cost)}</b></span></div>`).join('') || '<p class="muted">No calls in the last 30 days.</p>'}</div>
-      <h4 class="lbl">By day (last 14 days)</h4><div class="list">${d.days.map(x => `<div class="row sm"><span class="grow"><b>${x.day} · ${prov(x.provider)}</b><small>${x.calls} calls · ${tok(x.tokens)} tokens · ${usd(x.cost)}</small>${bar(+x.tokens / maxDay * 100, 'good')}</span></div>`).join('') || '<p class="muted">No calls in the last 14 days.</p>'}</div>
-      <h4 class="lbl">Every player this month</h4><div class="kv">${d.everyone.map(x => `<div><small>${prov(x.provider)}</small><b>${x.calls} calls · ${usd(x.cost)}</b><small>${tok(x.tokens)} tokens · ${x.installs} device${+x.installs === 1 ? '' : 's'} with stats</small></div>`).join('') || '<div><small>No calls</small><b>-</b></div>'}</div>
-      <p class="muted">Loaded ${new Date(C.at).toLocaleString('en-GB')}.</p>`;
-  })();
-  return `<div class="card"><h3>On this device</h3><p class="muted">Every Jev and DeepSeek call this browser made, by month. Costs use the list prices on the Jev and DeepSeek tabs.</p>
-      <div class="list">${local || '<p class="muted">No AI calls yet.</p>'}</div></div>
-    <div class="card"><h3>Cloud usage log</h3><p class="muted">The relays log every call in the database: tokens, cost and which game feature asked (never keys, prompts or player data). Shown here for this device, plus totals for everyone. Only calls through the Personal relay are logged with this device; direct calls appear above only.</p>
-      <div class="btns"><button class="btn pri" data-a="aiUsageLoad" ${C && C.busy ? 'disabled' : ''}>${C && C.busy ? 'Loading…' : C ? 'Refresh' : 'Load usage'}</button></div>${cloud}</div>`;
-};
-ACT.aiUsageLoad = async () => {
-  ADM.usage = { ...(ADM.usage || {}), busy: true }; render();
-  try { ADM.usage = { data: await aiCloudUsage(), at: Date.now() }; } catch (e) { ADM.usage = { error: e.message || 'Could not load usage.' }; }
-  render();
-};
-
-ACT.aiMode = ds => { readAISettings(ds.svc); aiCfg()[ds.svc].mode = ds.v; aiSave(); render(); };
-function readAISettings(svc) {
-  const c = aiCfg()[svc], el = id => document.getElementById(id);
-  c.on = el('ai-on').checked;
-  if (el('ai-key') && el('ai-key').value.trim()) c.key = el('ai-key').value.trim().replace(/^Bearer\s+/i, '').trim();
-  if (el('ai-proxy')) c.proxy = el('ai-proxy').value.trim();
-  c.model = val('ai-model');
-  c.timeout = Math.max(500, nval('ai-timeout'));
-  c.budget = Math.max(0, nval('ai-budget'));
-  if (svc === 'ds') {
-    if (el('ai-base')) c.base = el('ai-base').value.trim() || 'https://api.deepseek.com';
-    c.maxTokens = clamp(nval('ai-max'), 50, 4000); c.temp = clamp(nval('ai-temp'), 0, 2); c.thinking = el('ai-think').checked;
-  }
-  document.querySelectorAll('.ai-feat').forEach(x => { c.feat[x.dataset.k] = x.checked; });
-  return aiSave();
-}
-ACT.aiSave = ds => {
-  toast(readAISettings(ds.svc) ? 'AI settings saved.' : 'Could not save: browser storage is blocked here.'); render();
-};
-ACT.aiClearKey = ds => { aiCfg()[ds.svc].key = ''; aiSave(); toast('Key removed from this browser.'); render(); };
-
-const AI_TEST_STATE = 'Premier Division match, 67th minute. Home: Gunners 2, Away: Black Cats 0. Away side has 31% possession, 3 shots, none on target. Away midfielders average 61% condition. Away manager mentality: Cautious, formation 5-4-1. Away fans have been booing.';
-ACT.aiTest = async ds => {
-  const svc = ds.svc;
-  ADM.aiTest = ADM.aiTest || {};
-  if (ADM.aiTest[svc]?.pending) return;
-  readAISettings(svc);
-  ADM.aiTest[svc] = { ok: true, pending: true, html: 'Testing…' };
-  render();
-  try {
-    if (svc === 'jev') {
-      const r = await jevAsk(AI_TEST_STATE, {
-        change: { type: 'choice', instructions: 'Best change for the away manager right now', criteria: { attack: 'Go more attacking and bring on a forward', hold: 'Keep the current approach', defend: 'Tighten up to limit the damage', press: 'Press higher to win the ball back' } },
-        tired: { type: 'noul', instructions: 'The away midfield is exhausted' },
-        fans: { type: 'score', instructions: 'How frustrated the away fans are', criteria: ['Calm', 'Uneasy', 'Angry'] },
-      }, 'Admin test', { timeout: Math.max(10000, aiCfg().jev.timeout) });
-      if (!r.answers?.change?.choice) throw new Error('The server replied without a Jev decision. Check the proxy URL and selected model.');
-      const a = r.answers, ch = a.change;
-      ADM.aiTest[svc] = { ok: true, html: `<b>Connected · ${esc(r.model || '')} · ${r.ms} ms</b><br>Manager change: <b>${esc(ch.choice)}</b> (confidence ${ch.confidence != null ? Math.round(ch.confidence * 100) + '%' : '-'})<br>Midfield exhausted: ${a.tired ? Math.round(a.tired.noul * 100) + '%' : '-'} · Fan frustration: ${a.fans ? a.fans.score : '-'} of 2` };
-    } else {
-      const r = await dsChat([
-        { role: 'system', content: 'You are a sharp football journalist in a football manager game. Reply with exactly one press-conference question for the away manager, under 30 words.' },
-        { role: 'user', content: AI_TEST_STATE },
-      ], 'Admin test', { maxTokens: 80 });
-      ADM.aiTest[svc] = { ok: true, html: `<b>Connected · ${esc(r.model || aiCfg().ds.model)} · ${r.ms} ms · $${r.cost.toFixed(5)}</b><br>“${esc(r.text)}”` };
-    }
-  } catch (e) {
-    ADM.aiTest[svc] = { ok: false, html: `<b>Test failed</b><br>${esc(e.message)}` };
-  }
-  if (UI.s === 'admin') render();
-};
-
 /* ---------- AI Brain: learning engine for computer managers ---------- */
 const SRC_NAME = { jev: 'Jev', deepseek: 'DeepSeek', learned: 'Learned engine', rules: 'Built-in rules', explore: 'Exploring', pending: 'Waiting', late: 'Too late' };
 ADMIN_TABS.brain = () => {
@@ -420,7 +303,7 @@ ADMIN_TABS.brain = () => {
       <div class="kv"><div><small>Teacher (Jev)</small><b class="${teacher ? 'good' : ''}">${teacher ? 'Configured' : 'Off'}</b></div><div><small>Second opinion (DeepSeek)</small><b class="${second ? 'good' : ''}">${second ? 'Configured' : 'Off'}</b></div>
       <div><small>Engine in use</small><b>${V ? esc(V.name) : 'Built-in rules'}</b></div><div><small>Teacher calls saved by hybrid</small><b>${B.saved.skipped}</b></div></div>
       <div class="btns"><button class="btn sm" data-a="tab" data-key="adm" data-v="jev">Jev settings</button><button class="btn sm" data-a="tab" data-key="adm" data-v="ds">DeepSeek settings</button></div>
-      ${!teacher ? '<p class="note">No teacher is connected, so the engine learns from outcomes only (the training camp tries options and keeps what works). Connect Jev in the Jev AI tab and tick “Computer managers” to add a teacher. If direct browser requests fail, configure a server proxy.</p>' : ''}</div>
+      ${!teacher ? '<p class="note">No teacher is connected, so the engine learns from outcomes only (the training camp tries options and keeps what works). Connect Jev on the /admin page and tick “Computer managers” to add a teacher. If direct browser requests fail, configure a server proxy.</p>' : ''}</div>
 
     <div class="card"><h3>Cloud learning data</h3>
       <p id="brain-cloud-status" class="muted">${esc(B.cloud && B.cloud.error || (B.cloud && B.cloud.lastSync ? 'Last synced ' + new Date(B.cloud.lastSync).toLocaleString() + ' · ' + B.cloud.received + ' detailed records received' : 'Waiting for first upload…'))}</p>
@@ -455,7 +338,7 @@ ADMIN_TABS.brain = () => {
 
     <div class="card"><h3>Press question library (DeepSeek)</h3>
       <p class="muted">DeepSeek writes new press questions with answers and effects. Approved ones join the built-in questions and are used offline in every pre-match press conference.</p>
-      <button class="btn" data-a="brPressGen" ${aiReady('ds', 'press') && !job ? '' : 'disabled'}>Generate 5 questions</button>${aiReady('ds', 'press') ? '' : '<p class="muted">Switch on DeepSeek and tick “Press conference questions” in the DeepSeek tab first.</p>'}
+      <button class="btn" data-a="brPressGen" ${aiReady('ds', 'press') && !job ? '' : 'disabled'}>Generate 5 questions</button>${aiReady('ds', 'press') ? '' : '<p class="muted">Switch on DeepSeek and tick “Press conference questions” on the /admin page first.</p>'}
       <div class="list">${B.press.map(p => `<div class="row"><span class="grow"><b>${esc(p.q)}</b><small>${p.a.map(a => esc(a[0]) + ` (morale ${a[1].mor >= 0 ? '+' : ''}${a[1].mor}, fans ${a[1].fan >= 0 ? '+' : ''}${a[1].fan}, board ${a[1].board >= 0 ? '+' : ''}${a[1].board})`).join(' · ')}${p.ok ? ` · used ${p.used || 0}x` : ''}</small></span>${p.ok ? '<em class="tag good">Live</em>' : `<button class="btn sm" data-a="brPressOk" data-id="${p.id}">Approve</button>`}<button class="btn sm ghost" data-a="brPressDel" data-id="${p.id}">Remove</button></div>`).join('') || '<p class="muted">Library is empty. The 5 built-in questions are used.</p>'}</div></div>
 
     <div class="card"><h3>Recent decisions</h3><div class="list">${B.log.slice(-10).reverse().map(e => `<div class="row sm"><span class="grow"><b>${esc(sitLabel(e.key))} → ${e.opt}</b><small>${SRC_NAME[e.src] || e.src}${e.conf != null ? ' · confidence ' + Math.round(e.conf * 100) + '%' : ''}${e.second ? ' · DeepSeek said ' + e.second + (e.jev ? ', Jev said ' + e.jev : '') : ''} · result ${e.out >= 0 ? '+' : ''}${e.out}</small></span></div>`).join('') || '<p class="muted">Nothing yet.</p>'}</div>

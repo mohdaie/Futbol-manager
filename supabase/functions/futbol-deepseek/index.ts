@@ -12,4 +12,17 @@ async function recordDiagnostic(row: Record<string, unknown>) {
   if (!response.ok) throw new Error('Diagnostic write failed.');
 }
 
-Deno.serve(req => handleDeepSeek(req, fetch, recordDiagnostic));
+// Key saved in /admin (Server key mode). Read with the privileged key; never sent to the game.
+async function serverKey(): Promise<string | null> {
+  const base = Deno.env.get('SUPABASE_URL');
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!base || !key) return null;
+  const response = await fetch(base + '/rest/v1/futbol_admin_secrets?name=eq.deepseek&select=value', {
+    headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: AbortSignal.timeout(2000),
+  });
+  if (!response.ok) return null;
+  const rows = await response.json();
+  return rows[0]?.value ?? null;
+}
+
+Deno.serve(req => handleDeepSeek(req, fetch, recordDiagnostic, serverKey));
