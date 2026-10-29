@@ -7,4 +7,4 @@ Story, in match order: they score first (27') -> you switch tactics and sub -> y
 - `assets/title-hero.png`: the game's title screen (opening and closing screen).
 - `build.py` generates `index.html` from the clips (reads their lengths); `events.json` holds the moment inside each clip (goal overlay, card, shout sheet and tap).
 - Render: `npx hyperframes render -o futbol-manager-match-engine-hero.mp4`
-- No audio yet.
+- `assets/music.mp3`: the Suno track "Final Peak" (about 123 BPM), volume-shaped to the picture: dip at the concession (5.9 s), a half-beat pause then lift at our goal (17.0 s), strip-back during the shout sheet (25.0–27.2 s), lift at the push-on, fade out at the end. Mixed in `index.html` as one audio element.

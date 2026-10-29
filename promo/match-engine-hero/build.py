@@ -151,6 +151,7 @@ A('</div></div>')  # phone, cam
 A('<div id="flash" style="background:#fff"></div>')
 A(f'<div id="brand" class="clip" data-start="0.8" data-duration="{END-0.8:.2f}" data-track-index="2">FUTBOL <span>MANAGER</span></div>')
 A(f'<div id="endcard" class="clip" data-start="{END}" data-duration="{DUR-END:.2f}" data-track-index="6"><div class="inner"><div class="small" id="e1">FUTBOL MANAGER · 2026/27</div><h1 id="e2">MATCH ENGINE.</h1><div class="tag" id="e3">Football that plays back.</div><div class="chips" id="e4"><span class="chip">Live</span><span class="chip">Tactical</span><span class="chip">Alive</span></div></div></div>')
+A(f'<audio id="music" src="assets/music.mp3" data-start="0" data-duration="{DUR}" data-volume="1" data-track-index="7"></audio>')
 A('</div>')
 
 # ---------- timeline ----------
