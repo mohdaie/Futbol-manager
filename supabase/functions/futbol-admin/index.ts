@@ -41,9 +41,12 @@ async function probe(name: string, key: string) {
   }
 }
 
-// A Google sign-in (Supabase Auth access token) whose email is in the ADMIN_EMAILS secret (comma separated).
+// A Google sign-in (Supabase Auth access token) whose email is on the admin list: the 'admins' row of
+// futbol_admin_settings (a JSON array of emails, set with SQL; never editable through this API) or the ADMIN_EMAILS secret.
 async function isAdmin(token: string) {
-  const admins = (Deno.env.get('ADMIN_EMAILS') || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const rows = await rest('/futbol_admin_settings?id=eq.admins&select=value').catch(() => []);
+  const listed = Array.isArray(rows?.[0]?.value) ? rows[0].value : [];
+  const admins = [...listed, ...(Deno.env.get('ADMIN_EMAILS') || '').split(',')].map(e => String(e).trim().toLowerCase()).filter(Boolean);
   if (!admins.length) return false;
   const response = await fetch(Deno.env.get('SUPABASE_URL') + '/auth/v1/user', {
     headers: { apikey: Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(5000),

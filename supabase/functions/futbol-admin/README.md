@@ -31,8 +31,10 @@ service with a saved key, runs in Server key mode through the relay. A service w
 ## Sign-in (Google)
 
 Every route except `GET /config`, `POST /report` and `/health` needs `Authorization: Bearer <Supabase Auth access
-token>` from a Google sign-in whose email is in the `ADMIN_EMAILS` edge function secret (comma separated). No token:
-401; a token for any other account: 403. With `ADMIN_EMAILS` unset nobody is an admin (fail closed). The admin page
+token>` from a Google sign-in whose email is on the admin list: the `admins` row of `futbol_admin_settings` (a JSON
+array, set with SQL: `insert into futbol_admin_settings (id, value) values ('admins', '["you@example.com"]') on conflict (id)
+do update set value = excluded.value`) or the `ADMIN_EMAILS` edge function secret (comma separated). No token:
+401; a token for any other account: 403. With neither set nobody is an admin (fail closed). The API never edits the `admins` row. The admin page
 (`js/ui/admin-services.js`) sends people to `/auth/v1/authorize?provider=google` and reads the access token from the
 address fragment on return (implicit flow, one hour; then sign in again). It keeps the token in sessionStorage.
 
@@ -41,7 +43,7 @@ One-time setup:
    redirect URI: `https://wkzrefbvjxqphkrduyqj.supabase.co/auth/v1/callback`.
 2. Supabase → Authentication → Sign In / Providers → Google: on, with that client ID and secret.
 3. Supabase → Authentication → URL Configuration: add `https://fmotg.app/admin/` to the redirect URLs.
-4. Supabase → Edge Functions → Secrets: `ADMIN_EMAILS` = the admin Google address(es).
+4. The admin list: the `admins` row above (done for the owner).
 
 Still open: the relays (`futbol-jev`, `futbol-deepseek`) spend the saved keys for any caller from the game's origins;
 the per-device monthly budget is enforced in the game. Consider server-side rate limits.
