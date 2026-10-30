@@ -5,7 +5,7 @@
    Edit this file to rebalance or rename things without touching game logic. */
 
 const GAME_NAME = 'Futbol Manager';
-const GAME_VERSION = '1.8.0';
+const GAME_VERSION = '1.9.0';
 // Manager portraits shown as Manager 1-5 (small copies of public/assets/managers).
 const AVATARS = [1, 2, 3, 4, 5];
 const avatarSrc = n => `public/assets/managers/small/manager-${AVATARS.includes(+n) ? +n : 1}.webp`;
@@ -281,6 +281,17 @@ const SHOUTS = [
   { k: 'fire', n: 'Fire up', d: 'More chances created, more fouls given away.' },
   { k: 'focus', n: 'Focus', d: 'Fewer chances conceded.' },
   { k: 'calm', n: 'Calm down', d: 'Lowers card risk.' },
+];
+
+// Tactical shouts: a temporary change of approach (see tacticalShout() in js/engine/match.js). After 10 minutes the
+// staff judge it on what it is for (its own measure, against the side's rate before the shout): it stays if it
+// works, the side goes back to the main tactic if it clearly does not, and an unclear case gets 5 more minutes.
+const TACTICAL_SHOUTS = [
+  { k: 'shoot', n: 'Shoot on sight', d: 'More shots, from distance too. Judged on chances created; gives the ball away more.' },
+  { k: 'wide', n: 'Get it wide and cross', d: 'Wider, wingers to the byline, more crosses. Judged on chances created; less play through the middle.' },
+  { k: 'deeper', n: 'Drop deeper', d: 'Deeper line, less pressing, more cautious. Judged on chances conceded; fewer of your own.' },
+  { k: 'higher', n: 'Push up', d: 'Higher line and press. Judged on balls won high and the chance balance; space left behind.' },
+  { k: 'calm', n: 'Keep the ball', d: 'Patient, short passing, fewer risks. Judged on possession and chances conceded; fewer chances.' },
 ];
 
 const INJURIES = [['Hamstring strain', 2, 5], ['Twisted ankle', 1, 3], ['Calf strain', 1, 4], ['Groin strain', 2, 4], ['Knee ligament damage', 6, 14], ['Bruised ribs', 1, 2], ['Broken metatarsal', 6, 10], ['Thigh strain', 2, 4], ['Concussion', 1, 2], ['Back spasms', 1, 2]];

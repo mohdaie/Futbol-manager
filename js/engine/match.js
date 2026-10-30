@@ -178,6 +178,7 @@ function simMinute(M) {
   if (M.shout && M.min >= M.shout.until) { const S = M.sides[M.shout.side]; S.boost = 0; S.guard = 0; S.calm = 0; M.shout = null; }
   const played = playMinute(M), ev = played[0];
   evs.push(...played);
+  M.sides.forEach(X => { const e = reviewTacticalShout(M, X); if (e) evs.push(e); });
   // Injuries: more likely in bad weather and for sides that started tired (fixture congestion).
   M.sides.forEach(X => {
     if (R() < (tune('injuryRate') / 2) * M.mod.inj * (1 + Math.max(0, 85 - (X.startCond ?? 100)) / 30)) { const e = injury(M, X); if (e) evs.push(e); }
@@ -188,6 +189,85 @@ function simMinute(M) {
   if (M.min >= (M.finishAt ?? 90 + M.added)) { const extra = M.extra; decideMatchEnd(M); if (M.ended) ev.ft = true; else if (!extra && M.extra) ev.etBreak = true; }
   evs.forEach(e => { if (e.t !== 'poss') M.log.push(e); });
   return [...managerEvents, ...evs];
+}
+
+/* ---------- tactical shouts ---------- */
+// Each shout overrides a few instructions for its spell (S.tsh remembers the manager's own values) and the engine
+// reads S.tsh.k for what instructions cannot say (shooting, crossing). Its staff measure is a per-minute score from
+// the side's chances (xG plus dangerous attacks), chances conceded and the shout's own aim.
+const TSHOUT = {
+  shoot: { set: S => ({ ment: Math.min(4, S.ment + 1) }), score: d => d.thrF - d.thrA * 0.5 },
+  wide: { set: () => ({ width: 2 }), score: d => d.thrF + d.cr * 0.003 - d.thrA * 0.5 },
+  deeper: { set: S => ({ line: Math.max(0, S.line - 1), press: Math.max(0, S.press - 1), ment: Math.max(0, S.ment - 1) }), score: d => d.thrF * 0.3 - d.thrA },
+  higher: { set: S => ({ line: Math.min(2, S.line + 1), press: Math.min(2, S.press + 1) }), score: d => d.thrF - d.thrA + d.hr * 0.003 },
+  calm: { set: S => ({ tempo: 0, pass: 0, ment: Math.max(1, S.ment - 1) }), score: d => d.thrF * 0.5 - d.thrA + (d.pos - 0.5) * 0.02 },
+};
+// A dangerous attack (the ball in the final 30%) is worth about this much xG in the staff's measure.
+const TSH_ATTACK = 0.004, TSH_PRIOR_MIN = 15;
+function tshCount(M, S) {
+  const O = M.sides[1 - S.idx];
+  return { min: M.min, xgF: S.st.xg, xgA: O.st.xg, daF: S.st.da || 0, daA: O.st.da || 0, cr: S.st.cr || 0, hr: S.st.hr || 0, posF: S.st.pos, posA: O.st.pos };
+}
+// Per-minute rates between two counts. With few minutes the rates lean towards a typical match (prior).
+function tshRate(a, b, prior = 0) {
+  const m = Math.max(1, b.min - a.min), k = prior ? TSH_PRIOR_MIN : 0, pm = (x, p) => (x + p * k) / (m + k);
+  const pos = (b.posF - a.posF) / ((b.posF - a.posF) + (b.posA - a.posA) || 1);
+  return { thrF: pm(b.xgF - a.xgF + (b.daF - a.daF) * TSH_ATTACK, 0.0175), thrA: pm(b.xgA - a.xgA + (b.daA - a.daA) * TSH_ATTACK, 0.0175),
+    cr: pm(b.cr - a.cr, 0.2), hr: pm(b.hr - a.hr, 0.1), pos: (pos * m + 0.5 * k) / (m + k) };
+}
+function tshRestore(S) {
+  const t = S.tsh;
+  if (!t) return;
+  // Only what still holds the shout's value goes back: an instruction changed during the spell is the manager's.
+  Object.keys(t.set).forEach(f => { if (S[f] === t.set[f]) S[f] = t.orig[f]; });
+  S.tsh = null;
+}
+// Start (or replace) a tactical shout. Returns the touchline event.
+function tacticalShout(M, S, k) {
+  if (!TSHOUT[k]) return null;
+  tshRestore(S);
+  const set = TSHOUT[k].set(S), orig = {}, now = tshCount(M, S);
+  Object.keys(set).forEach(f => { orig[f] = S[f]; S[f] = set[f]; });
+  const zero = { min: 0, xgF: 0, xgA: 0, daF: 0, daA: 0, cr: 0, hr: 0, posF: 0, posA: 0 };
+  S.tsh = { k, from: M.min, until: M.min + 10, set, orig, start: now, pre: TSHOUT[k].score(tshRate(zero, now, 1)), keep: false, ext: false, checks: 0 };
+  M.dirty = true;
+  return evt(M, { side: S.idx, t: 'tsh', k, res: 'start', key: true });
+}
+// The manager keeps it regardless of the staff's measure, or goes back to the main tactic.
+function tacticalShoutKeep(M, S) { if (S.tsh) { S.tsh.keep = true; M.dirty = true; } }
+function tacticalShoutEnd(M, S) {
+  if (!S.tsh) return null;
+  const k = S.tsh.k; tshRestore(S); M.dirty = true;
+  return evt(M, { side: S.idx, t: 'tsh', k, res: 'end', key: true });
+}
+// Every minute: at the end of a spell the staff compare the last 10 (or 15) minutes with the side's rate before the
+// shout. Clearly better: it stays and is checked again in 10 minutes. Clearly worse: back to the main tactic.
+// Unclear: 5 more minutes once, then the sign decides.
+function reviewTacticalShout(M, S) {
+  const t = S.tsh;
+  if (!t || M.min < t.until || M.ended) return null;
+  const now = tshCount(M, S), win = TSHOUT[t.k].score(tshRate(t.start, now)), diff = win - t.pre;
+  const xg = `${(now.xgF - t.start.xgF).toFixed(2)} xG for, ${(now.xgA - t.start.xgA).toFixed(2)} against in ${now.min - t.start.min} min`;
+  if (t.keep) { Object.assign(t, { until: M.min + 10, start: now }); return null; }
+  t.checks++;
+  if (diff > 0.002 || t.ext && diff >= 0) {
+    Object.assign(t, { until: M.min + 10, start: now, ext: false, kept: true });
+    return evt(M, { side: S.idx, t: 'tsh', k: t.k, res: 'keep', why: xg, key: true });
+  }
+  if (diff < -0.004 || t.ext) { tshRestore(S); M.dirty = true; return evt(M, { side: S.idx, t: 'tsh', k: t.k, res: 'revert', why: xg, key: true }); }
+  t.ext = true; t.until = M.min + 5;
+  return evt(M, { side: S.idx, t: 'tsh', k: t.k, res: 'extend', why: xg });
+}
+// Computer managers use them too: protect a late lead, chase a game, or try something when chances dry up.
+function aiTacticalShout(M, S) {
+  if (S.user || S.tsh || M.min < 30 || M.min > 88 || M.min % 5 || R() > 0.3) return null;
+  const O = M.sides[1 - S.idx], diff = S.st.g - O.st.g;
+  let k = null;
+  if (diff > 0 && M.min >= 70) k = (S.pass === 0 || S.tempo === 0) && R() < 0.6 ? 'calm' : 'deeper';
+  else if (diff < 0 && M.min >= 60) k = M.min >= 78 ? (R() < 0.5 ? 'higher' : 'shoot') : S.width === 2 || R() < 0.4 ? 'wide' : 'shoot';
+  else if (diff === 0 && M.min >= 55 && S.st.xg <= O.st.xg) k = R() < 0.5 ? 'wide' : 'shoot';
+  else if (O.st.xg - S.st.xg > 0.8 && M.min >= 35) k = 'deeper';
+  return k ? tacticalShout(M, S, k) : null;
 }
 
 // A deciding playoff leg uses aggregate goals; away goals never break a tie.
@@ -310,6 +390,7 @@ function injurySubs(M, S) {
 // Computer manager: forced changes, then a tactical review at checkpoints and after goals and red cards (see brain.js).
 function aiManage(M, S) {
   const evs = injurySubs(M, S);
+  if (!S.user) { const e = aiTacticalShout(M, S); if (e) evs.push(e); }
   if (typeof managerReview === 'function') evs.push(...managerReview(M, S, S.user ? (M, S) => applyMgrOption(M, S, rulesDecision(M, S)) : brainDecide));
   return evs;
 }
