@@ -121,7 +121,7 @@ function sellPlayer(p, toId, fee, terms) {
   moveClub(p, toId);
   p.wage = wageFor(p, to.rep); p.con = G.season + ri(2, 5);
   G.tHist.unshift({ date: weekDate(G.week).getTime(), pid: p.id, name: fullName(p), from: G.club, to: toId, fee, upfront: settlement.upfront, deferred: settlement.deferred, exchangeValue: terms?.exchangeValue || 0 });
-  addNews('transfer', `${fullName(p)} leaves for ${theClub(to)}`, `${fullName(p)} has been sold for ${money(fee)}. Half of cash received is added to your transfer budget; future instalments are credited when paid.`);
+  addNews('transfer', `${fullName(p)} leaves for ${theClub(to)}`, `${fullName(p)} has been sold for ${money(fee)}. The board releases ${saleReinvest().pct}% of cash received to your transfer budget (finances: ${saleReinvest().band.toLowerCase()}); future instalments are credited the same way when paid.`);
   if (typeof makeStory === 'function') storyTransfer(G.news[0], 'sale', p, G.club, toId, fee);
 }
 
