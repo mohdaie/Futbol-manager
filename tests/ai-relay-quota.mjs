@@ -19,10 +19,10 @@ for (const [handler, url, body] of cases) {
 
   seen = {}; r = await call(handler, url, body, async () => 'player', seen);
   assert.equal(r.status, 429); assert.equal(r.headers.get('Retry-After'), '3600');
-  assert.match((await r.json()).error, /Daily AI limit/); assert.equal(seen.upstream, undefined); assert.equal(seen.rows, undefined);
+  assert.equal((await r.json()).error, 'AI unavailable.'); assert.equal(seen.upstream, undefined); assert.equal(seen.rows, undefined);
 
   seen = {}; r = await call(handler, url, body, async () => 'global', seen);
-  assert.equal(r.status, 429); assert.match((await r.json()).error, /busy today/); assert.equal(seen.upstream, undefined);
+  assert.equal(r.status, 429); assert.equal((await r.json()).error, 'AI unavailable.'); assert.equal(seen.upstream, undefined);
 
   seen = {}; r = await call(handler, url, body, async () => { throw new Error('db down'); }, seen);
   assert.equal(r.status, 200, 'fails open when the count fails'); assert.equal(seen.upstream, 1);

@@ -50,7 +50,7 @@ async function handleJevFor(req, fetcher = fetch, record = async () => {}, serve
   } catch { return json(400, { error: 'Invalid JSON request.' }); }
   const limited = await quota(await sourceOf(meta(body).install)).catch(() => null);
   if (limited) {
-    return new Response(JSON.stringify({ error: limited === 'player' ? 'Daily AI limit reached for this game. It resets on a rolling 24-hour basis.' : 'The AI service is busy today. Try again later.' }),
+    return new Response(JSON.stringify({ error: 'AI unavailable.' }),
       { status: 429, headers: { ...CORS, 'Content-Type': 'application/json', 'Retry-After': '3600' } });
   }
   const started = performance.now();
