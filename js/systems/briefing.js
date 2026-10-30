@@ -8,7 +8,7 @@ function clubBriefingFacts() {
   const c = userClub(), sq = seniorSquad(G.club), xi = G.tactics.slots.map(id => G.players[id]).filter(Boolean);
   const injured = sq.filter(p => p.inj), tired = xi.filter(p => !p.inj && p.cond < 75), banned = sq.filter(p => p.ban > 0);
   const low = sq.filter(p => p.mor <= 42), unsettled = sq.filter(p => p.unset || p.treq);
-  const expiring = sq.filter(p => p.con <= G.season + 1), decisions = (G.deals || []).filter(d => d.dir !== 'ai' && !d.closed && d.need);
+  const expiring = sq.filter(p => p.con <= G.season + 1 && !activeLoan(p)), decisions = (G.deals || []).filter(d => d.dir !== 'ai' && !d.closed && d.need);
   const wageRoom = G.fin.wb - clubWageBill(c), fit = tacticReport(G.tactics).overall;
   const missing = Object.keys(STAFF_ROLES).filter(role => !staffOf(role).length);
   const tbl = leagueTable(), pos = tbl.findIndex(r => r.id === G.club) + 1, row = tbl[pos - 1];

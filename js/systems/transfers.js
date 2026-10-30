@@ -60,6 +60,7 @@ function offerContract(pid, wage, years, status, fee, mode) {
   if (mode !== 'renew' && !squadSpace(userClub())) return { ok: false, msg: squadLimitMessage(userClub()) };
   const p = G.players[pid];
   if (!p || G.clubs[p.club]?.backgroundOnly) return { ok: false, msg: 'This player is unavailable for transfer.' };
+  if (mode === 'renew' && (activeLoan(p) || p.club !== G.club)) return { ok: false, msg: `${fullName(p)} is on loan. His contract belongs to ${activeLoan(p) ? clubName(p.loan.parent) : 'another club'}; you can only buy him through the loan's purchase clause.` };
   const demand = wageDemand(p, mode === 'renew');
   const bill = clubWageBill(userClub()) - (mode === 'renew' ? p.wage : 0) + wage;
   if (bill > G.fin.wb) return { ok: false, msg: `The board will not exceed the wage budget of ${wageFmt(G.fin.wb)}. Raise it in Finance or offer less.` };
@@ -234,7 +235,7 @@ function agentPitch() {
 
 function weeklyContracts() {
   if (G.week !== 18 && G.week !== 32) return;
-  seniorSquad(G.club).filter(p => p.con - G.season <= 1).forEach(p => {
+  seniorSquad(G.club).filter(p => p.con - G.season <= 1 && !activeLoan(p)).forEach(p => {
     addNews('inbox', `${pname(p)}'s contract is expiring`, `${fullName(p)}'s deal ends in June. Offer a new contract or the player leaves on a free.`, { t: 'renew', pid: p.id });
   });
 }
