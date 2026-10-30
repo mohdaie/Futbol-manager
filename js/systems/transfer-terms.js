@@ -123,7 +123,7 @@ function saleReinvest(cid = G.club) {
 const REINVEST_ASK_DAYS = 56, REINVEST_FIN = { 'In debt': -0.6, Tight: -0.3, Stable: 0, Healthy: 0.1, Wealthy: 0.2 };
 function reinvestAskOdds(pts) {
   const r = saleReinvest(), conf = G.board.conf;
-  return clamp((conf - 45) / 40 + REINVEST_FIN[r.band] - (pts >= 20 ? 0.25 : 0) - (r.extra ? 0.15 : 0), 0.03, 0.9);
+  return clamp((conf - 45) / 40 + REINVEST_FIN[r.band] - (pts >= 20 ? 0.25 : 0) - (r.extra ? 0.15 : 0) + (typeof boardSeat === 'function' && boardSeat() ? 0.15 : 0), 0.03, 0.9); // a director's voice helps
 }
 function reinvestAskWait() {
   const last = G.board.reinvestAsk;

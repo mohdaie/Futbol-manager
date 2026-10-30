@@ -240,7 +240,7 @@ ACT.assistApply = () => {
 };
 ACT.pressA = ds => {
   const fx = userFixture(), pc = G.press[fx.id], a = (pc.Q || PRESS[pc.q]).a[+ds.k], e = a[1];
-  if (e.mor) seniorSquad(G.club).forEach(p => { p.mor = clamp(p.mor + e.mor, 0, 100); });
+  if (e.mor) { const m = Math.round(e.mor * (typeof freshFactor === 'function' ? freshFactor() : 1)); seniorSquad(G.club).forEach(p => { p.mor = clamp(p.mor + m, 0, 100); }); } // freshness: lifestyle.js
   if (e.fan) G.board.fans = clamp(G.board.fans + e.fan, 0, 100);
   if (e.board) G.board.conf = clamp(G.board.conf + e.board, 0, 100);
   pc.done = true; pc.said = 'You said: “' + a[0] + '”';

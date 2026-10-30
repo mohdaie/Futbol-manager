@@ -186,6 +186,7 @@ function seasonEnd() {
   table.forEach((r, i) => { const cl = G.clubs[r.id]; cl.rep = clamp(Math.round((cl.rep + (repOrder.indexOf(r.id) - i) * 0.4) * 10) / 10, 55, 95); });
   G.seasonReview = review;
   if ((pos > target + 5 && G.board.conf < 35) || G.board.conf < 10) { sack(`A ${ordinal(pos)}-place finish against a target of ${lcFirst(G.board.target.text)} has cost you your job.`); }
+  if (typeof lifestyleDividend === 'function') lifestyleDividend();
   review.divisionChanges = applyDivisionChanges();
   rollover();
 }
@@ -274,6 +275,7 @@ function sack(reason) {
 
 function takeJob(cid) {
   if (!G.clubs[cid] || G.clubs[cid].backgroundOnly || G.clubs[cid].foreignSquad) return false;
+  if (typeof sellSharesOnLeaving === 'function') sellSharesOnLeaving(cid);
   const old = G.club, wasOut = jobless();
   if (!wasOut) managerCloseEmployment(G.managerProfileId, 'Left for another club');
   G.club = cid;

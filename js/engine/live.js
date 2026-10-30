@@ -703,7 +703,7 @@ function openTeamTalk(L) {
 
 function applyTalk(k) {
   const L = LIVE, S = L.M.sides[L.bottom], O = L.M.sides[1 - L.bottom];
-  const eff = talkEffect(k, S.st.g - O.st.g);
+  const eff = Math.round(talkEffect(k, S.st.g - O.st.g) * (typeof freshFactor === 'function' ? freshFactor() : 1)); // a tired manager carries less weight (lifestyle.js)
   S.played.forEach(id => { const p = G.players[id]; p.mor = clamp(p.mor + eff + ri(-2, 2), 0, 100); });
   L.M.dirty = true;
   pushFeed(L, 'info', eff > 2 ? 'The players respond well to the team talk.' : eff < 0 ? 'The team talk does not go down well.' : 'The players take the message on board.', L.bottom);

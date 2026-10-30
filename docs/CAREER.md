@@ -48,3 +48,22 @@ are played by instant result with the assistant's team, press conferences are ha
 (an accepted sale is completed); any other transfer decision calls you back early. On return: a report with
 results, league position and board confidence before and after, the director's decisions and the headlines.
 "Come back now" on the home screen ends it early. A holiday cannot start while a non-bid decision is open.
+
+## Spending your own money (lifestyle)
+
+Code: `js/systems/lifestyle.js`; UI in `js/ui/screens-career.js` (manager profile → Lifestyle). Browser checks:
+`tests/lifestyle.cjs`. Everything is paid from the manager's personal bank (salary, bonuses, sponsorship) and
+shows in his transactions; nothing buys results.
+
+| Item | Prices | Effect |
+|---|---|---|
+| Car (one, part-exchanged) | £25k hatchback, £70k saloon, £180k sports car, £450k supercar | Prestige 1-4. Loses ~15% a year. |
+| Home (one, part-exchanged) | £450k flat, £1.2m family house, £4.5m country estate | Prestige 1.5/3/4.5. Value drifts, ~+3% a year. The first home bought while at a club: board confidence +3. |
+| Holiday trip (with a holiday) | city break £8k (+15), beach resort £40k (+30), luxury safari £150k (+50) | Freshness on return, on top of 15 per week away. |
+| Shares in your club (up to 25%) | 1% = club valuation / 100; valuation = 1.5m × (reputation − 50)² + half the cash, min £20m | Dividends: a quarter of the season's profit, pro rata. 10%: a board seat (+3 confidence, +15 points on the odds of asking the board for a bigger sale share). Sold at their value when you leave. |
+
+- **Prestige** (car tier + 1.5 × home tier, max 8.5) raises weekly personal sponsorship by 3% a point.
+- **Freshness** (0-100, starts at 80): −2 per match you take charge of, +3 in a week without one, +5 a week between
+  clubs, +15 a week on holiday. From 80 a season without a break ends near 40. Team talk and press-conference
+  morale effects are scaled by 0.6 + 0.4 × freshness / 100. Below 30 a news item suggests a break.
+- Retirement shows net worth (bank + assets + shares).

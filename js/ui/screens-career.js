@@ -3,7 +3,7 @@
    Career screens and sheets (career.js): between clubs, retirement, applying for a job, offers, resigning,
    retiring and holidays, plus the career section of the manager profile and the home banner. */
 
-const HOLIDAY_PICK = { len: 'w1', bids: 'reject' };
+const HOLIDAY_PICK = { len: 'w1', bids: 'reject', trip: 'none' };
 // Screens that still make sense without a club; anything else shows the between-clubs screen.
 const JOBLESS_SCREENS = new Set(['unemployed', 'news', 'manager', 'competitions', 'table', 'fixtures', 'stats', 'clubs', 'clubview', 'settings', 'more', 'gamestatus']);
 
@@ -36,7 +36,7 @@ SCREENS.retired = {
   render() {
     const C = careerState(), s = C.summary || {}, p = userManagerProfile();
     return `<div class="start review"><header class="st-hero">${avatarImg(G.avatar, 'av-hero')}<div class="eyebrow">${esc(s.season || seasonLabel())}</div><h1 class="logo">Retired</h1><p>${esc(G.manager)} has stepped away from management.</p></header>
-      <div class="card"><div class="kv"><div><small>Career score</small><b>${s.score ?? 0}</b></div><div><small>Seasons</small><b>${s.seasons ?? 0}</b></div><div><small>Clubs</small><b>${s.clubs ?? 0}</b></div><div><small>Trophies</small><b>${(s.trophies || []).length}</b></div><div><small>Honours</small><b>${s.awards ?? 0}</b></div><div><small>Career earnings</small><b>${money(s.earned || 0)}</b></div></div></div>
+      <div class="card"><div class="kv"><div><small>Career score</small><b>${s.score ?? 0}</b></div><div><small>Seasons</small><b>${s.seasons ?? 0}</b></div><div><small>Clubs</small><b>${s.clubs ?? 0}</b></div><div><small>Trophies</small><b>${(s.trophies || []).length}</b></div><div><small>Honours</small><b>${s.awards ?? 0}</b></div><div><small>Career earnings</small><b>${money(s.earned || 0)}</b></div>${s.netWorth != null ? `<div><small>Net worth</small><b>${money(s.netWorth)}</b></div>` : ''}</div></div>
       ${(s.trophies || []).length ? `<h2 class="lbl">Trophies</h2><div class="list">${s.trophies.map(t => `<div class="row"><span class="grow"><b>${esc(t.name)}</b><small>${esc(t.season)}</small></span></div>`).join('')}</div>` : ''}
       <h2 class="lbl">Career</h2><div class="list">${p.history.slice().reverse().map(h => `<div class="row"><span class="grow"><b>${esc(h.name)}</b><small>${esc(h.joined)}${h.left ? ' – ' + esc(h.left) + ' · ' + esc(h.reason) : ''}</small></span></div>`).join('')}</div>
       <button class="btn wide" data-a="newGame2">Start a new career</button></div>`;
@@ -46,10 +46,10 @@ SCREENS.retired = {
 // The career section of your manager profile: offers, applications, vacancies and what you can do now.
 function careerProfileHtml() {
   const C = careerState();
-  if (C.status !== 'employed') return offersHtml(C) + applicationsHtml(C) + vacanciesHtml(C);
+  if (C.status !== 'employed') return lifestyleHtml() + offersHtml(C) + applicationsHtml(C) + vacanciesHtml(C);
   return `<div class="card career-actions"><h3>Your future</h3><p class="muted">Take a break and let your assistant run things, step down, or end your career.</p>
       <div class="btns"><button class="btn sm" data-a="careerHolidayAsk">Go on holiday</button><button class="btn sm ghost" data-a="careerResignAsk">Resign</button><button class="btn sm ghost" data-a="careerRetireAsk">Retire</button></div></div>
-    ${offersHtml(C)}${applicationsHtml(C)}${vacanciesHtml(C)}`;
+    ${lifestyleHtml()}${offersHtml(C)}${applicationsHtml(C)}${vacanciesHtml(C)}`;
 }
 // Home: on holiday, and offers waiting.
 function careerBanner() {
@@ -61,6 +61,7 @@ function careerBanner() {
 function holidayReport(r) {
   if (!r) return;
   sheet(`<h3 class="sh-t">Welcome back</h3><p class="muted">${esc(r.why)} ${r.days} day${r.days === 1 ? '' : 's'} away.</p>
+    ${r.fresh ? `<div class="kvrow"><span>Freshness${r.trip && r.trip !== 'Stay at home' ? ' · ' + esc(r.trip) : ''}</span><b>${Math.round(r.fresh[0])} → ${Math.round(r.fresh[1])}</b></div>` : ''}
     <div class="kvrow"><span>League position</span><b>${ordinal(r.pos[0])} → ${ordinal(r.pos[1])}</b></div><div class="kvrow"><span>Board confidence</span><b>${Math.round(r.conf[0])}% → ${Math.round(r.conf[1])}%</b></div>
     ${r.results.length ? `<h4 class="lbl">Results</h4><div class="list">${r.results.map(x => `<div class="row"><span class="grow"><b>${esc(x.txt)}</b></span></div>`).join('')}</div>` : '<p class="muted">No matches while you were away.</p>'}
     ${r.handled.length ? `<h4 class="lbl">Your director</h4><div class="list">${r.handled.map(x => `<div class="row"><span class="grow">${esc(x)}</span></div>`).join('')}</div>` : ''}
@@ -83,11 +84,41 @@ ACT.careerResign = () => { closeSheet(true); resignJob(); go('unemployed'); };
 ACT.careerRetireAsk = () => sheet(`<h3 class="sh-t">Retire?</h3><p class="muted">This ends your career for good. You will see your career summary; the save is kept, but you cannot manage again in it.</p>
   <div class="btns"><button class="btn ghost" data-a="closeSheet">Not yet</button><button class="btn pri" data-a="careerRetire">Retire</button></div>`, { key: 'career:retire' });
 ACT.careerRetire = () => { closeSheet(true); retireCareer(); render(); };
-ACT.careerHolidayAsk = () => (Object.assign(HOLIDAY_PICK, { len: 'w1', bids: 'reject' }), sheet(`<h3 class="sh-t">Go on holiday</h3><p class="muted">Your assistant picks the team and plays your matches (instant results). You will be called back early if a transfer needs you.</p>
+ACT.careerHolidayAsk = () => (Object.assign(HOLIDAY_PICK, { len: 'w1', bids: 'reject', trip: 'none' }), sheet(`<h3 class="sh-t">Go on holiday</h3><p class="muted">Your assistant picks the team and plays your matches (instant results). You will be called back early if a transfer needs you.</p>
   <div class="field"><label>How long</label><div class="chips">${Object.entries(HOLIDAY_LENGTHS).map(([k, n], i) => `<button class="chip ${i === 1 ? 'on' : ''}" data-a="careerHolidayLen" data-v="${k}">${n}</button>`).join('')}</div></div>
   <div class="field"><label>Bids for your players</label><div class="seg"><button class="on" data-a="careerHolidayBids" data-v="reject">Reject all</button><button data-a="careerHolidayBids" data-v="value">Accept at market value</button></div></div>
+  <div class="field"><label>Trip <small>· freshness ${Math.round(lifestyle().fresh)} · bank ${money(lifestyle().bank)}</small></label><div class="chips">${Object.entries(TRIPS).map(([k, t]) => `<button class="chip ${k === 'none' ? 'on' : ''}" data-a="careerHolidayTrip" data-v="${k}" ${t.price > lifestyle().bank ? 'disabled' : ''}>${t.n}${t.price ? ' · ' + money(t.price) + ' · +' + t.fresh : ''}</button>`).join('')}</div><p class="muted">Every week away restores 15 freshness; a trip adds its own on top. A tired manager's team talks and press answers move morale less.</p></div>
   <button class="btn wide pri" data-a="careerHolidayGo">Start holiday</button>`, { key: 'career:holiday-start' }));
 ACT.careerHolidayLen = ds => { HOLIDAY_PICK.len = ds.v; document.querySelectorAll('[data-a=careerHolidayLen]').forEach(b => b.classList.toggle('on', b.dataset.v === ds.v)); };
 ACT.careerHolidayBids = ds => { HOLIDAY_PICK.bids = ds.v; document.querySelectorAll('[data-a=careerHolidayBids]').forEach(b => b.classList.toggle('on', b.dataset.v === ds.v)); };
-ACT.careerHolidayGo = () => { const r = startHoliday(HOLIDAY_PICK.len, HOLIDAY_PICK.bids); toast(r.msg); if (!r.ok) return; closeSheet(true); saveGame(); go('home'); startDayRun(); };
+ACT.careerHolidayGo = () => { const r = startHoliday(HOLIDAY_PICK.len, HOLIDAY_PICK.bids, HOLIDAY_PICK.trip); toast(r.msg); if (!r.ok) return; closeSheet(true); saveGame(); go('home'); startDayRun(); };
 ACT.careerHolidayEnd = () => { holidayReport(endHoliday('You came back early.')); saveGame(); render(); };
+
+/* ---------- lifestyle (lifestyle.js) ---------- */
+function lifestyleHtml() {
+  const p = lifestyle(), car = assetOf(p, 'car'), home = assetOf(p, 'home'), sh = p.shares, f = Math.round(p.fresh);
+  const row = (label, a, kind) => `<div class="row"><span class="grow"><b>${label}: ${a ? esc(a.n) : 'none'}</b><small>${a ? `Worth ${money(a.value)} · paid ${money(a.paid)}` : kind === 'car' ? 'A car lifts your profile with sponsors.' : 'A home lifts your profile, and one near your club pleases the board.'}</small></span>${a ? `<button class="btn sm ghost" data-a="lifeSell" data-k="${kind}">Sell</button>` : ''}<button class="btn sm" data-a="lifeShop" data-k="${kind}">${a ? 'Change' : 'Buy'}</button></div>`;
+  return `<div class="card lifestyle"><h3>Lifestyle</h3>
+    <div class="kvrow"><span>Freshness</span><b class="${f < 30 ? 'bad' : f < 50 ? 'warn' : ''}">${f}/100</b></div>${bar(f, f < 30 ? 'bad' : f < 50 ? 'warn' : 'good')}
+    <p class="muted">Falls about 2 a match and recovers in quiet weeks and on holiday. ${f < 50 ? 'Your team talks and press answers carry less weight: think about a break.' : 'Your team talks and press answers carry full weight.'}</p>
+    <div class="kvrow"><span>Personal bank</span><b>${money(p.bank)}</b></div><div class="kvrow"><span>Net worth</span><b>${money(netWorth(p))}</b></div>
+    <div class="kvrow"><span>Prestige</span><b>${prestige(p)} · sponsorship +${Math.round(prestige(p) * 3)}%</b></div>
+    <div class="list">${row('Car', car, 'car')}${row('Home', home, 'home')}
+    <div class="row"><span class="grow"><b>Club shares: ${sh ? sh.pct + '% of ' + esc(clubName(sh.club)) : 'none'}</b><small>${sh ? `Worth ${money(sharePrice(sh.club) * sh.pct)} · paid ${money(sh.paid)}${sh.pct >= BOARD_SEAT ? ' · board seat' : ` · ${BOARD_SEAT}% for a board seat`}` : jobless() ? 'Only in the club you manage.' : `1% of ${esc(clubName(G.club))} costs ${money(sharePrice())}.`}</small></span>${jobless() ? '' : '<button class="btn sm" data-a="lifeShares">Shares</button>'}</div></div></div>`;
+}
+ACT.lifeShop = ds => {
+  const kind = ds.k === 'home' ? 'home' : 'car', p = lifestyle(), old = assetOf(p, kind), credit = old ? old.value : 0;
+  sheet(`<h3 class="sh-t">${kind === 'car' ? 'Buy a car' : 'Buy a home'}</h3><p class="muted">From your personal bank (${money(p.bank)})${old ? `, with ${money(credit)} for your ${esc(old.n.toLowerCase())}` : ''}. ${kind === 'car' ? 'Cars lose about 15% a year.' : 'Homes move with the market, about +3% a year on average.'}</p>
+    <div class="list">${(kind === 'car' ? CARS : HOMES).map(x => `<button class="row act" data-a="lifeBuy" data-kind="${kind}" data-k="${x.k}" ${x.price > p.bank + credit || old?.k === x.k ? 'disabled' : ''}><span class="grow"><b>${esc(x.n)}</b><small>${money(x.price)} · prestige +${kind === 'car' ? x.tier : x.tier * 1.5}</small></span><span class="chev">›</span></button>`).join('')}</div>`, { key: 'life:shop' });
+};
+ACT.lifeBuy = ds => { const r = buyAsset(ds.kind, ds.k); toast(r.msg); if (!r.ok) return; saveGame(); closeSheet(true); render(); };
+ACT.lifeSell = ds => { const r = sellAsset(ds.k); toast(r.msg); saveGame(); render(); };
+ACT.lifeShares = () => {
+  const p = lifestyle(), have = p.shares?.club === G.club ? p.shares.pct : 0, price = sharePrice();
+  sheet(`<h3 class="sh-t">Shares in ${esc(clubName(G.club))}</h3><p class="muted">The club is valued at ${money(clubValuation())}, so 1% costs ${money(price)}. You own ${have}% (up to ${SHARE_MAX}%). Each season a quarter of the club's profit is paid out as dividends; ${BOARD_SEAT}% gives you a board seat, and the board listens more readily. Leaving the club sells your shares at their value then.</p>
+    <div class="btns">${[1, 5, 10].map(n => `<button class="btn sm" data-a="lifeSharesBuy" data-v="${n}" ${have + n > SHARE_MAX || price * n > p.bank ? 'disabled' : ''}>Buy ${n}% · ${money(price * n)}</button>`).join('')}</div>
+    ${have ? `<div class="btns">${[1, 5, have].filter((n, i, a) => n <= have && a.indexOf(n) === i).map(n => `<button class="btn sm ghost" data-a="lifeSharesSell" data-v="${n}">Sell ${n === have ? 'all' : n + '%'} · ${money(price * n)}</button>`).join('')}</div>` : ''}`, { key: 'life:shares' });
+};
+ACT.lifeSharesBuy = ds => { const r = buyShares(+ds.v); toast(r.msg); if (!r.ok) return; saveGame(); closeSheet(true); render(); };
+ACT.lifeSharesSell = ds => { const r = sellShares(+ds.v); toast(r.msg); saveGame(); closeSheet(true); render(); };
+ACT.careerHolidayTrip = ds => { HOLIDAY_PICK.trip = ds.v; document.querySelectorAll('[data-a=careerHolidayTrip]').forEach(b => b.classList.toggle('on', b.dataset.v === ds.v)); };

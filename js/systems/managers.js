@@ -64,7 +64,7 @@ const MANAGER_REAL_WORLD = {
 };
 Object.values(MANAGER_REAL_WORLD).forEach(ref => { ref.figures ||= [{ name: ref.name, nationality: ref.nationality, age: ref.age }]; });
 const MANAGER_STYLES = { tiki: 'Possession and positional play', gegen: 'High press and fast transitions', counter: 'Compact shape and counter-attacks', long: 'Direct play and second balls', bal: 'Balanced, adaptable football' };
-const MANAGER_INCOME_NAMES = { salary: 'Club salary', win: 'Match bonus', owner: 'Owner bonus', sponsor: 'Sponsorship and endorsements', award: 'Award bonus', signing: 'Signing bonus' };
+const MANAGER_INCOME_NAMES = { salary: 'Club salary', win: 'Match bonus', owner: 'Owner bonus', sponsor: 'Sponsorship and endorsements', award: 'Award bonus', signing: 'Signing bonus', sale: 'Sale of an asset', dividend: 'Club dividend' };
 
 function managerSalaryFor(c) {
   if (!c) return 0;
@@ -163,7 +163,7 @@ function managerPayWeek() {
     if (p.id === G.managerProfileId) {
       userSalary = salary;
       managerRecordIncome(p, 'salary', salary, `Weekly salary from ${theClub(c)}.`);
-      const sponsor = Math.round((c.rep * 65) + (p.awards.length * 250));
+      const sponsor = Math.round(((c.rep * 65) + (p.awards.length * 250)) * (1 + (typeof prestige === 'function' ? prestige(p) : 0) * 0.03)); // a car and a home lift the profile (lifestyle.js)
       if (sponsor > 0) managerRecordIncome(p, 'sponsor', sponsor, 'Weekly personal sponsorship and endorsement income.', true);
     } else {
       p.bank = Math.round((p.bank || 0) + salary);
