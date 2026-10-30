@@ -171,7 +171,7 @@ ACT.worldRound = ds => {
 function fixtureLinks(f, cid) {
   const home = f.h === cid, opp = home ? f.a : f.h;
   const us = home ? f.hg : f.ag, them = home ? f.ag : f.hg, result = played(f) ? 'r' + (f.winner ? f.winner === cid ? 'W' : 'L' : us > them ? 'W' : us < them ? 'L' : 'D') : '';
-  return `<div class="row"><span class="rd">${f.playoff ? 'PO' : f.fr ? 'FR' : f.r + 1}</span><span class="grow"><b>${clubLink(opp, badge(opp, 20) + ' ' + esc(clubName(opp)))}</b><small>${f.neutral ? 'Neutral' : home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}${f.penalties ? ' · Pens ' + f.penalties.join('–') : ''}</small></span><button class="res ${result}" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '–' + f.ag : 'Preview'}</button></div>`;
+  return `<div class="row"><span class="rd">${f.cup ? 'ESL' : f.playoff ? 'PO' : f.fr ? 'FR' : f.r + 1}</span><span class="grow"><b>${clubLink(opp, badge(opp, 20) + ' ' + esc(clubName(opp)))}</b><small>${f.neutral ? 'Neutral' : home ? 'Home' : 'Away'} · ${fxWhen(f)}${f.tv ? ' · TV' : ''}${f.penalties ? ' · Pens ' + f.penalties.join('–') : ''}</small></span><button class="res ${result}" data-a="fixturePage" data-id="${f.id}" aria-label="${played(f) ? 'Match report' : 'Match preview'}">${played(f) ? f.hg + '–' + f.ag : 'Preview'}</button></div>`;
 }
 ACT.fixturePage = ds => {
   const f = G.fixtures.find(f => f.id === +ds.id); if (!f) return toast('Fixture unavailable.');

@@ -29,6 +29,7 @@ function advanceWeek() {
   if (G.week % 6 === 5) G.staffPool = genStaffPool(userClub().rep);
   if (!jobless() && G.board.conf < 10 && G.week > 12) { sack('The board has lost confidence after a run of poor results.'); return 'sacked'; }
   updateCompetitionSeason();
+  if (typeof eslWeek === 'function') eslWeek();
   G.week++;
   G.day = 0;
   if (G.week >= SEASON_WEEKS) { const out = jobless(); seasonEnd(); return out ? 'ok' : jobless() ? 'sacked' : 'season'; }
@@ -203,6 +204,7 @@ function rollover() {
   if (typeof payInstalments === 'function') payInstalments(true);
   seasonFavourites();
   staffSeasonEnd();
+  if (typeof eslSeasonEnd === 'function') eslSeasonEnd(); // before the overseas tables reset
   if (typeof worldSimSeasonEnd === 'function') worldSimSeasonEnd();
   const S = G.season, c = userClub(), left = [];
   Object.values(G.players).forEach(p => {
@@ -246,6 +248,7 @@ function rollover() {
   if (typeof resetTrainingDev === 'function') resetTrainingDev();
   G.playoffs = null;
   G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
+  if (typeof ensureEsl === 'function') ensureEsl();
   G.press = {};
   G.flags = {};
   weeklyTransfers();

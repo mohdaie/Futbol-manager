@@ -318,7 +318,10 @@ CHG.round = v => { UI.tab.round = +v; render(); };
 
 SCREENS.competitions = {
   render() {
+    const esl = UI.tab.homeCompetition === 'ESL' && typeof eslScreenHtml === 'function';
     const competition = G.leagues.includes(UI.tab.homeCompetition) ? UI.tab.homeCompetition : leagueOf(G.club);
+    const seg = `<div class="seg">${G.leagues.map(id => `<button class="${!esl && competition === id ? 'on' : ''}" data-a="homeCompetition" data-id="${id}">${leagueName(id)}</button>`).join('')}${typeof ESL_NAME === 'string' ? `<button class="${esl ? 'on' : ''}" data-a="homeCompetition" data-id="ESL">${ESL_NAME}</button>` : ''}</div>`;
+    if (esl) return `<h1 class="h1">Competitions</h1>${seg}${eslScreenHtml()}`;
     const view = UI.tab.homeCompetitionView || 'table', tbl = leagueTable(competition);
     let content = '';
     if (view === 'fixtures') {
@@ -334,7 +337,7 @@ SCREENS.competitions = {
         </tbody></table></div>${leagueRulesHtml(competition)}`;
     }
     return `<h1 class="h1">Competitions</h1><p class="muted">${seasonLabel()} · ${esc(phaseLabel())}</p>
-      <div class="seg">${G.leagues.map(id => `<button class="${competition === id ? 'on' : ''}" data-a="homeCompetition" data-id="${id}">${leagueName(id)}</button>`).join('')}</div>
+      ${seg}
       ${tabs('homeCompetitionView', [['table', 'League table'], ['fixtures', 'Fixtures']], view)}${content}`;
   },
 };

@@ -189,7 +189,7 @@ async function dsChat(messages, note = 'request', opts = {}) {
 
 // Rough season cost estimate from typical call sizes.
 function aiSeasonEstimate() {
-  const matches = G ? G.fixtures.filter(f => !f.fr && !f.playoff).length : 380;
+  const matches = G ? G.fixtures.filter(f => !f.fr && !f.playoff && !f.cup).length : 380;
   const userMatches = G ? leagueRules().matches : 38;
   const jevCalls = matches * 3 + userMatches * 4 + 120, jevTok = 1500;
   const ds = aiCfg().ds, P = AI_PRICES[ds.model] || AI_PRICES['deepseek-flash'];
