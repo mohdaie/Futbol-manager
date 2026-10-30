@@ -113,7 +113,39 @@ function saleReinvest(cid = G.club) {
   const c = G.clubs[cid], cover = c.bal / Math.max(1, clubWageBill(c) * 52);
   const [, band, base] = c.bal < 0 ? REINVEST_BANDS[0] : REINVEST_BANDS.find(([max], i) => i && cover < max);
   const conf = G.board?.conf ?? 50, boost = conf >= 75 ? 5 : conf < 30 ? -10 : 0;
-  return { band, pct: clamp(base + boost, 25, 90), boost, cover };
+  // Extra points the board agreed when asked (askBoardReinvest): this club, this season, and not while in debt.
+  const ask = G.board?.reinvestAsk, extra = ask && ask.club === cid && ask.season === G.season && c.bal >= 0 ? ask.pts : 0;
+  return { band, pct: clamp(base + boost + extra, 25, 90), boost, extra, cover };
+}
+// Asking the board to let you reinvest more of each sale (+10 or +20 points, for the rest of the season). Its
+// answer: confidence in you first, then the club's finances; the bigger ask is harder. Once every 8 weeks; a
+// board with little faith in you thinks less of you for asking.
+const REINVEST_ASK_DAYS = 56, REINVEST_FIN = { 'In debt': -0.6, Tight: -0.3, Stable: 0, Healthy: 0.1, Wealthy: 0.2 };
+function reinvestAskOdds(pts) {
+  const r = saleReinvest(), conf = G.board.conf;
+  return clamp((conf - 45) / 40 + REINVEST_FIN[r.band] - (pts >= 20 ? 0.25 : 0) - (r.extra ? 0.15 : 0), 0.03, 0.9);
+}
+function reinvestAskWait() {
+  const last = G.board.reinvestAsk;
+  return last && last.club === G.club ? Math.max(0, Math.ceil((last.day + REINVEST_ASK_DAYS - todayNo()) / 7)) : 0;
+}
+function askBoardReinvest(pts) {
+  pts = pts >= 20 ? 20 : 10;
+  const wait = reinvestAskWait();
+  if (wait) return { ok: false, msg: `The board will not discuss it again for ${wait} week${wait === 1 ? '' : 's'}.` };
+  const before = saleReinvest(), odds = reinvestAskOdds(pts), roll = R(), prev = before.extra;
+  const got = roll < odds ? pts : roll < odds + 0.25 ? pts / 2 : 0, total = Math.min(20, prev + got);
+  G.board.reinvestAsk = { club: G.club, season: G.season, day: todayNo(), pts: total, asked: pts };
+  const share = saleReinvest().pct;
+  let msg;
+  if (got === pts) msg = `The board agrees: ${share}% of sale cash goes to your transfer budget until the end of the season.`;
+  else if (got) msg = `The board meets you halfway: +${got} points, so ${share}% of sale cash until the end of the season.`;
+  else {
+    if (G.board.conf < 45) G.board.conf = Math.max(0, G.board.conf - 2);
+    msg = `The board refuses. ${before.band === 'In debt' || before.band === 'Tight' ? 'The club needs the money.' : G.board.conf < 45 ? 'It wants results before it trusts you with more.' : 'It wants to keep a cushion for now.'} You keep ${share}% of sale cash.`;
+  }
+  addNews('club', got ? 'Board backs your transfer plans' : 'Board turns down your request', msg);
+  return { ok: !!got, got, share, msg };
 }
 const reinvested = amount => Math.round(amount * saleReinvest().pct / 100);
 function transferCash(from, to, amount, reserveBudget = false) {

@@ -193,7 +193,7 @@ SCREENS.finance = {
     const h = G.balHist, mn = Math.min(...h, 0), mx = Math.max(...h, 1), W = 320, H = 90;
     const pts = h.map((v, i) => `${(i / Math.max(1, h.length - 1)) * W},${H - ((v - mn) / (mx - mn || 1)) * (H - 10) - 5}`).join(' ');
     const top = seniorSquad(G.club).sort((a, b) => b.wage - a.wage).slice(0, 8);
-    const rights = Object.values(G.players).filter(p => p.sellOn?.club === G.club || activeBuyBack(p)), reinvest = saleReinvest();
+    const rights = Object.values(G.players).filter(p => p.sellOn?.club === G.club || activeBuyBack(p)), reinvest = saleReinvest(), askWait = reinvestAskWait();
     return `<h1 class="h1">Finances</h1>
       <div class="tiles">
         <div class="tile"><small>Balance</small><b class="${c.bal < 0 ? 'bad' : ''}">${money(c.bal)}</b><span>${c.bal < 0 ? 'In the red' : 'Healthy'}</span></div>
@@ -202,8 +202,15 @@ SCREENS.finance = {
         <div class="tile"><small>Wage budget</small><b>${wageFmt(G.fin.wb)}</b><span>${wageFmt(Math.max(0, G.fin.wb - bill))} free</span></div>
       </div>
       <div class="card transfer-commitments"><h3>Transfer commitments</h3><div class="kvrow"><span>Future payments owed</span><b>${money(commitments.owed)}</b></div><div class="kvrow"><span>Future payments due to us</span><b>${money(commitments.due)}</b></div><div class="kvrow"><span>Owed within 12 months</span><b>${money(commitments.nextYear)}</b></div>
-      <p class="muted">Bank balance and the income/expenditure ledger record cash when paid. The full guaranteed purchase fee is reserved from transfer budget at signing. The board releases ${reinvest.pct}% of sale cash received to transfer budget: ${reinvest.band.toLowerCase()} finances (balance ${reinvest.cover.toFixed(1)}× the yearly wage bill)${reinvest.boost > 0 ? ', plus 5 points for its confidence in you' : reinvest.boost < 0 ? ', minus 10 points while its confidence in you is low' : ''}. In debt 30%, tight 40%, stable 50%, healthy 65%, wealthy 80%.</p>
+      <p class="muted">Bank balance and the income/expenditure ledger record cash when paid. The full guaranteed purchase fee is reserved from transfer budget at signing. The board releases ${reinvest.pct}% of sale cash received to transfer budget: ${reinvest.band.toLowerCase()} finances (balance ${reinvest.cover.toFixed(1)}× the yearly wage bill)${reinvest.boost > 0 ? ', plus 5 points for its confidence in you' : reinvest.boost < 0 ? ', minus 10 points while its confidence in you is low' : ''}${reinvest.extra ? `, plus ${reinvest.extra} points agreed with the board` : ''}. In debt 30%, tight 40%, stable 50%, healthy 65%, wealthy 80%.</p>
       <div class="list">${commitments.rows.slice().sort((a,b)=>(a.due||weekDate(SEASON_WEEKS,a.season).getTime())-(b.due||weekDate(SEASON_WEEKS,b.season).getTime())).slice(0,20).map(row=>`<div class="row"><span class="grow"><b>${row.from===G.club?'Pay':'Receive'} ${money(row.amount)}</b><small>${esc(row.name||G.players[row.pid]&&fullName(G.players[row.pid])||'Transfer')} · ${row.due?fmtDate(row.due,false):'End of '+seasonLabel(row.season)} · ${esc(clubName(row.from===G.club?row.to:row.from))}</small></span></div>`).join('')||'<p class="muted">No outstanding instalments.</p>'}</div>${commitments.rows.length>20?`<p class="muted">Showing the next 20 of ${commitments.rows.length} payments.</p>`:''}</div>
+      <div class="card reinvest"><h3>Sale reinvestment</h3>
+        <div class="kvrow"><span>Share of sale cash for transfers</span><b>${reinvest.pct}%</b></div>
+        <div class="kvrow"><span>Finances</span><b>${reinvest.band} (${reinvest.cover.toFixed(1)}× yearly wages)</b></div>
+        ${reinvest.boost ? `<div class="kvrow"><span>Board confidence</span><b>${reinvest.boost > 0 ? '+' : ''}${reinvest.boost} points</b></div>` : ''}
+        ${reinvest.extra ? `<div class="kvrow"><span>Agreed with the board</span><b>+${reinvest.extra} points to the end of ${seasonLabel()}</b></div>` : ''}
+        ${askWait ? `<p class="muted">You can ask the board again in ${askWait} week${askWait === 1 ? '' : 's'}.</p>` : reinvest.extra >= 20 ? '<p class="muted">The board will not go beyond +20 points this season.</p>' : `<p class="muted">Ask the board to let you reinvest more of each sale for the rest of the season. Board confidence matters most, then the finances.</p>
+        <div class="btns">${[10, 20].filter(v => reinvest.extra + v <= 20).map(v => { const o = reinvestAskOdds(v); return `<button class="btn sm" data-a="askReinvest" data-v="${v}">Ask for +${v} points <small>· ${o >= 0.6 ? 'likely' : o >= 0.3 ? 'possible' : 'unlikely'}</small></button>`; }).join('')}</div>`}</div>
       <div class="card"><h3>Balance trend</h3>${h.length < 3 ? '<p class="muted">The trend fills in as the weeks pass.</p>' : `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Club balance over recent weeks"><polyline points="0,${H} ${pts} ${W},${H}" class="area"/><polyline points="${pts}" class="line"/></svg><div class="spark-l"><span>${money(mn)}</span><span>${money(mx)}</span></div>`}</div>
       <div class="card"><h3>Adjust budgets</h3><p class="muted">Every £1k a week of wage budget is worth £100k of transfer budget.</p>
         <div class="btns">${[[-10000, '−£10k/w wages'], [-1000, '−£1k/w'], [1000, '+£1k/w'], [10000, '+£10k/w wages']].map(([v, n]) => `<button class="btn sm" data-a="budget" data-v="${v}">${n}</button>`).join('')}</div></div>
@@ -216,6 +223,7 @@ SCREENS.finance = {
       <div class="list">${top.map(p => playerRow(p, `<span class="stat"><b>${wageFmt(p.wage)}</b><small>to ${p.con}</small></span>`, { noBadge: true })).join('')}</div>`;
   },
 };
+ACT.askReinvest = ds => { const r = askBoardReinvest(+ds.v); toast(r.msg); render(); };
 ACT.budget = ds => { if (!adjustBudgets(+ds.v)) toast('Not enough budget to move.'); render(); };
 
 /* ---------- staff ---------- */
