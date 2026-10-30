@@ -217,13 +217,14 @@ function giveBall(M, s, i) {
   if (B.offSet && B.offS === s && (B.offSet & (1 << i)) && !M.sim.rs) { B.offSet = 0; return offside(M, s, i, null); }
   if (B.offS !== s) B.offSet = 0;
   if (M.sim.poss !== s) {
+    if (!M.sim.rs && toOwn(s, p.x, p.y)[1] < 0.5) M.sides[s].st.hr = (M.sides[s].st.hr || 0) + 1; // won back in their half
     const quick = counterpressState(M,s).active;
     beginCounterpress(M, M.sim.poss, B.x, B.y);
     M.sim.momentum = null; M.sim.poss = s; M.sim.turn = M.sim.t;
     if (!M.sim.rs) M.sim.tr = { s, t:M.sim.t, quick:!!quick };
   } // won in open play: a transition
   if (M.evidence) evidenceAction(M, 'possession', s, { slot: i, player: p.id, previousSide: B.os, previousSlot: B.oi, xy: [evidenceRound(p.x), evidenceRound(p.y)] });
-  if (toOwn(s, p.x, p.y)[1] < 0.3 && M.sim.t - (M.sim.lastAtt || -99) > 8) { M.sim.lastAtt = M.sim.t; mark(M, 'attack', s); }
+  if (toOwn(s, p.x, p.y)[1] < 0.3 && M.sim.t - (M.sim.lastAtt || -99) > 8) { M.sim.lastAtt = M.sim.t; mark(M, 'attack', s); M.sides[s].st.da = (M.sides[s].st.da || 0) + 1; }
   B.os = s; B.oi = i; B.ls = s; B.li = i; B.fl = null; B.x = p.x; B.y = p.y; B.z = 0; B.vx = B.vy = B.vz = 0;
   B.dt = decideDelay(M, s, i, ENG.touch) * (transition(M, s) === 'ctr' ? 0.6 : 1);
   { const bk = backness(s, p); if (bk > 0.45 && !M.sim.rs) B.dt += (bk - 0.45) * 1.2; } // 1c: back to goal, he needs a touch to turn
@@ -533,10 +534,11 @@ function carrierDecide(M, s, i, o = {}) {
     let will = (1 + b('sh') * 0.6) * (0.85 + (ac(S, i, 'fla') - 10) * 0.02) * [0.8, 0.9, 1, 1.1, 1.2][ment] * ENG.shoot * shotNerve(S, i);
     if (thru1) will *= 1 + (12 - ac(S, i, 'cmp')) * 0.04;
     if (finesseOn(M, s, i)) will *= 1.12; // his trademark: cutting in to curl it
+    if (S.tsh?.k === 'shoot') will *= 1.5; // tactical shout: shoot on sight
     // A miss costs the possession we actually have here, not a fixed premium
     // larger than most shooting chances. Poor angles/pressure still lower xG.
     const missCost = Math.min(ENG.keepShot, lossCost * 0.25);
-    opts.push({ k: 'shot', xg, v: xg * 1.15 * will - (1 - xg) * missCost, w: will });
+    opts.push({ k: 'shot', xg, v: xg * 1.15 * will - (1 - xg) * missCost + (S.tsh?.k === 'shoot' ? 0.01 : 0), w: will });
   }
   // Passes to team-mates (and through balls into space ahead of runners).
   const range = 20 + vis * 1.1 + [-4, 0, 14][pass] + (gk ? 25 : 0), longOk = gk || pass === 2 || vis >= 13 || bh(S, i, 'rk') > 0.2;
@@ -570,7 +572,8 @@ function carrierDecide(M, s, i, o = {}) {
     const ctrBack = trn === 'ctr' && fwdMetres < -1 ? 0.02 : 0;
     // An additive reward also improves a currently negative option; multiplying
     // a negative utility would accidentally discourage the forward release.
-    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style + ctrRelease - ctrBack, risk, rpress, esc });
+    const toWing = S.tsh?.k === 'wide' && oy < 0.6 && Math.abs(tx - PW / 2) > 20 && Math.abs(p.x - PW / 2) < 20 ? 0.006 * (1 - risk) : 0; // the wide shout: get it out to the flanks
+    opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style + ctrRelease - ctrBack + toWing, risk, rpress, esc });
     if (!air && !gk && !thr && j && len < 18 && oy < 0.62 && !wall) { const two = oneTwo(M, s, i, j, tx, ty, risk, lossCost); if (two) opts.push(two); }
     if (wall && j === wall.r) { const back = wallReturn(M, s, i, j, lossCost); if (back) opts.push(back); }
     // Through ball into the space in behind for a player making a run.
@@ -582,11 +585,11 @@ function carrierDecide(M, s, i, o = {}) {
     }
   });
   // Cross from a wide area near the box.
-  const wide = ox < 0.22 || ox > 0.78;
-  if (!gk && !thr && wide && oy < 0.33) {
+  const wideShout = S.tsh?.k === 'wide', wide = ox < (wideShout ? 0.28 : 0.22) || ox > (wideShout ? 0.72 : 0.78);
+  if (!gk && !thr && wide && oy < (wideShout ? 0.38 : 0.33)) {
     // 7.4: cross when runners are attacking the box (already in it or on their way to it).
     const inBox = TP.filter((q, j) => q && j && j !== i && ((toOwn(s, q.x, q.y)[1] < 0.2 && Math.abs(toOwn(s, q.x, q.y)[0] - 0.5) < 0.22) || (toOwn(s, q.tx, q.ty)[1] < 0.2 && Math.abs(toOwn(s, q.tx, q.ty)[0] - 0.5) < 0.22))).length;
-    if (inBox) opts.push({ k: 'cross', v: ENG.cross * (0.03 + inBox * 0.018) * (1 + b('cr') * 0.6) * (ac(S, i, 'cro') / 12) * [0.75, 1, 1.25][S.width ?? 1] * (1 + (O.line === 2 ? 0.05 : 0)) });
+    if (inBox) opts.push({ k: 'cross', v: (wideShout ? 0.008 : 0) + (wideShout ? 1.6 : 1) * ENG.cross * (0.03 + inBox * 0.018) * (1 + b('cr') * 0.6) * (ac(S, i, 'cro') / 12) * [0.75, 1, 1.25][S.width ?? 1] * (1 + (O.line === 2 ? 0.05 : 0)) });
   }
   // Carry it forward, or take the defender on.
   if (!gk && !thr) {
@@ -660,7 +663,7 @@ function carrierDecide(M, s, i, o = {}) {
 // to a better opportunity need not treat shooting as the default escape.
 function refineShotChoice(M,s,i,options,pressure) {
   const shot=options.find(o=>o.k==='shot');
-  if (!shot || shot.xg>=.08) return;
+  if (!shot || shot.xg>=.08 || M.sides[s].tsh?.k==='shoot') return; // told to shoot on sight, he does not talk himself out of it
   const S=M.sides[s], p=P_(M,s,i);
   const alternatives=options.filter(o=>{
     if (o.k==='escape') return o.risk<.3 && o.v>shot.v;
@@ -731,11 +734,12 @@ function finesseOn(M, s, i) {
 function carryDir(M, s, i) {
   const p = P_(M, s, i), S = M.sides[s], [ox, oy] = toOwn(s, p.x, p.y), role = roleName(S, i);
   let dx = (PW / 2 - p.x) * 0.25, dy = fwdY(s) * 10;
+  // (The 'get it wide' shout sends every wide player down the line like this.)
   // 7.4: in the attacking half a Winger goes down the line to the byline, then turns towards the cut-back
   // zone; an Inside Forward / Inverted Winger cuts inside into the half-space (more so on his stronger foot).
   if (oy < 0.5 && (ox < 0.25 || ox > 0.75)) {
     const side = ox < 0.5 ? -1 : 1, pl = G.players[S.on[i]];
-    if (role === 'Winger' || role === 'Wing-Back' || role === 'Wide Midfielder') { dx = oy < 0.12 ? (PW / 2 - p.x) * 0.6 : (PW / 2 - p.x) * 0.05; dy = fwdY(s) * (oy < 0.12 ? 2 : 10); }
+    if (role === 'Winger' || role === 'Wing-Back' || role === 'Wide Midfielder' || S.tsh?.k === 'wide') { dx = oy < 0.12 ? (PW / 2 - p.x) * 0.6 : (PW / 2 - p.x) * 0.05; dy = fwdY(s) * (oy < 0.12 ? 2 : 10); }
     else if (role === 'Inside Forward' || role === 'Inverted Winger') {
       const strong = pl && (pl.foot === 'Either' || (side > 0 ? pl.foot === 'Left' : pl.foot === 'Right')) ? 1 : 0.55;
       const [hx] = toWorld(s, 0.5 + side * 0.17, oy); dx = (hx - p.x) * 0.9 * strong; dy = fwdY(s) * 6;

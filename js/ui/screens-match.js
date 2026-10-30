@@ -300,6 +300,9 @@ ACT.instant2 = () => { if (LIVE && !LIVE.done) return liveInstant(); };
 ACT.toPost = () => { if (LIVE.finishing) return; const fid = LIVE.fid; go('post', { fid }); LIVE = null; };
 ACT.talk = ds => applyTalk(ds.k);
 ACT.shout = ds => applyShout(ds.k);
+ACT.tshout = ds => applyTacticalShout(ds.k);
+ACT.tshoutKeep = () => applyTacticalShout('keep');
+ACT.tshoutEnd = () => applyTacticalShout('end');
 ACT.liveSheet = ds => {
   const L = LIVE;
   if (!L || L.done) return;

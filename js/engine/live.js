@@ -661,6 +661,14 @@ function commLine(L, ev) {
     case 'foul': return `Foul by ${n(ev.pid)}. Free kick to ${tn}.`;
     case 'offside': return `Flag up. ${n(ev.pid)} ${pick(['is offside, timing his run too early', 'is caught offside', 'strays beyond the last defender', 'has gone too soon. Offside'])}.`;
     case 'inj': return `${n(ev.pid)} is down with a suspected ${ev.inj.toLowerCase()}.`;
+    case 'tsh': {
+      const n = (TACTICAL_SHOUTS.find(x => x.k === ev.k) || { n: 'the change' }).n, who = S.user ? G.manager : `The ${clubName(S.cid)} manager`;
+      if (ev.res === 'start') return `${who} on the touchline: ${n.toLowerCase()}!`;
+      if (ev.res === 'keep') return `${TheClub(S.cid)}: "${n}" is working (${ev.why}). It stays.`;
+      if (ev.res === 'extend') return `${TheClub(S.cid)}: no clear verdict yet on "${n.toLowerCase()}" (${ev.why}). Five more minutes.`;
+      if (ev.res === 'revert') return `${TheClub(S.cid)}: "${n}" is not working (${ev.why}). Back to the main tactic.`;
+      return `${TheClub(S.cid)} go back to the main tactic.`;
+    }
     case 'tac': return `${TheClub(S.cid)} ${MGR_SAY[ev.opt] || 'change their approach'}.`;
     case 'sub': return `Substitution, ${clubName(S.cid)}: ${n(ev.pid)} on, ${n(ev.out)} off.`;
     default: return '';
@@ -717,6 +725,22 @@ function applyShout(k) {
   M.dirty = true;
   pushFeed(L, 'info', `${G.manager} on the touchline: ${SHOUTS.find(s => s.k === k).n}.`, L.bottom);
   closeSheet();
+}
+
+// Tactical shouts (TACTICAL_SHOUTS): start one, keep it whatever the staff measure says, or go back to the main tactic.
+function applyTacticalShout(k) {
+  const L = LIVE, M = L.M, S = M.sides[L.bottom];
+  const ev = k === 'keep' ? (tacticalShoutKeep(M, S), null) : k === 'end' ? tacticalShoutEnd(M, S) : tacticalShout(M, S, k);
+  if (k === 'keep') pushFeed(L, 'info', `${G.manager} wants ${TACTICAL_SHOUTS.find(x => x.k === S.tsh?.k)?.n.toLowerCase() || 'it'} kept, whatever the numbers say.`, L.bottom);
+  if (ev) { const txt = commLine(L, ev); if (txt) pushFeed(L, 'info', txt, L.bottom); }
+  closeSheet();
+}
+function tacticalShoutsHtml(M, S) {
+  const t = S.tsh, cur = t && TACTICAL_SHOUTS.find(x => x.k === t.k);
+  const state = !t ? '' : `<p class="note">Active: <b>${cur.n}</b> since ${t.from}'. ${t.keep ? 'Kept until you change it.' : `Staff check at ${t.until}'${t.ext ? ' (extra 5 minutes, unclear so far)' : t.kept ? ' (working so far)' : ''}.`}</p>
+    <div class="btns">${t.keep ? '' : '<button class="btn sm" data-a="tshoutKeep">Keep it</button>'}<button class="btn sm" data-a="tshoutEnd">Back to main tactic</button></div>`;
+  return `<h4 class="lbl">Tactical shouts <small>· judged after 10 minutes, kept if they work</small></h4>${state}
+    <div class="list">${TACTICAL_SHOUTS.map(x => `<button class="row act" data-a="tshout" data-k="${x.k}" ${t && t.k === x.k ? 'disabled' : ''}><span class="grow"><b>${x.n}</b><small>${x.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`;
 }
 
 async function liveInstant() {
@@ -810,7 +834,7 @@ function openLiveSheet(kind) {
   }
   if (kind === 'shouts') {
     const active = M.shout ? `<p class="note">Active: ${SHOUTS.find(s => s.k === M.shout.k).n} until ${M.shout.until}'</p>` : '';
-    sheet(`<h3 class="sh-t">Touchline shouts</h3>${active}<div class="list">${SHOUTS.map(s => `<button class="row act" data-a="shout" data-k="${s.k}" ${M.shout ? 'disabled' : ''}><span class="grow"><b>${s.n}</b><small>${s.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`, opts);
+    sheet(`<h3 class="sh-t">Touchline shouts</h3>${tacticalShoutsHtml(M, S)}<h4 class="lbl">Motivation</h4>${active}<div class="list">${SHOUTS.map(s => `<button class="row act" data-a="shout" data-k="${s.k}" ${M.shout ? 'disabled' : ''}><span class="grow"><b>${s.n}</b><small>${s.d}</small></span><span class="chev">›</span></button>`).join('')}</div>`, opts);
     return;
   }
   if (kind === 'tactics') {
