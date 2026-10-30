@@ -122,6 +122,7 @@ async function aiFetch(url, body, headers, timeout) {
     let data = null;
     try { data = JSON.parse(text); } catch (e) { /* not JSON */ }
     if (!r.ok) {
+      if (r.status === 429) { const e = new Error('AI unavailable.'); e.limited = true; throw e; } // relay fair-use limit: not shown to players
       const msg = (data && (data.error && (data.error.message || data.error) || data.detail || data.message)) || text.slice(0, 160);
       throw new Error(`HTTP ${r.status}: ${typeof msg === 'string' ? msg : JSON.stringify(msg).slice(0, 160)}`);
     }
@@ -136,10 +137,15 @@ async function aiFetch(url, body, headers, timeout) {
 // True when a service is switched on, has a key or proxy, and (optionally) a feature is ticked.
 function aiReady(svc, feat) {
   const c = aiCfg()[svc];
-  return !!(c.on && (c.mode === 'direct' ? c.key : c.mode === 'relay' ? c.key && c.proxy : c.proxy) && (!feat || c.feat[feat]));
+  return !!(!aiPaused() && c.on && (c.mode === 'direct' ? c.key : c.mode === 'relay' ? c.key && c.proxy : c.proxy) && (!feat || c.feat[feat]));
 }
 
+// The relay answers 429 once this installation (or the whole game) has used its daily AI allowance. Both services
+// pause for an hour and every feature falls back to the engine, with nothing shown to the player.
+let AI_PAUSED_UNTIL = 0;
+const aiPaused = () => AI_PAUSED_UNTIL > Date.now();
 function aiGuard(svc) {
+  if (aiPaused()) throw Object.assign(new Error('AI unavailable.'), { limited: true });
   const c = aiCfg()[svc];
   if (c.mode !== 'proxy' && !c.key) throw new Error('Add an API key first.');
   if (c.mode !== 'direct' && !c.proxy) throw new Error('Add a proxy URL first.');
@@ -165,7 +171,7 @@ async function jevAsk(state, questions, note = 'request', opts = {}) {
     const ms = Math.round(performance.now() - t0), inTok = (res.usage && res.usage.input_tokens) || 0;
     aiRecord('jev', true, ms, inTok, (res.usage && res.usage.output_tokens) || 0, inTok * AI_PRICES.jev.in / 1e6, note);
     return { ...res, ms };
-  } catch (e) { aiRecord('jev', false, Math.round(performance.now() - t0), 0, 0, 0, note + ': ' + e.message); throw e; }
+  } catch (e) { if (e.limited) AI_PAUSED_UNTIL = Date.now() + 36e5; else aiRecord('jev', false, Math.round(performance.now() - t0), 0, 0, 0, note + ': ' + e.message); throw e; }
 }
 
 // DeepSeek chat completion (OpenAI format). Returns { text, usage, cost, ms }.
@@ -184,7 +190,7 @@ async function dsChat(messages, note = 'request', opts = {}) {
     const ms = Math.round(performance.now() - t0), u = res.usage || {}, cost = dsCost(c.model, u);
     aiRecord('ds', true, ms, u.prompt_tokens || 0, u.completion_tokens || 0, cost, note);
     return { text: (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content || '').trim(), usage: u, cost, ms, model: res.model, finishReason: res.choices?.[0]?.finish_reason || null };
-  } catch (e) { aiRecord('ds', false, Math.round(performance.now() - t0), 0, 0, 0, note + ': ' + e.message); throw e; }
+  } catch (e) { if (e.limited) AI_PAUSED_UNTIL = Date.now() + 36e5; else aiRecord('ds', false, Math.round(performance.now() - t0), 0, 0, 0, note + ': ' + e.message); throw e; }
 }
 
 // Rough season cost estimate from typical call sizes.

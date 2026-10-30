@@ -25,4 +25,24 @@ async function serverKey(): Promise<string | null> {
   return rows[0]?.value ?? null;
 }
 
-Deno.serve(req => handleDeepSeek(req, fetch, recordDiagnostic, serverKey));
+// Fair use: requests per installation and in total over a rolling 24 hours, counted from the usage log.
+// Override with the AI_DAILY_PLAYER_LIMIT and AI_DAILY_GLOBAL_LIMIT secrets. Fails open on any error.
+async function countSince(filter: string): Promise<number> {
+  const base = Deno.env.get('SUPABASE_URL');
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!base || !key) return 0;
+  const since = new Date(Date.now() - 864e5).toISOString();
+  const response = await fetch(base + '/rest/v1/futbol_manager_ai_requests?select=id&created_at=gte.' + encodeURIComponent(since) + filter, {
+    headers: { apikey: key, Authorization: 'Bearer ' + key, Prefer: 'count=exact', Range: '0-0' }, signal: AbortSignal.timeout(2000),
+  });
+  if (!response.ok) throw new Error('Usage count failed.');
+  return Number((response.headers.get('content-range') || '').split('/')[1]) || 0;
+}
+async function quota(source: string | null): Promise<'player' | 'global' | null> {
+  const playerLimit = Number(Deno.env.get('AI_DAILY_PLAYER_LIMIT')) || 600, globalLimit = Number(Deno.env.get('AI_DAILY_GLOBAL_LIMIT')) || 15000;
+  const [player, global] = await Promise.all([
+    countSince(source ? '&source_id=eq.' + encodeURIComponent(source) : '&source_id=is.null'), countSince('')]);
+  return global >= globalLimit ? 'global' : player >= playerLimit ? 'player' : null;
+}
+
+Deno.serve(req => handleDeepSeek(req, fetch, recordDiagnostic, serverKey, quota));
