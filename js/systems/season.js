@@ -30,6 +30,7 @@ function advanceWeek() {
   if (!jobless() && G.board.conf < 10 && G.week > 12) { sack('The board has lost confidence after a run of poor results.'); return 'sacked'; }
   updateCompetitionSeason();
   if (typeof eslWeek === 'function') eslWeek();
+  if (typeof cupsWeek === 'function') cupsWeek();
   G.week++;
   G.day = 0;
   if (G.week >= SEASON_WEEKS) { const out = jobless(); seasonEnd(); return out ? 'ok' : jobless() ? 'sacked' : 'season'; }
@@ -249,6 +250,7 @@ function rollover() {
   G.playoffs = null;
   G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
   if (typeof ensureEsl === 'function') ensureEsl();
+  if (typeof ensureCups === 'function') ensureCups();
   G.press = {};
   G.flags = {};
   weeklyTransfers();

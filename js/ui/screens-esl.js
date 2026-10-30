@@ -34,3 +34,28 @@ function eslScreenHtml() {
   }
   return head + tabs('eslView', [['groups', 'Groups'], ['ko', 'Knockouts'], ['prize', 'Prize money'], ['honours', 'Winners']], view) + body;
 }
+
+/* ---------- domestic cups (cups.js) ---------- */
+function cupScreenHtml(id) {
+  const def = CUP_DEFS[id], C = G.cups?.[id], view = ['rounds', 'prize', 'honours'].includes(UI.tab.cupView) ? UI.tab.cupView : 'rounds';
+  const mine = C && !C.skipped && !jobless() ? cupStatus(id, G.club) : null;
+  const head = !C || C.skipped ? `<p class="note">The ${def.name} starts next season: this career began after its first round.</p>`
+    : `<p class="muted">${seasonLabel()} · ${C.entrants.length} clubs. ${def.weekend ? 'Ties on a Saturday when both clubs are free, otherwise midweek; semi-finals and final at a neutral ground.' : 'Midweek rounds, two-legged semi-finals and a final at a neutral ground.'} One match per tie (extra time and penalties if level).${mine ? ` <b>${esc(clubName(G.club))}: ${esc(mine)}</b>${C.prizes[G.club] ? ' · prize money ' + money(C.prizes[G.club]) : ''}.` : ''}</p>`;
+  let body = '';
+  if (C && !C.skipped && view === 'rounds') {
+    const score = f => (played(f) ? `${f.hg}-${f.ag}${f.penalties ? ` (${f.penalties.join('-')} pens)` : ''}` : fxWhen(f));
+    const tie = t => {
+      const fs = t.legs.map(fid => G.fixtures.find(f => f.id === fid)), a = fs[0];
+      const legs = fs.length > 1 ? `1st leg ${score(fs[0])} · 2nd leg ${score(fs[1])}` : score(a);
+      return `<div class="row ${[a.h, a.a].includes(G.club) ? 'me' : ''}"><span class="grow"><b>${esc(clubName(a.h))} v ${esc(clubName(a.a))}</b><small>${legs}${a.neutral ? ' · neutral ground' : ''}${t.winner ? ' · ' + esc(clubName(t.winner)) + (a.stage === 2 ? ' win the cup' : ' go through') : ''}</small></span></div>`;
+    };
+    body = CUP_ORDER.filter(s => C.rounds[s]).reverse().map(s => `<h4 class="lbl">${CUP_ROUND_NAMES[s]}</h4><div class="list">${C.rounds[s].map(tie).join('')}</div>`).join('')
+      + (C.byes?.length && !C.rounds[C.size] ? `<p class="muted">Enter in the round of 32: ${C.byes.map(clubName).map(esc).join(', ')}.</p>` : '');
+  } else if (view === 'prize') {
+    const rows = CUP_ORDER.filter(s => def.prize[s]).map(s => `<div class="kvrow"><span>${CUP_ROUND_NAMES[s]}</span><b>${def.prize[s][0] ? (s === 2 ? 'winners ' : 'win ') + money(def.prize[s][0]) : ''}${def.prize[s][0] && def.prize[s][1] ? ' · ' : ''}${def.prize[s][1] ? (s === 2 ? 'runners-up ' : 'losers ') + money(def.prize[s][1]) : ''}</b></div>`).join('');
+    body = `<div class="card"><h3>Prize money</h3>${rows}<p class="muted">${id === 'NC' ? "The FA's 2026/27 FA Cup prize fund, by the number of clubs left in a round (the first round pays the third-round amounts). Home clubs keep the gate." : 'As the EFL pays it: the League Cup has prize money from the semi-finals only; clubs earn mainly from gate receipts.'}</p></div>`;
+  } else if (view === 'honours') {
+    body = `<div class="list">${(G.cupHistory?.[id] || []).map(h => `<div class="row"><span class="grow"><b>${esc(h.season)}: ${esc(clubName(h.winner))}</b><small>Beat ${esc(clubName(h.runnerUp))} ${esc(h.score)} in the final</small></span></div>`).join('') || '<p class="muted">The first winners will be crowned this season.</p>'}</div>`;
+  }
+  return head + tabs('cupView', [['rounds', 'Rounds'], ['prize', 'Prize money'], ['honours', 'Winners']], view) + body;
+}

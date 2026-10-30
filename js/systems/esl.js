@@ -167,7 +167,7 @@ function eslWeek() {
     if (next === 'final') {
       const lastLeague = Math.max(...G.fixtures.filter(f => !isEslFx(f) && !f.fr && !f.playoff && ESL_LEAGUES.includes(f.comp || leagueOf(f.h))).map(f => f.w), 0);
       const sfEnd = Math.max(...ties.map(t => G.fixtures.find(x => x.id === t.legs[1]).w));
-      const w = Math.min(SEASON_WEEKS - 1, Math.max(lastLeague + 1, sfEnd + 2));
+      const w0 = Math.min(SEASON_WEEKS - 1, Math.max(lastLeague + 1, sfEnd + 2)), w = typeof clubsFreeWeek === 'function' ? Math.min(SEASON_WEEKS - 1, clubsFreeWeek(w0, through, true)) : w0;
       E.final = addEslFixture(through[0], through[1], w, 5, 'final', { neutral: true, t: '20:00' }).id;
       addNews('league', `${ESL_NAME} final`, `${clubName(through[0])} and ${clubName(through[1])} meet in the final on ${fmtDate(fxDate(G.fixtures.find(f => f.id === E.final)), false)}.`);
     } else {
