@@ -63,6 +63,15 @@ const{chromium}=require('playwright'),assert=require('node:assert/strict'),fs=re
     out.reinvestBands=[at(-1).pct,at(year*.2).pct,at(year*.6).pct,at(year*1.1).pct,at(year*3).pct].join()==='30,40,50,65,80';
     G.board.conf=80;out.reinvestConfidentBoard=at(year*.6).pct===55;G.board.conf=20;out.reinvestDoubtingBoard=at(-1).pct===25;
     G.board.conf=50;c.bal=-1;const tb=G.fin.tb;transferCash('CIT',G.club,1e6);out.reinvestInDebtSale=G.fin.tb===tb+300000; }
+  { resetPackage();newGame(leagueClubs('EPL')[0],'Reinvest ask',1);const c=userClub(),year=clubWageBill(c)*52;c.bal=year*.6;G.board.conf=60;G.board.reinvestAsk=null;
+    const mr=Math.random;Math.random=()=>0;const a=askBoardReinvest(10);out.reinvestAskGranted=a.got===10&&saleReinvest().pct===60;
+    out.reinvestAskCooldown=!askBoardReinvest(10).ok&&reinvestAskWait()===8;
+    G.board.reinvestAsk.day-=57;Math.random=()=>0.999;const conf0=G.board.conf;out.reinvestAskRefusedKeepsAgreement=askBoardReinvest(10).got===0&&saleReinvest().pct===60&&G.board.conf===conf0;
+    c.bal=-1;out.reinvestAskSuspendedInDebt=saleReinvest().pct===30;c.bal=year*.6;
+    G.season++;out.reinvestAskEndsWithSeason=saleReinvest().pct===50;G.season--;
+    G.board.conf=90;const hi=reinvestAskOdds(10);G.board.conf=40;const lo=reinvestAskOdds(10);G.board.conf=60;out.reinvestAskOddsFollowConfidence=hi>lo&&reinvestAskOdds(20)<reinvestAskOdds(10);
+    G.board.reinvestAsk=null;G.board.conf=40;Math.random=()=>0.999;askBoardReinvest(20);out.reinvestAskDoubtingBoardCostsConfidence=G.board.conf===38;
+    Math.random=mr;G.board.conf=50; }
   for(const comp of ['EPL','ECH']){
    resetPackage();const cid=leagueClubs(comp)[0];newGame(cid,'Sale simulation',1);G.fin.tb=1e8;G.fin.wb=1e8;for(const c of Object.values(G.clubs))if(!c.fa&&!c.backgroundOnly)c.bal=500e6;G.deals=[];G.payments=[];
    const player=seniorSquad(cid).find(p=>!p.inj),buyer=G.clubs.CIT;delete player.rc;player.listed=true;
@@ -127,7 +136,10 @@ const{chromium}=require('playwright'),assert=require('node:assert/strict'),fs=re
  check('Revised package returns to negotiation without signing',await p.evaluate(()=>!G.deals[0].need&&G.deals[0].stage==='bid'&&G.players[G.deals[0].pid].club!==G.club));
  await p.evaluate(async()=>{closeSheet(true);const d=G.deals[0];G.payments=[{id:999,from:G.club,to:d.from,pid:d.pid,name:fullName(G.players[d.pid]),amount:123456,due:today().getTime()+366*864e5,reserved:true}];await saveGameAsync();go('finance');});
  check('Finances exposes commitments and payment dates',await p.locator('.transfer-commitments').count()===1&&/Future payments owed/.test(await p.locator('.main').textContent()));
- check('Finance commitment screen fits the phone',await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await p.screenshot({path:'/tmp/futbol-transfer-finance.png'});
+ check('Finance commitment screen fits the phone',await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await p.evaluate(()=>{G.board.reinvestAsk=null;G.board.conf=70;render();});check('Finance offers to ask the board for a higher sale share',await p.locator('[data-a=askReinvest]').count()===2);
+ await p.evaluate(()=>{Math.random=()=>0;});await p.locator('[data-a=askReinvest][data-v="10"]').click();
+ check('The board answer updates the share and starts the wait',await p.evaluate(()=>saleReinvest().extra===10&&reinvestAskWait()===8)&&await p.locator('[data-a=askReinvest]').count()===0&&/ask the board again in 8 weeks/.test(await p.locator('.reinvest').textContent()));await p.screenshot({path:'/tmp/futbol-transfer-finance.png'});
 
  await p.reload();await p.waitForFunction(()=>G?.payments?.some(x=>x.id===999));check('Scheduled obligations survive durable save and reload',await p.evaluate(()=>G.payments.some(x=>x.id===999&&x.amount===123456&&x.from===G.club)));
  await p.evaluate(()=>go('tactics'));check('First XI appears above substitutes with condition and natural positions',await p.locator('.tactics-first-xi [data-a=slot]').count()===11&&/Natural:/.test(await p.locator('.tactics-first-xi').textContent()));
