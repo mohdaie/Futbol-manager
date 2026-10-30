@@ -319,9 +319,11 @@ CHG.round = v => { UI.tab.round = +v; render(); };
 SCREENS.competitions = {
   render() {
     const esl = UI.tab.homeCompetition === 'ESL' && typeof eslScreenHtml === 'function';
+    const cups = typeof cupsPlayed === 'function' ? cupsPlayed() : [], cup = cups.includes(UI.tab.homeCompetition) ? UI.tab.homeCompetition : null;
     const competition = G.leagues.includes(UI.tab.homeCompetition) ? UI.tab.homeCompetition : leagueOf(G.club);
-    const seg = `<div class="seg">${G.leagues.map(id => `<button class="${!esl && competition === id ? 'on' : ''}" data-a="homeCompetition" data-id="${id}">${leagueName(id)}</button>`).join('')}${typeof ESL_NAME === 'string' ? `<button class="${esl ? 'on' : ''}" data-a="homeCompetition" data-id="ESL">${ESL_NAME}</button>` : ''}</div>`;
+    const seg = `<div class="seg comp-seg">${G.leagues.map(id => `<button class="${!esl && !cup && competition === id ? 'on' : ''}" data-a="homeCompetition" data-id="${id}">${leagueName(id)}</button>`).join('')}${typeof ESL_NAME === 'string' ? `<button class="${esl ? 'on' : ''}" data-a="homeCompetition" data-id="ESL">${ESL_NAME}</button>` : ''}${cups.map(id => `<button class="${cup === id ? 'on' : ''}" data-a="homeCompetition" data-id="${id}">${CUP_DEFS[id].name}</button>`).join('')}</div>`;
     if (esl) return `<h1 class="h1">Competitions</h1>${seg}${eslScreenHtml()}`;
+    if (cup) return `<h1 class="h1">Competitions</h1>${seg}${cupScreenHtml(cup)}`;
     const view = UI.tab.homeCompetitionView || 'table', tbl = leagueTable(competition);
     let content = '';
     if (view === 'fixtures') {

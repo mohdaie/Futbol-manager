@@ -63,7 +63,7 @@ function createMatchState(fx) {
   // Computer clubs set up for this match with the tactic their available players suit best.
   [[fx.h, fx.a], [fx.a, fx.h]].forEach(([c, o]) => { if ((c !== G.club || jobless()) && G.clubs[c] && G.clubs[c].pl && !(G.flags && G.flags.fixedTac)) G.clubs[c].tac = aiChooseTactic(c, o); });
   const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0, fx), buildSide(fx.a, 1, fx)], log: [], shout: null, duels: fx.id > 0 ? {} : null };
-  if (fx.playoff && (fx.leg === 2 || fx.neutral)) {
+  if (fx.playoff && (fx.leg === 2 || fx.neutral || fx.single)) { // a deciding leg, a final or a one-match cup tie
     const first = fx.firstLeg && G.fixtures.find(f => f.id === fx.firstLeg);
     M.knockout = { home: first ? first.ag : 0, away: first ? first.hg : 0 };
   }

@@ -62,6 +62,29 @@ A 32-club European competition in the classic format (`js/systems/esl.js`, scree
   them out. ESL yellow cards do not lead to league bans; a red card's ban applies to the next matches as usual.
 - Not modelled: separate UEFA disciplinary counts, squad registration lists, and a second-tier European cup.
 
+## Domestic cups
+
+`js/systems/cups.js` (screen in `js/ui/screens-esl.js`, checks `tests/cups.cjs`). Every club in the played
+divisions enters. Single-match ties go to extra time and penalties on the day. So that the draw proper is
+exactly 32 clubs, the lowest-ranked clubs (second division, by reputation) first play a first round; in
+England that is 12 ties among the 24 Championship clubs, and the 20 Premier League clubs join in the round of 32.
+
+- **National Cup** (every playable country): rounds aimed at the weekends the 2026/27 Premier League leaves free
+  (season weeks 26, 31, 34, 37; semi-finals week 42; final from week 45). A tie is played on the Saturday if
+  both clubs are free that weekend, otherwise on Tuesday/Wednesday of that week, otherwise the next week; real
+  leagues postpone league games instead, which the game does not do. Semi-finals and final at a neutral ground;
+  the final on the first Saturday from mid-May on which both finalists are free (with Premier League finalists,
+  after the league season). Prize money: the FA's 2026/27 FA Cup prize fund by clubs left in the round: first
+  round winners £121,500 / losers £26,500 (the third-round amounts), round of 32 winners £127,000, round of 16
+  £238,500, quarter-finals £477,000, semi-finals £1,060,000 / losers £530,000, final £2,120,000 / runners-up
+  £1,060,000. Other countries use the same amounts (an approximation).
+- **League Cup** (England only): midweek rounds from August (weeks 5, 11, 18, 24), two-legged semi-finals
+  (from weeks 28 and 31), a Sunday final at a neutral ground from week 36 (March). Prize money as the EFL pays it:
+  winners £100,000, runners-up £50,000, losing semi-finalists £25,000; clubs earn mainly from gate receipts.
+- Winners: +0.5 reputation; for the managed club a trophy, a manager award bonus (£150k / £75k) and board
+  confidence (+8 / +5). Cup yellow cards do not count towards league bans.
+- No replays (the FA Cup dropped them from the first round proper in 2024-25) and no lower divisions.
+
 ## Background club setup: Spain, Italy, Germany and France
 
 **Current state:** every club in La Liga (20), Serie A (20), Bundesliga (18) and Ligue 1 (18) now has a full first-team
@@ -97,7 +120,7 @@ Official 2026/27 PL/EFL handbooks were inaccessible in the environment. This rel
 - The bottom three Championship positions are marked, but movement into League One is held until that division exists.
 - Senior-list/homegrown/Under-21 registration, loan quotas, financial regulations, exceptional disciplinary cases and official broadcast/prize distributions are not enforced. Configuration fields for registration are preparatory only.
 - After the model's points, goal difference, goals, wins (Championship) and head-to-head criteria, an unresolved exact tie uses a stable club-ID order. A special neutral league-position decider is not implemented.
-- FA Cup and League Cup are not implemented yet. European club football: the Euro Super League (above), one tier only.
+- Domestic cups: the National Cup and (England) League Cup above. European club football: the Euro Super League (above), one tier only.
 - English academy facilities retain their existing reputation-based starting value. Selected overseas clubs have independent historical development estimates; an officially verified academy ranking is not implemented.
 
 ## Validation

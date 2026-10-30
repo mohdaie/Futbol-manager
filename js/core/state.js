@@ -208,6 +208,7 @@ function newGame(clubId, manager, avatar) {
   G.fixtures = G.leagues.flatMap(id => genFixtures(leagueClubs(id), id));
   setupUserClub();
   if (typeof ensureEsl === 'function') ensureEsl();
+  if (typeof ensureCups === 'function') ensureCups();
   addNews('club', 'Welcome to ' + theClub(G.club), `The board has appointed ${G.manager} as manager. Their objective for ${seasonLabel()}: ${lcFirst(G.board.target.text)}. The transfer budget is ${money(G.fin.tb)}.`, null);
   addNews('club', 'Pre-season begins', 'Set your training focus, review the squad and check the tactics screen before the opening match in mid-August. The summer transfer window is open until 1 September.');
   seasonOpeningStory();
