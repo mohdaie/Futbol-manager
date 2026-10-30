@@ -13,6 +13,12 @@ const DAYRUN = { on: false, timer: 0, days: 0, feed: [], stop: null };
 function reviewRequiredTransfer() {
   // On holiday the director answers bids by the manager's rule; anything else calls him back (career.js).
   if (typeof onHoliday === 'function' && onHoliday()) { const why = holidayDecisions(); if (why) holidayReport(endHoliday(`Called back early: ${why}.`)); }
+  if (plRegistrationDue()) {
+    DAYRUN.on=false;clearTimeout(DAYRUN.timer);DAYRUN.timer=0;closeDayRun();
+    go('registration');
+    toast('Confirm your Premier League registration list before the window closes.');
+    return true;
+  }
   const pending=pendingTransferDecisions();
   if(!pending.length)return false;
   DAYRUN.on=false;clearTimeout(DAYRUN.timer);DAYRUN.timer=0;closeDayRun();

@@ -31,6 +31,7 @@ function deadlineHour() {
   }
   if (D.h >= 23) {
     D.done = true;
+    if (typeof confirmPLRegistration === 'function') confirmPLRegistration(); // skipped days close the list as it stands
     const open = G.deals.filter(d => dealOpen(d) && d.dir !== 'ai' && (d.loanTerms || WINDOW_STAGES.includes(d.stage)));
     const names = list => list.map(d => pname(G.players[d.pid])).join(', ');
     const ours = open.filter(d => d.dir !== 'out'), theirs = open.filter(d => d.dir === 'out');
