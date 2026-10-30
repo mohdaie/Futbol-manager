@@ -231,7 +231,7 @@ function swapInMatch(M, S, i, j) {
   const P = M.sim.P[S.idx]; [P[i], P[j]] = [P[j], P[i]];
   const B = M.sim.B;
   if (B.os === S.idx) { if (B.oi === i) B.oi = j; else if (B.oi === j) B.oi = i; }
-  S._shape = null; S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null;
+  S._shape = null; S._ac = null; S._sp = null; S._rc = null; S._chem = null; S._attC = null; S._bh = null;
   M.dirty = true;
   return true;
 }
@@ -258,7 +258,7 @@ function moveIntoGap(M, S, fromId, gap) {
   S.on[gap] = fromId; S.on[from] = null;
   const P = M.sim.P[S.idx], q = P[from]; P[gap] = q; P[from] = null;
   if (M.sim.B.os === S.idx && M.sim.B.oi === from) M.sim.B.oi = gap;
-  S._shape = null; S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null;
+  S._shape = null; S._ac = null; S._sp = null; S._rc = null; S._chem = null; S._attC = null; S._bh = null;
   M.dirty = true;
   return true;
 }

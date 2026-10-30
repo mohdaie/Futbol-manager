@@ -337,7 +337,17 @@ function liveMark(L, m) {
   const tn = TheClub(L.M.sides[m.s].cid);
   if (m.k === 'corner') pushFeed(L, 'info', `Corner to ${tn.toLowerCase().replace('the ', 'the ')}.`, m.s);
   if (m.k === 'chance' && R() < 0.5) pushFeed(L, 'info', `${tn} are through on goal!`, m.s);
+  const who = id => pname(G.players[L.M.sides[m.s].on[id]]);
+  if (m.k === 'skill' && m.x != null) (L.fx || (L.fx = [])).push({ k: 'skill', x: m.x, y: m.y, side: m.s, t0: m.t }); // a gold flash where the trick came off
+  if (m.k === 'skill' && L.M.sides[m.s].on[m.who]) pushFeed(L, 'info', SKILL_LINE[m.move] ? SKILL_LINE[m.move](who(m.who)) : `${who(m.who)} beats his man.`, m.s);
+  if (m.k === 'onetwo' && R() < 0.5 && L.M.sides[m.s].on[m.who] && L.M.sides[m.s].on[m.wall]) pushFeed(L, 'info', `${who(m.who)} plays a one-two with ${who(m.wall)}...`, m.s);
 }
+const SKILL_LINE = {
+  roulette: n => `${n} spins away from his man with a roulette!`,
+  'quick feet': n => `${n} dances through with quick feet!`,
+  'step-over': n => `${n} sends his marker the wrong way with a step-over.`,
+  'round the keeper': n => `${n} takes it round the keeper!`,
+};
 // The minute is over: half time, an injury to one of yours, or full time.
 function endMinute(L) {
   const q = L.mq, M = L.M, main = q.main;
@@ -396,7 +406,7 @@ function draw(L) {
   // Effects under the players: rings where the ball was won and at the keeper on a save (1.2 s of play).
   L.fx = (L.fx || []).filter(f => L.gt - f.t0 < 1.2 && L.gt >= f.t0);
   L.fx.forEach(f => {
-    const [vx, vy] = view(L, f.x, f.y), k = (L.gt - f.t0) / 1.2, col = f.k === 'save' ? '#9AD1D4' : L.colors[f.side === L.bottom ? 0 : 1].f;
+    const [vx, vy] = view(L, f.x, f.y), k = (L.gt - f.t0) / 1.2, col = f.k === 'save' ? '#9AD1D4' : f.k === 'skill' ? '#F2C14E' : L.colors[f.side === L.bottom ? 0 : 1].f;
     g.save(); g.globalAlpha = 1 - k; g.strokeStyle = col; g.lineWidth = 3;
     g.beginPath(); g.arc(X(vx), Y(vy), (f.k === 'save' ? 1.5 : 1) * s * (0.8 + k * 2.2), 0, Math.PI * 2); g.stroke(); g.restore();
   });
@@ -631,9 +641,9 @@ function renderFeed(L) {
   }).join('');
   linkEntities(el);
 }
-const SHOT_WITH = { placed: 'with a placed finish', driven: 'with a low drive', power: 'with a powerful strike', long: 'from distance', curler: 'with a curler from distance', chip: 'with a chip over the keeper', volley: 'with a volley', header: 'with a header', 'free kick': 'with a direct free kick', 'open goal': 'into an empty net' };
-const SHOT_NOUN = { placed: 'placed shot', driven: 'low drive', power: 'powerful strike', long: 'shot from distance', curler: 'curler', chip: 'chip', volley: 'volley', 'free kick': 'free kick' };
-const SHOT_NAME = { placed: 'Placed shot', driven: 'Low drive', power: 'Power shot', long: 'Long shot', curler: 'Curler', chip: 'Chip', volley: 'Volley', header: 'Header', 'free kick': 'Free kick', penalty: 'Penalty', 'open goal': 'Open goal' };
+const SHOT_WITH = { placed: 'with a placed finish', driven: 'with a low drive', power: 'with a powerful strike', long: 'from distance', curler: 'with a curler from distance', finesse: 'with a curled finesse shot', chip: 'with a chip over the keeper', volley: 'with a volley', header: 'with a header', 'free kick': 'with a direct free kick', 'open goal': 'into an empty net' };
+const SHOT_NOUN = { placed: 'placed shot', driven: 'low drive', power: 'powerful strike', long: 'shot from distance', curler: 'curler', finesse: 'finesse shot', chip: 'chip', volley: 'volley', 'free kick': 'free kick' };
+const SHOT_NAME = { placed: 'Placed shot', driven: 'Low drive', power: 'Power shot', long: 'Long shot', curler: 'Curler', finesse: 'Finesse shot', chip: 'Chip', volley: 'Volley', header: 'Header', 'free kick': 'Free kick', penalty: 'Penalty', 'open goal': 'Open goal' };
 function commLine(L, ev) {
   const M = L.M, S = M.sides[ev.side], O = M.sides[1 - ev.side], n = id => pname(G.players[id]);
   const tn = theClub(S.cid);

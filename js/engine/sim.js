@@ -56,7 +56,7 @@ function refreshForm(M, S) {
     return pForm(S, p) * fam(p, FORMATIONS[S.ip][i][0]) * (S.capF || 1) * (S.idx === 0 && !S.neutral ? 1.015 : 1) * (losingLate && p.pers === 'Determined' ? 1.05 : 1);
   });
   S.fam = S.user ? G.training.fam : 85;
-  S._ac = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null; S._shape = null;
+  S._ac = null; S._sp = null; S._rc = null; S._chem = null; S._attC = null; S._bh = null; S._shape = null;
 }
 // Attribute k of the player in slot i, as it counts right now.
 function av(S, i, k) {
@@ -186,7 +186,7 @@ function simInit(M) {
 function syncSide(M, s, place) {
   const S = M.sides[s], P = M.sim.P[s];
   if (S.on.every((id, i) => (P[i] ? P[i].id : null) === (id || null))) return;
-  S._ac = null; S._shape = null; S._sp = null; S._rc = null; S._attC = null; S._bh = null;
+  S._ac = null; S._shape = null; S._sp = null; S._rc = null; S._chem = null; S._attC = null; S._bh = null;
   const pos = positions(S, false, 0.5, 0.5);
   S.on.forEach((id, i) => {
     if (!id) { if (P[i] && M.sim.B.os === s && M.sim.B.oi === i) looseBall(M); P[i] = null; return; }
@@ -233,6 +233,21 @@ function giveBall(M, s, i) {
     B.dt += (1 - pressure) * [0.65, 0.4, 0.15][M.sides[s].tempo ?? 1];
   }
   if (pressureOn(M, s, i)[2] > 10 && toOwn(s, p.x, p.y)[1] < 0.66 && transition(M, s) !== 'ctr') B.dt = Math.max(B.dt, 1.5 + R() * 0.6);
+  p.give = null;
+  const first = firstTime(M, s, i);
+  if (first) { B.dt = first; p.oneTouch = M.sim.t + TICK + 0.1; } // decided on the next tick
+}
+// First time (one touch): the wall of a one-two always tries it; in a quick passing move in the attacking half,
+// a player with the touch and vision for it (and team-mates who read him: chemistry) plays it on without
+// stopping the ball. The delay is the time to shape his body; the decision still weighs what is on.
+function firstTime(M, s, i) {
+  const S = M.sides[s], p = P_(M, s, i), sim = M.sim, c = sim.combo;
+  if (sim.rs) return 0;
+  if (p.wall && p.wall.until > sim.t) return 0.12 + (20 - ac(S, i, 'fir')) * 0.01;
+  if (!c || c.s !== s || c.j !== i || c.t !== sim.t || c.n < 1 || toOwn(s, p.x, p.y)[1] > 0.55) return 0;
+  const touch = (ac(S, i, 'fir') + ac(S, i, 'pas') + ac(S, i, 'vis') + ac(S, i, 'dec')) / 4;
+  const pr = clamp((touch - 11) / 6, 0, 1) * (0.3 + chemistry(S)) * [0.55, 1, 1.35][S.tempo ?? 1] * (S.pass === 0 ? 1.2 : 1) * (0.6 + pressureOn(M, s, i)[0] * 0.6);
+  return R() < Math.min(0.6, pr) ? 0.15 + R() * 0.1 : 0;
 }
 // Straight after a change of possession: 'ctr' (counter: quick and forward), 'hold' (keep it, wait for the shape),
 // or null. Set by "When the ball is won".
@@ -424,6 +439,26 @@ function passRisk(M, s, ax, ay, bx, by, air) {
   }
   return 1 - safe;
 }
+// The carrier's estimate for a ground pass, timed against the ball: a defender can only cut it out where he
+// gets across before it passes him. He covers his standing reach at once (the same reach the ball physics
+// gives him), then closes after reading it. passRisk() reached 3-4 m from a standing start at every point,
+// so a cut-back past a crowded six-yard box read as 0.85-0.95 when about three in ten of those played were cut out.
+function groundPassRisk(M, s, ax, ay, bx, by) {
+  const O = M.sides[1 - s], OP = M.sim.P[1 - s], dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1, len = Math.sqrt(L2);
+  const sp = clamp(9 + len * 0.42, 10, 22); // kick(): the speed a ground pass of this length is struck at
+  let safe = 1;
+  for (let j = 0; j < OP.length; j++) {
+    const q = OP[j];
+    if (!q) continue;
+    let u = ((q.x - ax) * dx + (q.y - ay) * dy) / L2;
+    if (u < 0) u = 0; else if (u > 1) u = 1;
+    const ex = q.x - ax - u * dx, ey = q.y - ay - u * dy, d = Math.sqrt(ex * ex + ey * ey);
+    const ant = ac(O, j, 'ant'), react = 0.3 - (ant - 10) * 0.012;
+    const reach = 0.8 + (ant + ac(O, j, 'pos')) * 0.025 + Math.max(0, u * len / sp - react) * 3.2;
+    if (d < reach) { let f = (1 - d / reach) * (0.45 + u * 0.35); if (f > 0.9) f = 0.9; safe *= 1 - f * ENG.intercept; }
+  }
+  return 1 - safe;
+}
 // How far each player reads and cuts out a pass (Anticipation, Positioning), once a minute.
 function reads(S) {
   if (S._rc) return S._rc;
@@ -431,11 +466,58 @@ function reads(S) {
   for (let j = 0; j < 11; j++) a[j] = 1.4 + (ac(S, j, 'ant') + ac(S, j, 'pos')) * 0.06 + ac(S, j, 'mar') * 0.025;
   return (S._rc = a);
 }
+// Chemistry (0-1): how well the side's players read each other, for the combinations that need it (one-twos,
+// first-time passing, swapping positions). Tactical familiarity, the side's average Teamwork and how well the
+// players suit the tactic (cohesion). A typical Premier League side (Teamwork about 14.5, familiarity 85) is about
+// 0.35-0.4; an unselfish side drilled in its tactic (Teamwork 16, full familiarity, suited players) 0.65-0.8.
+function chemistry(S) {
+  if (S._chem != null) return S._chem;
+  let t = 0, n = 0;
+  for (let i = 1; i < 11; i++) { const pl = G.players[S.on[i]]; if (pl) { t += pl.at[A.tea]; n++; } } // his Teamwork, not how tired he is
+  return (S._chem = clamp(((S.fam ?? 85) - 50) / 50 * 0.35 + clamp(((n ? t / n : 14) - 14) / 2 * 0.4, -0.3, 0.45) + (S.coh || 0) * 0.25, 0, 1));
+}
+// The one-two (give-and-go): a short ball into a team-mate and straight off past the man in front for the
+// first-time return into the space behind him. Both players' technique and the side's chemistry decide whether
+// it is on; it is worth the space behind the defender, discounted by both passes and his reading of the run.
+function oneTwo(M, s, i, j, tx, ty, risk, lossCost) {
+  const S = M.sides[s], O = M.sides[1 - s], p = P_(M, s, i), fw = fwdY(s), OP = M.sim.P[1 - s];
+  let di = -1, dd = 9;
+  for (let k = 1; k < OP.length; k++) { const q = OP[k]; if (!q) continue; const d = hyp(q.x - p.x, q.y - p.y); if (d < dd && (q.y - p.y) * fw > 0.5) { dd = d; di = k; } }
+  if (di < 0) return null;
+  const skill = (ac(S, i, 'pas') + ac(S, i, 'otb') + ac(S, i, 'tea') + ac(S, j, 'fir') + ac(S, j, 'pas') + ac(S, j, 'tea')) / 6;
+  const q = clamp((skill - 11) / 5, 0, 1.2) * (0.5 + chemistry(S));
+  if (q < 0.35) return null;
+  const def = OP[di], line = offsideY(M, s);
+  let best = null;
+  for (const sd of [-1, 1]) {
+    const rx = clamp(def.x + sd * 3, 2, PW - 2), ry = clamp(def.y + fw * 7, 3, PL - 3);
+    if (dGoal(s, rx, ry) > dGoal(s, p.x, p.y) || beyond(s, ry, line + fw * 3) || recvPressure(M, s, rx, ry)[0] < 3) continue;
+    // The return is first time, past a defender who has turned to the ball: his reading of the run (Anticipation) is what stops it.
+    const r2 = clamp(groundPassRisk(M, s, tx, ty, rx, ry) + 0.06 + (20 - ac(S, j, 'pas')) * 0.006 + (ac(O, di, 'ant') - 10) * 0.015, 0.03, 0.9);
+    const ok = (1 - risk) * (1 - r2), val = Math.max(threat(s, rx, ry), dGoal(s, rx, ry) < 22 ? chanceAt(M, s, rx, ry, { press: 0.2 }).xg * 0.85 : 0);
+    const v = ok * val * (0.85 + q * 0.3) - (1 - ok) * lossCost;
+    if (!best || v > best.v) best = { k: 'onetwo', move: 'onetwo', j, tx, ty, rx, ry, v, risk: 1 - ok, rpress: recvPressure(M, s, tx, ty)[1] };
+  }
+  return best;
+}
+// The return ball of a one-two, into the runner's path ahead of him; worth a little more than the plain pass
+// to him because the defender he went past is facing the wrong way.
+function wallReturn(M, s, i, r, lossCost) {
+  const p = P_(M, s, i), q = P_(M, s, r);
+  if (!q || offsideNow(M, s, r)) return null;
+  const g = q.give && q.give.until > M.sim.t ? q.give : null, tx = g ? q.x + (g.x - q.x) * 0.7 : q.x + q.vx * 0.7, ty = g ? q.y + (g.y - q.y) * 0.7 : q.y + q.vy * 0.7;
+  const risk = clamp(groundPassRisk(M, s, p.x, p.y, tx, ty) + 0.04 + (20 - ac(M.sides[s], i, 'pas')) * 0.005, 0.03, 0.9), rpress = recvPressure(M, s, tx, ty)[1];
+  const val = Math.max(threat(s, tx, ty), dGoal(s, tx, ty) < 22 ? chanceAt(M, s, tx, ty, { press: rpress }).xg * 0.85 : 0) * (1 - rpress * 0.3);
+  return { k: 'pass', move: 'return', j: r, tx, ty, v: (1 - risk) * val * (1.1 + chemistry(M.sides[s]) * 0.3) - risk * lossCost, risk, rpress };
+}
 // Options for the player on the ball, each with a value; he picks one, better decision makers more reliably.
 function carrierDecide(M, s, i, o = {}) {
   const S = M.sides[s], O = M.sides[1 - s], sim = M.sim, B = sim.B, p = P_(M, s, i), TP = sim.P[s];
   const [press, di, dd] = pressureOn(M, s, i), here = threat(s, p.x, p.y), d2g = dGoal(s, p.x, p.y);
   const gk = i === 0, opts = [], b = k => bh(S, i, k), [ox, oy] = toOwn(s, p.x, p.y), thr = o.restart === 'thr';
+  // The wall of a one-two: he returns it first time into the runner's path (or keeps it if that has gone).
+  const wall = !o.restart && p.wall && p.wall.until > sim.t ? p.wall : null, oneTouch = !o.restart && (p.oneTouch || 0) > sim.t;
+  p.wall = null; p.oneTouch = 0;
   const pass = S.pass ?? 1, ment = S.ment ?? 2, vis = ac(S, i, 'vis'), pas = ac(S, i, 'pas'), tea = ac(S, i, 'tea');
   // Losing the ball costs what we had here, plus the counter it gives them (worse near our own goal).
   // Patient sides (slow tempo, short passing) and good team players value keeping it more.
@@ -450,6 +532,7 @@ function carrierDecide(M, s, i, o = {}) {
     let xg = chanceAt(M, s, p.x, p.y, { press, fo: faceOff(p, PW / 2, goalY(s)) }).xg; // 7.5, 1c
     let will = (1 + b('sh') * 0.6) * (0.85 + (ac(S, i, 'fla') - 10) * 0.02) * [0.8, 0.9, 1, 1.1, 1.2][ment] * ENG.shoot * shotNerve(S, i);
     if (thru1) will *= 1 + (12 - ac(S, i, 'cmp')) * 0.04;
+    if (finesseOn(M, s, i)) will *= 1.12; // his trademark: cutting in to curl it
     // A miss costs the possession we actually have here, not a fixed premium
     // larger than most shooting chances. Poor angles/pressure still lower xG.
     const missCost = Math.min(ENG.keepShot, lossCost * 0.25);
@@ -463,7 +546,9 @@ function carrierDecide(M, s, i, o = {}) {
     if (len < 4 || len > (thr ? 22 : range)) return;
     const air = !thr && len > 32;
     if (air && !longOk) return;
-    const risk = clamp(passRisk(M, s, p.x, p.y, tx, ty, air) + len * (0.003 + (20 - pas) * 0.0006) + (air ? 0.12 + aerialContest(M, s, j, tx, ty) : 0) + press * 0.08 - (ac(S, j, 'fir') - 10) * 0.006 + Math.max(0, faceOff(p, tx, ty) - 1.75) * 0.08 * (1 + press), 0.02, 0.95); // 1c: a ball played behind where he faces
+    // The cut-back: from the byline area to the penalty spot or the edge, the best chance in open play (7.1).
+    const cutZone = !air && oy < 0.13 && Math.abs(ox - 0.5) > 0.12 && dGoal(s, tx, ty) > 7 && dGoal(s, tx, ty) < 20 && Math.abs(tx - PW / 2) < 12;
+    const risk = clamp((cutZone ? groundPassRisk(M, s, p.x, p.y, tx, ty) : passRisk(M, s, p.x, p.y, tx, ty, air)) + len * (0.003 + (20 - pas) * 0.0006) + (air ? 0.12 + aerialContest(M, s, j, tx, ty) : 0) + press * 0.08 - (ac(S, j, 'fir') - 10) * 0.006 + Math.max(0, faceOff(p, tx, ty) - 1.75) * 0.08 * (1 + press), 0.02, 0.95); // 1c: a ball played behind where he faces
     const [, rpress] = recvPressure(M, s, tx, ty);
     // A free team-mate close by under pressure deep: the short escape out of the press.
     // Out of the press: a ground ball to a free team-mate past two or more pressers (a press-breaking pass) is
@@ -473,8 +558,7 @@ function carrierDecide(M, s, i, o = {}) {
       const beat = sim.P[1 - s].filter((z, n) => z && n && hyp(z.x - p.x, z.y - p.y) < 12 && (z.y - ty) * fwdY(s) < 0).length;
       esc = beat >= 2 && (ty - p.y) * fwdY(s) > 8 ? 1.6 : len < 25 ? 1.3 : 1;
     }
-    // The cut-back: from the byline area to the penalty spot or the edge, the best chance in open play (7.1).
-    const cutback = !air && oy < 0.13 && Math.abs(ox - 0.5) > 0.12 && dGoal(s, tx, ty) > 7 && dGoal(s, tx, ty) < 20 && Math.abs(tx - PW / 2) < 12 && rpress < 0.5;
+    const cutback = cutZone && rpress < 0.5;
     const receivingChance = dGoal(s,tx,ty)<22 ? chanceAt(M,s,tx,ty,{press:rpress}).xg : 0;
     const val = Math.max(threat(s,tx,ty), receivingChance*.85) * (1-rpress*.45) * esc * (cutback?1.5:1);
     const fwd = (toOwn(s, p.x, p.y)[1] - toOwn(s, tx, ty)[1]);
@@ -487,6 +571,8 @@ function carrierDecide(M, s, i, o = {}) {
     // An additive reward also improves a currently negative option; multiplying
     // a negative utility would accidentally discourage the forward release.
     opts.push({ k: air ? 'long' : 'pass', j, tx, ty, v: ((1 - risk) * val - risk * lossCost) * style + ctrRelease - ctrBack, risk, rpress, esc });
+    if (!air && !gk && !thr && j && len < 18 && oy < 0.62 && !wall) { const two = oneTwo(M, s, i, j, tx, ty, risk, lossCost); if (two) opts.push(two); }
+    if (wall && j === wall.r) { const back = wallReturn(M, s, i, j, lossCost); if (back) opts.push(back); }
     // Through ball into the space in behind for a player making a run.
     // A runner is found while he is still onside (a mistimed run, by a fraction, is flagged).
     if (q.run > sim.t && !gk && !thr && !beyond(s, q.y, offsideY(M, s) + fwdY(s) * (0.05 + (ac(S, j, 'otb') - 10) * 0.03 - (0.25 + Math.max(0, 14 - vis) * 0.1) * R()))) { // 4.7: timing read by Vision; a fraction late is flagged
@@ -513,7 +599,7 @@ function carrierDecide(M, s, i, o = {}) {
     // the defender's speed and Anticipation against the carrier's pace, then Dribbling against Tackling.
     // (The two who get there best count: the rest are cover.)
     let f1 = 1, f2 = 1, inPath = 0;
-    const tk = (ac(S, i, 'dri') + ac(S, i, 'agi') + ac(S, i, 'fla') * 0.5) / 2.5, OS = speeds(O), tC = len / (speeds(S)[i * 2] * 0.85) + Math.max(0, faceOff(p, cx, cy) - 0.5) / (2.5 + ac(S, i, 'agi') * 0.15); // 1c: turning first
+    const trick = skillMove(M, s, i), tk = (ac(S, i, 'dri') + ac(S, i, 'agi') + ac(S, i, 'fla') * 0.5) / 2.5 + (trick ? trick.bonus : 0), OS = speeds(O), tC = len / (speeds(S)[i * 2] * 0.85) + Math.max(0, faceOff(p, cx, cy) - 0.5) / (2.5 + ac(S, i, 'agi') * 0.15); // 1c: turning first
     sim.P[1 - s].forEach((q, j) => {
       if (!q) return;
       const d = segD(q.x, q.y, p.x, p.y, cx, cy), u = SD.u, tq = Math.max(0, d - 1.2) / OS[j * 2] - (ac(O, j, 'ant') - 10) * 0.03, late = tq - u * tC;
@@ -530,11 +616,12 @@ function carrierDecide(M, s, i, o = {}) {
     // who cannot passes, shields or carries away from him instead.
     const futurePress = recvPressure(M, s, cx, cy)[1];
     const carryValue = d2g < 25 ? Math.min(threat(s, cx, cy), chanceAt(M, s, cx, cy, { press: futurePress }).xg * 0.65 + 0.015) : threat(s, cx, cy);
-    if (thru1 || inPath === 0 || beat >= 0.5) opts.push({ k: 'carry', cx, cy, v: cbStep + (beat * carryValue * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1, takeOn: inPath > 0 });
+    if (thru1 || inPath === 0 || beat >= 0.5) opts.push({ k: 'carry', cx, cy, v: cbStep + (beat * carryValue * 0.9 - (1 - beat) * lossCost) * (1 + b('dr') * 0.5) * (0.9 + ac(S, i, 'fla') * 0.01) * (thru1 ? 1.1 : 1) * ENG.carry, thru1, takeOn: inPath > 0, move: inPath > 0 && trick ? trick.move : undefined, trick: inPath > 0 ? trick : null });
     // Round the keeper when he comes out: Dribbling, Agility and Composure against his One on Ones.
-    if (thru1 && gk1 && hyp(gk1.x - p.x, gk1.y - p.y) < 3.5 && dGoal(s, gk1.x, gk1.y) < d2g) { // 7.3: only when he rushes at his feet
+    // A gifted dribbler takes him on a step sooner (he can go round a keeper still coming, not only one at his feet).
+    if (thru1 && gk1 && hyp(gk1.x - p.x, gk1.y - p.y) < 3.5 + Math.max(0, ac(S, i, 'dri') - 14) * 0.5 && dGoal(s, gk1.x, gk1.y) < d2g) { // 7.3: only when he rushes at him
       const pr = duel(roundSkill(S, i), roundStop(O), 0.35);
-      opts.push({ k: 'round', v: pr * 0.5 * (1 + b('dr') * 0.3) - (1 - pr) * 0.1 });
+      opts.push({ k: 'round', move: 'round', v: pr * 0.5 * (1 + b('dr') * 0.3) * (1 + Math.max(0, ac(S, i, 'dri') - 12) * 0.04) - (1 - pr) * 0.1 });
     }
   }
   if (!gk && !o.restart) {
@@ -551,14 +638,20 @@ function carrierDecide(M, s, i, o = {}) {
   // Cornered on the touchline under pressure in his own half: put it out for a throw-in.
   if (!gk && oy > 0.5 && press > 0.6 && (p.x < 4 || p.x > PW - 4)) opts.push({ k: 'touch', v: 0.004 + press * 0.012 });
   if (!opts.length) { B.dt = 0.5; return; }
+  // First time: no touch to carry or turn, so he passes, shoots or crosses (if nothing is on, he takes a touch).
+  if (oneTouch) { const first = opts.filter(x => x.k !== 'carry' && x.k !== 'escape' && x.k !== 'touch'); if (first.length) { opts.length = 0; opts.push(...first.map(x => ({ ...x, move: x.move || 'oneTouch' }))); } }
   refineShotChoice(M,s,i,opts,press);
   sim.intent = applyTeamIntent(M, s, i, opts, press, o);
   // He weighs the few best passes he sees (Vision finds them), not every team-mate equally.
-  const PK = { pass: 1, long: 1, thru: 1 }, passes = opts.filter(x => PK[x.k]);
+  const PK = { pass: 1, long: 1, thru: 1, onetwo: 1 }, passes = opts.filter(x => PK[x.k]);
   if (passes.length > 4) { passes.sort((a, b) => b.v - a.v); const keep = new Set(passes.slice(0, 4)); for (let k = opts.length - 1; k >= 0; k--) if (PK[opts[k].k] && !keep.has(opts[k])) opts.splice(k, 1); }
   // Decision quality: Decisions and Composure under pressure sharpen the choice.
   const sharp = ENG.sharp * (1 + (ac(S, i, 'dec') - 10) * 0.06 + (ac(S, i, 'cmp') - 10) * press * 0.03);
-  const pick1 = wpick(opts, x => Math.exp(sharp * Math.max(-0.2, x.v)));
+  // A clear mistake (well below the best option he sees) is left out; the margin he tolerates widens with poor
+  // Decisions and, under pressure, poor Composure. Near-equal options stay a weighted choice, for variety.
+  const bestV = opts.reduce((m, x) => Math.max(m, x.v), -1), cmp = ac(S, i, 'cmp');
+  const margin = 0.015 + (20 - ac(S, i, 'dec')) * 0.0015 + press * Math.max(0, 14 - cmp) * 0.002;
+  const pick1 = wpick(opts.filter(x => x.v >= bestV - margin), x => Math.exp(sharp * Math.max(-0.2, x.v)));
   if (M.evidence) evidenceDecision(M, s, i, opts, pick1, press, d2g, thru1);
   playOption(M, s, i, pick1, press);
   sim.last = { s, i, k: pick1.k };
@@ -612,6 +705,27 @@ function recvPressure(M, s, X, Y) {
   const OP = M.sim.P[1 - s];
   for (let j = 0; j < OP.length; j++) { const q = OP[j]; if (q) { const d = Math.sqrt((q.x - X) * (q.x - X) + (q.y - Y) * (q.y - Y)); if (d < bd) bd = d; } }
   return [bd, clamp(1 - (bd - 1.5) / 7, 0, 1)];
+}
+// Skill moves on a take-on: a player with Flair and Dribbling picks the trick the situation calls for. A roulette
+// spins away from a man closing at his side; quick feet (tight touches and a drag-back) slip between two in front;
+// a step-over or body feint sends one in front the wrong way. The trick adds to his take-on rating as far as
+// Flair, Dribbling and Agility (Strength to shield the spin) back it; a failed trick still loses the ball.
+function skillMove(M, s, i) {
+  const S = M.sides[s], p = P_(M, s, i), fla = ac(S, i, 'fla'), dri = ac(S, i, 'dri'), agi = ac(S, i, 'agi');
+  if (!i || fla < 13 || dri < 13) return null;
+  const OP = M.sim.P[1 - s], fw = fwdY(s);
+  let front = 0, side = 0, close = 99;
+  for (let j = 1; j < OP.length; j++) { const q = OP[j]; if (!q) continue; const d = hyp(q.x - p.x, q.y - p.y); if (d > 6) continue; close = Math.min(close, d); if ((q.y - p.y) * fw > 0.5) front++; else side++; }
+  if (!front && !side) return null;
+  const move = side && close < 2.5 ? 'roulette' : front >= 2 && agi >= 14 ? 'quick feet' : 'step-over';
+  const extra = move === 'roulette' ? (ac(S, i, 'str') - 12) * 0.08 + (agi - 12) * 0.08 : move === 'quick feet' ? (agi - 12) * 0.15 : 0;
+  return { move, bonus: clamp((fla - 12) * 0.25 + (dri - 12) * 0.15 + extra, 0, 2.5) };
+}
+// The finesse shot: cutting in from the flank onto the stronger foot and curling it inside the far post.
+function finesseOn(M, s, i) {
+  const S = M.sides[s], p = P_(M, s, i), pl = G.players[S.on[i]], [ox] = toOwn(s, p.x, p.y), d = dGoal(s, p.x, p.y), off = Math.abs(p.x - PW / 2);
+  if (!pl || ac(S, i, 'fla') < 13 || ac(S, i, 'fin') < 12 || d < 12 || d > 26 || off < 5 || off > 20) return false;
+  return pl.foot === 'Either' || (ox > 0.5 ? pl.foot === 'Left' : pl.foot === 'Right');
 }
 // Which way to carry the ball: towards goal, away from defenders.
 function carryDir(M, s, i) {
@@ -671,10 +785,17 @@ const offsideNow = (M, s, j) => { const q = P_(M, s, j); return q && beyond(s, q
 
 function playOption(M, s, i, op, press) {
   const S = M.sides[s], sim = M.sim, B = sim.B, p = P_(M, s, i);
+  if (op.k === 'onetwo') { // pass and go: he sprints past his man for the return
+    const q = P_(M, s, op.j);
+    p.give = { x: op.rx, y: op.ry, until: sim.t + 3 }; p.run = sim.t + 3;
+    if (q) q.wall = { r: i, until: sim.t + 3 };
+    mark(M, 'onetwo', s, { who: i, wall: op.j });
+    op = { ...op, k: 'pass' };
+  }
   if (op.k === 'shot') return shoot(M, s, i, { press });
   if (op.k === 'cross') return crossBall(M, s, i, {});
   if (op.k === 'escape') { B.hx=op.cx; B.hy=op.cy; B.dt=.9; p.carry=1; p.takeOn=0; p.escapeAt=sim.t; return; }
-  if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; p.takeOn = !!op.takeOn; return; }
+  if (op.k === 'carry') { B.hx = op.cx; B.hy = op.cy; B.dt = op.thru1 ? 0.5 : decideDelay(M, s, i, ENG.touch + 0.6); p.carry = 1; p.takeOn = !!op.takeOn; p.trick = op.trick ? { ...op.trick, until: sim.t + 2 } : null; return; }
   if (op.k === 'round') return roundKeeper(M, s, i);
   if (op.k === 'touch') return kick(M, s, i, 'clear', p.x < PW / 2 ? -3 : PW + 3, p.y + fwdY(s) * rf(2, 10), -1, { air: false, err: 1 });
   if (op.k === 'clear') {
@@ -685,7 +806,7 @@ function playOption(M, s, i, op, press) {
   }
   // A pass: off-target by the passer's technique, more so under pressure, on the weaker foot or in the wind.
   const pl = G.players[S.on[i]], len = hyp(op.tx - p.x, op.ty - p.y);
-  const weak = pl && pl.foot !== 'Either' && R() < 0.3 ? 1.3 : 1;
+  const weak = (pl && pl.foot !== 'Either' && R() < 0.3 ? 1.3 : 1) * (op.move === 'oneTouch' || op.move === 'return' ? clamp(1.25 - (ac(S, i, 'fir') - 10) * 0.03, 0.9, 1.3) : 1); // first time: First Touch
   const err = len * (0.035 + (20 - ac(S, i, 'pas')) * 0.0045 + (20 - ac(S, i, 'fir')) * 0.001) * (1 + press * (1.1 - ac(S, i, 'cmp') * 0.04)) * weak * (op.k === 'long' ? 1.3 / M.mod.wind : 1) * ((S.tempo ?? 1) === 2 ? 1.08 : 1);
   S.st.pa++; pstat(S, i, 'pa'); if (op.k === 'long') S.st.lp = (S.st.lp || 0) + 1;
   const tgt = P_(M, s, op.j), off = op.k === 'thru' || (tgt && beyond(s, tgt.y, offsideY(M, s)));
@@ -748,7 +869,7 @@ function roundKeeper(M, s, i) {
   if (!g) return shoot(M, s, i, {});
   pstat(S, i, 'da');
   if (duelRoll(M, 'round', 0.05, roundSkill(S, i), roundStop(O), 0.35, 1, S, O)) {
-    pstat(S, i, 'dw'); bump(S, i, 0.1);
+    pstat(S, i, 'dw'); bump(S, i, 0.1); mark(M, 'skill', s, { who: i, move: 'round the keeper', x: p.x, y: p.y });
     // 7.3: going round him takes the striker wide; the angle narrows (the shot is read as it is, 7.5).
     const side = p.x < g.x ? -1 : 1;
     p.x = clamp(g.x + side * rf(4, 6), 2, PW - 2); p.y = g.y + fwdY(s) * 0.5; g.cool = 1.5;
@@ -836,6 +957,7 @@ function shotType(M, s, i, p, o, oneOnOne, press) {
   if (o.open) return { kind: 'open goal', ax: rf(-1.5, 1.5), az: rf(0, 0.6) };
   const gkOut = g ? Math.abs(g.y - goalY(s)) : 0;
   if (oneOnOne && gkOut > 4 && R() < clamp(0.15 + (cmp + fla - 24) * 0.03, 0.05, 0.5)) return { kind: 'chip', ax: rf(-1.2, 1.2), az: rf(1.7, 2.3) };
+  if (finesseOn(M, s, i) && R() < clamp(0.25 + (fla + fin - 26) * 0.04, 0.1, 0.75)) return { kind: 'finesse', ax: far * rf(2.4, 3.3), az: rf(0.4, 1.6) };
   if (d > 20) return fla >= 13 && R() < 0.5 ? { kind: 'curler', ax: away * rf(2.4, 3.4), az: rf(1.2, 2.35) } : { kind: 'long', ax: away * rf(1.5, 3.4), az: rf(0.2, 2.2) };
   if (d < 8) return { kind: 'power', ax: rf(-2.6, 2.6), az: rf(0.5, 2.3) };
   if (R() < clamp(0.3 + (cmp - 10) * 0.04 + (fin - 10) * 0.02 - press * 0.3, 0.1, 0.8)) return { kind: 'placed', ax: far * rf(2.3, 3.3), az: rf(0.1, 0.8) };
@@ -854,6 +976,7 @@ function shotExecution(M,s,i,o={},kind='driven') {
   if (o.volley) onTarget+=(control-12)*.006;
   if (o.weak) onTarget-=.06;
   if (kind==='placed') onTarget+=.035;
+  if (kind==='finesse') onTarget+=.02+(ac(S,i,'fla')-12)*.004;
   if (kind==='power'||kind==='chip') onTarget-=.025;
   if (o.open) onTarget=Math.max(onTarget,.88+(technique-12)*.006);
   if (o.pen) onTarget=.9+(technique-12)*.004+(composure-12)*.002;
@@ -903,7 +1026,7 @@ function shoot(M, s, i, o = {}) {
   const gy = goalY(s), shot = shotType(M, s, i, p, o, oneOnOne, press);
   const execution=shotExecution(M,s,i,{...o,press,weak,directFK},shot.kind);
   ev.accuracy=execution.onTarget;
-  const curve = ['curler', 'free kick'].includes(shot.kind) ? (shot.ax >= 0 ? -1 : 1) * (directFK ? 1.7 : 1.1) : 0;
+  const curve = ['curler', 'free kick', 'finesse'].includes(shot.kind) ? (shot.ax >= 0 ? -1 : 1) * (directFK ? 1.7 : shot.kind === 'finesse' ? 1.4 : 1.1) : 0;
   let blk = -1;
   let blockU = 1;
   if (!o.pen) M.sim.P[1 - s].forEach((q, j) => {
@@ -925,7 +1048,8 @@ function shoot(M, s, i, o = {}) {
   const fin = o.head ? (aerialAt(S, i) + ac(S, i, 'fin')) / 2 : directFK ? fkSkill(pl) : ac(S, i, 'fin');
   const gkv = o.open ? 30 : oneOnOne ? ac(O, 0, 'one') * 5 : O.u.gk;
   const pg = xg * ENG.fin * (1 + (fin - 12) / 50) * // rule 11: finishing is worth about +/-12% across the range
-     (1.25 - gkv / 250) * (0.92 + 0.08 * ac(S, i, 'cmp') / 10) * (o.open ? 1 : 1 - gkReach(gkp));
+     (1.25 - gkv / 250) * (0.92 + 0.08 * ac(S, i, 'cmp') / 10) * (o.open ? 1 : 1 - gkReach(gkp)) *
+     (shot.kind === 'finesse' ? 1 + clamp((ac(S, i, 'fla') + ac(S, i, 'fin') - 26) * 0.01, 0, 0.1) : 1); // bending away from the keeper
   // Accuracy answers whether he hits the frame. Conditional conversion keeps
   // the existing nominal goal chance instead of turning extra accuracy into goals.
   const resolution=shotResolution(pg,execution.onTarget);
@@ -937,7 +1061,7 @@ function shoot(M, s, i, o = {}) {
     if (R()<execution.overBar) { az=rf(2.6,4.5); ev.over=true; }
     else ax=(Math.sign(ax)||(R()<.5?-1:1))*rf(3.9,7.5);
   }
-  const speed = ({ header: 18, volley: 28, chip: 17, placed: 22, power: 31, driven: 28, long: 29, curler: 24, 'free kick': 25 })[shot.kind] || 26;
+  const speed = ({ header: 18, volley: 28, chip: 17, placed: 22, power: 31, driven: 28, long: 29, curler: 24, finesse: 23, 'free kick': 25 })[shot.kind] || 26;
   let tx = PW / 2 + ax, ty = gy + fwdY(s) * 1.5;
   if (res === 'save' && gk) {
     const contactD = Math.min(Math.max(0.8, Math.abs(gk.y - gy)), Math.max(0.8, Math.abs(launchY - gy) - 0.8));
@@ -1272,6 +1396,9 @@ function receive(M, s, j, fl, d) {
     pressTrigger(M, s, j, fl, roll > ctrl - 0.15);
     if (fl && fl.i != null && fl.j === j) { S.st.pc++; pstat(S, fl.i, 'pc'); if (toOwn(s, B.x, B.y)[1] < 0.3) bump(S, fl.i, 0.03); sim.lastPass = { s, id: S.on[fl.i], t: sim.t }; }
     if (fl && fl.k === 'thru') mark(M, 'chance', s);
+    // A quick passing move: short balls completed one after another (for first-time play, firstTime()).
+    const c = sim.combo, quick = fl && fl.k === 'pass' && fl.j === j && fl.len < 22;
+    sim.combo = quick ? { s, j, t: sim.t, n: c && c.s === s && sim.t - c.t < 3.5 ? c.n + 1 : 1 } : null;
     giveBall(M, s, j);
     if (fl?.linesBroken && fl.j === j) sim.momentum = { s, until: sim.t + 6 };
     return;
@@ -1353,11 +1480,13 @@ function challenges(M) {
     const pl = G.players[O.on[j]], inBox = toOwn(s, own.x, own.y)[1] < 0.157 && Math.abs(own.x - PW / 2) < 20;
     const fp = ENG.tackleFoul * tune('foulRate') / 0.18 * ENG.foul * (1 + bh(O, j, 'tk') * 0.5) * (pl && pl.pers === 'Temperamental' ? 1.3 : 1) * (1 + (10 - ac(O, j, 'tck')) / 25) * M.mod.foul * (1 - O.calm * 0.5) * (inBox ? 0.015 : 1);
     if (R() < fp) return foul(M, s, i, o, j);
-    const a = avg2(S, i, [['dri', 0.4], ['agi', 0.2], ['str', 0.2 + bh(S, i, 'hold') * 0.2], ['fla', 0.1], ['fir', 0.1]]) + (faceOff(q, own.x, own.y) > 1.6 ? 1.5 : 0); // a defender caught turned is easier to beat
+    const trick = takeOn && own.trick && own.trick.until > sim.t ? own.trick : null;
+    const a = avg2(S, i, [['dri', 0.4], ['agi', 0.2], ['str', 0.2 + bh(S, i, 'hold') * 0.2], ['fla', 0.1], ['fir', 0.1]]) + (faceOff(q, own.x, own.y) > 1.6 ? 1.5 : 0) + (trick ? trick.bonus : 0); // a defender caught turned is easier to beat
     const dd = avg2(O, j, [['tck', 0.25], ['str', 0.2], ['agi', 0.15], ['ant', 0.25], ['pos', 0.15]]) + bh(O, j, 'tk') * 0.8;
     pstat(S, i, 'da');
     if (duelRoll(M, 'tackle', toOwn(s, own.x, own.y)[1], a + S.boost * 20, dd + O.guard * 20, front && takeOn ? 0.47 : 0.38, 1, S, O)) { // 4.5: take-on a bit under half; a tackle that is on wins three in five
       if (takeOn) pstat(S, i, 'dw'); bump(S, i, 0.05); bump(O, j, -0.03); q.cool = 1.5; // beaten: he needs a moment to turn
+      if (trick) { q.cool += trick.move === 'roulette' ? 0.5 : 0.2; own.trick = null; mark(M, 'skill', s, { who: i, move: trick.move, x: own.x, y: own.y }); }
       return;
     }
     pstat(O, j, 'tk'); bump(O, j, 0.06); bump(S, i, -0.04);
@@ -1410,6 +1539,27 @@ function closeSupport(M,s,carrier,box) {
   return best;
 }
 
+// Fluid interchange: a side with real chemistry rotates its front players and midfielders in possession (a
+// winger and the 9, a 10 and a winger, two eights): for 8-14 s each takes the other's place in the shape while
+// keeping his own role's runs, which drags markers out of position. The rest defence never joins in; losing the
+// ball ends it. Low-chemistry sides keep their stations.
+function rotation(M, s, carrier, pos, reserves) {
+  const S = M.sides[s], sim = M.sim, r = S._rot;
+  if (r && r.until > sim.t && r.a !== carrier && r.b !== carrier) return r;
+  if (r && r.until > sim.t) return null; // one of them has the ball: he plays it from where he is
+  S._rot = null;
+  const chem = chemistry(S);
+  if (chem < 0.5 || R() > (chem - 0.5) * 0.6 * [0.6, 0.85, 1, 1.15, 1.3][S.ment ?? 2]) return null;
+  const ip = FORMATIONS[S.ip], P = sim.P[s], pairs = [];
+  for (let a = 1; a < 11; a++) for (let b = a + 1; b < 11; b++) {
+    if (!P[a] || !P[b] || !pos[a] || !pos[b] || a === carrier || b === carrier || reserves.has(a) || reserves.has(b)) continue;
+    if (LINE[ip[a][0]] < 3 || LINE[ip[b][0]] < 3 || roleName(S, a) === 'Anchor' || roleName(S, b) === 'Anchor') continue;
+    if (hyp((pos[a][0] - pos[b][0]) * PW, (pos[a][1] - pos[b][1]) * PL) < 22) pairs.push([a, b]);
+  }
+  if (!pairs.length) return null;
+  const [a, b] = pick(pairs);
+  return (S._rot = { a, b, until: sim.t + 8 + R() * 6 });
+}
 // Every second: where each player wants to be. In possession: the shape, support near the ball, runs in behind,
 // width and late runs into the box. Without it: the shape, pressing the ball, marking and a back line that holds.
 // A forward who drops back to receive. Position-based drops need him actually moving back; the deep-lying roles
@@ -1430,6 +1580,7 @@ function targets(M, all) {
     const box = has && own ? boxPlan(M, s, ip, bx, by, carrier, reserves, line) : null;
     if (has) S._box = box;
     const support = has && own ? closeSupport(M,s,carrier,box) : null;
+    const rot = has && own ? rotation(M, s, carrier, pos, reserves) : (S._rot = null);
     const gx = PW / 2, gy = goalY(1 - s); // their own goal
     const unitStep = !has && own ? defensiveLineStep(M, s) : 0;
     S._defStep = unitStep;
@@ -1469,7 +1620,9 @@ function targets(M, all) {
       if (!p || !pos[i] || i === carrier) continue;
       if (B.fl && B.fl.s === s && B.fl.j === i && sim.t < (p.want || 0)) continue; // running onto a pass
       if ((p.sup || 0) > sim.t) continue; // going for the knock-down / second ball
-      let X = s === 0 ? pos[i][0] * PW : (1 - pos[i][0]) * PW, Y = s === 0 ? pos[i][1] * PL : (1 - pos[i][1]) * PL;
+      if (has && p.give && p.give.until > sim.t) { p.tx = p.give.x; p.ty = p.give.y; continue; } // gone for the one-two return
+      const at = rot && pos[rot.a] && pos[rot.b] ? (i === rot.a ? pos[rot.b] : i === rot.b ? pos[rot.a] : pos[i]) : pos[i]; // fluid interchange: his partner's spot
+      let X = s === 0 ? at[0] * PW : (1 - at[0]) * PW, Y = s === 0 ? at[1] * PL : (1 - at[1]) * PL;
       const role = LINE[ip[i][0]], defRole = LINE[FORMATIONS[S.oop][(S.map || shapeMap(S.ip, S.oop))[i]][0]];
       if (!has && i) Y += fw * unitStep;
       const lineY = Y;

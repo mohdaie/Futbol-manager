@@ -41,7 +41,7 @@ function evidenceDecision(M, s, i, options, pick, pressure, distance, through) {
   a.decisions++; if (pressure > .5) a.pressuredDecisions++;
   a.selected[pick.k] = (a.selected[pick.k] || 0) + 1;
   evidenceAction(M, 'decision', s, { slot: i, player: S.on[i], xy: [evidenceRound(p.x), evidenceRound(p.y)],
-    pressure: evidenceRound(pressure), condition: evidenceRound(S.cond[S.on[i]]), form: evidenceRound(S.form[i]), distance: evidenceRound(distance), through, selected: pick.k, selectedReceiver: pick.j ?? null, selectedUtility: evidenceRound(pick.v, 10000),
+    pressure: evidenceRound(pressure), condition: evidenceRound(S.cond[S.on[i]]), form: evidenceRound(S.form[i]), distance: evidenceRound(distance), through, selected: pick.k, selectedReceiver: pick.j ?? null, selectedUtility: evidenceRound(pick.v, 10000), move: pick.move || null,
     transition: transition(M, s), mental: ['vis', 'fla', 'dec', 'cmp', 'tea'].map(k => evidenceRound(ac(S, i, k))),
     options: options.map(o => [o.k, o.j ?? null, evidenceRound(o.v, 10000), evidenceRound(o.risk, 1000), evidenceRound(o.tx ?? o.cx), evidenceRound(o.ty ?? o.cy), evidenceRound(o.xg,10000)]) });
 }
