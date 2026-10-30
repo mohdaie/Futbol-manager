@@ -23,12 +23,45 @@ function ensurePLRegistration(cid) {
   const current = old?.season === G.season;
   const roster = squadOf(cid).filter(p => lvlOf(p) !== 'Y' && !under21Exempt(p));
   const validIds = new Set(roster.map(p => p.id));
-  let ids = current ? (old.ids || []).filter(id => validIds.has(id)).slice(0, premierLeagueRegistrationLimit()) : [];
+  const limit = premierLeagueRegistrationLimit();
+  let ids = current ? (old.ids || []).filter(id => validIds.has(id)).slice(0, limit) : [];
+  let seen = current ? new Set((old.seen || []).filter(id => validIds.has(id))) : new Set();
+  const rank = (a, b) => (lvlOf(a) === 'A' ? 0 : 1) - (lvlOf(b) === 'A' ? 0 : 1) || b.ca - a.ca;
   if (!current) {
-    ids = roster.sort((a, b) => (lvlOf(a) === 'A' ? 0 : 1) - (lvlOf(b) === 'A' ? 0 : 1) || b.ca - a.ca)
-      .slice(0, premierLeagueRegistrationLimit()).map(p => p.id);
+    ids = roster.slice().sort(rank).slice(0, limit).map(p => p.id);
+    seen = new Set(roster.map(p => p.id));
+  } else {
+    // Signings and loan arrivals take a free place automatically. When the list is
+    // full they stay unseen, which makes the manager choose who to drop.
+    roster.filter(p => !seen.has(p.id) && !ids.includes(p.id)).sort(rank).forEach(p => {
+      if (ids.length < limit) { ids.push(p.id); seen.add(p.id); }
+      else if (cid !== G.club) seen.add(p.id);
+    });
+    roster.forEach(p => { if (ids.includes(p.id)) seen.add(p.id); });
   }
-  c.plRegistration = { season: G.season, ids };
+  c.plRegistration = { season: G.season, ids, seen: [...seen] };
+}
+
+// Senior players the manager has not yet decided on (list full when they arrived).
+function plRegistrationPending(cid = G.club) {
+  const c = G.clubs[cid];
+  if (!c || c.league !== 'EPL') return [];
+  ensurePLRegistration(cid);
+  const seen = new Set(c.plRegistration.seen), ids = new Set(c.plRegistration.ids);
+  return squadOf(cid).filter(p => lvlOf(p) !== 'Y' && !under21Exempt(p) && !ids.has(p.id) && !seen.has(p.id));
+}
+
+function confirmPLRegistration(cid = G.club) {
+  const c = G.clubs[cid];
+  if (!c || c.league !== 'EPL') return;
+  ensurePLRegistration(cid);
+  c.plRegistration.seen = squadOf(cid).filter(p => lvlOf(p) !== 'Y' && !under21Exempt(p)).map(p => p.id);
+}
+
+// The registration list must be answered before the window shuts: from the day before deadline day on.
+function plRegistrationDue() {
+  const s = windowState();
+  return s.open && s.left <= 1 && plRegistrationPending().length > 0;
 }
 
 function ensurePremierLeagueRegistrations() {
@@ -47,7 +80,7 @@ function setPremierLeagueRegistration(cid, ids) {
   if (requested.length > premierLeagueRegistrationLimit()) {
     return { ok: false, reason: `The Premier League list can contain at most ${premierLeagueRegistrationLimit()} players.` };
   }
-  c.plRegistration = { season: G.season, ids: requested };
+  c.plRegistration = { season: G.season, ids: requested, seen: c.plRegistration.seen };
   return { ok: true };
 }
 
