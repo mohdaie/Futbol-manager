@@ -65,8 +65,10 @@ function render(reset) {
   if (window.ADMIN_PAGE) { if (!['admin', 'shapedemo'].includes(UI.s)) UI.s = 'admin'; scr = SCREENS[UI.s]; } // the /admin page shows only the admin tools
   else if (UI.s === 'title') scr = SCREENS.title;
   else if (!G) scr = SCREENS.start;
+  else if (typeof careerState === 'function' && (careerState(), careerRetired())) scr = SCREENS.retired;
   else if (G.gameOver) scr = SCREENS.sacked;
   else if (G.seasonReview && UI.s !== 'review') { UI.s = 'review'; scr = SCREENS.review; }
+  else if (jobless() && !JOBLESS_SCREENS.has(UI.s)) { UI.s = 'unemployed'; scr = SCREENS.unemployed; }
   else scr = SCREENS[UI.s] || SCREENS.home;
   const subnav = TEAM_SECTIONS.some(([s]) => s === UI.s) || UI.s === 'pinstr' ? teamSections() : ['home', 'competitions'].includes(UI.s) ? dashboardSections() : UI.s === 'facilities' ? facilitySections() : '';
   const body = (!scr.full ? subnav : '') + scr.render(UI.p);
@@ -125,7 +127,7 @@ function shell(body) {
     </header>
     ${worldAlertMarkup()}
     <nav class="tabs2">${NAV.map(([k, n]) => `<button class="${cur === k ? 'on' : ''}" data-a="go" data-s="${k}">${n}</button>`).join('')}</nav>
-    <div class="subbar"><button data-a="go" data-s="club">${badge(c.id, 20)}<b>${esc(c.name)}</b><span>· ${esc(phaseLabel())}</span></button><span>${ICON.cal}${fmtDate(today())}</span></div>
+    <div class="subbar">${jobless() ? `<button data-a="go" data-s="unemployed"><b>Between clubs</b><span>· ${esc(phaseLabel())}</span></button>` : `<button data-a="go" data-s="club">${badge(c.id, 20)}<b>${esc(c.name)}</b><span>· ${esc(phaseLabel())}</span></button>`}<span>${ICON.cal}${fmtDate(today())}</span></div>
     <main class="main">${body}<div class="spacer"></div></main>
     ${UI.s === 'admin' ? '' : `<div class="bottombar">
       <button class="bb-sum" data-a="go" data-s="news">${ICON.doc}<span>${inbox} inbox · ${reports} report${reports === 1 ? '' : 's'}</span></button>

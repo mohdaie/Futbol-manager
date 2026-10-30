@@ -11,6 +11,8 @@ const DAYRUN_MAX = 35; // safety stop after five weeks without anything happenin
 const DAYRUN = { on: false, timer: 0, days: 0, feed: [], stop: null };
 
 function reviewRequiredTransfer() {
+  // On holiday the director answers bids by the manager's rule; anything else calls him back (career.js).
+  if (typeof onHoliday === 'function' && onHoliday()) { const why = holidayDecisions(); if (why) holidayReport(endHoliday(`Called back early: ${why}.`)); }
   const pending=pendingTransferDecisions();
   if(!pending.length)return false;
   DAYRUN.on=false;clearTimeout(DAYRUN.timer);DAYRUN.timer=0;closeDayRun();
@@ -23,7 +25,7 @@ function startDayRun() {
   if (!G || DAYRUN.on) return;
   if (reviewRequiredTransfer()) return;
   const fx = userFixture();
-  if (fx && !played(fx) && (fx.d ?? 5) <= G.day) return matchdayNow(fx);
+  if (fx && !played(fx) && (fx.d ?? 5) <= G.day && !holidayNow()) return matchdayNow(fx);
   Object.assign(DAYRUN, { on: true, days: 0, feed: [], stop: null });
   drawDayRun(true);
   DAYRUN.timer = setTimeout(dayTick, DAY_MS * 0.6);
@@ -75,15 +77,34 @@ async function dayTick() {
   DAYRUN.feed.length = Math.min(DAYRUN.feed.length, 4);
   const imp = fresh.filter(newsImportant);
   if (reviewRequiredTransfer()) return;
+  if (r === 'match' && holidayNow()) { await holidayMatch(userFixture()); if (G !== game || !DAYRUN.on) return; if (holidayFinished()) return; DAYRUN.feed.unshift({ d: wasDay, t: 'Your assistant: ' + G.career.holiday.results.at(-1)?.txt }); drawDayRun(); DAYRUN.timer = setTimeout(dayTick, DAY_MS); return; }
   if (r === 'match') return finishDayRun(() => matchdayNow(userFixture()));
+  if (r === 'season' && holidayNow()) { const rep = endHoliday('The season is over.'); return finishDayRun(() => { go('review'); holidayReport(rep); }); }
   if (r === 'season') return finishDayRun(() => go('review'));
   if (r === 'sacked') return finishDayRun(() => go('home'));
-  if (imp.length) { DAYRUN.stop = { kind: 'news', items: imp.slice(0, 4), at: wasDay }; return pauseDayRun(); }
-  if (DAYRUN.days >= DAYRUN_MAX) { DAYRUN.stop = { kind: 'quiet' }; return pauseDayRun(); }
+  if (holidayNow()) { G.career.holiday.news.push(...imp.map(n => n.title)); if (holidayFinished()) return; }
+  else if (imp.length) { DAYRUN.stop = { kind: 'news', items: imp.slice(0, 4), at: wasDay }; return pauseDayRun(); }
+  if (DAYRUN.days >= DAYRUN_MAX && !holidayNow()) { DAYRUN.stop = { kind: 'quiet' }; return pauseDayRun(); }
   drawDayRun();
   const sb = document.querySelector('.subbar > span:last-child'); // the date in the header follows the calendar
   if (sb) sb.innerHTML = ICON.cal + fmtDate(today());
   DAYRUN.timer = setTimeout(dayTick, DAY_MS);
+}
+
+// Holidays (career.js): matches by instant result, the day run never pausing for news, home when it is over.
+const holidayNow = () => typeof onHoliday === 'function' && onHoliday();
+async function holidayMatch(fx) {
+  const game = G;
+  if (!fx || played(fx)) return;
+  if (G.press[fx.id]) Object.assign(G.press[fx.id], { done: true, said: 'Your assistant handled the media.' });
+  await playUserInstantAsync(fx); if (G !== game) return;
+  holidayRecordMatch(fx); saveGame();
+}
+function holidayFinished() {
+  if (!holidayDue()) return false;
+  const rep = endHoliday('Your holiday is over.');
+  finishDayRun(() => { go('home'); holidayReport(rep); });
+  return true;
 }
 
 // Stop and leave the card up, showing why (important news) or that the manager paused it.

@@ -17,6 +17,7 @@ function advanceWeek() {
   weeklyMedical();
   weeklyFinance();
   managerJobWeek();
+  if (typeof careerWeek === 'function') careerWeek();
   staffWeekly();
   moodWeekly();
   if (typeof lifeWeekly === 'function') lifeWeekly();
@@ -26,11 +27,11 @@ function advanceWeek() {
   monthly();
   youthIntake();
   if (G.week % 6 === 5) G.staffPool = genStaffPool(userClub().rep);
-  if (G.board.conf < 10 && G.week > 12) { sack('The board has lost confidence after a run of poor results.'); return 'sacked'; }
+  if (!jobless() && G.board.conf < 10 && G.week > 12) { sack('The board has lost confidence after a run of poor results.'); return 'sacked'; }
   updateCompetitionSeason();
   G.week++;
   G.day = 0;
-  if (G.week >= SEASON_WEEKS) { seasonEnd(); return G.gameOver ? 'sacked' : 'season'; }
+  if (G.week >= SEASON_WEEKS) { const out = jobless(); seasonEnd(); return out ? 'ok' : jobless() ? 'sacked' : 'season'; }
   const nx = userFixture();
   if (nx && !G.press[nx.id]) G.press[nx.id] = { Q: pickPress(nx), done: false };
   saveGame();
@@ -152,11 +153,20 @@ function boardRequest(kind) {
   return `Approved. ${money(cost)} invested; ${kind === 'train' ? 'training' : 'youth'} facilities rise to level ${lvl + 1}.`;
 }
 
+function seasonEndPrizes() {
+  for (const id of G.leagues) leagueTable(id).forEach((r, i, rows) => { const prize = (rows.length - i) * (leagueTier(id) === 2 ? .15e6 : 1.5e6); G.clubs[r.id].bal += prize; if (r.id === G.club && !jobless()) G.ledger.prize += prize; });
+}
 function seasonEnd() {
   const table = leagueTable(), c = userClub();
   const managerChampions = managerSeasonRecords();
+  if (jobless()) { // between clubs: prizes, reputations, promotion and relegation, but no review or board verdict
+    seasonEndPrizes();
+    const order = leagueClubs().slice().sort((a, b) => G.clubs[b].rep - G.clubs[a].rep);
+    table.forEach((r, i) => { const cl = G.clubs[r.id]; cl.rep = clamp(Math.round((cl.rep + (order.indexOf(r.id) - i) * 0.4) * 10) / 10, 55, 95); });
+    applyDivisionChanges(); rollover(); return;
+  }
   const pos = table.findIndex(r => r.id === G.club) + 1, me = table[pos - 1];
-  for (const id of G.leagues) leagueTable(id).forEach((r, i, rows) => { const prize = (rows.length - i) * (leagueTier(id) === 2 ? .15e6 : 1.5e6); G.clubs[r.id].bal += prize; if (r.id === G.club) G.ledger.prize += prize; });
+  seasonEndPrizes();
   const pl = Object.values(G.players).filter(p => G.clubs[p.club] && G.clubs[p.club].pl && leagueOf(p.club) === leagueOf(G.club));
   const top = (arr, f) => arr.slice().sort((a, b) => f(b) - f(a))[0];
   const boot = top(pl, p => p.st.g + p.st.as * 0.01);
@@ -200,7 +210,7 @@ function rollover() {
     p.st = newStats(); p.ban = Math.max(0, p.ban || 0); p.age++; p.rd = null; p.cond = 100;
     if (!cl || cl.fa) return;
     if (p.con <= S + 1) {
-      if (p.club === G.club) {
+      if (p.club === G.club && !jobless()) {
         if (lvlOf(p) !== 'A') p.con = S + 3;
         else { moveClub(p, 'FA'); p.con = 0; left.push(fullName(p)); }
       } else if (R() < 0.7) p.con = S + 1 + ri(1, 3);
@@ -220,7 +230,7 @@ function rollover() {
   academyClubs().forEach(id => {
     const cl = G.clubs[id];
     if (typeof isSimClub === 'function' && isSimClub(cl)) { simYouthRollover(cl); return; }
-    if (id !== G.club) levelSquad(id, 'R').filter(p => p.age >= 23).forEach(p => {
+    if (id !== G.club || jobless()) levelSquad(id, 'R').filter(p => p.age >= 23).forEach(p => {
       const worst = Math.min(...seniorSquad(id).map(x => x.ca));
       if (p.ca >= worst) { p.lvl = 'A'; p.wage = wageFor(p, cl.rep); } else { moveClub(p, 'FA'); p.lvl = 'A'; p.con = 0; }
     });
@@ -238,7 +248,7 @@ function rollover() {
   G.press = {};
   G.flags = {};
   weeklyTransfers();
-  if (!G.gameOver) {
+  if (!G.gameOver && !jobless()) {
     G.board.target = expectationFor(G.club);
     G.fin.tb = roundMoney(Math.max(0, Math.max(5e6, c.bal * 0.3) - (typeof transferCommitments === 'function' ? transferCommitments(c.id).nextYear : 0)));
     G.fin.wb = roundWage(Math.max(clubWageBill(c) * 1.1, G.fin.wb));
@@ -255,19 +265,21 @@ function sack(reason) {
   const me = userClub().rep;
   const offers = domesticClubs().filter(id => id !== G.club && G.clubs[id].rep < me).sort(() => R() - 0.5).slice(0, 3);
   if (!offers.length) offers.push(domesticClubs().filter(id => id !== G.club).sort((a, b) => G.clubs[a].rep - G.clubs[b].rep)[0]);
-  G.gameOver = { reason, offers, club: G.club };
-  managerCloseEmployment(G.managerProfileId, 'Dismissed');
-  postManagerJob(G.club, reason);
+  // Out of work (career.js): the world carries on, and these clubs make offers while he looks around.
+  if (typeof becomeUnemployed === 'function') becomeUnemployed('Dismissed', reason, offers);
+  else { G.gameOver = { reason, offers, club: G.club }; managerCloseEmployment(G.managerProfileId, 'Dismissed'); postManagerJob(G.club, reason); }
+  addStory('club', `${G.manager} sacked`, reason);
   saveGame();
 }
 
 function takeJob(cid) {
   if (!G.clubs[cid] || G.clubs[cid].backgroundOnly || G.clubs[cid].foreignSquad) return false;
-  const old = G.club;
-  managerCloseEmployment(G.managerProfileId, 'Left for another club');
+  const old = G.club, wasOut = jobless();
+  if (!wasOut) managerCloseEmployment(G.managerProfileId, 'Left for another club');
   G.club = cid;
   G.gameOver = null;
-  managerReplaceAt(old, 'Replaced after departure');
+  if (G.career) Object.assign(G.career, { status: 'employed', holiday: null, offers: [], since: null, from: null });
+  if (!wasOut) managerReplaceAt(old, 'Replaced after departure');
   managerHireUser(cid);
   const vacancy = G.managerJobs?.find(j => j.cid === cid && j.status === 'open');
   if (vacancy) { vacancy.status = 'filled'; vacancy.filled = today().getTime(); }

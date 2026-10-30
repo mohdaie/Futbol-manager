@@ -26,7 +26,7 @@ function shapeMap(ipN, oopN) {
 }
 
 function buildSide(cid, idx, fx = {}) {
-  const c = G.clubs[cid], user = cid === G.club;
+  const c = G.clubs[cid], user = cid === G.club && !jobless();
   let tac, xi, bench, roles;
   if (user) { ensureUserLineup(); tac = G.tactics; xi = tac.slots.slice(); bench = tac.bench.slice(); roles = tac.roles.slice(); }
   else { tac = c.tac; const pk = autoPick(cid, tac.ip); xi = pk.xi; bench = pk.bench; roles = (tac.roles || Array(11).fill(0)).slice(); }
@@ -59,16 +59,16 @@ function createMatch(fx) {
 function createMatchState(fx) {
   // Real fixtures: players recover for the days since their last match before teams are picked.
   if (fx.id > 0 && fx.w != null) [fx.h, fx.a].forEach(cid => squadOf(cid).forEach(p => recoverTo(p, fxDayNo(fx))));
-  if (fx.id > 0 && (fx.h === G.club || fx.a === G.club) && typeof adviceAtKickoff === 'function') adviceAtKickoff(fx);
+  if (fx.id > 0 && isUserFx(fx) && typeof adviceAtKickoff === 'function') adviceAtKickoff(fx);
   // Computer clubs set up for this match with the tactic their available players suit best.
-  [[fx.h, fx.a], [fx.a, fx.h]].forEach(([c, o]) => { if (c !== G.club && G.clubs[c] && G.clubs[c].pl && !(G.flags && G.flags.fixedTac)) G.clubs[c].tac = aiChooseTactic(c, o); });
+  [[fx.h, fx.a], [fx.a, fx.h]].forEach(([c, o]) => { if ((c !== G.club || jobless()) && G.clubs[c] && G.clubs[c].pl && !(G.flags && G.flags.fixedTac)) G.clubs[c].tac = aiChooseTactic(c, o); });
   const M = { fid: fx.id, min: 0, added: ri(1, 5), ended: false, dirty: false, mod: matchMods(fx), sides: [buildSide(fx.h, 0, fx), buildSide(fx.a, 1, fx)], log: [], shout: null, duels: fx.id > 0 ? {} : null };
   if (fx.playoff && (fx.leg === 2 || fx.neutral)) {
     const first = fx.firstLeg && G.fixtures.find(f => f.id === fx.firstLeg);
     M.knockout = { home: first ? first.ag : 0, away: first ? first.hg : 0 };
   }
   M.sides.forEach(S => calcUnits(S));
-  if (fx.id > 0 && (fx.h === G.club || fx.a === G.club)) {
+  if (fx.id > 0 && isUserFx(fx)) {
     if (typeof evidenceInit === 'function') evidenceInit(M);
     M.analysisFrames = []; M.analysisNextFrame = 0;
     M.analysisTactics = M.sides.map(S => ({ club: S.cid, ip: S.ip, oop: S.oop, roles: S.roles.slice(), mentality: S.ment, tempo: S.tempo, width: S.width, press: S.press, line: S.line, passing: S.pass, startingXI: S.on.slice() }));
@@ -407,7 +407,7 @@ function stepMatchState(M, autoUser) {
 function quickSim(fx) {
   if (played(fx)) return null;
   const M = createMatch(fx);
-  M.instant = fx.h === G.club || fx.a === G.club;
+  M.instant = isUserFx(fx);
   if (!M.instant && typeof runFastMatch === 'function') runFastMatch(M);
   else while (!M.ended) stepMatch(M, true);
   finishMatch(M);
@@ -422,7 +422,7 @@ function finishMatch(M) {
   brainScore(M);
   const fx = G.fixtures.find(f => f.id === M.fid);
   const [H, W] = M.sides;
-  if (fx.h === G.club || fx.a === G.club) {
+  if (isUserFx(fx)) {
     fx.timeline = (M.evidence ? M.log : M.log.slice(-240)).map(e => ({ ...e }));
     if (M.evidence) { fx.evidence = evidenceFinish(M); evidenceArchiveFixture(fx, G); }
     if (M.analysisFrames?.length) fx.trace = M.analysisFrames;
@@ -505,7 +505,7 @@ function finishMatch(M) {
   fx.att = att;
   [hc, ac].forEach(c => { c.bal += tv; });
   if (fx.neutral) { hc.bal += Math.round(gate / 2); ac.bal += Math.round(gate / 2); } else hc.bal += gate;
-  if (fx.h === G.club || fx.a === G.club) {
+  if (isUserFx(fx)) {
     G.ledger.tv += tv;
     if (fx.neutral) G.ledger.gate += Math.round(gate / 2); else if (fx.h === G.club) G.ledger.gate += gate;
     const us = fx.h === G.club ? 0 : 1, S = M.sides[us], O = M.sides[1 - us];

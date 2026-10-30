@@ -101,7 +101,7 @@ SCREENS.home = {
     </section>`;
 
     return `<div class="dash-h"><h1 class="h1">Dashboard</h1></div>
-      ${assistantBriefingCard()}${clubCard}${next}${finance}
+      ${typeof careerBanner === 'function' ? careerBanner() : ''}${assistantBriefingCard()}${clubCard}${next}${finance}
       ${dashboardInbox()}
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="newsOpen" data-v="news">All news</button></div>
       <div class="list">${G.news.filter(n => n.box === 'news').slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
@@ -403,7 +403,7 @@ SCREENS.manager = {
       ${user ? `<div class="tiles"><div class="tile"><small>Personal bank</small><b>${money(m.bank)}</b><span>Career earnings held personally</span></div><div class="tile"><small>Weekly salary</small><b>${money(m.weeklySalary)}</b><span>Paid into your personal bank</span></div></div><div class="card"><h3>Income breakdown</h3>${totals || '<p class="muted">Your earnings will appear after the next weekly advance.</p>'}</div><h2 class="h2">Recent income</h2><div class="list">${tx || '<p class="muted">No transactions recorded yet.</p>'}</div>` : ''}
       <h2 class="h2">Career history</h2><div class="list">${m.history.slice().reverse().map(h => `<div class="row"><span class="grow"><b>${esc(h.name)} · ${esc(h.league)}</b><small>${esc(h.joined)}${h.left ? ' – ' + esc(h.left) + ' · ' + esc(h.reason) : ' · Current appointment'} · ${money(h.salary)}/week${h.seasons?.length ? ' · ' + h.seasons.map(s => `${esc(s.season)}: ${ordinal(s.position)} (${s.points} pts)`).join('; ') : ''}</small></span></div>`).join('') || '<p class="muted">Career history starts with the first appointment.</p>'}</div>
       <h2 class="h2">Honours and milestones</h2><div class="list">${m.awards.map(a => `<div class="row"><span class="grow"><b>${esc(a.name)}</b><small>${esc(a.season || fmtDate(a.date))}</small></span></div>`).join('') || '<p class="muted">Your achievements will be recorded here.</p>'}</div>
-      <h2 class="h2">Manager jobs · playable leagues</h2><div class="list">${jobs.map(j => `<div class="row"><span class="grow"><b>${esc(clubName(j.cid))} · ${esc(leagueName(j.league))}</b><small>${esc(j.reason)} · closes ${fmtDate(j.opened + 35 * 86400000)}</small></span>${j.cid !== G.club ? `<button class="btn" data-a="applyManagerJob" data-id="${j.cid}">Take job</button>` : ''}</div>`).join('') || '<p class="muted">No vacancies at the moment. Job news appears here when clubs are hiring.</p>'}</div>
+      ${user && typeof careerProfileHtml === 'function' ? careerProfileHtml() : `<h2 class="h2">Manager jobs · playable leagues</h2><div class="list">${jobs.map(j => `<div class="row"><span class="grow"><b>${esc(clubName(j.cid))} · ${esc(leagueName(j.league))}</b><small>${esc(j.reason)} · closes ${fmtDate(j.opened + 35 * 86400000)}</small></span></div>`).join('') || '<p class="muted">No vacancies at the moment. Job news appears here when clubs are hiring.</p>'}</div>`}
       ${news.length ? `<h2 class="h2">Around the leagues</h2><div class="list">${news.map(n => `<div class="row"><span class="grow"><b>${esc(n.title)}</b><small>${esc(n.body)}</small></span></div>`).join('')}</div>` : ''}`;
   },
 };
