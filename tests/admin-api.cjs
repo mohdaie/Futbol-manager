@@ -21,6 +21,11 @@ const assert = require('node:assert/strict');
   check('health needs no origin', (await call('GET', '/health', null, null)).status, 200);
   check('other origins are refused', (await call('GET', '/config', null, 'https://evil.example')).status, 403);
   check('no origin is refused', (await call('GET', '/state', null, null)).status, 403);
+  for (const o of ['https://fmotg.app', 'https://www.fmotg.app', ORIGIN]) {
+    const res = await call('GET', '/config', null, o);
+    check('the game domain ' + o + ' is allowed and echoed', [res.status, res.headers.get('Access-Control-Allow-Origin')], [200, o]);
+  }
+  check('preflight from the custom domain', (await call('OPTIONS', '/config', null, 'https://fmotg.app')).headers.get('Access-Control-Allow-Origin'), 'https://fmotg.app');
 
   let r = await read(await call('GET', '/config'));
   check('fresh config has defaults and no keys', [r.status, r.body.settings.jev.on, r.body.settings.ds.model, r.body.keys], [200, false, 'deepseek-flash', { jev: false, ds: false }]);

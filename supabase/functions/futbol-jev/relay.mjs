@@ -1,5 +1,7 @@
 // Personal-key relay. Diagnostics never contain keys, prompts or personal data.
-const ORIGIN = 'https://mohdaie.github.io';
+// The game's own pages; the first is the live domain, the others redirect to it.
+const ORIGINS = ['https://fmotg.app', 'https://www.fmotg.app', 'https://mohdaie.github.io'];
+const ORIGIN = ORIGINS[0];
 const UPSTREAM = 'https://api.typesafe.ai/v1/systemone';
 const CORS = {
   'Access-Control-Allow-Origin': ORIGIN,
@@ -26,9 +28,9 @@ async function sourceOf(install) {
 const JEV_PRICE_IN = 0.042; // US$ per 1M input tokens; output is free
 
 // serverKey() supplies the key saved in /admin when the game sends none (Server key mode).
-export async function handleJev(req, fetcher = fetch, record = async () => {}, serverKey = async () => null) {
+async function handleJevFor(req, fetcher = fetch, record = async () => {}, serverKey = async () => null) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-jev' });
-  if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
+  if (!ORIGINS.includes(req.headers.get('Origin'))) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json(405, { error: 'Use POST.' });
   if (!new URL(req.url).pathname.endsWith('/v1/systemone')) return json(404, { error: 'Unknown endpoint.' });
@@ -70,4 +72,11 @@ export async function handleJev(req, fetcher = fetch, record = async () => {}, s
       error: error.name === 'TimeoutError' ? 'Jev did not reply within 15 seconds.' : 'The relay could not reach Jev. Try again later.',
     });
   }
+}
+
+// CORS answers with the calling page's own origin.
+export async function handleJev(req, ...args) {
+  const response = await handleJevFor(req, ...args), origin = req.headers.get('Origin');
+  if (ORIGINS.includes(origin)) response.headers.set('Access-Control-Allow-Origin', origin);
+  return response;
 }

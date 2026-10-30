@@ -4,7 +4,7 @@ Development host: **musab-agents** (`wkzrefbvjxqphkrduyqj`).
 
 Base URL: `https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-admin`
 
-Backs the **/admin** page (`admin/index.html`, served at `https://mohdaie.github.io/Futbol-manager/admin/`).
+Backs the **/admin** page (`admin/index.html`, served at `https://fmotg.app/admin/`). The functions accept requests from `https://fmotg.app`, `https://www.fmotg.app` and the old `https://mohdaie.github.io` (`ORIGINS` in each handler).
 It stores the AI settings and the Jev / DeepSeek API keys in Supabase.
 
 | Route | What it does |

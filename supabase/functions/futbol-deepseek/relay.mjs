@@ -1,5 +1,7 @@
 // Personal-key relay. Diagnostics never contain keys, prompts or personal data.
-const ORIGIN = 'https://mohdaie.github.io';
+// The game's own pages; the first is the live domain, the others redirect to it.
+const ORIGINS = ['https://fmotg.app', 'https://www.fmotg.app', 'https://mohdaie.github.io'];
+const ORIGIN = ORIGINS[0];
 const UPSTREAM = 'https://api.deepseek.com/chat/completions';
 const CORS = {
   'Access-Control-Allow-Origin': ORIGIN,
@@ -33,9 +35,9 @@ export function deepSeekCost(model, u, d = new Date()) {
 }
 
 // serverKey() supplies the key saved in /admin when the game sends none (Server key mode).
-export async function handleDeepSeek(req, fetcher = fetch, record = async () => {}, serverKey = async () => null) {
+async function handleDeepSeekFor(req, fetcher = fetch, record = async () => {}, serverKey = async () => null) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-deepseek' });
-  if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
+  if (!ORIGINS.includes(req.headers.get('Origin'))) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json(405, { error: 'Use POST.' });
   if (!new URL(req.url).pathname.endsWith('/chat/completions')) return json(404, { error: 'Unknown endpoint.' });
@@ -78,4 +80,11 @@ export async function handleDeepSeek(req, fetcher = fetch, record = async () => 
       error: error.name === 'TimeoutError' ? 'DeepSeek did not reply within 18 seconds.' : 'The relay could not reach DeepSeek. Try again later.',
     });
   }
+}
+
+// CORS answers with the calling page's own origin.
+export async function handleDeepSeek(req, ...args) {
+  const response = await handleDeepSeekFor(req, ...args), origin = req.headers.get('Origin');
+  if (ORIGINS.includes(origin)) response.headers.set('Access-Control-Allow-Origin', origin);
+  return response;
 }

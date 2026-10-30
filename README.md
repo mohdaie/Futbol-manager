@@ -4,7 +4,7 @@ A football manager game for the browser, designed for a phone held in portrait. 
 
 ## Play
 
-- **Online:** turn on GitHub Pages for this repo (Settings → Pages → Deploy from a branch → `main`, folder `/ (root)`). The game is then at `https://mohdaie.github.io/Futbol-manager/`.
+- **Online:** turn on GitHub Pages for this repo (Settings → Pages → Deploy from a branch → `main`, folder `/ (root)`). The game is at `https://fmotg.app/` (custom domain: the `CNAME` file; DNS at Namecheap). The old `https://mohdaie.github.io/Futbol-manager/` address redirects there.
 - **Locally:** run any static server from the repo root, for example `python3 -m http.server 8000`, then open `http://localhost:8000`. Opening `index.html` straight from disk is not supported.
 
 Your career saves automatically in the browser. Use Settings → Export save to keep a backup.
@@ -31,7 +31,7 @@ The full design, file map and how to extend it are in [STRUCTURE.md](STRUCTURE.m
 
 ## AI services (optional)
 
-Set them up on the `/admin/` page (AI keys tab) (`https://mohdaie.github.io/Futbol-manager/admin/`). Keys are saved in Supabase and used by the `futbol-jev` and `futbol-deepseek` relays; they never reach the player's browser or save. Players get the settings you save (on or off, model, features, budget) when the game opens. See [supabase/functions/futbol-admin/README.md](supabase/functions/futbol-admin/README.md).
+Set them up on the `/admin/` page (AI keys tab) (`https://fmotg.app/admin/`). Keys are saved in Supabase and used by the `futbol-jev` and `futbol-deepseek` relays; they never reach the player's browser or save. Players get the settings you save (on or off, model, features, budget) when the game opens. See [supabase/functions/futbol-admin/README.md](supabase/functions/futbol-admin/README.md).
 
 There is no sign-in on the admin page yet, so treat the address as private.
 
