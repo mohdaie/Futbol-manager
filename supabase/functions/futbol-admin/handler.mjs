@@ -1,6 +1,8 @@
 // Admin API for /admin: global AI settings, server-held API keys and usage.
 // No sign-in yet (by design, for now): keys are write-only, so they can be replaced or removed but never read back.
-const ORIGIN = 'https://mohdaie.github.io';
+// The game's own pages; the first is the live domain, the others redirect to it.
+const ORIGINS = ['https://fmotg.app', 'https://www.fmotg.app', 'https://mohdaie.github.io'];
+const ORIGIN = ORIGINS[0];
 const CORS = {
   'Access-Control-Allow-Origin': ORIGIN,
   'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS',
@@ -41,10 +43,10 @@ export function cleanSettings(id, raw, base = DEFAULTS[id]) {
 /* store: { settings(): {id: value}, saveSettings(id, value), secrets(): {name: value}, saveSecret(name, value), deleteSecret(name), usage(),
             report(row), players(days) }
    probe: async (name, key) => { ok, status, ms, detail } */
-export async function handleAdmin(req, store, probe) {
+async function handleAdminFor(req, store, probe) {
   const url = new URL(req.url), path = url.pathname.replace(/\/+$/, '');
   if (req.method === 'GET' && path.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-admin' });
-  if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
+  if (!ORIGINS.includes(req.headers.get('Origin'))) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   const merged = async () => { const s = await store.settings(); return { jev: cleanSettings('jev', s.jev), ds: cleanSettings('ds', s.ds) }; };
   const keyInfo = async () => {
@@ -99,4 +101,11 @@ export async function handleAdmin(req, store, probe) {
     return json(400, { error: e instanceof SyntaxError ? 'Invalid JSON request.' : 'The admin service could not complete that request.' });
   }
   return json(404, { error: 'Unknown endpoint.' });
+}
+
+// CORS answers with the calling page's own origin.
+export async function handleAdmin(req, ...args) {
+  const response = await handleAdminFor(req, ...args), origin = req.headers.get('Origin');
+  if (ORIGINS.includes(origin)) response.headers.set('Access-Control-Allow-Origin', origin);
+  return response;
 }

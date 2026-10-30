@@ -1,6 +1,6 @@
 # Handover: Futbol Manager match engine (for ChatGPT or any assistant)
 
-Live game: https://mohdaie.github.io/Futbol-manager/ (GitHub Pages, served from `main`).
+Live game: https://fmotg.app/ (GitHub Pages, served from `main`, custom domain via `CNAME`).
 Repository: `mohdaie/Futbol-manager`. Plain HTML/JS, no build step. Current version **2026.10.22.31**.
 
 Read this first, then `docs/FOOTBALL_RULEBOOK.md` (the rulebook), then `STRUCTURE.md` (feature history, newest at the
@@ -39,7 +39,7 @@ bottom) and `docs/CLAUDE_HANDOVER.md` (earlier engine notes).
 3. Add a short section at the bottom of `STRUCTURE.md`.
 4. Run all tests (below), the strict audit, and the scorecard on 3 seeds.
 5. Open a PR to `main`, squash-merge, then confirm the live site serves the new version:
-   `curl -s "https://mohdaie.github.io/Futbol-manager/js/core/data.js?t=$(date +%s)" | grep GAME_VERSION`.
+   `curl -s "https://fmotg.app/js/core/data.js?t=$(date +%s)" | grep GAME_VERSION`.
 
 ## 3. Tests
 

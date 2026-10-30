@@ -1,4 +1,6 @@
-const ORIGIN = 'https://mohdaie.github.io';
+// The game's own pages; the first is the live domain, the others redirect to it.
+const ORIGINS = ['https://fmotg.app', 'https://www.fmotg.app', 'https://mohdaie.github.io'];
+const ORIGIN = ORIGINS[0];
 const CORS = { 'Access-Control-Allow-Origin': ORIGIN, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'authorization, content-type', 'Access-Control-Max-Age': '86400', 'Cache-Control': 'no-store', Vary: 'Origin' };
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const actions = ['attack', 'hold', 'defend', 'press', 'fresh', 'restyle', 'counter', 'cpress', 'protect', 'mark'];
@@ -49,9 +51,9 @@ async function digest(value) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return [...new Uint8Array(bytes)].map(n => n.toString(16).padStart(2, '0')).join('');
 }
-export async function handleBrain(req, ingest, usage = null) {
+async function handleBrainFor(req, ingest, usage = null) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-brain' });
-  if (req.headers.get('Origin') !== ORIGIN) return json(403, { error: 'Origin not allowed.' });
+  if (!ORIGINS.includes(req.headers.get('Origin'))) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json(405, { error: 'Use POST.' });
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer /i, '');
@@ -80,4 +82,11 @@ export async function handleBrain(req, ingest, usage = null) {
     if (message.includes('rate_limited')) return json(429, { error: 'Sync limit reached. Data is kept locally; retry later.' });
     return json(503, { error: 'Cloud storage is temporarily unavailable. Learning is kept locally.' });
   }
+}
+
+// CORS answers with the calling page's own origin.
+export async function handleBrain(req, ...args) {
+  const response = await handleBrainFor(req, ...args), origin = req.headers.get('Origin');
+  if (ORIGINS.includes(origin)) response.headers.set('Access-Control-Allow-Origin', origin);
+  return response;
 }
