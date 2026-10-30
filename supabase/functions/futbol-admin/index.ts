@@ -41,4 +41,17 @@ async function probe(name: string, key: string) {
   }
 }
 
-Deno.serve(req => handleAdmin(req, store, probe));
+// A Google sign-in (Supabase Auth access token) whose email is in the ADMIN_EMAILS secret (comma separated).
+async function isAdmin(token: string) {
+  const admins = (Deno.env.get('ADMIN_EMAILS') || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  if (!admins.length) return false;
+  const response = await fetch(Deno.env.get('SUPABASE_URL') + '/auth/v1/user', {
+    headers: { apikey: Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) return false;
+  const user = await response.json();
+  const google = user?.app_metadata?.provider === 'google' || (user?.app_metadata?.providers || []).includes('google');
+  return google && typeof user.email === 'string' && admins.includes(user.email.toLowerCase());
+}
+
+Deno.serve(req => handleAdmin(req, store, probe, isAdmin));

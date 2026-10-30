@@ -3,7 +3,8 @@
    The admin tools: edit clubs and players, move time forward, tune the match engine, run the AI Brain
    and the match analyst, and manage AI keys and settings (admin-services.js). They are not part of the game:
    they run on the /admin page (admin/index.html), which loads this same code against the career saved in
-   this browser. In the game itself the screen is unreachable (adminAllowed is false). No sign-in yet. */
+   this browser. In the game itself the screen is unreachable (adminAllowed is false). The page asks for a Google
+   sign-in first (admin-services.js); the server checks it on every admin request. */
 
 function adminAllowed() { return !!window.ADMIN_PAGE; }
 
@@ -15,15 +16,16 @@ SCREENS.admin = {
   full: true,
   render() {
     if (!adminAllowed()) return `<h1 class="h1">Admin</h1>${empty('Moved', 'The admin tools now live on the /admin page.')}`;
+    if (!admSignedIn()) return admSignInHtml();
     const t = UI.tab.adm || 'dash', needsSave = !ADMIN_NO_SAVE.includes(t) && !G;
     return `<div class="main admin-page"><h1 class="h1">Admin</h1>
       <div class="banner open"><b>${G ? 'Live editing' : 'No career in this browser'}</b><span>${G ? 'Changes apply to the career saved in this browser at once. Close the game tab while you edit, and export a backup in the game\'s Settings first if you want to undo.' : 'The save tools need a career. Start one in the game, then reload this page. The dashboard, AI keys and settings still work.'}</span></div>
       ${tabs('adm', G ? ADMIN_TAB_LIST : ADMIN_TAB_LIST.filter(x => ADMIN_NO_SAVE.includes(x[0])), needsSave ? 'dash' : t)}
       ${needsSave ? ADMIN_TABS.dash() : ADMIN_TABS[t]()}
-      <p class="muted">Futbol Manager admin · <a href="./" data-nolink>Back to the game</a></p></div>`;
+      <p class="muted">Futbol Manager admin · ${esc(ADM_AUTH.email)} · <a href="#" data-a="admSignOut">Sign out</a> · <a href="./" data-nolink>Back to the game</a></p></div>`;
   },
   after() {
-    if (!adminAllowed()) return; // the services and dashboard code is only on the admin page
+    if (!adminAllowed() || !admSignedIn()) return; // the services and dashboard code is only on the admin page
     const t = UI.tab.adm || 'dash';
     if (t === 'svc') admSvcLoad();
     if (t === 'dash' || (!G && !ADMIN_NO_SAVE.includes(t))) admDashLoad();

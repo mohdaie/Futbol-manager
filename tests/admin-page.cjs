@@ -28,8 +28,10 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       ds: { on: false, model: 'deepseek-flash', thinking: false, maxTokens: 300, temp: 0.7, timeout: 20000, budget: 2, feat: feat(['briefing', 'second', 'press', 'talks', 'report', 'staff', 'agents', 'news', 'match']) } } };
     const keyInfo = () => ({ jev: db.keys.jev ? { set: true, last4: db.last4.jev } : { set: false }, ds: db.keys.ds ? { set: true, last4: db.last4.ds } : { set: false } });
     const calls = [];
+    const auths = [];
     const mock = async page => page.route('https://wkzrefbvjxqphkrduyqj.supabase.co/functions/v1/futbol-admin/**', async route => {
       const req = route.request(), p = new URL(req.url()).pathname.replace(/.*futbol-admin/, ''), body = req.postData() ? JSON.parse(req.postData()) : null;
+      if (req.method() !== 'OPTIONS' && p !== '/report' && p !== '/config') auths.push(req.headers().authorization || '');
       calls.push([req.method(), p, body]);
       const ok = data => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(data) });
       if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': '*', 'access-control-allow-headers': '*' } });
@@ -50,9 +52,25 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
     const open = async () => { const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message)); page.on('dialog', d => d.accept()); await page.route('https://fonts.googleapis.com/**', r => r.abort()); await mock(page); return page; };
 
-    // ---- /admin with no career in this browser
+    // ---- signed out: only the Google sign-in, and no admin request is made
     const admin = await open();
     await admin.goto(base + '/admin/');
+    await admin.waitForSelector('[data-a=admSignIn]');
+    check('signed out, the admin page asks for a Google sign-in', [await admin.locator('[data-a=admSignIn]').count(), await admin.locator('.tabs').count()], [1, 0]);
+    check('signed out, no admin request is sent', calls.filter(c => c[1] !== '/config').length, 0);
+    await admin.route('https://wkzrefbvjxqphkrduyqj.supabase.co/auth/v1/authorize**', r => r.fulfill({ status: 200, contentType: 'text/html', body: 'google' }));
+    const [authReq] = await Promise.all([admin.waitForRequest(r => r.url().includes('/auth/v1/authorize')), admin.locator('[data-a=admSignIn]').click()]);
+    const signIn = authReq.url();
+    check('sign-in goes to Supabase Google sign-in and back to /admin/', signIn.startsWith('https://wkzrefbvjxqphkrduyqj.supabase.co/auth/v1/authorize?provider=google&redirect_to=') && signIn.endsWith(encodeURIComponent('/admin/')), true);
+    await admin.goto('about:blank');
+    await admin.goto(base + '/admin/#error=access_denied&error_description=Unverified+email');
+    await admin.waitForSelector('[data-a=admSignIn]');
+    check('a refused sign-in is explained', (await admin.locator('.main').innerText()).includes('Unverified email'), true);
+
+    // ---- /admin with no career in this browser, signed in (Google returns the token in the address fragment)
+    await admin.goto('about:blank');
+    await admin.goto(base + '/admin/#access_token=e30.eyJlbWFpbCI6ImFkbWluQHRlc3QuZXhhbXBsZSIsImV4cCI6NDEwMjQ0NDgwMH0.sig&token_type=bearer');
+    check('the token is removed from the address bar', await admin.evaluate(() => location.hash), '');
     await admin.waitForSelector('.dash-kv');
     check('without a career the dashboard and AI keys are offered', [await admin.locator('.tabs button').allTextContents(), (await admin.locator('.banner').textContent()).includes('No career')], [['Dashboard', 'AI keys'], true]);
     const dashText = (await admin.locator('.main').innerText()).toLowerCase();
@@ -65,6 +83,8 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
     check('the period is requested from the server', calls.some(c => c[1] === '/players' && c[0] === 'GET'), true);
     check('the dashboard has no sideways scrolling at 390px', await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     check('the admin page sends no play reports', calls.some(c => c[1] === '/report'), false);
+    check('every admin request carries the sign-in', auths.length > 0 && auths.every(a => a === 'Bearer e30.eyJlbWFpbCI6ImFkbWluQHRlc3QuZXhhbXBsZSIsImV4cCI6NDEwMjQ0NDgwMH0.sig'), true);
+    check('the signed-in email is shown with a sign-out link', (await admin.locator('.main').innerText()).includes('admin@test.example'), true);
 
     // ---- the game: settings hold everything a player needs, and there is no Admin
     const game = await open();

@@ -1,6 +1,7 @@
 // Rulebook geometry/shape invariants plus the real mobile demo and match paths.
 // Run: CHROMIUM_PATH=/path/to/chromium node tests/shape.cjs
 const { chromium } = require('playwright');
+const ADMIN_LOGIN = '#access_token=e30.eyJlbWFpbCI6ImFkbWluQHRlc3QuZXhhbXBsZSIsImV4cCI6NDEwMjQ0NDgwMH0.sig'; // a test session (the server is mocked or not called)
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path');
 const root = path.resolve(__dirname, '..');
@@ -81,7 +82,7 @@ const server = require('node:http').createServer((req, res) => {
     check('Planning does not mutate tactic or squad', r.immutable);
     check('All 64 formation pairings remain finite on both flanks and goals', r.finite);
 
-    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/'); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
+    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/' + ADMIN_LOGIN); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
     await toAdmin();
     const before = await page.evaluate(() => { window.shapeBefore = JSON.stringify({ tactics: G.tactics, fixtures: G.fixtures, players: G.players, ai: G.ai }); return true; });
     await page.evaluate(() => { UI.tab.adm = 'eng'; render(); });

@@ -28,11 +28,22 @@ with no policies, and anon / authenticated have no grants, so only the edge func
 mode). A personal key sent by a client still wins. The game never receives a key: it reads `/config` and, for a
 service with a saved key, runs in Server key mode through the relay. A service without a key stays off.
 
-## No sign-in yet
+## Sign-in (Google)
 
-By request, the admin API has no authentication. Anyone who can reach the origin-restricted URLs can change
-settings, replace or remove keys, and the relays will spend the saved keys for any caller. Keys are write-only
-(never returned). Add a passphrase or Supabase Auth check in `handleAdmin` before sharing the address widely, and
-consider per-device rate limits on the relays.
+Every route except `GET /config`, `POST /report` and `/health` needs `Authorization: Bearer <Supabase Auth access
+token>` from a Google sign-in whose email is in the `ADMIN_EMAILS` edge function secret (comma separated). No token:
+401; a token for any other account: 403. With `ADMIN_EMAILS` unset nobody is an admin (fail closed). The admin page
+(`js/ui/admin-services.js`) sends people to `/auth/v1/authorize?provider=google` and reads the access token from the
+address fragment on return (implicit flow, one hour; then sign in again). It keeps the token in sessionStorage.
+
+One-time setup:
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID (Web application). Authorized
+   redirect URI: `https://wkzrefbvjxqphkrduyqj.supabase.co/auth/v1/callback`.
+2. Supabase → Authentication → Sign In / Providers → Google: on, with that client ID and secret.
+3. Supabase → Authentication → URL Configuration: add `https://fmotg.app/admin/` to the redirect URLs.
+4. Supabase → Edge Functions → Secrets: `ADMIN_EMAILS` = the admin Google address(es).
+
+Still open: the relays (`futbol-jev`, `futbol-deepseek`) spend the saved keys for any caller from the game's origins;
+the per-device monthly budget is enforced in the game. Consider server-side rate limits.
 
 Deploy with the Supabase dashboard or MCP: `index.ts` + `handler.mjs`, `verify_jwt = false`.
