@@ -470,7 +470,7 @@ function finishMatch(M) {
       Object.keys(S.yc).forEach(id => {
         const p = G.players[id]; if (!p || S.reds.includes(+id)) return;
         p.st.yc++;
-        if (fx.playoff) return;
+        if (fx.playoff || fx.cup) return; // only league cautions count towards league bans
         if (!p.discipline || p.discipline.season !== G.season) {
           // An older career has only its total cautions; retain those instead of
           // discarding a suspension threshold halfway through its first season.

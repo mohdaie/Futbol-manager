@@ -36,7 +36,39 @@ A relegated club retains its best 24 first-team players (protecting two goalkeep
 
 Yellow-card thresholds use 5 by club game 19/23, 10 by 32/37, and 15 across the regular season for Premier League/Championship. Second-yellow dismissals carry one match; the game's default straight-red category carries three. Friendly matches do not count league cautions or serve competitive bans. Outstanding bans survive rollover. This remains a simplified disciplinary model, without all FA offence categories, appeals or misconduct hearings.
 
+## Euro Super League
+
+A 32-club European competition in the classic format (`js/systems/esl.js`, screen `js/ui/screens-esl.js`, checks
+`tests/esl.cjs`). Clubs come from the top divisions of England, Spain, Italy, Germany and France.
+
+- **Qualification:** the top six of each league, the holders, then the best seventh-placed (and lower) clubs by points
+  per game to make 32. The first season, with no table, goes by club reputation. Qualifiers are fixed at the end
+  of a season (before the overseas tables reset) and drawn at the start of the next.
+- **Draw:** four pots of eight by reputation (holders in pot 1); no group holds two clubs from one league.
+- **Groups:** home and away, six midweek matchdays (season weeks 10-22, September to December; a matchday moves
+  on a week if any club in the group has a Monday-Thursday league match). Top two go through. Ties: points,
+  head-to-head goal difference, goal difference, goals.
+- **Knockouts:** round of 16 (group winners v runners-up from another group and league, winners at home in the
+  second leg), quarter-finals and semi-finals over two legs (February-May), then one final at a neutral ground on
+  the Saturday after the league season. Level on aggregate: extra time and penalties; no away goals.
+- **Prize money**, per club, from UEFA's 2026/27 Champions League distribution (circular 48/2026) at €1 = £0.85:
+  starting fee €18.62m, group win €2.1m, draw €0.7m, round of 16 €11m, quarter-final €12.5m, semi-final €15m,
+  final €18.5m, winner €6.5m. UEFA's value pillar (€853m for 36 clubs, market pool and coefficient) is scaled to
+  32 clubs and shared by club reputation. Payments go to the club's bank balance (the managed club's ledger as
+  prize money) when earned.
+- The winner gains a point of reputation; for the managed club it is a trophy, a £500k manager award bonus and
+  +15 board confidence.
+- Fixtures are in `G.fixtures` with `comp: 'ESL'`; league tables, matchweek labels and league card counts leave
+  them out. ESL yellow cards do not lead to league bans; a red card's ban applies to the next matches as usual.
+- Not modelled: separate UEFA disciplinary counts, squad registration lists, and a second-tier European cup.
+
 ## Background club setup: Spain, Italy, Germany and France
+
+**Current state:** every club in La Liga (20), Serie A (20), Bundesliga (18) and Ligue 1 (18) now has a full first-team
+squad, and those leagues run as simulated divisions with fixtures, tables and transfers (`js/systems/world-sim.js`;
+see README). Their second divisions are rating-only, without players. The history below describes the first
+registry release.
+
 
 Release 2026.10.22.45 adds a separate, browsable club registry for La Liga (20 clubs), Serie A (20), Bundesliga (18) and Ligue 1 (18). The 2026/27 membership comes from the same pinned OpenFootball revision; all club names and source URLs are recorded in [data/world/sources.json](data/world/sources.json). These are community source snapshots, not independently checked official league publications.
 
@@ -65,7 +97,7 @@ Official 2026/27 PL/EFL handbooks were inaccessible in the environment. This rel
 - The bottom three Championship positions are marked, but movement into League One is held until that division exists.
 - Senior-list/homegrown/Under-21 registration, loan quotas, financial regulations, exceptional disciplinary cases and official broadcast/prize distributions are not enforced. Configuration fields for registration are preparatory only.
 - After the model's points, goal difference, goals, wins (Championship) and head-to-head criteria, an unresolved exact tie uses a stable club-ID order. A special neutral league-position decider is not implemented.
-- FA Cup, League Cup, European competitions and team-only simulation of additional countries are not part of this release.
+- FA Cup and League Cup are not implemented yet. European club football: the Euro Super League (above), one tier only.
 - English academy facilities retain their existing reputation-based starting value. Selected overseas clubs have independent historical development estimates; an officially verified academy ranking is not implemented.
 
 ## Validation
