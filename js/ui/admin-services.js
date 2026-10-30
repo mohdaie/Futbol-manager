@@ -2,7 +2,39 @@
 /* ===== admin-services.js =====
    Admin page only. AI keys, AI settings and AI usage, stored in Supabase through the futbol-admin edge
    function (supabase/functions/futbol-admin). A saved key is write-only: this page only ever sees the last
-   four characters. No sign-in yet. */
+   four characters. Sign-in: Google through Supabase Auth; the futbol-admin function accepts only the emails in its
+   ADMIN_EMAILS secret. */
+
+/* ---------- Sign-in: Google via Supabase Auth (implicit flow; the access token lasts an hour) ---------- */
+const ADM_AUTH_KEY = 'fm-admin-auth', SUPABASE_URL = ADMIN_API_URL.replace(/\/functions\/v1\/.*$/, '');
+const ADM_AUTH = { token: null, email: '', exp: 0, error: '' };
+(function admAuthInit() {
+  const h = new URLSearchParams(location.hash.slice(1)), q = new URLSearchParams(location.search);
+  const err = h.get('error_description') || q.get('error_description');
+  if (err) ADM_AUTH.error = err.replace(/\+/g, ' ');
+  let saved = null;
+  if (h.get('access_token')) {
+    try { const p = JSON.parse(atob(h.get('access_token').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); saved = { token: h.get('access_token'), email: p.email || '', exp: p.exp * 1000 }; } catch (e) { /* malformed token */ }
+    try { if (saved) sessionStorage.setItem(ADM_AUTH_KEY, JSON.stringify(saved)); } catch (e) { /* storage blocked: this tab only */ }
+  } else { try { saved = JSON.parse(sessionStorage.getItem(ADM_AUTH_KEY) || 'null'); } catch (e) { /* none */ } }
+  if (h.get('access_token') || err) history.replaceState(null, '', location.pathname); // keep the token out of the address bar
+  if (saved && saved.exp > Date.now() + 60000) Object.assign(ADM_AUTH, saved);
+})();
+const admSignedIn = () => !!ADM_AUTH.token && ADM_AUTH.exp > Date.now();
+function admSignOut(why = '') {
+  Object.assign(ADM_AUTH, { token: null, email: '', exp: 0, error: why });
+  try { sessionStorage.removeItem(ADM_AUTH_KEY); } catch (e) { /* none */ }
+  Object.assign(ADM_SVC, { state: null, error: '', usage: null }); Object.assign(ADM_DASH, { data: null, error: '' });
+}
+ACT.admSignIn = () => { location.href = SUPABASE_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(location.origin + location.pathname); };
+ACT.admSignOut = () => { admSignOut(); render(); };
+function admSignInHtml() {
+  return `<div class="main admin-page"><h1 class="h1">Admin</h1><div class="card"><h3>Sign in</h3>
+    <p class="muted">The admin tools are for the game's owner. Sign in with an admin Google account.</p>
+    ${ADM_AUTH.error ? `<div class="aitest bad" role="alert">${esc(ADM_AUTH.error)}</div>` : ''}
+    <div class="btns"><button class="btn pri" data-a="admSignIn">Sign in with Google</button></div></div>
+    <p class="muted"><a href="./" data-nolink>Back to the game</a></p></div>`;
+}
 
 const ADM_SERVICES = {
   jev: { name: 'Jev (TypeSafe)', role: 'Fast structured decisions (choose, score, yes/no). It does not write text.', console: 'console.typesafe.ai/keys', models: JEV_MODELS,
@@ -13,8 +45,11 @@ const ADM_SERVICES = {
 const ADM_SVC = { state: null, error: '', loading: false, test: {}, usage: null, usageBusy: false };
 
 async function admApi(path, method = 'GET', body) {
-  const res = await fetch(ADMIN_API_URL + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+  if (!admSignedIn()) { admSignOut('Your sign-in has expired. Sign in again.'); render(); throw new Error('Signed out.'); }
+  const headers = { Authorization: 'Bearer ' + ADM_AUTH.token, ...(body ? { 'Content-Type': 'application/json' } : {}) };
+  const res = await fetch(ADMIN_API_URL + path, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 || res.status === 403) { admSignOut(data.error || 'Sign in again.'); render(); throw new Error(data.error || 'Signed out.'); }
   if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ').');
   return data;
 }

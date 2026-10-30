@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const ADMIN_LOGIN = '#access_token=e30.eyJlbWFpbCI6ImFkbWluQHRlc3QuZXhhbXBsZSIsImV4cCI6NDEwMjQ0NDgwMH0.sig'; // a test session (the server is mocked or not called)
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const server = require('node:http').createServer((req, res) => {
@@ -26,7 +27,7 @@ const server = require('node:http').createServer((req, res) => {
       Object.assign(aiCfg().jev, { on: true, mode: 'proxy', proxy: 'https://engineqa.test', feat: { engine: true } }); aiSave();
     });
     // The admin tools live on the /admin page, which opens the career saved in this browser.
-    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/'); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
+    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/' + ADMIN_LOGIN); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
     await toAdmin();
     await page.evaluate(() => {
       window.qaOriginal = JSON.stringify({ tactics: G.tactics, players: G.players, fixtures: G.fixtures, tune: G.tune });

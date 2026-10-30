@@ -1,12 +1,13 @@
 // Admin API for /admin: global AI settings, server-held API keys and usage.
-// No sign-in yet (by design, for now): keys are write-only, so they can be replaced or removed but never read back.
+// Admin endpoints need a Google sign-in (Supabase Auth) by an admin email; keys are write-only, so they can be replaced or
+// removed but never read back. The game's own endpoints (/config, /report, /health) stay public.
 // The game's own pages; the first is the live domain, the others redirect to it.
 const ORIGINS = ['https://fmotg.app', 'https://www.fmotg.app', 'https://mohdaie.github.io'];
 const ORIGIN = ORIGINS[0];
 const CORS = {
   'Access-Control-Allow-Origin': ORIGIN,
   'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type',
+  'Access-Control-Allow-Headers': 'authorization, content-type',
   'Access-Control-Max-Age': '86400',
   'Cache-Control': 'no-store',
   'Vary': 'Origin',
@@ -42,12 +43,19 @@ export function cleanSettings(id, raw, base = DEFAULTS[id]) {
 
 /* store: { settings(): {id: value}, saveSettings(id, value), secrets(): {name: value}, saveSecret(name, value), deleteSecret(name), usage(),
             report(row), players(days) }
-   probe: async (name, key) => { ok, status, ms, detail } */
-async function handleAdminFor(req, store, probe) {
+   probe: async (name, key) => { ok, status, ms, detail }
+   isAdmin: async accessToken => true only for a signed-in admin (index.ts checks the token with Supabase Auth) */
+async function handleAdminFor(req, store, probe, isAdmin = async () => false) {
   const url = new URL(req.url), path = url.pathname.replace(/\/+$/, '');
   if (req.method === 'GET' && path.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-admin' });
   if (!ORIGINS.includes(req.headers.get('Origin'))) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+  const open = (req.method === 'GET' && path.endsWith('/config')) || (req.method === 'POST' && path.endsWith('/report'));
+  if (!open) {
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return json(401, { error: 'Sign in with Google to use the admin tools.' });
+    if (!(await isAdmin(token).catch(() => false))) return json(403, { error: 'This Google account is not an admin.' });
+  }
   const merged = async () => { const s = await store.settings(); return { jev: cleanSettings('jev', s.jev), ds: cleanSettings('ds', s.ds) }; };
   const keyInfo = async () => {
     const sec = await store.secrets();

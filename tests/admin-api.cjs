@@ -15,12 +15,22 @@ const assert = require('node:assert/strict');
     report: async row => { db.reports = (db.reports || []).concat(row); }, players: async days => ({ days }),
   };
   const probe = async (name, key) => ({ ok: key === 'good-key-123', detail: name });
-  const call = (method, path, body, origin = ORIGIN) => handleAdmin(new Request('https://x.test/functions/v1/futbol-admin' + path, { method, headers: { ...(origin ? { Origin: origin } : {}), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }), store, probe);
+  const isAdmin = async token => token === 'admin-token';
+  const call = (method, path, body, origin = ORIGIN, token = 'admin-token') => handleAdmin(new Request('https://x.test/functions/v1/futbol-admin' + path, { method, headers: { ...(origin ? { Origin: origin } : {}), ...(token ? { Authorization: 'Bearer ' + token } : {}), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }), store, probe, isAdmin);
   const read = async r => ({ status: r.status, body: await r.json() });
 
   check('health needs no origin', (await call('GET', '/health', null, null)).status, 200);
   check('other origins are refused', (await call('GET', '/config', null, 'https://evil.example')).status, 403);
   check('no origin is refused', (await call('GET', '/state', null, null)).status, 403);
+  check('admin endpoints need a sign-in', (await call('GET', '/state', null, ORIGIN, null)).status, 401);
+  check('a signed-in non-admin is refused', (await call('GET', '/state', null, ORIGIN, 'someone-else')).status, 403);
+  for (const [m, p, b] of [['GET', '/usage'], ['GET', '/players?days=7'], ['PUT', '/secret', { service: 'ds', value: 'sk-attacker-12345' }], ['DELETE', '/secret?service=ds'], ['PUT', '/settings', { ds: { on: true } }], ['POST', '/test', { service: 'ds' }]])
+    check('signed out: ' + m + ' ' + p + ' is refused', (await call(m, p, b, ORIGIN, null)).status, 401);
+  check('signed out: nothing was changed', [db.secrets, db.settings], [{}, {}]);
+  check('the game still reads /config without a sign-in', (await call('GET', '/config', null, ORIGIN, null)).status, 200);
+  check('the game still sends play statistics without a sign-in', (await call('POST', '/report', { kind: 'open', device: 'a'.repeat(32), session: 'b'.repeat(32) }, ORIGIN, null)).status, 204);
+  db.reports = undefined;
+  check('the preflight allows the Authorization header', /authorization/.test((await call('OPTIONS', '/state', null, ORIGIN, null)).headers.get('Access-Control-Allow-Headers')), true);
   for (const o of ['https://fmotg.app', 'https://www.fmotg.app', ORIGIN]) {
     const res = await call('GET', '/config', null, o);
     check('the game domain ' + o + ' is allowed and echoed', [res.status, res.headers.get('Access-Control-Allow-Origin')], [200, o]);
@@ -45,7 +55,7 @@ const assert = require('node:assert/strict');
   check('settings are clamped and unknown fields dropped', [r.body.settings.ds.on, r.body.settings.ds.model, r.body.settings.ds.timeout, r.body.settings.ds.temp, r.body.settings.ds.maxTokens, r.body.settings.ds.feat.press, 'bogus' in r.body.settings.ds.feat, 'evil' in r.body.settings.ds], [true, 'deepseek-v4-pro', 60000, 2, 50, false, false, false]);
   r = await read(await call('PUT', '/settings', { ds: { model: 'gpt-5' } }));
   check('unknown models are ignored', r.body.settings.ds.model, 'deepseek-v4-pro');
-  check('bad JSON is a 400', (await handleAdmin(new Request('https://x.test/settings', { method: 'PUT', headers: { Origin: ORIGIN }, body: '{oops' }), store, probe)).status, 400);
+  check('bad JSON is a 400', (await handleAdmin(new Request('https://x.test/settings', { method: 'PUT', headers: { Origin: ORIGIN, Authorization: 'Bearer admin-token' }, body: '{oops' }), store, probe, isAdmin)).status, 400);
   check('cleanSettings does not mutate defaults', cleanSettings('jev', { on: true }).on && !DEFAULTS.jev.on, true);
 
   check('test with a bad key fails', (await read(await call('POST', '/test', { service: 'ds' }))).body.ok, false);

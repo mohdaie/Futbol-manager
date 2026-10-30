@@ -1,3 +1,4 @@
+const ADMIN_LOGIN = '#access_token=e30.eyJlbWFpbCI6ImFkbWluQHRlc3QuZXhhbXBsZSIsImV4cCI6NDEwMjQ0NDgwMH0.sig'; // a test session (the server is mocked or not called)
 const { chromium } = require('playwright'), assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http');
 (async () => {
@@ -30,7 +31,7 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
       await saveGameAsync();
       return { fid: fx.id, parity, roundtrip, compressed: !!fx.evidence.encoding, frames: raw.frameCount, rawBytes: before.length, compressedBytes: JSON.stringify(fx.evidence).length };
     });
-    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/'); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
+    const toAdmin = async () => { await page.evaluate(async () => { saveGame(); await SaveStorage.flush(); }); await page.goto('http://127.0.0.1:' + server.address().port + '/admin/' + ADMIN_LOGIN); await page.waitForFunction(() => window.ADMIN_PAGE && typeof G !== 'undefined' && G && UI.s === 'admin'); };
     await toAdmin();
     await page.evaluate(fid => { UI.tab.adm = 'match'; ADM.matchAnalystFid = fid; render(); }, result.fid);
     assert(result.parity); checks.push('Simulation worker and main thread record identical movement and decisions');
