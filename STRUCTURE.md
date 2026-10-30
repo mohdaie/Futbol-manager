@@ -250,7 +250,7 @@ Older saves get personal details and club managers when they load (`ensureWorld(
 
 **Scouting fog of war.** Players at other clubs show attribute ranges, and the ranges narrow as `know` rises. League players start at 45% known, players abroad at 10%. Assignments filter by region, position and age, and each report gets a grade from A to D relative to your current starter.
 
-**Transfers.** The selling club accepts a bid at its asking price or above, makes a counter offer from 75% of it, and rejects anything lower. The player can refuse to talk if your club is too small. Personal terms depend on wage, contract length and the squad status you promise, and every deal is checked against the wage budget. Half of each sale fee goes back into your transfer budget.
+**Transfers.** The selling club accepts a bid at its asking price or above, makes a counter offer from 75% of it, and rejects anything lower. The player can refuse to talk if your club is too small. Personal terms depend on wage, contract length and the squad status you promise, and every deal is checked against the wage budget. The board releases a share of each sale fee to your transfer budget, set by the club's finances (`saleReinvest()`: balance against a year's wage bill) and its confidence in you: in debt 30%, tight 40%, stable 50%, healthy 65%, wealthy 80% (+5 at board confidence 75+, −10 below 30).
 
 **Finance.** Income comes from TV money per match, gate receipts at home, weekly sponsorship and merchandise, player sales and end-of-season prize money. Costs are wages, staff, running costs, scouting and transfer fees. Every £1k a week of wage budget converts to £100k of transfer budget.
 

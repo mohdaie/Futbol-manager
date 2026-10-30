@@ -58,16 +58,22 @@ const{chromium}=require('playwright'),assert=require('node:assert/strict'),fs=re
  console.log('package core',JSON.stringify(core));for(const [n,v]of Object.entries(core))check(n,v);
  const selling=await p.evaluate(()=>{
   const out={};
+  { resetPackage();newGame(leagueClubs('EPL')[0],'Reinvest bands',1);const c=userClub(),year=clubWageBill(c)*52;G.board.conf=50;
+    const at=bal=>{c.bal=bal;return saleReinvest();};
+    out.reinvestBands=[at(-1).pct,at(year*.2).pct,at(year*.6).pct,at(year*1.1).pct,at(year*3).pct].join()==='30,40,50,65,80';
+    G.board.conf=80;out.reinvestConfidentBoard=at(year*.6).pct===55;G.board.conf=20;out.reinvestDoubtingBoard=at(-1).pct===25;
+    G.board.conf=50;c.bal=-1;const tb=G.fin.tb;transferCash('CIT',G.club,1e6);out.reinvestInDebtSale=G.fin.tb===tb+300000; }
   for(const comp of ['EPL','ECH']){
    resetPackage();const cid=leagueClubs(comp)[0];newGame(cid,'Sale simulation',1);G.fin.tb=1e8;G.fin.wb=1e8;for(const c of Object.values(G.clubs))if(!c.fa&&!c.backgroundOnly)c.bal=500e6;G.deals=[];G.payments=[];
    const player=seniorSquad(cid).find(p=>!p.inj),buyer=G.clubs.CIT;delete player.rc;player.listed=true;
    if(!squadSpace(buyer))moveClub(seniorSquad(buyer.id).at(-1),'FA');
    bidForUser(buyer,player,2e6);const d=activeDeal(player.id,'out');
    setTransferProposal(d,{...TRANSFER_TERMS_DEFAULT,years:2,upfrontPct:50,sellOnPct:10,buyBackPrice:Math.max(pValue(player)*2,4e6)});
-   const balance=userClub().bal,budget=G.fin.tb;answerOffer(d,'accept');for(let i=0;i<10&&!d.need&&!d.closed;i++)dealTick(d,true);
+   const balance=userClub().bal,budget=G.fin.tb,share=saleReinvest().pct/100;answerOffer(d,'accept');for(let i=0;i<10&&!d.need&&!d.closed;i++)dealTick(d,true);
    out[comp+' saleReady']=d.need?.k==='finalout';completeOut(d);
-   out[comp+' upfrontSale']=d.closed?.ok&&userClub().bal===balance+1e6&&G.fin.tb===budget+500000&&G.payments.length===2&&player.sellOn?.club===cid&&activeBuyBack(player);
-   for(const row of G.payments)row.due=today().getTime();payInstalments();out[comp+' saleSettled']=G.payments.length===0&&userClub().bal===balance+2e6&&G.fin.tb===budget+1e6;
+   out[comp+' upfrontSale']=d.closed?.ok&&userClub().bal===balance+1e6&&G.fin.tb===budget+Math.round(1e6*share)&&G.payments.length===2&&player.sellOn?.club===cid&&activeBuyBack(player);
+   for(const row of G.payments)row.due=today().getTime();payInstalments();out[comp+' saleSettled']=G.payments.length===0&&userClub().bal===balance+2e6&&G.fin.tb===budget+2*Math.round(1e6*share);
+   out[comp+' wealthyClubReinvestsMore']=share>=0.8;
    const activation=activateBuyBack(player.id),bb=activation.deal;
    if(bb){dealProceed(bb,'quiet',player.buyBack.price,1e6);bb.will='keen';bb.add=0;for(let i=0;i<25&&!bb.closed;i++){if(bb.need){if(bb.need.k==='final'){completeIn(bb);break;}if(['agentfee','wagelimit','bidlimit','notforsale'].includes(bb.need.k))dealRaise(bb,bb.need.wage||bb.need.fee||bb.agentFee);else break;}else dealTick(bb,true);}}
    out[comp+' buyBackCompletes']=!!bb?.closed?.ok&&player.club===cid&&!player.buyBack;

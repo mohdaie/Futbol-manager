@@ -105,11 +105,23 @@ function transferCommitments(cid = G.club) {
   const rows = G.payments.filter(x => x.from === cid || x.to === cid);
   return { rows, owed: sum(rows.filter(x => x.from === cid), x => x.amount), due: sum(rows.filter(x => x.to === cid), x => x.amount), nextYear: sum(rows.filter(x => x.from === cid && (x.due ? x.due <= now + year : x.season <= G.season + 1)), x => x.amount) };
 }
+// The board's share of sale cash released to the manager's transfer budget, from the club's finances (bank
+// balance against a year's wage bill) and its confidence in him: a club in debt keeps most of it, a wealthy one
+// lets him reinvest most of it. Judged on the balance before the money arrives.
+const REINVEST_BANDS = [[0, 'In debt', 30], [0.4, 'Tight', 40], [0.9, 'Stable', 50], [1.4, 'Healthy', 65], [Infinity, 'Wealthy', 80]];
+function saleReinvest(cid = G.club) {
+  const c = G.clubs[cid], cover = c.bal / Math.max(1, clubWageBill(c) * 52);
+  const [, band, base] = c.bal < 0 ? REINVEST_BANDS[0] : REINVEST_BANDS.find(([max], i) => i && cover < max);
+  const conf = G.board?.conf ?? 50, boost = conf >= 75 ? 5 : conf < 30 ? -10 : 0;
+  return { band, pct: clamp(base + boost, 25, 90), boost, cover };
+}
+const reinvested = amount => Math.round(amount * saleReinvest().pct / 100);
 function transferCash(from, to, amount, reserveBudget = false) {
   if (!(amount > 0)) return;
+  const back = to === G.club ? reinvested(amount) : 0; // before the cash arrives
   G.clubs[from].bal -= amount; if (!G.clubs[to].fa) G.clubs[to].bal += amount;
   if (from === G.club) { G.ledger.buys += amount; if (reserveBudget) G.fin.tb = Math.max(0, G.fin.tb - amount); }
-  if (to === G.club) { G.ledger.sales += amount; G.fin.tb += Math.round(amount * .5); }
+  if (to === G.club) { G.ledger.sales += amount; G.fin.tb += back; }
 }
 function settleTransferFee(p, toId, fee, terms = TRANSFER_TERMS_DEFAULT, exchangeValue = 0) {
   ensureTransferFinance(); const from = G.clubs[p.club], buyer = G.clubs[toId], date = today().getTime();
@@ -127,8 +139,8 @@ function settleTransferFee(p, toId, fee, terms = TRANSFER_TERMS_DEFAULT, exchang
     const cut = Math.round((fee + exchangeValue) * clamp(old.pct, 0, 50) / 100);
     if (cut > 0) {
       from.bal -= cut; G.clubs[old.club].bal += cut;
-      if (from.id === G.club) { G.ledger.sales -= cut; G.fin.tb = Math.max(0, G.fin.tb - Math.round(cut * .5)); }
-      if (old.club === G.club) { G.ledger.sales += cut; G.fin.tb += Math.round(cut * .5); }
+      if (from.id === G.club) { G.ledger.sales -= cut; G.fin.tb = Math.max(0, G.fin.tb - reinvested(cut)); }
+      if (old.club === G.club) { G.ledger.sales += cut; G.fin.tb += reinvested(cut); }
       addLog('transfer', `Sell-on paid for ${pname(p)}`, `${clubName(from.id)} paid ${money(cut)} to ${clubName(old.club)} (${old.pct}% of the next sale package).`);
     }
   }
