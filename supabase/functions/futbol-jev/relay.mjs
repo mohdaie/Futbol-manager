@@ -28,7 +28,7 @@ async function sourceOf(install) {
 const JEV_PRICE_IN = 0.042; // US$ per 1M input tokens; output is free
 
 // serverKey() supplies the key saved in /admin when the game sends none (Server key mode).
-async function handleJevFor(req, fetcher = fetch, record = async () => {}, serverKey = async () => null) {
+async function handleJevFor(req, fetcher = fetch, record = async () => {}, serverKey = async () => null, quota = async () => null) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-jev' });
   if (!ORIGINS.includes(req.headers.get('Origin'))) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -48,6 +48,11 @@ async function handleJevFor(req, fetcher = fetch, record = async () => {}, serve
       return json(400, { error: 'Expected a Jev model, state and 1–16 questions.' });
     }
   } catch { return json(400, { error: 'Invalid JSON request.' }); }
+  const limited = await quota(await sourceOf(meta(body).install)).catch(() => null);
+  if (limited) {
+    return new Response(JSON.stringify({ error: limited === 'player' ? 'Daily AI limit reached for this game. It resets on a rolling 24-hour basis.' : 'The AI service is busy today. Try again later.' }),
+      { status: 429, headers: { ...CORS, 'Content-Type': 'application/json', 'Retry-After': '3600' } });
+  }
   const started = performance.now();
   const log = async (http_status, usage = {}, model = body.model, error_code = null) => {
     const count = n => Number.isFinite(n) && n > 0 ? Math.min(2147483647, Math.trunc(n)) : 0;

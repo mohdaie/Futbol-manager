@@ -35,7 +35,7 @@ export function deepSeekCost(model, u, d = new Date()) {
 }
 
 // serverKey() supplies the key saved in /admin when the game sends none (Server key mode).
-async function handleDeepSeekFor(req, fetcher = fetch, record = async () => {}, serverKey = async () => null) {
+async function handleDeepSeekFor(req, fetcher = fetch, record = async () => {}, serverKey = async () => null, quota = async () => null) {
   if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) return json(200, { status: 'ok', service: 'futbol-deepseek' });
   if (!ORIGINS.includes(req.headers.get('Origin'))) return json(403, { error: 'Origin not allowed.' });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -56,6 +56,11 @@ async function handleDeepSeekFor(req, fetcher = fetch, record = async () => {}, 
   const payload = { model: body.model, messages: body.messages, max_tokens: Math.min(4000, Math.max(1, Math.trunc(Number(body.max_tokens) || 300))), thinking: { type: body.thinking?.type === 'enabled' ? 'enabled' : 'disabled' }, stream: false };
   if (payload.thinking.type === 'disabled') payload.temperature = Math.min(2, Math.max(0, Number(body.temperature) || 0));
   if (body.response_format?.type === 'json_object') payload.response_format = { type: 'json_object' };
+  const limited = await quota(await sourceOf(meta(body).install)).catch(() => null);
+  if (limited) {
+    return new Response(JSON.stringify({ error: limited === 'player' ? 'Daily AI limit reached for this game. It resets on a rolling 24-hour basis.' : 'The AI service is busy today. Try again later.' }),
+      { status: 429, headers: { ...CORS, 'Content-Type': 'application/json', 'Retry-After': '3600' } });
+  }
   const started = performance.now();
   const log = async (http_status, usage = {}, model = body.model, error_code = null) => {
     const count = n => Number.isFinite(n) && n > 0 ? Math.min(2147483647, Math.trunc(n)) : 0;
