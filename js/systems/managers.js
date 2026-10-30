@@ -106,7 +106,7 @@ function newManagerProfile(name, cid, isUser = false, useReference = true) {
 function ensureManagerProfiles() {
   G.managerProfiles ||= {}; G.managerJobs ||= []; G.nextManagerId ||= 1;
   for (const c of Object.values(G.clubs || {})) {
-    if (c.fa || c.id === G.club) continue;
+    if (c.fa || c.id === G.club && !jobless()) continue;
     c.mgr ||= genManagerName();
     let p = c.managerId && G.managerProfiles[c.managerId];
     if (!p || p.name !== c.mgr) p = newManagerProfile(null, c.id, false);
@@ -132,8 +132,8 @@ function ensureManagerProfiles() {
   }
   let user = G.managerProfileId && G.managerProfiles[G.managerProfileId];
   if (!user) user = newManagerProfile(G.manager, G.club, true, false);
-  user.name = G.manager; user.isUser = true; user.identityVersion = 3; user.currentClubId = G.club;
-  const c = G.clubs[G.club];
+  user.name = G.manager; user.isUser = true; user.identityVersion = 3; user.currentClubId = jobless() ? null : G.club;
+  const c = !jobless() && G.clubs[G.club];
   if (c) { c.mgr = G.manager; c.managerId = user.id; user.weeklySalary = managerSalaryFor(c); user.reputation = Math.max(user.reputation || 0, Math.round(c.rep)); }
   G.managerProfileId = user.id;
   Object.values(G.managerProfiles).forEach(p => {
@@ -227,7 +227,7 @@ function postManagerJob(cid, reason = 'The club is seeking a new manager.') {
 function managerJobWeek() {
   if (!G.managerJobs) return;
   G.managerJobs.filter(j => j.status === 'open' && dayAbs() >= j.expires).forEach(j => {
-    const c = G.clubs[j.cid]; if (!c || c.id === G.club) return;
+    const c = G.clubs[j.cid]; if (!c || c.id === G.club && !jobless()) return;
     managerReplaceAt(j.cid, 'Contract ended'); j.status = 'filled'; j.filled = today().getTime();
     addNews('league', `${c.name} appoint a manager`, `${c.mgr} takes charge in the ${leagueName(c.league)}.`);
     if (typeof makeStory === 'function') storySimple(G.news[0], 'league', 'appointed', { club: c.name, mgr: c.mgr, league: leagueName(c.league) }, [c.id]);

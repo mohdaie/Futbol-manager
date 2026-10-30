@@ -144,7 +144,7 @@ function genFixtures(ids, competition = leagueOf(ids[0])) {
 }
 
 const played = f => f.hg != null;
-const isUserFx = f => f.h === G.club || f.a === G.club;
+const isUserFx = f => (f.h === G.club || f.a === G.club) && !jobless();
 const userFixtures = (w = G.week) => G.fixtures.filter(f => f.w === w && isUserFx(f)).sort(fxSort);
 // The user's next unplayed fixture this week, or the last one if all are played.
 const userFixture = (w = G.week) => { const l = userFixtures(w); return l.find(f => !played(f)) || l[l.length - 1]; };
