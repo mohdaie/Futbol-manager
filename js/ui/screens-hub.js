@@ -101,7 +101,7 @@ SCREENS.home = {
     </section>`;
 
     return `<div class="dash-h"><h1 class="h1">Dashboard</h1></div>
-      ${typeof careerBanner === 'function' ? careerBanner() : ''}${assistantBriefingCard()}${clubCard}${next}${finance}
+      ${typeof careerBanner === 'function' ? careerBanner() : ''}${assistantBriefingCard()}${typeof eventCard === 'function' ? eventCard() : ''}${clubCard}${next}${finance}
       ${dashboardInbox()}
       <div class="sec-h"><h2>Latest news</h2><button class="link" data-a="newsOpen" data-v="news">All news</button></div>
       <div class="list">${G.news.filter(n => n.box === 'news').slice(0, 3).map(newsRow).join('') || empty('No news yet', 'Press Continue to move the week on.')}</div>`;
@@ -119,7 +119,7 @@ const STORY_CHIPS = [['all', 'All'], ['match', 'Matches'], ['transfer', 'Transfe
 const INBOX_CHIPS = [['all', 'All'], ['action', 'Needs action'], ['log', 'Club log']];
 const needsYou = n => !!n.action && !n.done && n.action.t !== 'player';
 // The section label on a row. Generic inbox items are named by what they are about.
-const INBOX_LABELS = { press: 'Press', treq: 'Squad', renew: 'Contracts', life: 'Squad' };
+const INBOX_LABELS = { press: 'Press', evt: 'Squad', treq: 'Squad', renew: 'Contracts', life: 'Squad' };
 const newsLabel = n => (n.cat === 'inbox' ? INBOX_LABELS[n.action?.t] || 'Club' : NEWS_CATS.find(c => c[0] === n.cat)[1]);
 function newsList(view) {
   if (view === 'news') { const f = UI.f.news; return G.news.filter(n => n.box === 'news' && (f === 'all' || n.cat === f)); }
@@ -199,6 +199,7 @@ ACT.news = ds => {
   if (a && a.t === 'treq' && G.players[a.pid] && G.players[a.pid].treq) actions = `<div class="btns"><button class="btn pri" data-a="treq" data-id="${a.pid}" data-v="1">Accept and list him</button><button class="btn" data-a="treq" data-id="${a.pid}" data-v="0">Refuse</button></div>`;
   if (a && a.t === 'press') { const r = (G.media.req || []).find(x => x.id === a.id); if (r && !r.done) actions = `<div class="btns col">${STATEMENTS[r.kind].map(([k, t]) => `<button class="btn wide ${k === r.advice ? 'pri' : ''}" data-a="press" data-id="${r.id}" data-k="${k}">${esc(t)}${k === r.advice ? ' (advised)' : ''}</button>`).join('')}</div>`; }
   if (a && a.t === 'life') { const ev = lifeEvent(a.id); if (ev && !ev.choice) actions = `<div class="btns col">${LIFE_CHOICES[ev.kind].map(([k, t, mor, fans, board, cost]) => `<button class="btn wide" data-a="lifeChoice" data-id="${ev.id}" data-k="${k}">${esc(t)}<small class="muted"> · ${lifeEffectText(mor, fans, board, cost)}</small></button>`).join('')}</div>`; }
+  if (a && !n.done && a.t === 'evt') { const ev = eventById(a.id); if (ev && !ev.choice) actions = eventButtons(ev); }
   if (a && a.t === 'deal' && G.deals.some(d => d.id === a.id)) actions = `<div class="btns"><button class="btn pri" data-a="deal" data-id="${a.id}">Open the deal</button></div>`;
   if (a && a.t === 'scoutfile' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="scoutFile" data-id="${a.pid}">Open scouting file</button></div>`;
   if (a && !n.done && a.t === 'renew' && G.players[a.pid]) actions = `<div class="btns"><button class="btn pri" data-a="contract" data-id="${a.pid}" data-mode="renew">Open contract talks</button></div>`;
@@ -213,6 +214,7 @@ function lifeEffectText(mor, fans, board, cost) {
   const w = (v, s) => v ? (v > 0 ? `${s} up` : `${s} down`) : '';
   return [w(mor, 'his morale'), w(fans, 'fans'), w(board, 'board'), cost ? money(cost) : ''].filter(Boolean).join(', ') || 'no effect';
 }
+ACT.evtChoice = ds => { const msg = eventAnswer(+ds.id, ds.k); saveGame(); if (msg) toast(msg); if (UI.popup) closeSheet(true); render(); };
 ACT.lifeChoice = ds => { const msg = lifeAnswer(+ds.id, ds.k); saveGame(); if (msg) toast(msg); if (UI.popup) closeSheet(true); render(); };
 ACT.bid = ds => {
   const n = G.news.find(x => x.id === +ds.id);

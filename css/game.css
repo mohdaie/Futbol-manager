@@ -932,3 +932,12 @@ button:not(.tok):not(:disabled):active { filter: brightness(.86); transition-dur
 .dash-chart .dash-ax { fill: var(--mute); font-size: 11px; font-family: var(--f-body); }
 .dash-chart .dash-bar path { fill: var(--amber); }
 .dash-chart .dash-bar:hover path { fill: var(--chalk); }
+
+/* Dressing-room event card (events.js): one decision, big buttons, little text */
+.evcard { margin: 8px 0; padding: 12px; border-radius: 14px; background: var(--stand); border: 1px solid var(--line); border-left: 3px solid var(--warn); display: grid; gap: 8px; }
+.evcard p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--chalk); }
+.evh { display: flex; gap: 10px; align-items: center; }
+.evh b { display: block; font-family: var(--f-disp); font-size: 17px; font-weight: 800; line-height: 1.15; text-wrap: balance; }
+.evi { font-size: 26px; line-height: 1; }
+.evcard .btn { min-height: 44px; font-size: 13.5px; justify-content: flex-start; text-align: left; flex-wrap: wrap; }
+.evcard .btn small { font-size: 11px; }

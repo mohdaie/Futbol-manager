@@ -20,6 +20,7 @@ function advanceWeek() {
   if (typeof careerWeek === 'function') careerWeek();
   staffWeekly();
   moodWeekly();
+  if (typeof eventsWeekly === 'function') eventsWeekly();
   if (typeof lifeWeekly === 'function') lifeWeekly();
   transferLearnWeekly();
   // Day jobs not reached day by day this week (Admin time skips) still happen once.
