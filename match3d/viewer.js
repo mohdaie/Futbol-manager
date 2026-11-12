@@ -7,10 +7,10 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
 const PW = 68, PL = 105, STRIDE = 72, NONE = -32768, BALL_R = 0.11;
 // ground speed (m/s) each looping clip was animated for, so feet match the pitch
-const LOCO = { Walk: 1.16, Jog: 2.57, Run: 4.7, Dribble: 2.45, Jockey: 0.95 };
+const LOCO = { Walk: 1.16, Jog: 2.57, Run: 4.7, Dribble: 2.45, Jockey: 0.95, WalkBack: 0.77, WalkDribble: 1.07, SideStep: 0.83 };
 // seconds from the start of a clip to the moment of ball contact, and how fast to play it
-const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0, ReceiveInside: 0.34, ReceiveTurn: 0.36, ReceiveSole: 0.36, ReceiveRun: 0.2 };
-const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1, ReceiveInside: 1.25, ReceiveTurn: 1.25, ReceiveSole: 1.2, ReceiveRun: 1 };
+const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0, ReceiveInside: 0.34, ReceiveTurn: 0.36, ReceiveSole: 0.36, ReceiveRun: 0.2, Shoulder: 0.22, Stumble: 0, Fall: 0 };
+const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1, ReceiveInside: 1.25, ReceiveTurn: 1.25, ReceiveSole: 1.2, ReceiveRun: 1, Shoulder: 1, Stumble: 1, Fall: 1 };
 // a player already on the move plays only the swing of a kick: seconds kept before and after ball contact
 const SWING = { Pass: [0.2, 0.2], LongKick: [0.28, 0.3], Shoot: [0.3, 0.35] };
 const SKIN = ['#F1C9A5', '#E0AC86', '#C68863', '#A56B46', '#7A4A2E', '#5A3520'];
@@ -99,7 +99,7 @@ function start(meta, F, playerGltf, ballGltf) {
       actions[c.name] = a;
     }
     scene.add(root);
-    P[s].push({ root, mixer, actions, cur: null, name: '', shot: null, swing: null, speed: 0, x: 0, z: 0 });
+    P[s].push({ root, mixer, actions, cur: null, name: '', shot: null, swing: null, hold: 0, speed: 0, x: 0, z: 0 });
   }
   function play(p, name, fade, rate, sync, from) {
     const next = p.actions[name], prev = p.cur;
@@ -125,6 +125,9 @@ function start(meta, F, playerGltf, ballGltf) {
   const px = (k, s, i) => F[k * STRIDE + 6 + (s * 11 + i) * 2];
   const py = (k, s, i) => F[k * STRIDE + 7 + (s * 11 + i) * 2];
   const fa = (k, s, i) => F[k * STRIDE + 50 + s * 11 + i] / 1000;
+  // A body has weight: between two engine positions he follows a curve through the ones before and after
+  // (Catmull-Rom), so he rounds his turns and eases in and out of speed instead of moving in straight pieces.
+  const curve = (a, b, c, d, u) => 0.5 * (2 * b + (c - a) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (3 * b - 3 * c + d - a) * u * u * u);
   const frameAt = t => { let lo = 0, hi = NF - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (times[m] <= t) lo = m; else hi = m - 1; } return lo; };
 
   /* ---------- action cues from the engine's marks ---------- */
@@ -157,7 +160,9 @@ function start(meta, F, playerGltf, ballGltf) {
       const clip = throwIn ? 'ThrowIn' : m.style === 'header' ? 'Header' : m.kind === 'shot' ? 'Shoot' : ['long', 'cross', 'clear'].includes(m.kind) ? 'LongKick' : 'Pass';
       cue(m.t, m.s, m.who, clip);
     } else if (m.k === 'touch') receive(m.t, m.s, m.who);
-    else if (m.k === 'duel') cue(m.t, m.s, m.who, 'Tackle');
+    else if (m.k === 'duel') { cue(m.t, m.s, m.who, 'Tackle'); cue(m.t + 0.15, m.os, m.oi, 'Stumble', { soft: true }); } // the man who lost it
+    else if (m.k === 'contact') { cue(m.t, m.s, m.who, 'Shoulder', { other: [m.os, m.oi], soft: true }); cue(m.t, m.os, m.oi, 'Shoulder', { other: [m.s, m.who], soft: true }); }
+    else if (m.k === 'foul') cue(m.t + 0.1, m.s, m.who, 'Fall');
     else if (m.k === 'sfx') {
       if (m.res === 'goal') lastScorer = { s: m.s, i: m.who };
       if (m.res === 'goal' || m.res === 'save') cue(m.t + (m.flight || 0.4), 1 - m.s, 0, 'KeeperDive', { tx: m.tx });
@@ -186,7 +191,7 @@ function start(meta, F, playerGltf, ballGltf) {
   function seek(t) {
     T = Math.max(0, Math.min(T_END, t));
     ci = cues.findIndex(c => c.t > T - 0.3); if (ci < 0) ci = cues.length;
-    for (const side of P) for (const p of side) { p.shot = null; p.swing = null; p.root.scale.x = 1; }
+    for (const side of P) for (const p of side) { p.shot = null; p.swing = null; p.hold = 0; p.root.scale.x = 1; }
     $('note').textContent = '';
     cut = true;
   }
@@ -200,7 +205,7 @@ function start(meta, F, playerGltf, ballGltf) {
     // action cues that have come due
     while (ci < cues.length && cues[ci].t <= T) {
       const c = cues[ci++], p = P[c.s][c.i];
-      if (T - c.t > 0.4 || (c.soft && (p.shot || p.speed > 0.6))) continue;
+      if (T - c.t > 0.4 || (c.soft && p.shot)) continue;
       const rate = RATE[c.clip];
       if (SWING[c.clip] && p.speed > 1) { // keep running: the swing alone, timed to the same contact
         const [pre, post] = SWING[c.clip];
@@ -211,7 +216,10 @@ function start(meta, F, playerGltf, ballGltf) {
         const a = fa(k, c.s, c.i), left = Math.sin(a) * (c.tx - px(k, c.s, c.i) / 100) > 0 ? 1 : -1;
         p.root.scale.x = left;
       }
-      else p.root.scale.x = c.mirror ? -1 : 1;
+      else if (c.other) { // lean into the man: the clip leans right, mirror it if he is on the left
+        const a = fa(k, c.s, c.i), ox = px(k, c.other[0], c.other[1]), oy = py(k, c.other[0], c.other[1]);
+        p.root.scale.x = Math.sin(a) * (ox - px(k, c.s, c.i)) - Math.cos(a) * (oy - py(k, c.s, c.i)) > 0 ? -1 : 1;
+      } else p.root.scale.x = c.mirror ? -1 : 1;
       play(p, c.clip, c.clip.startsWith('Receive') ? 0.14 : 0.08, rate);
       p.shot = { end: T + (c.hold || p.actions[c.clip].getClip().duration / rate) };
       if (c.clip === 'Celebrate' && c.i === (lastScorerAt(T) ?? -1)) note('GOAL! ' + nameOf(c.s, c.i) + ' (' + meta.teams[c.s].name + ')', 6);
@@ -223,9 +231,11 @@ function start(meta, F, playerGltf, ballGltf) {
       const p = P[s][i], x0 = px(k, s, i), x1 = px(k2, s, i);
       if (x0 === NONE) { p.root.visible = false; continue; }
       p.root.visible = true;
-      const y0 = py(k, s, i), jump = x1 === NONE || span > 1;
-      const x = (jump ? x0 : x0 + (x1 - x0) * u) / 100, y = (jump ? y0 : y0 + (py(k2, s, i) - y0) * u) / 100;
-      const vx = jump ? 0 : (x1 - x0) / 100 / step, vy = jump ? 0 : (py(k2, s, i) - y0) / 100 / step, v = Math.hypot(vx, vy);
+      const y0 = py(k, s, i), y1 = py(k2, s, i), jump = x1 === NONE || span > 1;
+      const ka = k > 0 && times[k] - times[k - 1] <= 1 && px(k - 1, s, i) !== NONE ? k - 1 : k;
+      const kb = k2 < NF - 1 && times[k2 + 1] - times[k2] <= 1 && px(k2 + 1, s, i) !== NONE ? k2 + 1 : k2;
+      const x = (jump ? x0 : curve(px(ka, s, i), x0, x1, px(kb, s, i), u)) / 100, y = (jump ? y0 : curve(py(ka, s, i), y0, y1, py(kb, s, i), u)) / 100;
+      const vx = jump ? 0 : (x1 - x0) / 100 / step, vy = jump ? 0 : (y1 - y0) / 100 / step, v = Math.hypot(vx, vy);
       let a0 = fa(k, s, i), da = fa(k2, s, i) - a0; da = Math.atan2(Math.sin(da), Math.cos(da));
       const a = a0 + (jump ? 0 : da * u);
       p.x = x - PW / 2; p.z = y - PL / 2; p.speed = v;
@@ -237,9 +247,19 @@ function start(meta, F, playerGltf, ballGltf) {
       }
       if (p.shot && T >= p.shot.end) { p.shot = null; p.root.scale.x = 1; }
       if (!p.shot) {
-        const back = v > 0.35 && v < 3.5 && (vx * Math.cos(a) + vy * Math.sin(a)) / v < -0.3;
-        const name = v < 0.35 ? 'Idle' : back ? 'Jockey' : os === s && oi === i && v > 1 && v < 5.5 ? 'Dribble' : v < 1.9 ? 'Walk' : v < 4.2 ? 'Jog' : 'Run';
-        const rate = name === 'Idle' ? 1 : Math.max(0.6, Math.min(2.2, v / LOCO[name]));
+        // Which way he is going against where he faces: forwards, backwards or sideways. The crouched
+        // jockey is only for the defender closing down the man on the ball; anyone else moving backwards
+        // simply walks backwards, upright.
+        const fwd = v > 0.35 ? (vx * Math.cos(a) + vy * Math.sin(a)) / v : 1, left = vx * Math.sin(a) - vy * Math.cos(a);
+        const mine = os === s && oi === i, closing = os === 1 - s && Math.hypot(p.x - ballPos.x, p.z - ballPos.z) < 6;
+        let name = v < 0.35 ? 'Idle' : v < 1.9 ? 'Walk' : v < 4.2 ? 'Jog' : 'Run';
+        if (mine && v >= 0.35) name = v < 1.9 ? 'WalkDribble' : v < 5.5 ? 'Dribble' : 'Run';
+        else if (v >= 0.35 && v < 3.2 && fwd < -0.5) name = closing ? 'Jockey' : 'WalkBack';
+        else if (v >= 0.35 && v < 3.2 && fwd < 0.5) name = 'SideStep';
+        if (p.name !== name && p.name !== '' && T < (p.hold || 0)) name = p.name in LOCO || p.name === 'Idle' ? p.name : name; // no flicker between clips
+        else if (p.name !== name) p.hold = T + 0.35;
+        const rate = name === 'Idle' ? 1 : Math.max(0.6, Math.min(2.4, v / LOCO[name]));
+        p.root.scale.x = name === 'SideStep' && left < 0 ? -1 : 1; // the clip steps to his left
         play(p, name, p.name === 'Idle' || name === 'Idle' ? 0.25 : 0.18, rate, name !== 'Idle' && p.name in LOCO);
       }
       p.mixer.update(playing ? dt * Math.min(speed, 2) : 0);
@@ -247,9 +267,11 @@ function start(meta, F, playerGltf, ballGltf) {
     }
 
     // ball
-    const lerp = (a, b) => (span > 1 ? a : a + (b - a) * u) / 100;
+    const ka = k > 0 && times[k] - times[k - 1] <= 1 ? k - 1 : k, kb = k2 < NF - 1 && times[k2 + 1] - times[k2] <= 1 ? k2 + 1 : k2;
+    const held = os >= 0 && [ka, k2, kb].every(n => F[n * STRIDE + 3] === os && F[n * STRIDE + 4] === oi);
+    const lerp = (a, b, n) => (span > 1 ? a : held ? curve(F[ka * STRIDE + n], a, b, F[kb * STRIDE + n], u) : a + (b - a) * u) / 100;
     prevBall.copy(ballPos);
-    ballPos.set(lerp(F[r], F[r2]) - PW / 2, Math.max(0, lerp(F[r + 2], F[r2 + 2])) + BALL_R, lerp(F[r + 1], F[r2 + 1]) - PL / 2);
+    ballPos.set(lerp(F[r], F[r2], 0) - PW / 2, Math.max(0, (span > 1 ? F[r + 2] : F[r + 2] + (F[r2 + 2] - F[r + 2]) * u) / 100) + BALL_R, lerp(F[r + 1], F[r2 + 1], 1) - PL / 2);
     ball.position.copy(ballPos);
     const dx = ballPos.x - prevBall.x, dz = ballPos.z - prevBall.z, moved = Math.hypot(dx, dz);
     if (moved > 1e-4 && moved < 5) ball.rotateOnWorldAxis(spinAxis.set(dz, 0, -dx).normalize(), moved / BALL_R);

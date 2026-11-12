@@ -909,6 +909,65 @@ JOCKEY = make_gait(
     0.78, 0.006, 0.27, lean=18, sp_lean=10, ch_lean=4, head=-22, yaw=3, yaw_phase=0.2, ch=3,
     arm0=15, arm_amp=6, arm_phase=0.4, el0=50, el_amp=5, add=5, width=0.10, turn=10)
 
+# walking backwards: upright, eyes on the play, toes down first (a walk is standing, moving)
+WALK_BACK = make_gait(
+    0.60, (-0.24, 0.22), (10, 4, 0, 0, -4, -10),
+    [(0.70, 0.12, 0.13, 0), (0.80, -0.06, 0.13, 8), (0.92, -0.20, 0.11, 12)],
+    0.868, -0.012, 0.30, lean=-1, sp_lean=2, ch_lean=2, head=0, yaw=3, yaw_phase=0.45, ch=3,
+    arm0=0, arm_amp=12, arm_phase=0.1, el0=14, el_amp=6)
+# walking with the ball: an upright walk, eyes a little down, arms a little out
+WALK_DRIBBLE = make_gait(
+    0.62, (0.22, -0.38), (-15, -3, 0, 0, 12, 38),
+    [(0.70, -0.26, 0.19, 42), (0.80, -0.05, 0.15, 15), (0.90, 0.18, 0.13, -10),
+     (0.96, 0.23, 0.115, -15)],
+    0.868, -0.013, 0.31, lean=1, sp_lean=5, ch_lean=3, head=8, yaw=4, yaw_phase=0.95, ch=5,
+    arm0=0, arm_amp=14, arm_phase=0.6, el0=25, el_amp=8, add=24)
+
+SIDE_L = (spline([(0.0, 0.22), (0.6, -0.08), (0.8, 0.09)]), spline([(0.0, 0.08), (0.6, 0.08), (0.8, 0.135)]))
+SIDE_R = (spline([(0.0, -0.22), (0.2, -0.07), (0.4, 0.08), (0.7, -0.07)]),
+          spline([(0.0, 0.08), (0.2, 0.135), (0.4, 0.08), (0.9, 0.08)]))
+
+
+def side_step(p):
+    """Side-step to the player's left (mirror for the right): upright, facing the play,
+    the lead foot steps out and the trailing foot closes; the feet never cross."""
+    return {"hip_z": 0.852 + 0.008 * math.cos(4 * math.pi * (p - 0.05)), "lean": 4, "sp_lean": 3,
+            "roll": 2 * math.sin(2 * math.pi * p), "hd_pitch": -3,
+            "l_x": SIDE_L[0](p), "l_z": SIDE_L[1](p), "r_x": SIDE_R[0](p), "r_z": SIDE_R[1](p),
+            "l_turn": 8, "r_turn": 8, "la_add": 22, "ra_add": 22, "la_el": 35, "ra_el": 35,
+            "la_sw": 4, "ra_sw": 4}
+
+
+def shoulder(t):
+    """Shoulder to shoulder at a jog: he leans into the man on his right, elbow tucked,
+    without breaking stride (mirror for a man on the left)."""
+    v = JOG(t * FPS / 40)
+    w = math.exp(-((t - 0.22) / 0.13) ** 2)
+    v["roll"] = -7 * w
+    v["sp_roll"] = -12 * w
+    v["hip_z"] -= 0.03 * w
+    v["ra_add"] = 30 + 8 * w
+    v["ra_el"] = v["ra_el"] + (95 - v["ra_el"]) * w
+    v["ra_sw"] = v["ra_sw"] * (1 - w)
+    v["la_add"] = 30 - 25 * w
+    v["hd_pitch"] += 6 * w
+    return v
+
+
+def stumble(t):
+    """Knocked off balance: two heavy steps, body pitching forward, arms out, then recovers."""
+    v = JOG(t * FPS / 44)
+    w = math.exp(-((t - 0.25) / 0.16) ** 2)
+    v["lean"] = 26 * w
+    v["sp_lean"] += 10 * w
+    v["hip_z"] -= 0.07 * w
+    v["hd_pitch"] += -12 * w
+    for k in ("la", "ra"):
+        v[k + "_add"] = 30 - 40 * w
+        v[k + "_sw"] = v[k + "_sw"] * (1 - w) + 35 * w
+        v[k + "_el"] = v[k + "_el"] * (1 - w) + 30 * w
+    return v
+
 
 def idle(t):
     """Standing ready: breathing and a slow shift of weight."""
@@ -1150,6 +1209,25 @@ CELEB = both({
    _p=(0, 0, 45, 40, 30, 10, 0, 0, 0))
 
 
+# Fouled: tripped forward, down on his front, hands under him, then up again.
+FALL_T = (0.00, 0.15, 0.35, 0.60, 0.90, 1.40, 1.80, 2.20, 2.60)
+FALL = both({
+    "fwd":   (0.00, 0.15, 0.45, 0.75, 0.85, 0.85, 0.85, 0.85, 0.85),
+    "hip_z": (0.86, 0.78, 0.55, 0.36, 0.33, 0.33, 0.52, 0.80, 0.88),
+    "lean":  (8, 30, 60, 78, 80, 80, 55, 20, 3),
+    "legs_local": (0, 0.4, 1, 1, 1, 1, 0.6, 0, 0),
+    "l_y":   (0.00, 0.00, 0.30, 0.60, 0.80, 0.80, 0.80, 0.80, 0.82),
+    "r_y":   (0.00, 0.10, 0.30, 0.60, 0.85, 0.90, 0.92, 0.92, 0.90),
+    "l_ly":  (0.00, 0.00, -0.05, -0.10, -0.10, -0.10, 0.20, 0.05, 0.00),
+    "l_lz":  (-0.85, -0.82, -0.80, -0.80, -0.80, -0.80, -0.55, -0.80, -0.85),
+    "r_ly":  (0.05, 0.10, 0.15, 0.10, 0.00, 0.00, 0.30, 0.10, 0.00),
+    "r_lz":  (-0.80, -0.70, -0.70, -0.78, -0.80, -0.80, -0.50, -0.78, -0.85),
+    "sp_lean": (2, 8, 8, 0, -4, -4, 10, 8, 2),
+    "hd_pitch": (0, -10, -25, -35, -30, -25, -15, -5, 0),
+}, a_sw=(0, 40, 90, 150, 160, 160, 100, 30, 0),
+   a_el=(20, 40, 40, 30, 25, 25, 60, 40, 20),
+   a_add=(30, 22, 18, 20, 22, 22, 20, 25, 30))
+
 # ------------------------------------------------------- receiving the ball
 # A receiver is never flat-footed: he is on his toes before the ball arrives,
 # opens his body, and his first touch takes him into his next move.
@@ -1252,6 +1330,12 @@ CLIPS = {
     "Run":        (28, True, loop(RUN, 28), None),
     "Jockey":     (30, True, loop(JOCKEY, 30), None),
     "Dribble":    (34, True, loop(DRIBBLE, 34), None),
+    "WalkBack":   (60, True, loop(WALK_BACK, 60), None),
+    "WalkDribble": (54, True, loop(WALK_DRIBBLE, 54), None),
+    "SideStep":   (36, True, loop(side_step, 36), None),
+    "Shoulder":   (31, False, shoulder, 13),
+    "Stumble":    (37, False, stumble, None),
+    "Fall":       (157, False, keyed(FALL_T, FALL), None),
     "FirstTouch": (37, False, keyed(TOUCH_T, TOUCH), 18),
     "ReceiveInside": (49, False, keyed(RECV_T, RECV), 21),
     "ReceiveTurn": (54, False, keyed(RECV_TURN_T, RECV_TURN), 23),
