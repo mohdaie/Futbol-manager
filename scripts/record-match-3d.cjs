@@ -35,7 +35,8 @@ const fs = require('node:fs'), path = require('node:path');
       while (!M.ended && M.min < 130) {
         simMinute(M);
         const lu = [names(M.sides[0]), names(M.sides[1])], key = JSON.stringify(lu);
-        if (key !== last) { last = key; lineups.push({ min: M.min, on: lu }); }
+        if (key !== last) { last = key; lineups.push({ min: M.min, on: lu, // height (cm), build (BMI) and shirt number per slot
+          body: M.sides.map(S => S.on.map(id => { const p = G.players[id]; return p ? [p.ht || 180, +(typeof bmiOf === 'function' ? bmiOf(p) : 23).toFixed(1), p.no || p.num || 0] : null; })) }); }
         for (const f of M.frames || []) {
           const row = [Math.round(f[1] * 100), Math.round(f[2] * 100), Math.round(f[3] * 100), f[4], f[5], RS[f[6]] || 0];
           for (let n = 7; n < 51; n++) row.push(f[n] == null ? -32768 : Math.round(f[n] * 100));

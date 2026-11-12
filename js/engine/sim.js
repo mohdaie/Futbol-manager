@@ -1294,6 +1294,9 @@ function tryCrossVolley(M, fl) {
 }
 
 /* ---------- the ball each tick ---------- */
+// A football on grass keeps a little over half its speed off the ground (rebound about 0.55), so a dropping
+// ball bounces two or three times, lower each time, before it rolls.
+const BOUNCE = 0.55, BOUNCE_UP = 2.6;
 function ballTick(M) {
   const sim = M.sim, B = sim.B, dt = TICK;
   const own = owner(M);
@@ -1324,14 +1327,14 @@ function ballTick(M) {
         continue;
       }
       if (time >= fl.arr) {
-        fl.landed = true; B.z = B.vz = 0; B.vx *= 0.45; B.vy *= 0.45;
+        fl.landed = true; B.z = 0; B.vz = BOUNCE_UP; B.vx *= 0.6; B.vy *= 0.6; // lands and comes up off the turf
         airDuel(M, fl); if (B.fl !== fl) return;
       } else if (fl.k === 'cross' && tryCrossVolley(M, fl)) return;
       if (outOfPlay(M)) return;
       continue;
     }
     B.x += B.vx * h; B.y += B.vy * h;
-    if (B.z > 0 || B.vz > 0) { B.z += B.vz * h; B.vz -= 9.8 * h; if (B.z <= 0) { B.z = 0; B.vz = 0; B.vx *= 0.45; B.vy *= 0.45; if (fl && fl.air && !fl.landed) { fl.landed = true; if (fl.k === 'cross' || fl.k === 'long' || fl.k === 'clear') { airDuel(M, fl); if (sim.B.fl !== fl) return; } } } }
+    if (B.z > 0 || B.vz > 0) { B.z += B.vz * h; B.vz -= 9.8 * h; if (B.z <= 0) { const down = -B.vz; B.z = 0; if (down > 2) { B.vz = down * BOUNCE; B.vx *= 0.8; B.vy *= 0.8; } else { B.vz = 0; B.vx *= 0.75; B.vy *= 0.75; } if (fl && fl.air && !fl.landed) { fl.landed = true; if (fl.k === 'cross' || fl.k === 'long' || fl.k === 'clear') { airDuel(M, fl); if (sim.B.fl !== fl) return; } } } }
     { const f = Math.max(0, 1 - 0.55 * h); B.vx *= f; B.vy *= f; }
     if (outOfPlay(M)) return;
   }
@@ -1823,7 +1826,12 @@ function movePlayers(M) {
       // Sprint only when it matters: on the ball, making a run, pressing, going for a loose ball, a restart, or
       // getting back goal-side; otherwise jog into position (most of a match is jogging).
       const urgent = carrier || p.run > sim.t || (p.boxRun || 0) > sim.t || p.eng === sim.t || p.chase === sim.t || sim.t < (p.want || 0) || (rs && d > 12) || (sim.poss !== s && (p.y - ty) * fwdY(s) > 21 - ac(M.sides[s], i, 'wor') * 0.6) || (sim.poss !== s && i > 0 && d > 1 && dGoal(1 - s, tx, ty) < 25) || (i === 0 && sim.poss !== s && d > 0.5 && dGoal(1 - s, B.x, B.y) < 35) || (sim.poss !== s && i > 0 && Math.abs(p.y - ty) > 3 && backLine(M.sides[s], i)); // 4.8: defending his own box is never at a jog; 6.1: the keeper resets with every pass near his goal
-      let want = urgent ? top : Math.min(top * (0.4 + ac(M.sides[s], i, 'wor') * 0.01), d / 2); // Work Rate: gets into position
+      // Real match profile (time-motion studies): about 60% of a match standing or walking, the rest jogging and
+      // steady running, and only 1-2% flat out. So: a small adjustment of position is walked; a longer one is a
+      // steady run (Work Rate: gets there sooner); urgent work is a hard run; a full sprint is kept for a run in
+      // behind, a loose ball, a break on the ball or getting back to a man who is through.
+      const flatOut = p.run > sim.t || p.chase === sim.t || (p.boxRun || 0) > sim.t || (carrier && p.carry) || (sim.poss !== s && i > 0 && d > 6 && dGoal(1 - s, tx, ty) < 25);
+      let want = urgent ? (flatOut ? top : top * 0.8) : d < 5 ? Math.min(1.8, d / 1.2) : Math.min(top * (0.5 + ac(M.sides[s], i, 'wor') * 0.012), d / 2);
       if (want > d / 0.6) want = d / 0.6;
       // Rulebook 1c: where he faces. On the ball he turns to face play (unless a man tight behind him stops the turn);
       // defending he watches the ball (turning his back only to sprint back); with his team on the ball he opens up
