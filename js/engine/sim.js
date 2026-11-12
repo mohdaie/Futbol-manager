@@ -164,7 +164,10 @@ function chanceAt(M, s, X, Y, o = {}) {
   });
   iv.sort((u, v) => u[0] - v[0]);
   let cov = 0, e = -Infinity; for (const [a, b] of iv) { if (b <= e) continue; cov += b - Math.max(a, e); e = b; }
-  const visible = 1 - cov / th, z = Math.log(xgAt(s, X, Y) / (1 - xgAt(s, X, Y))) + 4 * (visible - visSet) - 0.35 * between - 0.6 * (o.press || 0) - (o.head ? 1 : 0) - 1.6 * Math.max(0, (o.fo || 0) - 1.1); // 1c: shooting with his back to goal
+  // 6.1b: out wide the keeper stands for the cross, not on the near post; a shot from there gains nothing from
+  // that (he has the time and the steps to get across), so the open near post is not counted as goal to aim at.
+  const wideShot = clamp((Math.abs(X - PW / 2) - 20.16) / 6, 0, 1), seen = 1 - cov / th;
+  const visible = seen > visSet ? visSet + (seen - visSet) * (1 - wideShot) : seen, z = Math.log(xgAt(s, X, Y) / (1 - xgAt(s, X, Y))) + 4 * (visible - visSet) - 0.35 * between - 0.6 * (o.press || 0) - (o.head ? 1 : 0) - 1.6 * Math.max(0, (o.fo || 0) - 1.1); // 1c: shooting with his back to goal
   return { xg: clamp(1 / (1 + Math.exp(-z)), 0.005, 0.9), visible, between };
 }
 // How dangerous a spot is with the ball (expected threat): grows towards goal, highest centrally.
@@ -1505,6 +1508,7 @@ function foul(M, s, i, o, j) {
   if (!fp) return;
   O.st.fo++; pstat(O, j, 'fo');
   const ev = evt(M, { side: s, t: 'foul', pid: fp.id, fside: o });
+  mark(M, 'foul', s, { who: i, os: o, oi: j, x: own.x, y: own.y });
   const [ox, oy] = toOwn(s, own.x, own.y);
   const ycP = 0.15 * (1 + 0.25 * ((O.press ?? 1) - 1)) * (1 - O.calm) * cardMul(fp) * (1 + bh(O, j, 'tk') * 0.35) * (1 - ((O.capLdr ?? 10) - 10) * 0.008) * (oy < 0.35 ? 1.1 : 1);
   if (R() < 0.0015 * cardMul(fp) * 1.4) { sendOff(M, O, fp.id, ev); syncSide(M, o); if (!O.user) fillGapAI(M, O); mark(M, 'card', o, { red: true }); }
@@ -1633,8 +1637,14 @@ function targets(M, all) {
       if (i === 0) { // keeper: on his line, covering the angle; a sweeper higher behind a high line
         const ky = gy + fw * (1.5 + (by > 0.5 ? 0 : (S.line ?? 1) * 3 + bh(S, 0, 'sweep') * 6));
         // 6.1: on the line from the middle of his goal to the ball, at his depth (at the near post for a tight angle).
-        const dep = Math.abs(ky - gy), kx = PW / 2 + (B.x - PW / 2) * dep / Math.max(dep + 0.1, Math.abs(B.y - gy));
-        p.tx = has ? X : clamp(kx, PW / 2 - 3.2, PW / 2 + 3.2); p.ty = has ? Y : ky; continue;
+        const dep = Math.abs(ky - gy), kx = clamp(PW / 2 + (B.x - PW / 2) * dep / Math.max(dep + 0.1, Math.abs(B.y - gy)), PW / 2 - 3.2, PW / 2 + 3.2);
+        // 6.1b: a ball out wide is a cross to come, not a shot. He leaves the near post for the middle of his
+        // goal, half a pace towards the far post and a step further out, so he can come for it or get across.
+        // Anywhere within the width of the penalty area the angle rule above holds: there a shot is the danger.
+        const wideX = Math.abs(B.x - PW / 2), deepY = Math.abs(B.y - gy);
+        const cross = deepY < 40 ? clamp((wideX - 20.16) / 6, 0, 1) : 0; // outside the width of the penalty area
+        const kxCross = PW / 2 - Math.sign(B.x - PW / 2) * 0.6;
+        p.tx = has ? X : kx + (kxCross - kx) * cross; p.ty = has ? Y : ky + fw * cross; continue;
       }
       if (support?.i===i) { p.tx=support.x; p.ty=support.y; p.run=hyp(p.tx-p.x,p.ty-p.y)>2?sim.t+1:0; continue; }
       if (reserves.has(i)) p.run = 0; // the chosen cover cannot join an attacking run
@@ -1853,8 +1863,12 @@ function bodyRadius(S, i) {
   return clamp(0.34 + (p.ht - 182) * 0.0015 + (bmiOf(p) - 23) * 0.01, 0.3, 0.46);
 }
 function separateBodies(M) {
-  const sim = M.sim, bodies = [];
-  for (let s = 0; s < 2; s++) sim.P[s].forEach((q, i) => { if (q) bodies.push({ q, r: bodyRadius(M.sides[s], i) }); });
+  const sim = M.sim, B = sim.B, bodies = [];
+  for (let s = 0; s < 2; s++) sim.P[s].forEach((q, i) => {
+    if (!q) return;
+    const r = bodyRadius(M.sides[s], i);
+    bodies.push({ q, r, s, i, w: (0.6 + ac(M.sides[s], i, 'str') * 0.04) * (r / 0.36) }); // how hard he is to move: Strength and build
+  });
   for (let pass = 0; pass < 2; pass++) for (let a = 0; a < bodies.length; a++) for (let b = a + 1; b < bodies.length; b++) {
     const A = bodies[a].q, C = bodies[b].q, min = bodies[a].r + bodies[b].r;
     let dx = C.x - A.x, dy = C.y - A.y;
@@ -1863,13 +1877,26 @@ function separateBodies(M) {
     let d = Math.sqrt(dx * dx + dy * dy);
     if (d >= min) continue;
     if (d < 1e-3) { dx = 1; dy = 0; d = 1; } // exactly on top of each other: part sideways
-    const push = (min - d) / 2 / d;
-    A.x -= dx * push; A.y -= dy * push; C.x += dx * push; C.y += dy * push;
+    // Two bodies meeting: the stronger, heavier man gives less ground, and the speed they were closing at is
+    // lost by both (nobody runs through an opponent or bounces off him).
+    const nx = dx / d, ny = dy / d, giveA = bodies[b].w / (bodies[a].w + bodies[b].w), giveC = 1 - giveA, push = min - d;
+    A.x -= nx * push * giveA; A.y -= ny * push * giveA; C.x += nx * push * giveC; C.y += ny * push * giveC;
+    if (pass === 0) {
+      const closing = ((C.vx || 0) - (A.vx || 0)) * nx + ((C.vy || 0) - (A.vy || 0)) * ny;
+      if (closing < 0) {
+        A.vx = (A.vx || 0) + nx * closing * giveA; A.vy = (A.vy || 0) + ny * closing * giveA;
+        C.vx = (C.vx || 0) - nx * closing * giveC; C.vy = (C.vy || 0) - ny * closing * giveC;
+        // a shoulder-to-shoulder challenge near the ball, for the match view
+        if (bodies[a].s !== bodies[b].s && closing < -2 && !sim.rs && sim.t - Math.max(A.hit ?? -9, C.hit ?? -9) > 1.5 && hyp(B.x - A.x, B.y - A.y) < 4) {
+          A.hit = C.hit = sim.t;
+          mark(M, 'contact', bodies[a].s, { who: bodies[a].i, os: bodies[b].s, oi: bodies[b].i, x: A.x, y: A.y, v: -closing });
+        }
+      }
+    }
     A.x = clamp(A.x, 0.5, PW - 0.5); A.y = clamp(A.y, 0.5, PL - 0.5); C.x = clamp(C.x, 0.5, PW - 0.5); C.y = clamp(C.y, 0.5, PL - 0.5);
   }
   bodies.forEach(({ q }) => { q.x = clamp(q.x, 0.5, PW - 0.5); q.y = clamp(q.y, 0.5, PL - 0.5); });
 }
-// Top speed (Pace) and acceleration (Agility) per slot, both lower when tired: worked out once a minute.
 function speeds(S) {
   if (S._sp) return S._sp;
   const a = new Float32Array(22);
@@ -1888,7 +1915,8 @@ function engage(M) {
   // A forward through on goal: the keeper comes out to narrow the angle, and rushes him when he gets close
   // (One on Ones decides how far and how well judged).
   const g = OP[0];
-  if (g && throughOnGoal(M, s, own.x, own.y)) {
+  // (Only for a man coming at goal: a winger free on the touchline does not pull the keeper out to the flank.)
+  if (g && Math.abs(own.x - gx) < 16 && throughOnGoal(M, s, own.x, own.y)) {
     const d = dGoal(s, own.x, own.y), f = d < 13 ? clamp(1 - (1.5 + (20 - ac(O, 0, 'one')) * 0.08) / d, 0.3, 0.92) : clamp(0.22 + (ac(O, 0, 'one') - 10) * 0.015, 0.12, 0.4);
     g.tx = gx + (own.x - gx) * f; g.ty = gy + (own.y - gy) * f; g.run = sim.t + 1;
     if (M.evidence && !sim.rs && !(sim.celebrate > 0)) evidenceKeeper(M, s, own, g);
