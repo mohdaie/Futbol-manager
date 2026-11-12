@@ -1781,6 +1781,8 @@ function findSpace(M, s, i, X, Y, own, line) {
 }
 
 // Movement: top speed from Pace, acceleration from Agility, both lower when tired; jogging into shape, sprinting when it matters.
+// Metres a second a player moves with the ball while choosing his next action, by team tempo (slow, normal, fast).
+const SETTLE_PACE = [1.0, 1.7, 2.4];
 function movePlayers(M) {
   const sim = M.sim, B = sim.B, dt = TICK, rs = !!sim.rs;
   // Both sides move at the same moment: anything a player reads about the other side is where they were at the
@@ -1795,9 +1797,18 @@ function movePlayers(M) {
       if (p.cool > 0) { p.cool -= dt; p.vx *= 0.5; p.vy *= 0.5; p.x += p.vx * dt; p.y += p.vy * dt; continue; }
       const carrier = B.os === s && B.oi === i;
       let tx = p.tx, ty = p.ty;
-      if (carrier) { if (p.carry) { tx = B.hx; ty = B.hy; } else { tx = p.x; ty = p.y; } }
+      // Nobody receives the ball and stands on it: while he looks up for his next action he takes it with him,
+      // away from the nearest opponents and up the pitch, at the pace of the team's tempo (a walk when the
+      // team plays slowly, a brisk jog at a high tempo). A keeper, a restart and a first-time ball stay put.
+      const settle = carrier && !p.carry && !rs && i > 0 && !(p.oneTouch > sim.t);
+      if (carrier) {
+        if (p.carry) { tx = B.hx; ty = B.hy; }
+        else if (settle) { const [ux, uy] = carryDir(M, s, i); tx = p.x + ux * 5; ty = p.y + uy * 5; }
+        else { tx = p.x; ty = p.y; }
+      }
       const dx = tx - p.x, dy = ty - p.y, d = Math.sqrt(dx * dx + dy * dy);
       let top = sp[i * 2] * (carrier && p.carry ? 0.85 : 1);
+      if (settle) top = Math.min(top, SETTLE_PACE[S.tempo ?? 1] * (0.85 + ac(S, i, 'dri') * 0.015));
       if (carrier) { const O = at[1 - s]; for (let j = 0; j < O.length; j++) { const q = O[j]; if (q && (q[0] - p.x) * (q[0] - p.x) + (q[1] - p.y) * (q[1] - p.y) < 9 && (q[1] - p.y) * fwdY(s) > -0.5) { top *= 0.55; break; } } }
       // Sprint only when it matters: on the ball, making a run, pressing, going for a loose ball, a restart, or
       // getting back goal-side; otherwise jog into position (most of a match is jogging).
@@ -1812,7 +1823,7 @@ function movePlayers(M) {
       let face = p.fa ?? fwdA(s), turnK = 1;
       if (carrier) {
         if (p.carry && mv != null) face = mv;
-        else { const tight = at[1 - s].some(q => q && hyp(q[0] - p.x, q[1] - p.y) < 2.2); face = tight && backness(s, p) > 0.5 ? p.fa : fwdA(s); if (tight) turnK = 0.5; }
+        else { const tight = at[1 - s].some(q => q && hyp(q[0] - p.x, q[1] - p.y) < 2.2); face = tight && backness(s, p) > 0.5 ? p.fa : settle && mv != null ? mv : fwdA(s); if (tight) turnK = 0.5; }
       } else if (i === 0 || sim.poss !== s) face = urgent && d > 4 && mv != null && Math.abs(wrapA(mv - toBall)) > 1.75 ? mv : toBall;
       else if (sp0 > 5 && mv != null) face = mv;
       else { const open = clamp(0.3 + (ac(S, i, 'dec') + ac(S, i, 'vis') + ac(S, i, 'ant') - 30) * 0.012, 0.15, 0.6), f0 = fwdA(s);

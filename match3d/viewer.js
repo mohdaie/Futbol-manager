@@ -11,6 +11,8 @@ const LOCO = { Walk: 1.16, Jog: 2.57, Run: 4.7, Dribble: 2.45, Jockey: 0.95 };
 // seconds from the start of a clip to the moment of ball contact, and how fast to play it
 const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0 };
 const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1 };
+// a player already on the move plays only the swing of a kick: seconds kept before and after ball contact
+const SWING = { Pass: [0.2, 0.2], LongKick: [0.28, 0.3], Shoot: [0.3, 0.35] };
 const SKIN = ['#F1C9A5', '#E0AC86', '#C68863', '#A56B46', '#7A4A2E', '#5A3520'];
 const HAIR = ['#1B1410', '#2E2018', '#4A3020', '#7A5632', '#8C6A3A', '#101010'];
 
@@ -97,15 +99,16 @@ function start(meta, F, playerGltf, ballGltf) {
       actions[c.name] = a;
     }
     scene.add(root);
-    P[s].push({ root, mixer, actions, cur: null, name: '', shot: null, speed: 0, x: 0, z: 0 });
+    P[s].push({ root, mixer, actions, cur: null, name: '', shot: null, swing: null, speed: 0, x: 0, z: 0 });
   }
-  function play(p, name, fade, rate, sync) {
+  function play(p, name, fade, rate, sync, from) {
     const next = p.actions[name], prev = p.cur;
-    if (prev === next) { next.setEffectiveTimeScale(rate); return; }
+    if (prev === next && from == null) { next.setEffectiveTimeScale(rate); return; }
     next.enabled = true; next.reset(); next.setEffectiveTimeScale(rate); next.setEffectiveWeight(1);
+    if (from != null) next.time = from;
     if (sync && prev) next.time = (prev.time / prev.getClip().duration) % 1 * next.getClip().duration;
     next.play();
-    if (prev) prev.crossFadeTo(next, fade, false);
+    if (prev && prev !== next) prev.crossFadeTo(next, fade, false);
     p.cur = next; p.name = name;
   }
 
@@ -161,7 +164,7 @@ function start(meta, F, playerGltf, ballGltf) {
   function seek(t) {
     T = Math.max(0, Math.min(T_END, t));
     ci = cues.findIndex(c => c.t > T - 0.3); if (ci < 0) ci = cues.length;
-    for (const side of P) for (const p of side) { p.shot = null; p.root.scale.x = 1; }
+    for (const side of P) for (const p of side) { p.shot = null; p.swing = null; p.root.scale.x = 1; }
     $('note').textContent = '';
     cut = true;
   }
@@ -175,8 +178,13 @@ function start(meta, F, playerGltf, ballGltf) {
     // action cues that have come due
     while (ci < cues.length && cues[ci].t <= T) {
       const c = cues[ci++], p = P[c.s][c.i];
-      if (T - c.t > 0.4 || (c.soft && (p.shot || p.speed > 2.5))) continue;
+      if (T - c.t > 0.4 || (c.soft && (p.shot || p.speed > 0.6))) continue;
       const rate = RATE[c.clip];
+      if (SWING[c.clip] && p.speed > 1) { // keep running: the swing alone, timed to the same contact
+        const [pre, post] = SWING[c.clip];
+        p.swing = { at: c.t + (CONTACT[c.clip] - pre) / rate, clip: c.clip, from: CONTACT[c.clip] - pre, len: (pre + post) / rate };
+        continue;
+      }
       if (c.clip === 'KeeperDive') { // the clip dives to the keeper's left; mirror it for the other side
         const a = fa(k, c.s, c.i), left = Math.sin(a) * (c.tx - px(k, c.s, c.i) / 100) > 0 ? 1 : -1;
         p.root.scale.x = left;
@@ -200,6 +208,10 @@ function start(meta, F, playerGltf, ballGltf) {
       p.x = x - PW / 2; p.z = y - PL / 2; p.speed = v;
       p.root.position.set(p.x, 0, p.z);
       p.root.rotation.y = Math.PI / 2 - a;
+      if (p.swing && T >= p.swing.at) {
+        const w = p.swing; p.swing = null;
+        if (T - w.at < 0.3) { play(p, w.clip, 0.1, RATE[w.clip], false, w.from); p.shot = { end: T + w.len }; }
+      }
       if (p.shot && T >= p.shot.end) { p.shot = null; p.root.scale.x = 1; }
       if (!p.shot) {
         const back = v > 0.35 && v < 3.5 && (vx * Math.cos(a) + vy * Math.sin(a)) / v < -0.3;
