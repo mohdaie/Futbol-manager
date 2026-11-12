@@ -1150,6 +1150,96 @@ CELEB = both({
    _p=(0, 0, 45, 40, 30, 10, 0, 0, 0))
 
 
+# ------------------------------------------------------- receiving the ball
+# A receiver is never flat-footed: he is on his toes before the ball arrives,
+# opens his body, and his first touch takes him into his next move.
+ON_TOES = {"l_y": 0.02, "l_z": 0.116, "l_p": 12, "r_y": 0.02, "r_z": 0.116, "r_p": 12}
+
+# Inside of the right boot, touch across the body, then away with the ball.
+RECV_T = (0.00, 0.12, 0.24, 0.34, 0.48, 0.64, 0.80)
+RECV = {
+    "fwd":   (0.00, 0.00, 0.00, 0.02, 0.10, 0.22, 0.36),
+    "side":  (0.00, 0.03, 0.04, 0.05, 0.04, 0.02, 0.00),
+    "hip_z": (0.84, 0.86, 0.83, 0.83, 0.84, 0.85, 0.86),
+    "lean":  (8, 7, 6, 6, 8, 10, 8),
+    "yaw":   (0, -4, -12, -10, 10, 6, 0),
+    "l_x":   (0.08, 0.08, 0.08, 0.08, 0.08, 0.05, 0.03),
+    "l_y":   (0.02, 0.02, 0.00, 0.00, 0.051, 0.30, 0.46),
+    "l_z":   (0.116, 0.13, 0.08, 0.08, 0.149, 0.16, 0.08),
+    "l_p":   (12, 14, 0, 0, 25, 10, 0),
+    "r_x":   (-0.08, -0.08, -0.04, 0.02, 0.02, 0.00, -0.02),
+    "r_y":   (0.02, 0.02, 0.22, 0.16, 0.22, 0.22, 0.258),
+    "r_z":   (0.116, 0.13, 0.13, 0.11, 0.08, 0.08, 0.137),
+    "r_p":   (12, 14, -5, -5, 0, 0, 20),
+    "r_turn": (0, 10, 70, 75, 20, 0, 0),
+    "hd_pitch": (4, 6, 12, 14, 8, 2, 0),
+    "la_add": (15, 12, 8, 6, 12, 20, 24), "la_el": (45, 45, 40, 40, 45, 55, 60),
+    "la_sw": (0, 0, 10, 12, -5, -15, 10),
+    "ra_add": (15, 12, 10, 10, 14, 20, 24), "ra_el": (45, 45, 45, 45, 50, 55, 60),
+    "ra_sw": (0, 0, -10, -12, 5, 15, -10),
+}
+
+# On the half-turn: the body opens, the back foot takes the ball round and he
+# comes out facing the other way.
+RECV_TURN_T = (0.00, 0.12, 0.26, 0.36, 0.52, 0.70, 0.88)
+RECV_TURN = {
+    "side":  (0.00, 0.02, 0.02, 0.00, -0.03, -0.04, -0.02),
+    "hip_z": (0.84, 0.86, 0.83, 0.82, 0.83, 0.85, 0.87),
+    "lean":  (8, 7, 6, 6, 8, 8, 5),
+    "yaw":   (0, -8, -35, -55, -40, -20, 0),
+    "sp_yaw": (0, 2, 10, 16, 10, 3, 0),
+    "sp_roll": (0, 0, -4, -6, -4, 0, 0),
+    "l_x":   (0.08, 0.08, 0.08, 0.08, 0.06, 0.00, 0.00),
+    "l_y":   (0.02, 0.02, 0.00, 0.00, 0.051, 0.08, 0.12),
+    "l_z":   (0.116, 0.13, 0.08, 0.08, 0.149, 0.15, 0.08),
+    "l_p":   (12, 14, 0, 0, 25, 12, 0),
+    "r_x":   (-0.08, -0.08, -0.12, -0.16, -0.18, -0.18, -0.16),
+    "r_y":   (0.02, 0.02, -0.05, -0.12, -0.10, -0.10, -0.10),
+    "r_z":   (0.116, 0.13, 0.12, 0.11, 0.08, 0.08, 0.08),
+    "r_p":   (12, 14, -5, -5, 0, 0, 0),
+    "r_turn": (0, 20, 80, 85, 60, 30, 10),
+    "hd_pitch": (4, 6, 12, 14, 8, 2, 0),
+    "hd_yaw": (0, -4, -14, -18, -10, -3, 0),
+    "la_add": (15, 10, 4, 2, 10, 20, 26), "la_el": (45, 45, 40, 40, 45, 45, 35),
+    "la_sw": (0, 5, 15, 18, 5, -5, 0),
+    "ra_add": (15, 12, 8, 8, 12, 20, 26), "ra_el": (45, 45, 50, 50, 50, 45, 35),
+    "ra_sw": (0, -5, -15, -18, -5, 5, 0),
+}
+
+# Under the sole: the ball is killed dead with the studs on top of it.
+RECV_SOLE_T = (0.00, 0.12, 0.26, 0.36, 0.56, 0.76)
+RECV_SOLE = {
+    "side":  (0.00, 0.03, 0.04, 0.04, 0.03, 0.00),
+    "hip_z": (0.84, 0.86, 0.86, 0.87, 0.87, 0.87),
+    "lean":  (8, 6, 2, 0, 1, 3),
+    "l_x":   (0.08, 0.08, 0.08, 0.08, 0.08, 0.06),
+    "l_y":   (0.02, 0.02, 0.00, 0.00, 0.00, 0.00),
+    "l_z":   (0.116, 0.13, 0.08, 0.08, 0.08, 0.08),
+    "l_p":   (12, 14, 0, 0, 0, 0),
+    "r_x":   (-0.08, -0.08, -0.05, -0.04, -0.04, -0.06),
+    "r_y":   (0.02, 0.05, 0.26, 0.30, 0.24, 0.06),
+    "r_z":   (0.116, 0.20, 0.34, 0.30, 0.30, 0.08),
+    "r_p":   (12, 5, 0, 10, 12, 0),
+    "hd_pitch": (4, 8, 14, 16, 12, 2),
+    "sp_lean": (4, 4, 6, 8, 6, 3),
+    "la_add": (15, 10, 4, 2, 8, 24), "la_el": (45, 40, 35, 35, 35, 25),
+    "ra_add": (15, 12, 8, 6, 10, 24), "ra_el": (45, 45, 40, 40, 40, 25),
+}
+
+
+def touch_run(t):
+    """Receiving at a jog: one stride where the right boot opens to take the ball
+    in its path, eyes down, arms out, without breaking stride."""
+    v = JOG(t * FPS / 40)                    # starts as the right leg begins to swing
+    w = math.exp(-((t - 0.2) / 0.09) ** 2)   # the touch itself, 0.2 s in
+    v["r_turn"] = 60 * w
+    v["r_z"] += (0.13 - v["r_z"]) * w
+    v["r_p"] += (-5 - v["r_p"]) * w
+    v["hd_pitch"] += 14 * w
+    v["la_add"] = v["ra_add"] = 30 - 12 * w
+    return v
+
+
 def loop(values, frames):
     return lambda t: values(t * FPS / frames)
 
@@ -1163,6 +1253,10 @@ CLIPS = {
     "Jockey":     (30, True, loop(JOCKEY, 30), None),
     "Dribble":    (34, True, loop(DRIBBLE, 34), None),
     "FirstTouch": (37, False, keyed(TOUCH_T, TOUCH), 18),
+    "ReceiveInside": (49, False, keyed(RECV_T, RECV), 21),
+    "ReceiveTurn": (54, False, keyed(RECV_TURN_T, RECV_TURN), 23),
+    "ReceiveSole": (47, False, keyed(RECV_SOLE_T, RECV_SOLE), 23),
+    "ReceiveRun": (31, False, touch_run, 13),
     "Pass":       (64, False, keyed(PASS_T, PASS), 31),
     "Shoot":      (79, False, keyed(SHOOT_T, SHOOT), 26),
     "LongKick":   (79, False, keyed(SHOOT_T, LONG_KICK), 26),

@@ -9,8 +9,8 @@ const PW = 68, PL = 105, STRIDE = 72, NONE = -32768, BALL_R = 0.11;
 // ground speed (m/s) each looping clip was animated for, so feet match the pitch
 const LOCO = { Walk: 1.16, Jog: 2.57, Run: 4.7, Dribble: 2.45, Jockey: 0.95 };
 // seconds from the start of a clip to the moment of ball contact, and how fast to play it
-const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0 };
-const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1 };
+const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0, ReceiveInside: 0.34, ReceiveTurn: 0.36, ReceiveSole: 0.36, ReceiveRun: 0.2 };
+const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1, ReceiveInside: 1.25, ReceiveTurn: 1.25, ReceiveSole: 1.2, ReceiveRun: 1 };
 // a player already on the move plays only the swing of a kick: seconds kept before and after ball contact
 const SWING = { Pass: [0.2, 0.2], LongKick: [0.28, 0.3], Shoot: [0.3, 0.35] };
 const SKIN = ['#F1C9A5', '#E0AC86', '#C68863', '#A56B46', '#7A4A2E', '#5A3520'];
@@ -130,13 +130,33 @@ function start(meta, F, playerGltf, ballGltf) {
   /* ---------- action cues from the engine's marks ---------- */
   const cues = [];
   const cue = (t, s, i, clip, extra) => { if (i != null && i >= 0 && i < 11) cues.push({ t: t - CONTACT[clip] / RATE[clip], s, i, clip, ...extra }); };
+  // Receiving: which first touch a player takes depends on how fast he is moving and whether he turns
+  // with it: in stride at a run, on the half-turn, killed under the sole when standing, or the inside of
+  // the boot and away. About one in three takes it with the left foot (the clip mirrored).
+  const kicksBy = new Map(), touchesBy = new Map();
+  for (const m of meta.marks) if (m.k === 'kick' || m.k === 'touch' || m.k === 'duel') {
+    const map = m.k === 'kick' ? kicksBy : touchesBy, key = m.s + ':' + m.who;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(m.t);
+  }
+  function receive(t, s, i) {
+    if (i == null || i < 1 || i > 10) return;
+    if ((kicksBy.get(s + ':' + i) || []).some(k => k >= t && k - t < 0.45)) return; // played first time: the kick is the touch
+    const k = frameAt(t), k2 = Math.min(NF - 1, k + 1), k3 = Math.min(NF - 1, k + 3);
+    if (px(k, s, i) === NONE || px(k2, s, i) === NONE) return;
+    const v = Math.hypot(px(k2, s, i) - px(k, s, i), py(k2, s, i) - py(k, s, i)) / 100 / 0.5;
+    const turn = Math.abs(Math.atan2(Math.sin(fa(k3, s, i) - fa(k, s, i)), Math.cos(fa(k3, s, i) - fa(k, s, i))));
+    const h = hash(Math.round(t * 10) + ':' + s + ':' + i);
+    const clip = v > 3.2 ? 'ReceiveRun' : turn > 1.2 ? 'ReceiveTurn' : v < 0.6 && h % 3 === 0 ? 'ReceiveSole' : 'ReceiveInside';
+    cue(t, s, i, clip, { mirror: (h >>> 3) % 3 === 0 });
+  }
   let lastScorer = null;
   for (const m of meta.marks) {
     if (m.k === 'kick') {
       const k = frameAt(m.t - 0.5), throwIn = F[k * STRIDE + 5] === 1 && m.kind !== 'shot';
       const clip = throwIn ? 'ThrowIn' : m.style === 'header' ? 'Header' : m.kind === 'shot' ? 'Shoot' : ['long', 'cross', 'clear'].includes(m.kind) ? 'LongKick' : 'Pass';
       cue(m.t, m.s, m.who, clip);
-    } else if (m.k === 'touch') cue(m.t, m.s, m.who, 'FirstTouch', { soft: true });
+    } else if (m.k === 'touch') receive(m.t, m.s, m.who);
     else if (m.k === 'duel') cue(m.t, m.s, m.who, 'Tackle');
     else if (m.k === 'sfx') {
       if (m.res === 'goal') lastScorer = { s: m.s, i: m.who };
@@ -146,8 +166,10 @@ function start(meta, F, playerGltf, ballGltf) {
       [who, 1 + (who + 2) % 10, 1 + (who + 5) % 10, 1 + (who + 7) % 10].forEach((i, n) => cue(m.t + 0.7 + n * 0.35, m.s, i, 'Celebrate', { hold: 5 }));
     }
   }
-  for (let k = 1; k < NF; k++) { // a keeper taking a high ball
+  for (let k = 1; k < NF; k++) { // a keeper taking a high ball; an outfield player collecting a loose or intercepted one
     const r = k * STRIDE, q = r - STRIDE;
+    if (F[r + 4] > 0 && F[r + 3] >= 0 && !F[r + 5] && (F[q + 4] !== F[r + 4] || F[q + 3] !== F[r + 3])
+      && !(touchesBy.get(F[r + 3] + ':' + F[r + 4]) || []).some(t => Math.abs(t - times[k]) < 0.8)) receive(times[k], F[r + 3], F[r + 4]);
     if (F[r + 4] === 0 && F[r + 3] >= 0 && (F[q + 4] !== 0 || F[q + 3] !== F[r + 3]) && F[q + 2] > 120) cue(times[k], F[r + 3], 0, 'KeeperCatch');
   }
   cues.sort((a, b) => a.t - b.t);
@@ -189,7 +211,8 @@ function start(meta, F, playerGltf, ballGltf) {
         const a = fa(k, c.s, c.i), left = Math.sin(a) * (c.tx - px(k, c.s, c.i) / 100) > 0 ? 1 : -1;
         p.root.scale.x = left;
       }
-      play(p, c.clip, 0.08, rate);
+      else p.root.scale.x = c.mirror ? -1 : 1;
+      play(p, c.clip, c.clip.startsWith('Receive') ? 0.14 : 0.08, rate);
       p.shot = { end: T + (c.hold || p.actions[c.clip].getClip().duration / rate) };
       if (c.clip === 'Celebrate' && c.i === (lastScorerAt(T) ?? -1)) note('GOAL! ' + nameOf(c.s, c.i) + ' (' + meta.teams[c.s].name + ')', 6);
     }
@@ -210,7 +233,7 @@ function start(meta, F, playerGltf, ballGltf) {
       p.root.rotation.y = Math.PI / 2 - a;
       if (p.swing && T >= p.swing.at) {
         const w = p.swing; p.swing = null;
-        if (T - w.at < 0.3) { play(p, w.clip, 0.1, RATE[w.clip], false, w.from); p.shot = { end: T + w.len }; }
+        if (T - w.at < 0.3) { p.root.scale.x = 1; play(p, w.clip, 0.1, RATE[w.clip], false, w.from); p.shot = { end: T + w.len }; }
       }
       if (p.shot && T >= p.shot.end) { p.shot = null; p.root.scale.x = 1; }
       if (!p.shot) {
@@ -289,7 +312,7 @@ function start(meta, F, playerGltf, ballGltf) {
     if (!manual) { update(dt); renderer.render(scene, camera); }
     requestAnimationFrame(frame);
   }
-  window.match3d = { seek, step(dt) { update(dt); renderer.render(scene, camera); }, get time() { return T; }, end: T_END, cues: cues.length, setCam(n) { camMode = n; cut = true; }, clips: clips.map(c => c.name) };
+  window.match3d = { cueMix: cues.reduce((o, c) => { o[c.clip] = (o[c.clip] || 0) + 1; return o; }, {}), seek, step(dt) { update(dt); renderer.render(scene, camera); }, get time() { return T; }, end: T_END, cues: cues.length, setCam(n) { camMode = n; cut = true; }, clips: clips.map(c => c.name) };
   update(0.3); renderer.render(scene, camera);
   $('load').remove();
   requestAnimationFrame(frame);
