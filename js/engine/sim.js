@@ -933,7 +933,9 @@ function roundKeeper(M, s, i) {
     looseBall(M); const B = M.sim.B; B.vx = (p.x < PW / 2 ? -1 : 1) * rf(3, 6); B.vy = fwdY(s) * rf(3, 6); return;
   }
   pstat(O, 0, 'sv'); bump(O, 0, 0.2);
-  giveBall(M, 1 - s, 0);
+  mark(M, 'save', 1 - s, { how: 'smother', h: 0, dive: true, x: p.x, y: p.y, who: i }); // down at his feet, the ball under his body
+  g.x += (p.x - g.x) * 0.5; g.y += (p.y - g.y) * 0.5; g.down = M.sim.t + 1.5;
+  keeperHolds(M, 1 - s, 'smother', true);
 }
 
 // A lofted pass has to be won in the air: the receiver against the nearest defender at the landing point

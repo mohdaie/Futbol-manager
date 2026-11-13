@@ -198,7 +198,7 @@ function start(meta, F, playerGltf, ballGltf) {
   for (const m of meta.marks) {
     if (m.k === 'kick') {
       const k = frameAt(m.t - 0.5), throwIn = F[k * STRIDE + 5] === 1 && m.kind !== 'shot';
-      const clip = throwIn ? 'ThrowIn' : m.style === 'header' ? 'Header' : m.kind === 'shot' ? 'Shoot' : ['long', 'cross', 'clear'].includes(m.kind) ? 'LongKick' : 'Pass';
+      const clip = throwIn || m.style === 'throw' ? 'ThrowIn' : m.style === 'header' || m.style === 'punch' ? 'Header' : m.kind === 'shot' ? 'Shoot' : ['long', 'cross', 'clear'].includes(m.kind) ? 'LongKick' : 'Pass';
       cue(m.t, m.s, m.who, clip);
     } else if (m.k === 'touch') receive(m.t, m.s, m.who);
     else if (m.k === 'duel') { cue(m.t, m.s, m.who, 'Tackle'); cue(m.t + 0.15, m.os, m.oi, 'Stumble', { soft: true }); } // the man who lost it
@@ -206,7 +206,8 @@ function start(meta, F, playerGltf, ballGltf) {
     else if (m.k === 'foul') cue(m.t + 0.1, m.s, m.who, 'Fall');
     else if (m.k === 'sfx') {
       if (m.res === 'goal') lastScorer = { s: m.s, i: m.who };
-      if (m.res === 'goal' || m.res === 'save') cue(m.t + (m.flight || 0.4), 1 - m.s, 0, 'KeeperDive', { tx: m.tx });
+      if (m.res === 'goal' || m.res === 'save') cue(m.t + (m.flight || 0.4), 1 - m.s, 0, m.dive === false ? 'KeeperCatch' : 'KeeperDive', { tx: m.tx });
+    } else if (m.k === 'claim' && m.res === 'catch') { cue(m.t, m.s, 0, 'KeeperCatch');
     } else if (m.k === 'goal') {
       const who = lastScorer && lastScorer.s === m.s ? lastScorer.i : 9;
       [who, 1 + (who + 2) % 10, 1 + (who + 5) % 10, 1 + (who + 7) % 10].forEach((i, n) => cue(m.t + 0.7 + n * 0.35, m.s, i, 'Celebrate', { hold: 5 }));
@@ -359,7 +360,10 @@ function start(meta, F, playerGltf, ballGltf) {
 
     // camera
     const aspect = camera.aspect, wantPos = new THREE.Vector3(), wantAim = new THREE.Vector3();
-    if (follow) { const f = P[follow[0]][follow[1]]; wantPos.set(f.x - 4.5, 2.2, f.z + 5.5); wantAim.set(f.x, 1.0, f.z); }
+    if (follow && follow[2]) { // behind his goal, looking up the pitch over the keeper to the ball
+      const f = P[follow[0]][follow[1]], end = Math.sign(f.z) || 1, gap = Math.abs(ballPos.z - f.z);
+      wantPos.set(f.x * 0.4, 8 + gap * 0.1, end * (PL / 2 + 17 + gap * 0.08)); wantAim.set(f.x * 0.75 + ballPos.x * 0.25, 0.8, f.z + (ballPos.z - f.z) * 0.3);
+    } else if (follow) { const f = P[follow[0]][follow[1]]; wantPos.set(f.x - 4.5, 2.2, f.z + 5.5); wantAim.set(f.x, 1.0, f.z); }
     else if (camMode === 0) { // behind: the pitch runs up the screen, home side attacks upward
       const d = aspect < 1 ? 25 : 22;
       wantPos.set(ballPos.x * 0.62, d * 0.62, ballPos.z + d); wantAim.set(ballPos.x * 0.86, 0.5, ballPos.z - 3);
@@ -419,7 +423,7 @@ function start(meta, F, playerGltf, ballGltf) {
     }
     requestAnimationFrame(frame);
   }
-  window.match3d = { cueMix: cues.reduce((o, c) => { o[c.clip] = (o[c.clip] || 0) + 1; return o; }, {}), seek, step(dt) { update(dt); renderer.render(scene, camera); }, get time() { return T; }, end: T_END, cues: cues.length, setCam(n) { camMode = n; follow = null; cut = true; }, follow(s, i) { follow = s == null ? null : [s, i]; cut = true; }, carrierAt() { const k = frameAt(T); return [F[k * STRIDE + 3], F[k * STRIDE + 4]]; }, clips: clips.map(c => c.name), drawCalls: () => renderer.info.render.calls };
+  window.match3d = { cueMix: cues.reduce((o, c) => { o[c.clip] = (o[c.clip] || 0) + 1; return o; }, {}), seek, step(dt) { update(dt); renderer.render(scene, camera); }, get time() { return T; }, end: T_END, cues: cues.length, setCam(n) { camMode = n; follow = null; cut = true; }, follow(s, i, wide) { follow = s == null ? null : [s, i, !!wide]; cut = true; }, caption(text) { $('note').textContent = text || ''; noteUntil = 0; }, carrierAt() { const k = frameAt(T); return [F[k * STRIDE + 3], F[k * STRIDE + 4]]; }, clips: clips.map(c => c.name), drawCalls: () => renderer.info.render.calls };
   update(0.3); renderer.render(scene, camera);
   $('load').remove();
   requestAnimationFrame(frame);
