@@ -8,6 +8,7 @@ Branch `claude/football-manager-repo-connect-e1r6nf` (no pull request yet). Last
 |---|---|
 | Live 3D replay (private artifact) | https://claude.ai/artifact/3nbJ4BTM8UtaRMyBBwAbGy |
 | 3D viewer | `match3d/index.html`, `match3d/viewer.js` (three.js 0.170.0 in `match3d/vendor/`) |
+| 3D on match day | `js/engine/live3d.js` (the 3D tab of the live match screen), test `tests/live-3d.cjs` |
 | Player and ball models | `match3d/assets/player.glb`, `match3d/assets/ball.glb` |
 | Blender build scripts (source of the models) | `scripts/blender/build_player.py`, `scripts/blender/build_ball.py` |
 | Recorded match | `match3d/data/match.json` + `match.bin`; record a new one with `node scripts/record-match-3d.cjs` |
@@ -66,6 +67,20 @@ sink 17 cm).
 - Cuts and turns on the spot are read from the recorded path; balls arriving in the air are taken on the chest,
   thigh or head.
 
+## Match day in 3D (`js/engine/live3d.js`)
+
+- The live match screen has a 3D tab next to 2D (`MATCH_VIEWS` in `js/ui/live-panels.js`). 2D is the default.
+- Nothing 3D is fetched until the tab is opened; then `match3d/viewer.js` is imported (the import map for three.js
+  is in `index.html`) and `createLive()` returns an empty viewer for the two teams.
+- `live3dFeed()` pushes each minute's frames, marks and line-up as `liveStep()` produces them; `live3dFrame()` tells
+  the viewer which second to show (`q.t0 + q.p`), so highlights, speed and pause are live.js's own. In 3D the lowest
+  speed is real time (half the 2D rate).
+- The viewer's canvas is kept across redraws of the screen and moved into the new panel. A device without WebGL, or
+  a failed load, gets a toast and the 2D tab.
+- Known limits: an action in the first half second of a minute can start its swing late (the viewer only learns of
+  it when the minute arrives); tapping a player in 3D does not open his card (it does in 2D).
+- Kits carry the surname and number on the back and the number on the chest (`print()` and `number()` in the viewer).
+
 ## Keeper in the engine (`js/engine/sim.js`)
 
 - `targets()`: depth by the ball's distance (1.5 m inside 30 m, out to 17 m for a standard line at 72 m), sideways
@@ -105,12 +120,13 @@ Not done or only partly done, honestly:
 - Walk and jog were reworked from general gait knowledge (pelvis sway and roll, narrower step, arm carriage); the
   owner has not yet said what looked wrong in the old ones.
 - The live artifact has not been republished with the new match and model.
+- 3D on match day has been run in headless Chromium with software rendering only, not yet on a real phone.
 - Head control is rare by design; the engine lets most high balls bounce before they are controlled.
 
 ## Known gaps (also in the study)
 
 Jogging 25% of time (real about 17%), running 9% (about 17%); first touch never fails; tackles are dice rolls;
-no shirt numbers; the engine samples positions twice a second; every lost duel plays a stumble (too many);
+the engine samples positions twice a second; every lost duel plays a stumble (too many);
 keepers do not sweep up balls over the top; shots are a little high (about 26.5 a match against about 25).
 
 ## Engine numbers now (3 x 80 matches, worlds 1 to 3)

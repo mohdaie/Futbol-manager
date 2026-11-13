@@ -17,4 +17,5 @@ How the animation is mixed (gait blending, planted feet, the keeper) is describe
   material each, so kits are recoloured in code.
 - `vendor/` is three.js 0.170.0 (MIT, see `vendor/LICENSE-three`).
 
-Not yet wired into the live match screen: the game still shows the 2D view.
+The same viewer is the 3D tab of the live match screen (`js/engine/live3d.js`), fed minute by minute through
+`createLive()`; this page is the stand-alone replay of one recorded match.

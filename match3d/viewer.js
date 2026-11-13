@@ -120,6 +120,28 @@ function start(meta, F, playerGltf, ballGltf, embed) {
     return g;
   }), false);
   const bodyMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  // Where the back and the chest of the shirt are (the model faces +z), for the number and name.
+  let backZ = 0, chestZ = 0;
+  { const pos = body.attributes.position, part = body.attributes.part.array, shirtPart = partNames.indexOf('shirt');
+    for (let v = 0; v < pos.count; v++) if (part[v] === shirtPart && Math.abs(pos.getX(v)) < 0.09 && pos.getY(v) > 1.22 && pos.getY(v) < 1.44) { backZ = Math.min(backZ, pos.getZ(v)); chestZ = Math.max(chestZ, pos.getZ(v)); } }
+  // One texture per (name, number, ink): surname over a large number for the back, the number alone for the chest.
+  const printCache = new Map();
+  function print(name, no, ink, front) {
+    const key = (front ? 'f' : 'b') + name + '|' + no + '|' + ink;
+    if (printCache.has(key)) return printCache.get(key);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+    const g = cv.getContext('2d'); g.fillStyle = ink; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (front) { g.font = '700 150px Arial, Helvetica, sans-serif'; g.fillText(String(no), 128, 136); }
+    else {
+      const sur = String(name || '').split(' ').pop().toUpperCase();
+      let size = 46; g.font = '700 ' + size + 'px Arial, Helvetica, sans-serif';
+      while (size > 22 && g.measureText(sur).width > 236) { size -= 2; g.font = '700 ' + size + 'px Arial, Helvetica, sans-serif'; }
+      g.fillText(sur, 128, 36);
+      g.font = '700 178px Arial, Helvetica, sans-serif'; g.fillText(String(no), 128, 160);
+    }
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    printCache.set(key, tex); return tex;
+  }
   const hash = s => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822519) >>> 0; return (h ^ (h >>> 13)) >>> 0; };
   const dark = c => new THREE.Color(c).getHSL({}).l < 0.5;
   function kit(side, i, name) {
@@ -153,10 +175,23 @@ function start(meta, F, playerGltf, ballGltf, embed) {
     }
     root.rotation.order = 'YXZ';
     scene.add(root);
-    P[s].push({ root, mixer, acts, geo, who, w: { lo: {}, up: {} }, tg: { lo: {}, up: {} }, fd: { lo: 0.18, up: 0.18 }, phase: 0, freq: 1, upShot: null, plant: null, sel: null, gw: -1, chest: root.getObjectByName('chest'), thighR: root.getObjectByName('thighR'), neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, name: '', shot: null, swing: null, hold: 0,
+    // Name and number: two small panels carried by the chest bone, just off the cloth.
+    const chestBone = root.getObjectByName('chest'), prints = [];
+    for (const front of [false, true]) {
+      const size = front ? 0.085 : 0.23, m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.35, side: THREE.FrontSide }));
+      m.position.set(front ? 0.075 : 0, front ? 1.39 : 1.335, front ? chestZ + 0.012 : backZ - 0.012); m.rotation.y = front ? 0 : Math.PI; m.visible = false;
+      root.add(m); root.updateMatrixWorld(true); chestBone.attach(m); prints.push(m);
+    }
+    P[s].push({ root, mixer, acts, geo, who, prints, no: -1, w: { lo: {}, up: {} }, tg: { lo: {}, up: {} }, fd: { lo: 0.18, up: 0.18 }, phase: 0, freq: 1, upShot: null, plant: null, sel: null, gw: -1, chest: root.getObjectByName('chest'), thighR: root.getObjectByName('thighR'), neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, name: '', shot: null, swing: null, hold: 0,
       speed: 0, x: 0, z: 0, sx: 1, sy: 1, mirror: 1, look: 0, lean: 0, bank: 0, drib: 0, seed: (hash('p' + s + i) % 1000) / 1000 });
   }
-  const setMirror = (p, m) => { p.mirror = m; p.root.scale.set(p.sx * m, p.sy, p.sx); };
+  // A mirrored clip mirrors the whole body; the printing is flipped back so a 9 never reads backwards.
+  const setMirror = (p, m) => { if (p.mirror !== m) for (const q of p.prints) q.scale.x = Math.abs(q.scale.x) * (m < 0 ? -1 : 1); p.mirror = m; p.root.scale.set(p.sx * m, p.sy, p.sx); };
+  function number(p, s, i, name, no) {
+    const col = meta.colors[s], shirt = i === 0 ? col.gk : col.f, ink = dark(shirt) ? '#FFFFFF' : '#15171A';
+    p.no = no; p.inkFor = name;
+    p.prints.forEach((q, front) => { q.visible = no > 0; if (no > 0) { q.material.map = print(name, no, ink, !!front); q.material.needsUpdate = true; } });
+  }
   function paint(p, s, i, name) { // a substitute is a different man: his own skin, hair and boots
     const k = kit(s, i, name), part = p.geo.attributes.part.array, col = p.geo.attributes.color, c = new THREE.Color();
     const cache = partNames.map(n => c.set(k[n] || '#888888').toArray());
@@ -173,8 +208,9 @@ function start(meta, F, playerGltf, ballGltf, embed) {
       const b = bodyOf && bodyOf[s][i], p = P[s][i];
       p.sy = b ? clamp(b[0] / 180, 0.9, 1.1) : 1; p.sx = b ? p.sy * clamp(Math.sqrt(b[1] / 23), 0.92, 1.1) : 1;
       setMirror(p, p.mirror);
-      const name = meta.lineups[n].on[s][i];
+      const name = meta.lineups[n].on[s][i], no = b && b[2] || 0;
       if (name && name !== p.who) paint(p, s, i, name);
+      if (no !== p.no || name !== p.inkFor) number(p, s, i, name || '', no);
     }
   }
   // Animation is mixed by hand, per half of the body: each half has target weights for the clips it should be
@@ -575,8 +611,8 @@ function start(meta, F, playerGltf, ballGltf, embed) {
       const d = aspect < 1 ? 25 : 22;
       wantPos.set(ballPos.x * 0.62, d * 0.62, ballPos.z + d); wantAim.set(ballPos.x * 0.86, 0.5, ballPos.z - 3);
     } else if (camMode === 1) { // television gantry on the halfway line, panning with the ball
-      const d = aspect < 1 ? 60 : 46;
-      wantPos.set(-PW / 2 - d * 0.62, d * 0.46, ballPos.z * 0.45); wantAim.set(ballPos.x * 0.6 - 1, 0.5, ballPos.z * 0.97);
+      const d = 46; // any further back and the camera is inside the stand (a tall screen shows less width instead)
+      wantPos.set(-PW / 2 - d * 0.62, d * 0.46, ballPos.z * (aspect < 1 ? 0.7 : 0.45)); wantAim.set(ballPos.x * 0.6 - 1, 0.5, ballPos.z * 0.97);
     } else if (camMode === 2) { // close to the ball
       wantPos.set(ballPos.x - 8, 4.2, ballPos.z + 11); wantAim.set(ballPos.x, 0.9, ballPos.z);
     } else { // whole pitch
