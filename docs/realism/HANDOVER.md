@@ -1,6 +1,6 @@
 # Handover: 3D match, player model, animations, engine realism
 
-Branch `claude/football-manager-repo-connect-e1r6nf` (no pull request yet). Last updated 12 November 2026.
+Branch `claude/football-manager-repo-connect-e1r6nf` (no pull request yet). Last updated 13 November 2026.
 
 ## Where things are
 
@@ -11,7 +11,9 @@ Branch `claude/football-manager-repo-connect-e1r6nf` (no pull request yet). Last
 | Player and ball models | `match3d/assets/player.glb`, `match3d/assets/ball.glb` |
 | Blender build scripts (source of the models) | `scripts/blender/build_player.py`, `scripts/blender/build_ball.py` |
 | Recorded match | `match3d/data/match.json` + `match.bin`; record a new one with `node scripts/record-match-3d.cjs` |
-| Publishing the artifact | `match3d/publish/README.md` and `page.html` |
+| Publishing the artifact | `match3d/publish/README.md` and `page.html` (the artifact still shows the match recorded on 12 November: republish to update it) |
+| Video of the replay | `node scripts/match3d-video.cjs out.mp4 '<segments JSON>'` (captioned segments, any camera) |
+| Keeper scorecard | `SEED=1 node scripts/realism/league.cjs "$(sed 's/N_/30/' scripts/realism/keeper.js)"` |
 | Facts, comparison, what is left | `docs/realism/3D_MATCH_STUDY.md` (read this first) |
 | Engine | `js/engine/sim.js` |
 
@@ -27,7 +29,8 @@ Branch `claude/football-manager-repo-connect-e1r6nf` (no pull request yet). Last
   attacking-decisions attacking-support shot-accuracy tactical-shouts engine-qa live live-animation match-evidence gap`
   (`node tests/<name>.cjs`).
 - Viewer: open `match3d/?manual=1` and drive it from the page with `match3d.seek(t)`, `match3d.step(dt)`,
-  `match3d.setCam(n)` (0 behind, 1 TV, 2 close, 3 full pitch), `match3d.follow(side, slot)`. WebGL in headless
+  `match3d.setCam(n)` (0 behind, 1 TV, 2 close, 3 full pitch), `match3d.follow(side, slot)` (close on one player),
+  `match3d.follow(side, 0, true)` (behind the goal, over the keeper), `match3d.cuesOf('Cut')` (when a clip is played). WebGL in headless
   Chromium needs `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`.
 
 ## Player model
@@ -36,42 +39,82 @@ Branch `claude/football-manager-repo-connect-e1r6nf` (no pull request yet). Last
 legs, shirt, shorts, socks, boots, boot_soles), 4,250 triangles, 1.80 m, origin at the feet, 17-bone rig.
 The viewer merges the parts into one mesh per player and colours them per vertex.
 
-26 clips at 60 fps: Idle, Walk, WalkBack, SideStep, Jog, Run (sprint), Jockey, Dribble, WalkDribble, FirstTouch,
-ReceiveInside, ReceiveTurn, ReceiveSole, ReceiveRun, Pass, Shoot, LongKick, Header, Tackle, Shoulder, Stumble,
-Fall, ThrowIn, KeeperDive, KeeperCatch, Celebrate. All right-footed; the viewer mirrors for the left.
-Clips are hand-keyed from named values (pelvis, boot targets solved by two-bone IK, torso and arm angles) in
-`build_player.py`; there is no motion capture.
+49 clips at 60 fps, all hand-keyed from named values (pelvis, boot targets solved by two-bone IK, torso and arm
+angles) in `build_player.py`; there is no motion capture. Right-footed and to the keeper's left; the viewer mirrors.
+
+- Movement: Idle, IdleShift, IdleLook, IdleBounce, Walk, WalkBack, SideStep, Jog, Run, Jockey, Dribble, WalkDribble,
+  Cut, Turn.
+- Ball: FirstTouch, ReceiveInside, ReceiveTurn, ReceiveSole, ReceiveRun, ReceiveChest, ReceiveThigh, ReceiveHead,
+  Pass, Shoot, LongKick, Header, ThrowIn.
+- Contact: Tackle, Shoulder, Stumble, Fall, Celebrate. Arm gestures (upper body only): Call, Point.
+- Keeper: KeeperReady, KeeperShuffle, KeeperDiveLow, KeeperDive (body height), KeeperDiveHigh, KeeperScoop (standing
+  catch), KeeperCatch (high catch), KeeperPunch, KeeperSmother, KeeperGetUp, KeeperHold, KeeperHoldWalk, KeeperThrow,
+  KeeperRoll, KeeperPunt.
+
+`body_pose()` lifts a boot that would go below the turf, so no clip sinks more than about 4 cm (the fall used to
+sink 17 cm).
+
+## How the viewer animates (`match3d/viewer.js`)
+
+- Every clip is split into a legs half and an upper-body half; each half has target weights and eases to them
+  (`play`, `playUpper`, `loop`, `mix`). Gait clips share one stride phase per player.
+- Forward movement is a blend of Walk, Jog and Run by speed (`gaitOf`), not a switch at a threshold.
+- A player striking or controlling the ball keeps his position planted until just after contact, then catches up
+  with the engine (`p.plant`, `p.ox/p.oz`). The same offset carries a keeper's dive and a goal-kick run-up.
+- Keeper: the dive is chosen by the ball's height and whether the engine says he dived, and scaled so his hands
+  reach the ball (`ROOTED`); between the engine's `hands` mark and his next kick the ball is in his hands.
+- Cuts and turns on the spot are read from the recorded path; balls arriving in the air are taken on the chest,
+  thigh or head.
+
+## Keeper in the engine (`js/engine/sim.js`)
+
+- `targets()`: depth by the ball's distance (1.5 m inside 30 m, out to 17 m for a standard line at 72 m), sideways
+  with the ball. `keeperSet()`: plants his feet as the man on the ball shapes to act within 30 m.
+- `shoot()`: set 0.95, moving up to 1.16, stranded under a missed cross 1.35, on the ground 1.45 (multipliers on the
+  goal chance). A dive (`fl.dive`) leaves him down for 1.5 s.
+- `readKeeperCross()` / `keeperClaim()`: one decision per cross, then catch, punch or miss.
+- `keeperHolds()` / `keeperDistribute()`: ball in his hands (no challenge), release within 7.5 s by roll, throw or
+  kick from the hands according to the side's passing style.
+- New marks for the viewer: `save` (hold, tip, parry, smother), `claim` (catch, punch, miss, short), `come`, `hands`,
+  and on `sfx`: `set`, `rebound`, `dive`; a kick's `style` can be roll, throw, punt or punch, and `rs` names a restart.
 
 ## What the owner asked for, in their words, and how they work
 
 - Realism judged by eye against real football. They send phone recordings (TikTok) as references; frames are pulled
   with ffmpeg into a contact sheet and studied before animating. **For the goalkeeper they said: take reference from
-  YouTube.** Video download was not tried this session; if it is blocked, use written coaching sources and say so.
+  YouTube.** On 13 November YouTube refused video downloads from the cloud container (bot check); the transcripts of
+  three coaching videos did download and the keeper clips were built from those. The owner was told. If they send
+  footage, check the clips against it.
 - They want to see a short video after each stage, not only at the end.
 - "If usage hits the limit, hold and continue when it is available again."
 - They asked to be told the plan before work starts on the keeper and animation.
 
-## Agreed next work (plan given to the owner; they asked for a new session before starting)
+## Done on 13 November (the plan agreed on 12 November)
 
-**Keeper behaviour (engine, changes results):** move across the goal with the ball and up to the box edge when play
-is far away (now about 2.5 km a match, real about 5.5 km); set his feet just before a shot; decide to claim or stay
-for crosses; hold, get up and distribute (throw or kick, by tactic) after a save.
+All three stages, in order, with a video sent to the owner after each:
 
-**Keeper animations:** ready stance, side shuffle, low / mid / high dive and standing catch (now one dive for
-everything), parry and get up, smother at feet, punch, overarm throw, roll out, goal kick, kick from hands.
+1. **Keeper behaviour (engine).** Moves with play (2.2 km a match before, 4.7 km now; real about 5.5), sets for
+   shots, decides on crosses (1.2 to 1.6 caught and 0.6 to 0.8 punched per keeper per match, over samples of 20 to 30 matches), holds, gets up and distributes.
+2. **Keeper animations.** 13 clips and the viewer logic above.
+3. **All-player animation.** Gait blending, planted feet, split upper and lower body, cut, turn, chest/thigh/head
+   control, idle variety and gestures, reworked walk, jog and fall.
 
-**All-player animation:** blend walk / jog / run by speed; plant the standing foot during kicks and receives (feet
-slide now); upper body separate from legs; sharp cut and turn on the spot; chest, thigh and head control; idle
-variety; rework walk, jog and the fall (the fall sinks the trailing feet up to 17 cm).
+Not done or only partly done, honestly:
 
-Order: keeper behaviour, keeper animations, all-player animation, with the 80-match check and tests after each engine
-change and a video to the owner after each stage.
+- Keeper clips were made from transcripts, not from watching footage. They have not been compared with video.
+- Walk and jog were reworked from general gait knowledge (pelvis sway and roll, narrower step, arm carriage); the
+  owner has not yet said what looked wrong in the old ones.
+- The live artifact has not been republished with the new match and model.
+- Head control is rare by design; the engine lets most high balls bounce before they are controlled.
 
 ## Known gaps (also in the study)
 
 Jogging 25% of time (real about 17%), running 9% (about 17%); first touch never fails; tackles are dice rolls;
-no shirt numbers; the engine samples positions twice a second; every lost duel plays a stumble (too many).
+no shirt numbers; the engine samples positions twice a second; every lost duel plays a stumble (too many);
+keepers do not sweep up balls over the top; shots are a little high (about 26.5 a match against about 25).
 
-## Engine numbers now (80 matches, world 1)
+## Engine numbers now (3 x 80 matches, worlds 1 to 3)
 
-Goals 2.74, shots 26.2, on target 8.9, passes 483 per team, home wins 46%, draws 23%, 0-0 9%.
+Goals 2.65, shots 26.5, on target 9.2, passes 477 per team. Before the keeper work, same worlds: goals 2.46,
+shots 25.8, on target 8.8. Runs are not exactly repeatable even with a seed (about +/-0.1 goals between two runs of
+the same 80 matches), so compare on several worlds. All 14 engine tests pass.

@@ -1,6 +1,7 @@
 # 3D match viewer
 
-Replays one full match from the match engine in 3D, using the low-poly player (26 animation clips) and ball.
+Replays one full match from the match engine in 3D, using the low-poly player (49 animation clips) and ball.
+How the animation is mixed (gait blending, planted feet, the keeper) is described in `docs/realism/HANDOVER.md`.
 
 - Open `match3d/index.html` from any static web server (it loads files with `fetch`, so `file://` will not work).
 - `data/match.json` + `data/match.bin` are one recorded match. Record a new one with

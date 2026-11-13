@@ -12,15 +12,20 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const PW = 68, PL = 105, STRIDE = 72, NONE = -32768, BALL_R = 0.11;
 // ground speed (m/s) each looping clip was animated for, so feet match the pitch
 const LOCO = { Walk: 1.16, Jog: 2.57, Run: 4.7, Dribble: 2.45, Jockey: 0.95, WalkBack: 0.77, WalkDribble: 1.07, SideStep: 0.83, KeeperShuffle: 1.0, KeeperHoldWalk: 1.16 };
-const STILL = { Idle: 1, KeeperReady: 1, KeeperHold: 1 }; // looping clips that stand on the spot
+const STILL = { Idle: 1, IdleShift: 1, IdleLook: 1, IdleBounce: 1, KeeperReady: 1, KeeperHold: 1 }; // looping clips that stand on the spot
+// Forward gaits are blended by speed, not switched: between a walk and a jog he is part one, part the other.
+const GAIT = [['Walk', 1.16], ['Jog', 2.57], ['Run', 4.7]], GAIT_BALL = [['WalkDribble', 1.07], ['Dribble', 2.45], ['Run', 5.6]];
+const LOWER = /^(hips|thigh|shin|foot)/; // the legs' half of every clip; the rest is the upper body
+// clips during which the standing foot stays where it was put, whatever the engine does with him meanwhile
+const PLANT = { Pass: 1, Shoot: 1, LongKick: 1, FirstTouch: 1, ReceiveInside: 1, ReceiveTurn: 1, ReceiveSole: 1, ReceiveChest: 1, ReceiveThigh: 1, ReceiveHead: 1, ThrowIn: 1, Header: 1 };
 const LOOPS = n => n in LOCO || n in STILL;
 // Keeper clips that travel (dives, the smother): the clip's own movement is taken out and put back by the
 // viewer, scaled so the hands arrive where the engine says the ball is. reach: metres from hip to hands at
 // contact; side: metres the clip itself travels sideways by contact.
 const ROOTED = { KeeperDive: { reach: 1.15, side: 1.35 }, KeeperDiveLow: { reach: 1.2, side: 1.2 }, KeeperDiveHigh: { reach: 1.1, side: 1.5 }, KeeperSmother: { reach: 0.6, side: 0.44 } };
 // seconds from the start of a clip to the moment of ball contact, and how fast to play it
-const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0, ReceiveInside: 0.34, ReceiveTurn: 0.36, ReceiveSole: 0.36, ReceiveRun: 0.2, Shoulder: 0.22, Stumble: 0, Fall: 0 , KeeperDiveLow: 0.5, KeeperDiveHigh: 0.55, KeeperScoop: 0.283, KeeperGetUp: 0, KeeperSmother: 0.45, KeeperPunch: 0.517, KeeperThrow: 0.65, KeeperRoll: 0.667, KeeperPunt: 0.433 };
-const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1, ReceiveInside: 1.25, ReceiveTurn: 1.25, ReceiveSole: 1.2, ReceiveRun: 1, Shoulder: 1, Stumble: 1, Fall: 1 , KeeperDiveLow: 1.2, KeeperDiveHigh: 1.15, KeeperScoop: 1.2, KeeperGetUp: 1.3, KeeperSmother: 1.2, KeeperPunch: 1.2, KeeperThrow: 1.1, KeeperRoll: 1.1, KeeperPunt: 1.2 };
+const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0, ReceiveInside: 0.34, ReceiveTurn: 0.36, ReceiveSole: 0.36, ReceiveRun: 0.2, Shoulder: 0.22, Stumble: 0, Fall: 0 , KeeperDiveLow: 0.5, KeeperDiveHigh: 0.55, KeeperScoop: 0.283, KeeperGetUp: 0, KeeperSmother: 0.45, KeeperPunch: 0.517, KeeperThrow: 0.65, KeeperRoll: 0.667, KeeperPunt: 0.433 , Cut: 0.2, Turn: 0, ReceiveChest: 0.283, ReceiveThigh: 0.283, ReceiveHead: 0.283, Call: 0, Point: 0 };
+const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1, ReceiveInside: 1.25, ReceiveTurn: 1.25, ReceiveSole: 1.2, ReceiveRun: 1, Shoulder: 1, Stumble: 1, Fall: 1 , KeeperDiveLow: 1.2, KeeperDiveHigh: 1.15, KeeperScoop: 1.2, KeeperGetUp: 1.3, KeeperSmother: 1.2, KeeperPunch: 1.2, KeeperThrow: 1.1, KeeperRoll: 1.1, KeeperPunt: 1.2 , Cut: 1.1, Turn: 1.1, ReceiveChest: 1.2, ReceiveThigh: 1.2, ReceiveHead: 1.2, Call: 1, Point: 1 };
 // a player already on the move plays only the swing of a kick: seconds kept before and after ball contact
 const SWING = { Pass: [0.2, 0.2], LongKick: [0.28, 0.3], Shoot: [0.3, 0.35] };
 const GROUNDED = /Fall|KeeperDive|KeeperSmother|KeeperGetUp|Celebrate/;
@@ -89,6 +94,9 @@ function start(meta, F, playerGltf, ballGltf) {
     }
     return c;
   });
+  // Every clip in two halves, legs and upper body, so the arms can do one thing while the legs do another.
+  const halves = {};
+  for (const c of clips) halves[c.name] = { lo: new THREE.AnimationClip(c.name + ':lo', c.duration, c.tracks.filter(t => LOWER.test(t.name))), up: new THREE.AnimationClip(c.name + ':up', c.duration, c.tracks.filter(t => !LOWER.test(t.name))) };
   const rootAt = (name, t) => { // where a travelling clip has carried the body after t seconds: [left, forward]
     const r = rootPath[name]; if (!r) return [0, 0];
     let n = 0; while (n < r.t.length - 2 && r.t[n + 1] < t) n++;
@@ -128,16 +136,19 @@ function start(meta, F, playerGltf, ballGltf) {
     mesh.frustumCulled = false; mesh.castShadow = true;
     old[0].parent.add(mesh);
     old.forEach(o => o.parent.remove(o));
-    const mixer = new THREE.AnimationMixer(root), actions = {};
+    const mixer = new THREE.AnimationMixer(root), acts = {};
     for (const cl of clips) {
-      const a = mixer.clipAction(cl);
-      if (LOOPS(cl.name)) a.setLoop(THREE.LoopRepeat, Infinity);
-      else { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
-      actions[cl.name] = a;
+      acts[cl.name] = {};
+      for (const ch of ['lo', 'up']) {
+        const a = mixer.clipAction(halves[cl.name][ch]);
+        if (LOOPS(cl.name)) a.setLoop(THREE.LoopRepeat, Infinity);
+        else { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
+        acts[cl.name][ch] = a;
+      }
     }
     root.rotation.order = 'YXZ';
     scene.add(root);
-    P[s].push({ root, mixer, actions, neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, cur: null, name: '', shot: null, swing: null, hold: 0,
+    P[s].push({ root, mixer, acts, w: { lo: {}, up: {} }, tg: { lo: {}, up: {} }, fd: { lo: 0.18, up: 0.18 }, phase: 0, freq: 1, upShot: null, plant: null, sel: null, gw: -1, chest: root.getObjectByName('chest'), thighR: root.getObjectByName('thighR'), neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, name: '', shot: null, swing: null, hold: 0,
       speed: 0, x: 0, z: 0, sx: 1, sy: 1, mirror: 1, look: 0, lean: 0, bank: 0, drib: 0, seed: (hash('p' + s + i) % 1000) / 1000 });
   }
   const setMirror = (p, m) => { p.mirror = m; p.root.scale.set(p.sx * m, p.sy, p.sx); };
@@ -153,17 +164,47 @@ function start(meta, F, playerGltf, ballGltf) {
       setMirror(p, p.mirror);
     }
   }
-  function play(p, name, fade, rate, sync, from) {
-    const next = p.actions[name], prev = p.cur;
-    if (prev === next && from == null) { next.setEffectiveTimeScale(rate); return; }
-    next.enabled = true; next.reset(); next.setEffectiveTimeScale(rate); next.setEffectiveWeight(1);
-    if (from != null) next.time = from;
-    else if (sync && prev) next.time = (prev.time / prev.getClip().duration) % 1 * next.getClip().duration;
-    else if (LOOPS(name)) next.time = p.seed * next.getClip().duration; // no two players in step
-    next.play();
-    if (prev && prev !== next) prev.crossFadeTo(next, fade, false);
-    p.cur = next; p.name = name;
+  // Animation is mixed by hand, per half of the body: each half has target weights for the clips it should be
+  // showing and eases towards them. One-off clips run on their own clock; gait clips share one stride phase
+  // per player, so a walk and a jog being blended put the same foot down at the same moment.
+  function begin(p, ch, name, rate, from) {
+    const a = p.acts[name][ch];
+    a.enabled = true; a.reset(); a.setEffectiveTimeScale(rate); a.time = from || 0; a.setEffectiveWeight(p.w[ch][name] || 0); a.play();
+    if (!(name in p.w[ch])) p.w[ch][name] = 0;
   }
+  function play(p, name, fade, rate, from) { // a one-off clip on the whole body
+    for (const ch of ['lo', 'up']) { begin(p, ch, name, rate, from); p.tg[ch] = { [name]: 1 }; p.fd[ch] = fade; }
+    p.upShot = null; p.name = name;
+  }
+  function playUpper(p, name, fade, rate) { // a one-off clip on the arms and trunk; the legs carry on
+    begin(p, 'up', name, rate, 0); p.tg.up = { [name]: 1 }; p.fd.up = fade; p.upShot = { end: T + DUR[name] / rate };
+  }
+  function loop(p, ch, blend, fade) {
+    for (const name in blend) if (!(name in p.w[ch])) begin(p, ch, name, name in STILL ? 1 : 0, name in STILL ? p.seed * DUR[name] : 0);
+    p.tg[ch] = blend; p.fd[ch] = fade;
+  }
+  function mix(p, dt, snap) {
+    p.phase = (p.phase + dt * p.freq) % 1;
+    for (const ch of ['lo', 'up']) {
+      const w = p.w[ch], tg = p.tg[ch], step = snap ? 9 : dt / Math.max(0.02, p.fd[ch]);
+      let sum = 0;
+      for (const name in w) {
+        const t = tg[name] || 0;
+        w[name] += clamp(t - w[name], -step, step);
+        if (w[name] <= 0 && t === 0) { p.acts[name][ch].stop(); delete w[name]; } else sum += w[name];
+      }
+      for (const name in w) {
+        const a = p.acts[name][ch];
+        a.setEffectiveWeight(sum > 0 ? w[name] / sum : 0);
+        if (name in LOCO) a.time = p.phase * DUR[name];
+      }
+    }
+  }
+  const gaitOf = (v, G) => { // the two neighbouring gaits for this speed, and how far one stride carries him
+    let n = 0; while (n < G.length - 2 && v > G[n + 1][1]) n++;
+    const [a, va] = G[n], [b, vb] = G[n + 1], u = clamp((v - va) / (vb - va), 0, 1);
+    return { blend: u <= 0 ? { [a]: 1 } : u >= 1 ? { [b]: 1 } : { [a]: 1 - u, [b]: u }, stride: LOCO[a] * DUR[a] * (1 - u) + LOCO[b] * DUR[b] * u, name: u < 0.5 ? a : b };
+  };
 
   /* ---------- ball, its shadow fallback, and the marker over the man on the ball ---------- */
   const mats = new Map();
@@ -193,7 +234,7 @@ function start(meta, F, playerGltf, ballGltf) {
   // Receiving: which first touch a player takes depends on how fast he is moving and whether he turns
   // with it: in stride at a run, on the half-turn, killed under the sole when standing, or the inside of
   // the boot and away. About one in three takes it with the left foot (the clip mirrored).
-  const kicksBy = new Map(), touchesBy = new Map();
+  const kicksBy = new Map(), touchesBy = new Map(), controls = [];
   for (const m of meta.marks) if (m.k === 'kick' || m.k === 'touch' || m.k === 'duel') {
     const map = m.k === 'kick' ? kicksBy : touchesBy, key = m.s + ':' + m.who;
     if (!map.has(key)) map.set(key, []);
@@ -207,8 +248,12 @@ function start(meta, F, playerGltf, ballGltf) {
     const v = Math.hypot(px(k2, s, i) - px(k, s, i), py(k2, s, i) - py(k, s, i)) / 100 / 0.5;
     const turn = Math.abs(Math.atan2(Math.sin(fa(k3, s, i) - fa(k, s, i)), Math.cos(fa(k3, s, i) - fa(k, s, i))));
     const h = hash(Math.round(t * 10) + ':' + s + ':' + i);
-    const clip = v > 3.2 ? 'ReceiveRun' : turn > 1.2 ? 'ReceiveTurn' : v < 0.6 && h % 3 === 0 ? 'ReceiveSole' : 'ReceiveInside';
-    cue(t, s, i, clip, { mirror: (h >>> 3) % 3 === 0 });
+    // A ball still in the air when it reaches him is taken on the head, the chest or the thigh, by its height.
+    const kq = frameAt(t - 0.05), z = F[kq * STRIDE + 3] < 0 ? F[kq * STRIDE + 2] / 100 : 0;
+    const air = v < 4 && (z > 3 && h % 3 === 0 ? 'Head' : z > 1.6 ? (h % 5 < 3 ? 'Chest' : 'Thigh') : z > 0.9 ? (h % 5 < 2 ? 'Chest' : 'Thigh') : z > 0.42 ? 'Thigh' : ''); // z: its height up to half a second before
+    const clip = air ? 'Receive' + air : v > 3.2 ? 'ReceiveRun' : turn > 1.2 ? 'ReceiveTurn' : v < 0.6 && h % 3 === 0 ? 'ReceiveSole' : 'ReceiveInside';
+    if (air) controls.push({ s, i, t, part: air });
+    cue(t, s, i, clip, { mirror: !air && (h >>> 3) % 3 === 0 });
   }
   let lastScorer = null;
   const holds = [], runUps = [];
@@ -252,6 +297,16 @@ function start(meta, F, playerGltf, ballGltf) {
       && !(touchesBy.get(F[r + 3] + ':' + F[r + 4]) || []).some(t => Math.abs(t - times[k]) < 0.8)) receive(times[k], F[r + 3], F[r + 4]);
     if (!holds.length && F[r + 4] === 0 && F[r + 3] >= 0 && (F[q + 4] !== 0 || F[q + 3] !== F[r + 3]) && F[q + 2] > 120) cue(times[k], F[r + 3], 0, 'KeeperCatch'); // recordings made before the engine marked catches
   }
+  // Sharp cuts (a change of direction at speed) and turns on the spot, read from the recorded path.
+  const cutAt = Array.from({ length: 22 }, () => new Set());
+  for (let s = 0; s < 2; s++) for (let i = 1; i < 11; i++) for (let k = 1; k < NF - 1; k++) {
+    if (px(k - 1, s, i) === NONE || px(k, s, i) === NONE || px(k + 1, s, i) === NONE || times[k + 1] - times[k - 1] > 1.1) continue;
+    const ax = (px(k, s, i) - px(k - 1, s, i)) / 50, ay = (py(k, s, i) - py(k - 1, s, i)) / 50, bx = (px(k + 1, s, i) - px(k, s, i)) / 50, by = (py(k + 1, s, i) - py(k, s, i)) / 50;
+    const va = Math.hypot(ax, ay), vb = Math.hypot(bx, by), busy = [kicksBy, touchesBy].some(m => (m.get(s + ':' + i) || []).some(t => Math.abs(t - times[k]) < 0.7));
+    if (busy) continue;
+    if (va > 2.6 && vb > 2.6 && va < 9.5 && vb < 9.5 && !F[k * STRIDE + 5] && (ax * bx + ay * by) / (va * vb) < 0.7) { cutAt[s * 11 + i].add(k); cue(times[k], s, i, 'Cut', { soft: true, mirror: ax * by - ay * bx > 0 }); }
+    else if (va < 0.8 && vb < 0.8 && Math.abs(wrap(fa(k + 1, s, i) - fa(k, s, i))) > 1.3) cue(times[k], s, i, 'Turn', { soft: true });
+  }
   cues.sort((a, b) => a.t - b.t);
   const goals = meta.marks.filter(m => m.k === 'goal').sort((a, b) => a.t - b.t);
   const kicks = meta.marks.filter(m => m.k === 'kick').sort((a, b) => a.t - b.t);
@@ -275,7 +330,7 @@ function start(meta, F, playerGltf, ballGltf) {
     T = Math.max(0, Math.min(T_END, t));
     ci = cues.findIndex(c => c.t > T - 0.3); if (ci < 0) ci = cues.length;
     ki = 0;
-    for (const side of P) for (const p of side) { p.shot = null; p.swing = null; p.hold = 0; p.drib = 0; p.travel = null; p.ox = p.oz = 0; setMirror(p, 1); }
+    for (const side of P) for (const p of side) { p.shot = null; p.swing = null; p.hold = 0; p.drib = 0; p.travel = null; p.plant = null; p.upShot = null; p.sel = null; p.ox = p.oz = 0; setMirror(p, 1); }
     $('note').textContent = '';
     cut = true;
   }
@@ -309,8 +364,9 @@ function start(meta, F, playerGltf, ballGltf) {
         const a = fa(k, c.s, c.i), ox = px(k, c.other[0], c.other[1]), oy = py(k, c.other[0], c.other[1]);
         setMirror(p, Math.sin(a) * (ox - px(k, c.s, c.i)) - Math.cos(a) * (oy - py(k, c.s, c.i)) > 0 ? -1 : 1);
       } else setMirror(p, c.mirror ? -1 : 1);
-      play(p, c.clip, c.clip.startsWith('Receive') ? 0.14 : c.keep ? 0.2 : 0.08, rate);
-      p.shot = { end: T + (c.hold || p.actions[c.clip].getClip().duration / rate) };
+      play(p, c.clip, c.clip.startsWith('Receive') ? 0.14 : c.keep ? 0.2 : c.clip === 'Cut' || c.clip === 'Turn' ? 0.12 : 0.08, rate);
+      p.shot = { end: T + (c.hold || DUR[c.clip] / rate) };
+      if (PLANT[c.clip] && c.i > 0 && p.speed < 2.2) p.plant = { x: p.x, z: p.z, until: c.t + (CONTACT[c.clip] + 0.12) / rate };
       if (c.clip === 'Celebrate' && c.i === (lastScorerAt(T) ?? -1)) note('GOAL! ' + nameOf(c.s, c.i) + ' (' + meta.teams[c.s].name + ')', 6);
     }
 
@@ -334,32 +390,37 @@ function start(meta, F, playerGltf, ballGltf) {
       p.root.visible = true;
       const y0 = py(k, s, i), y1 = py(k2, s, i), jump = x1 === NONE || span > 1;
       const ka = kA !== k && px(kA, s, i) !== NONE ? kA : k, kb = kB !== k2 && px(kB, s, i) !== NONE ? kB : k2;
-      const x = (jump ? x0 : curve(px(ka, s, i), x0, x1, px(kb, s, i), u)) / 100, y = (jump ? y0 : curve(py(ka, s, i), y0, y1, py(kb, s, i), u)) / 100;
+      const sharp = cutAt[s * 11 + i].has(k) || cutAt[s * 11 + i].has(k2); // a cut is a corner, not a curve
+      const x = (jump ? x0 : sharp ? x0 + (x1 - x0) * u : curve(px(ka, s, i), x0, x1, px(kb, s, i), u)) / 100, y = (jump ? y0 : sharp ? y0 + (y1 - y0) * u : curve(py(ka, s, i), y0, y1, py(kb, s, i), u)) / 100;
       const vx0 = jump ? 0 : (x1 - x0) / 100 / step, vy0 = jump ? 0 : (y1 - y0) / 100 / step;
       const a0 = fa(k, s, i), da = jump ? 0 : wrap(fa(k2, s, i) - a0), a = a0 + da * u;
       let vx = vx0, vy = vy0, v = Math.hypot(vx0, vy0);
-      if (i === 0) { // the keeper is not always where the engine has him: a dive carries him, a goal kick has a run-up
-        const ox0 = p.ox, oz0 = p.oz, tr = p.travel;
+      { // He is not always exactly where the engine has him: a keeper's dive carries him and a goal kick has a
+        // run-up; anyone striking or controlling the ball keeps his standing foot planted, then catches up.
+        const ox0 = p.ox, oz0 = p.oz, tr = p.travel, ru = i === 0 && !tr ? runUps.find(q => q.s === s && T >= q.t0 && T < q.tk) : null;
         if (tr && (tr.rest || (p.shot && p.name === tr.clip))) {
           const [l, f] = rootAt(tr.clip, tr.rest ? 9 : (T - tr.t0) * tr.rate);
           if (!tr.rest) tr.mirror = p.mirror;
           const lm = l * tr.k * (tr.mirror ?? p.mirror);
           p.ox = lm * Math.sin(tr.a) + f * Math.cos(tr.a); p.oz = -lm * Math.cos(tr.a) + f * Math.sin(tr.a);
           if (tr.rest && !(p.shot && p.name === 'KeeperGetUp')) p.travel = null;
+        } else if (ru) {
+          const sm = q => q * q * (3 - 2 * q), back = T < ru.t1 ? sm(clamp((T - ru.t0) / 1.7, 0, 1)) : 1 - sm(clamp((T - ru.t1) / (ru.tk - ru.t1), 0, 1));
+          p.ox = -Math.cos(a) * 2.6 * back; p.oz = -Math.sin(a) * 2.6 * back;
+        } else if (p.plant && p.shot && T < p.plant.until && Math.hypot(p.plant.x - (x - PW / 2), p.plant.z - (y - PL / 2)) < 1.3) {
+          p.ox = p.plant.x - (x - PW / 2); p.oz = p.plant.z - (y - PL / 2);
         } else {
-          if (tr) p.travel = null;
-          const ru = runUps.find(q => q.s === s && T >= q.t0 && T < q.tk);
-          let wx = 0, wz = 0;
-          if (ru) { const sm = q => q * q * (3 - 2 * q), back = T < ru.t1 ? sm(clamp((T - ru.t0) / 1.7, 0, 1)) : 1 - sm(clamp((T - ru.t1) / (ru.tk - ru.t1), 0, 1)); wx = -Math.cos(a) * 2.6 * back; wz = -Math.sin(a) * 2.6 * back; p.ox = wx; p.oz = wz; }
-          else { const d = Math.hypot(p.ox, p.oz), stepBack = Math.min(d, 1.5 * Math.max(sdt, 0)); if (d > 1e-4) { p.ox -= p.ox / d * stepBack; p.oz -= p.oz / d * stepBack; } }
+          p.travel = null; p.plant = null;
+          const d = Math.hypot(p.ox, p.oz), back = Math.min(d, (1.5 + 0.6 * v) * Math.max(sdt, 0));
+          if (d > 1e-4) { p.ox -= p.ox / d * back; p.oz -= p.oz / d * back; }
         }
         if (sdt > 0 && !p.shot) { vx += (p.ox - ox0) / sdt; vy += (p.oz - oz0) / sdt; v = Math.hypot(vx, vy); }
       }
-      p.x = x - PW / 2 + (i === 0 ? p.ox : 0); p.z = y - PL / 2 + (i === 0 ? p.oz : 0); p.speed = v;
+      p.x = x - PW / 2 + p.ox; p.z = y - PL / 2 + p.oz; p.speed = v;
 
       if (p.swing && T >= p.swing.at) {
         const w = p.swing; p.swing = null;
-        if (T - w.at < 0.3) { setMirror(p, 1); play(p, w.clip, 0.1, RATE[w.clip], false, w.from); p.shot = { end: T + w.len }; }
+        if (T - w.at < 0.3) { setMirror(p, 1); play(p, w.clip, 0.1, RATE[w.clip], w.from); p.shot = { end: T + w.len }; }
       }
       if (p.shot && T >= p.shot.end) { p.shot = null; setMirror(p, 1); }
       const mine = os === s && oi === i;
@@ -369,24 +430,46 @@ function start(meta, F, playerGltf, ballGltf) {
         // simply walks backwards, upright.
         const fwd = v > 0.35 ? (vx * Math.cos(a) + vy * Math.sin(a)) / v : 1, left = vx * Math.sin(a) - vy * Math.cos(a);
         const closing = os === 1 - s && Math.hypot(p.x - ballPos.x, p.z - ballPos.z) < 6;
-        let name = v < 0.35 ? 'Idle' : v < 1.9 ? 'Walk' : v < 4.2 ? 'Jog' : 'Run';
-        if (mine && v >= 0.35) name = v < 1.9 ? 'WalkDribble' : v < 5.5 ? 'Dribble' : 'Run';
-        else if (v >= 0.35 && v < 3.2 && fwd < -0.5) name = closing ? 'Jockey' : 'WalkBack';
-        else if (v >= 0.35 && v < 3.2 && fwd < 0.5) name = 'SideStep';
+        const far = Math.hypot(p.x - ballPos.x, p.z - ballPos.z);
+        // what he is doing: standing, going forwards (a blend of gaits by his speed), backwards or sideways
+        let cat = v < 0.35 ? 'still' : mine ? 'ball' : v < 3.2 && fwd < -0.5 ? (closing ? 'Jockey' : 'WalkBack') : v < 3.2 && fwd < 0.5 ? 'SideStep' : 'go', upper = null;
         if (i === 0) {
           // The keeper: the ball in his hands; or, when the other side has it within range of his goal, the set
           // position, and short quick side steps (never crossing his feet) to stay in line with it.
           const holding = mine && holds.some(h => h.s === s && T >= h.t0 && T < h.t1);
-          const danger = !mine && lastSide !== s && !F[r + 5] && Math.hypot(p.x - ballPos.x, p.z - ballPos.z) < 36;
-          if (holding) name = v < 0.35 ? 'KeeperHold' : 'KeeperHoldWalk';
-          else if (danger) name = v < 0.35 ? 'KeeperReady' : v < 3.4 && fwd > -0.75 && fwd < 0.75 ? 'KeeperShuffle' : name;
+          const danger = !mine && lastSide !== s && !F[r + 5] && far < 36;
+          if (holding) { upper = { KeeperHold: 1 }; cat = v < 0.35 ? 'KeeperHold' : 'go'; } // any gait, the ball held to his chest
+          else if (danger) cat = v < 0.35 ? 'KeeperReady' : v < 3.4 && fwd > -0.75 && fwd < 0.75 ? 'KeeperShuffle' : cat;
         }
-        if (p.name !== name && p.name !== '' && T < p.hold) name = LOOPS(p.name) ? p.name : name; // no flicker between clips
-        else if (p.name !== name) p.hold = T + 0.35;
-        const rate = name in STILL ? 1 : clamp(v / LOCO[name], 0.6, 2.4);
+        if (p.sel && p.sel !== cat && T < p.hold && !(cat === 'still' && v < 0.15)) cat = p.sel; // no flicker between kinds of movement
+        else if (p.sel !== cat) { p.sel = cat; p.hold = T + 0.35; }
+        let blend, name, fade = 0.18;
+        if (cat === 'still') {
+          // Nobody stands the same way for a whole match: away from the play he shifts his weight, looks about
+          // or keeps loose; near the ball he is simply ready.
+          const h = far > 22 || F[r + 5] ? hash(s + ':' + i + ':' + Math.floor(T / 7 + p.seed * 5)) % 10 : 9;
+          name = h < 3 ? 'IdleShift' : h < 5 ? 'IdleLook' : h < 6 ? 'IdleBounce' : 'Idle'; blend = { [name]: 1 }; fade = 0.4; p.freq = 0;
+        } else if (cat === 'go' || cat === 'ball') {
+          const g = gaitOf(v, cat === 'ball' ? GAIT_BALL : GAIT);
+          blend = g.blend; name = g.name; p.freq = clamp(v / g.stride, 0.55, 3.4);
+        } else if (cat in STILL) { name = cat; blend = { [cat]: 1 }; fade = 0.25; p.freq = 0; }
+        else { name = cat; blend = { [cat]: 1 }; p.freq = clamp(v / LOCO[cat], 0.6, 2.4) / DUR[cat]; }
+        if (p.name in STILL && !(name in STILL)) fade = 0.25;
         setMirror(p, (name === 'SideStep' || name === 'KeeperShuffle') && left < 0 ? -1 : 1); // the clip steps to his left
-        play(p, name, p.name in STILL || name in STILL ? 0.25 : 0.18, rate, !(name in STILL) && p.name in LOCO);
+        loop(p, 'lo', blend, fade); p.name = name;
+        // The arms: a gesture now and then (asking for the ball in space, pointing a team-mate to his man);
+        // otherwise they go with the legs.
+        if (p.upShot && T >= p.upShot.end) p.upShot = null;
+        const win = Math.floor(T / 6 + p.seed * 6);
+        if (!p.upShot && i > 0 && win !== p.gw && playing) {
+          p.gw = win;
+          const h = hash('g' + s + ':' + i + ':' + win) % 12;
+          if (os === s && !mine && far > 10 && far < 34 && v < 4 && h < 2) playUpper(p, 'Call', 0.2, 1);
+          else if (os === 1 - s && far > 12 && v < 2.5 && h === 5) playUpper(p, 'Point', 0.2, 1);
+        }
+        if (!p.upShot) loop(p, 'up', upper || blend, upper ? 0.2 : Math.max(fade, 0.2));
       }
+      mix(p, sdt, cut);
       p.mixer.update(sdt);
 
       // A body has weight: he leans into his acceleration and banks into a turn.
@@ -405,6 +488,7 @@ function start(meta, F, playerGltf, ballGltf) {
       if (p.neck && p.head && Math.abs(p.look) > 0.02) { turnBone(p.neck, p.look * 0.4 * p.mirror); turnBone(p.head, p.look * 0.6 * p.mirror); }
 
       if (mine) carrier = { p, v, vx, vy, a, s, i };
+      if (mine && (p.ox || p.oz)) { ballPos.x += p.ox; ballPos.z += p.oz; } // the ball is at his feet, wherever they are
       if (!shadows) blobs.setMatrixAt(n++, M4.makeScale(0.38, 1, 0.38).setPosition(p.x, 0.02, p.z));
     }
 
@@ -435,6 +519,16 @@ function start(meta, F, playerGltf, ballGltf) {
         if (drop > 0) ballPos.lerp(p.footR.localToWorld(HV.set(0, 0.16, 0)), drop * drop);
       }
       ballPos.y = Math.max(BALL_R, ballPos.y);
+    }
+    // A ball taken out of the air meets the chest, thigh or head, then drops to his feet.
+    for (const c of controls) {
+      if (T < c.t - 0.25 || T > c.t + 0.15) continue;
+      const p = P[c.s][c.i], w = T < c.t ? Math.pow((T - (c.t - 0.25)) / 0.25, 2) : 1 - (T - c.t) / 0.15;
+      p.root.updateMatrixWorld(true);
+      const bone = c.part === 'Head' ? p.head : c.part === 'Chest' ? p.chest : p.thighR;
+      HB.copy(bone.localToWorld(HV.set(0, c.part === 'Head' ? 0.2 : c.part === 'Chest' ? 0.12 : 0.22, 0)));
+      HB.x += Math.cos(fa(k, c.s, c.i)) * 0.16; HB.z += Math.sin(fa(k, c.s, c.i)) * 0.16;
+      ballPos.lerp(HB, clamp(w, 0, 1));
     }
     ball.position.copy(ballPos);
     const dx = ballPos.x - prevBall.x, dz = ballPos.z - prevBall.z, moved = Math.hypot(dx, dz);
@@ -514,7 +608,7 @@ function start(meta, F, playerGltf, ballGltf) {
     }
     requestAnimationFrame(frame);
   }
-  window.match3d = { cueMix: cues.reduce((o, c) => { o[c.clip] = (o[c.clip] || 0) + 1; return o; }, {}), seek, step(dt) { update(dt); renderer.render(scene, camera); }, get time() { return T; }, end: T_END, cues: cues.length, setCam(n) { camMode = n; follow = null; cut = true; }, follow(s, i, wide) { follow = s == null ? null : [s, i, !!wide]; cut = true; }, caption(text) { $('note').textContent = text || ''; noteUntil = 0; }, carrierAt() { const k = frameAt(T); return [F[k * STRIDE + 3], F[k * STRIDE + 4]]; }, clips: clips.map(c => c.name), drawCalls: () => renderer.info.render.calls };
+  window.match3d = { cuesOf: name => cues.filter(c => c.clip === name).map(c => [Math.round(c.t * 10) / 10, c.s, c.i]), cueMix: cues.reduce((o, c) => { o[c.clip] = (o[c.clip] || 0) + 1; return o; }, {}), seek, step(dt) { update(dt); renderer.render(scene, camera); }, get time() { return T; }, end: T_END, cues: cues.length, setCam(n) { camMode = n; follow = null; cut = true; }, follow(s, i, wide) { follow = s == null ? null : [s, i, !!wide]; cut = true; }, caption(text) { $('note').textContent = text || ''; noteUntil = 0; }, carrierAt() { const k = frameAt(T); return [F[k * STRIDE + 3], F[k * STRIDE + 4]]; }, clips: clips.map(c => c.name), drawCalls: () => renderer.info.render.calls };
   update(0.3); renderer.render(scene, camera);
   $('load').remove();
   requestAnimationFrame(frame);

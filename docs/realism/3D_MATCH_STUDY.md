@@ -112,3 +112,40 @@ has consequences. Our match had none of the three.
 | No chest, thigh or head control of a ball in the air | Every receive is with the foot | art + view, medium |
 | No shirt numbers or names on kits | Players are told apart only by build and boots | art, small |
 | Engine samples twice a second | Sharp cuts are rounded off by the curve between samples | engine, large |
+
+## 5. Goalkeeper and animation work (13 November 2026)
+
+### Sources for the goalkeeper
+
+Three YouTube coaching videos, read from their transcripts (the video itself could not be downloaded from the
+cloud container): "4 essential diving techniques" (Unisport with Conor O'Keefe), "Footwork for set position"
+(Nine One Football), "The complete goalkeeper distribution tutorial" (Conor O'Keefe). What was taken from them:
+
+| Point from the coaching | Where it went |
+|---|---|
+| Set position: feet shoulder width, on the balls of the feet and "pulsing", weight forward, hands set | KeeperReady |
+| Do not set too early or stand static; quick micro steps across the goal | KeeperShuffle; the engine sets him only as the shot is shaped |
+| Collapse and low dive: step with the near leg, hands and head lead, go down not up, land on the side, trap the ball | KeeperDiveLow |
+| Extension dive: a snappy power step, top hand for a high ball, land on the side | KeeperDiveHigh |
+| Never dive backwards; parry away from goal | The engine's parry now goes out to the side he dived |
+| Roll: get low and release along the floor so it does not bounce | KeeperRoll |
+| Throws and kicks from the hands chosen by distance and by what the team wants | keeperDistribute() |
+
+### Measured after the change (30 matches, world 1, per keeper per match)
+
+| Measure | Before | After | Real |
+|---|---|---|---|
+| Distance covered | 2.2 km | 4.7 km (71% walking) | about 5.5 km, about 70% walking |
+| Depth when the ball is in the far third | 6.6 m | 13.5 m | edge of the area or beyond |
+| Crosses caught / punched | not modelled apart | 1.2 to 1.6 / 0.6 to 0.8 | about 1 / 0.3 to 0.5 |
+| Held saves released from the hands | never (played with the feet at once) | 5.5 s held, then roll, throw or kick | up to 8 s allowed |
+
+### Still short after this work
+
+| Gap | Size |
+|---|---|
+| Keeper clips not yet checked against real footage | art, small |
+| Keeper does not sweep behind a high line | engine, medium |
+| Hand-keyed animation, no motion capture | art, large |
+| Punches a little frequent (0.6 to 0.8 against 0.3 to 0.5) | engine, small |
+
