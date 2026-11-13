@@ -63,7 +63,7 @@ async function live3dOpen(L) {
   try {
     const probe = document.createElement('canvas');
     if (!(probe.getContext('webgl2') || probe.getContext('webgl'))) throw new Error('no WebGL');
-    const mod = LIVE3D.mod || (LIVE3D.mod = await import('../../match3d/viewer.js'));
+    const mod = LIVE3D.mod || (LIVE3D.mod = await import('../../match3d/viewer.js?v=' + GAME_VERSION));
     const host = document.createElement('div'), canvas = document.createElement('canvas'), who = document.createElement('div');
     host.className = 'm3-host'; canvas.setAttribute('aria-label', 'Live match in 3D'); who.className = 'm3-who'; who.dataset.m3 = 'who';
     host.append(canvas, who);

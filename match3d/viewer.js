@@ -840,7 +840,7 @@ export function bootReplay() { return boot().catch(fail); }
 // The live match: an empty viewer for these two teams, to be fed with push() and driven with frame().
 // meta: { teams: [{ id, name }, ...], colors: [{ f, s, gk }, ...], lineups: [{ min, on, body }] }
 export async function createLive(embed, meta) {
-  const loader = new GLTFLoader(), at = name => new URL('./assets/' + name, import.meta.url).href;
+  const loader = new GLTFLoader(), at = name => new URL('./assets/' + name + (new URL(import.meta.url).search || ''), import.meta.url).href; // same version as the viewer that asks
   const [playerGltf, ballGltf] = await Promise.all([binary(at('player.glb')).then(b => loader.parseAsync(b, '')), binary(at('ball.glb')).then(b => loader.parseAsync(b, ''))]);
   return start({ pitch: [PW, PL], ...meta, times: [], marks: [] }, new Int16Array(STRIDE * 512), playerGltf, ballGltf, embed);
 }
