@@ -7,6 +7,8 @@ Blender is Z-up; the character faces -Y in Blender, which the glTF exporter
 converts to Y-up / +Z forward. Units are metres, origin at the feet.
 """
 import argparse
+import json
+import os
 import math
 import sys
 from contextlib import contextmanager
@@ -1737,6 +1739,23 @@ CLIPS = {
 }
 
 
+# Motion capture fitted to this rig by mocap_retarget.py replaces the hand-keyed clip of the same name
+# (and adds any new ones). Each is a table of ready poses instead of a function of named values.
+MOCAP = {}
+_mocap = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mocap.json")
+if os.path.exists(_mocap):
+    MOCAP = json.load(open(_mocap))
+    for _name, _m in MOCAP.items():
+        _old = CLIPS.get(_name)
+        _gait = _m["speed"] > 0
+        CLIPS[_name] = (_m["frames"], _gait, ("mocap", _name), None if _gait else (_old[3] if _old else None))
+
+
+def mocap_pose(name, i):
+    m = MOCAP[name]
+    return ({k: Matrix((v[0:3], v[3:6], v[6:9])) for k, v in m["poses"][i].items()}, Vector(m["locs"][i]))
+
+
 def key_pose(arm, pose, loc, prev, frame):
     for pb in arm.pose.bones:
         rest = pb.bone.matrix_local.to_3x3()
@@ -1778,7 +1797,8 @@ def build_clips(arm, objs):
         count = frames + 1 if looping else frames
         prev, low = {}, []
         for i in range(count):
-            pose, loc = body_pose(values((i % frames if looping else i) / FPS))
+            j = i % frames if looping else i
+            pose, loc = mocap_pose(values[1], j) if isinstance(values, tuple) else body_pose(values(j / FPS))
             key_pose(arm, pose, loc, prev, i + 1)
             bpy.context.view_layer.update()
             low.append(lowest_point(objs))

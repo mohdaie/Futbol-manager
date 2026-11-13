@@ -19,3 +19,6 @@ How the animation is mixed (gait blending, planted feet, the keeper) is describe
 
 The same viewer is the 3D tab of the live match screen (`js/engine/live3d.js`), fed minute by minute through
 `createLive()`; this page is the stand-alone replay of one recorded match.
+
+Walk, Jog, Stride and Shoot are fitted from the Carnegie Mellon University Graphics Lab Motion Capture Database
+(mocap.cs.cmu.edu), which allows its data to be copied, modified and redistributed.

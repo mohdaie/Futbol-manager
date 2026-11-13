@@ -11,6 +11,7 @@ Branch `claude/football-manager-repo-connect-e1r6nf` (no pull request yet). Last
 | 3D on match day | `js/engine/live3d.js` (the 3D tab of the live match screen), test `tests/live-3d.cjs` |
 | Player and ball models | `match3d/assets/player.glb`, `match3d/assets/ball.glb` |
 | Blender build scripts (source of the models) | `scripts/blender/build_player.py`, `scripts/blender/build_ball.py` |
+| Motion capture | `scripts/blender/mocap_retarget.py` (fits CMU recordings to the rig) writes `scripts/blender/mocap.json`, which `build_player.py` uses |
 | Recorded match | `match3d/data/match.json` + `match.bin`; record a new one with `node scripts/record-match-3d.cjs` |
 | Publishing the artifact | `match3d/publish/README.md` and `page.html` (the artifact still shows the match recorded on 12 November: republish to update it) |
 | Video of the replay | `node scripts/match3d-video.cjs out.mp4 '<segments JSON>'` (captioned segments, any camera) |
@@ -55,11 +56,32 @@ angles) in `build_player.py`; there is no motion capture. Right-footed and to th
 `body_pose()` lifts a boot that would go below the turf, so no clip sinks more than about 4 cm (the fall used to
 sink 17 cm).
 
+## Motion capture (added 13 November)
+
+Walk, Jog, Stride (a steady run) and Shoot are motion capture from the Carnegie Mellon University Graphics Lab
+Motion Capture Database (mocap.cs.cmu.edu; its data "may be copied, modified, or redistributed without permission").
+Takes used: 35_01 walk, 35_17 jog, 16_45 run, 10_01 football kick. `mocap_retarget.py` documents the fitting; to add
+a clip, download the subject's `.asf` and the take's `.amc`, add a line to `TAKES`, run it, rebuild the model.
+The library has no flat-out sprint, so the hand-keyed Run stays for top speed; everything else is still hand-keyed.
+Good candidates not yet used: 127_05 run to quick stop, 127_15/16 run and turn, 09_12 walking backwards and sideways,
+16_17 to 16_20 walking 90-degree turns.
+
+## Movement between engine frames, and tried-and-reverted engine stepping
+
+The viewer draws a shape-preserving curve through the engine's half-second positions (no sliding past a stop; a
+cut is a plant and a drive) and takes the speed for the gait from the same curve. Each player has his own stride,
+arm carriage, lean and sway (`vary()` in the viewer, from his name).
+
+Moving players in 0.1 s steps inside the engine was tried on 13 November and reverted: acceleration that builds
+over a tick instead of being taken at its start hurt defenders reacting more than attackers running (goals 3.2 to
+3.7 a match against 2.65, attempts to round the keeper tripled) and the engine ran about 3.5 times slower. It would
+need defending rebalanced and the per-step work cached; it is a project of its own.
+
 ## How the viewer animates (`match3d/viewer.js`)
 
 - Every clip is split into a legs half and an upper-body half; each half has target weights and eases to them
   (`play`, `playUpper`, `loop`, `mix`). Gait clips share one stride phase per player.
-- Forward movement is a blend of Walk, Jog and Run by speed (`gaitOf`), not a switch at a threshold.
+- Forward movement is a blend of Walk, Jog, Stride and Run by speed (`gaitOf`), not a switch at a threshold.
 - A player striking or controlling the ball keeps his position planted until just after contact, then catches up
   with the engine (`p.plant`, `p.ox/p.oz`). The same offset carries a keeper's dive and a goal-kick run-up.
 - Keeper: the dive is chosen by the ball's height and whether the engine says he dived, and scaled so his hands

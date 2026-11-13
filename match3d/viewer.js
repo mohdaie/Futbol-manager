@@ -11,10 +11,11 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const PW = 68, PL = 105, STRIDE = 72, NONE = -32768, BALL_R = 0.11;
 // ground speed (m/s) each looping clip was animated for, so feet match the pitch
-const LOCO = { Walk: 1.16, Jog: 2.57, Run: 4.7, Dribble: 2.45, Jockey: 0.95, WalkBack: 0.77, WalkDribble: 1.07, SideStep: 0.83, KeeperShuffle: 1.0, KeeperHoldWalk: 1.16 };
+// (Walk, Jog and Stride are motion capture: these are the speeds the people were recorded at, scaled to our legs.)
+const LOCO = { Walk: 1.22, Jog: 2.99, Stride: 3.95, Run: 6.0, Dribble: 2.45, Jockey: 0.95, WalkBack: 0.77, WalkDribble: 1.07, SideStep: 0.83, KeeperShuffle: 1.0, KeeperHoldWalk: 1.16 };
 const STILL = { Idle: 1, IdleShift: 1, IdleLook: 1, IdleBounce: 1, KeeperReady: 1, KeeperHold: 1 }; // looping clips that stand on the spot
 // Forward gaits are blended by speed, not switched: between a walk and a jog he is part one, part the other.
-const GAIT = [['Walk', 1.16], ['Jog', 2.57], ['Run', 4.7]], GAIT_BALL = [['WalkDribble', 1.07], ['Dribble', 2.45], ['Run', 5.6]];
+const GAIT = [['Walk', 1.22], ['Jog', 2.99], ['Stride', 3.95], ['Run', 6.0]], GAIT_BALL = [['WalkDribble', 1.07], ['Dribble', 2.45], ['Run', 6.0]];
 const LOWER = /^(hips|thigh|shin|foot)/; // the legs' half of every clip; the rest is the upper body
 // clips during which the standing foot stays where it was put, whatever the engine does with him meanwhile
 const PLANT = { Pass: 1, Shoot: 1, LongKick: 1, FirstTouch: 1, ReceiveInside: 1, ReceiveTurn: 1, ReceiveSole: 1, ReceiveChest: 1, ReceiveThigh: 1, ReceiveHead: 1, ThrowIn: 1, Header: 1 };
