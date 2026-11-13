@@ -1148,7 +1148,7 @@ function shoot(M, s, i, o = {}) {
     fl.keeper = { x0: gk.x, y0: gk.y, tx: gk.x + (targetX - gk.x) / dist * travel, ty: gk.y + (targetY - gk.y) / dist * travel, start: sim.t + reaction, end: fl.arr };
     gk.diveUntil = fl.arr + 0.4;
     // A full-length dive leaves him on the ground: about a second before he is back on his feet.
-    fl.dive = travel > 1.1 || (res === 'save' && az < 0.5 && travel > 0.5);
+    fl.dive = dist > 1.6 || (az < 0.6 && dist > 1.1); // beyond a step and a stretch, or low and wide of his feet
     if (fl.dive) gk.down = fl.arr + 1.5;
   }
   mark(M, 'sfx', s, { kind: shot.kind, ax, az, z0: fl.z0, res, x0: fl.x0, y0: fl.y0, tx: fl.tx, ty: fl.ty, curve, keeper: fl.keeper, who: i, flight: fl.arr - M.sim.t, aim: ev.aim, set: gkSet, rebound: gkDown, dive: !!fl.dive });

@@ -842,7 +842,7 @@ def body_pose(v):
 # ------------------------------------------------------------ gait cycles
 def make_gait(stance, ref, pitches, swing, h0, amp, mid, lean=0, sp_lean=4, ch_lean=4,
               head=0, yaw=5, yaw_phase=0.8, ch=8, arm0=0, arm_amp=20, arm_phase=0.4,
-              el0=30, el_amp=10, add=30, width=0.0, turn=0.0):
+              el0=30, el_amp=10, add=30, width=0.0, turn=0.0, sway=0.0, hip_roll=0.0):
     """Looping stride. Phase 0 = foot strike. While a boot is on the ground it stays
     planted and slides straight under the body (ref[0] -> ref[1], metres forward of
     the hip), rolling through `pitches`; `swing` keys carry it through the air."""
@@ -863,6 +863,10 @@ def make_gait(stance, ref, pitches, swing, h0, amp, mid, lean=0, sp_lean=4, ch_l
         v = {"hip_z": h0 - amp * math.cos(2 * math.pi * (2 * p - 2 * mid)),
              "lean": lean, "yaw": -yaw * c, "sp_yaw": yaw * c, "sp_lean": sp_lean,
              "ch_lean": ch_lean, "ch_yaw": ch * c, "hd_yaw": -0.5 * ch * c, "hd_pitch": head}
+        # the pelvis rides over the standing leg and drops on the side of the swinging one;
+        # the spine leans back the other way, so the shoulders stay level
+        over = math.cos(2 * math.pi * (p - stance / 2))
+        v.update({"side": sway * over, "roll": -hip_roll * over, "sp_roll": 1.4 * hip_roll * over})
         for side, key in ((1, "l"), (-1, "r")):
             q = p if side > 0 else p + 0.5
             k = math.cos(2 * math.pi * (q - arm_phase))   # arm swings opposite its leg
@@ -886,15 +890,17 @@ JOG = make_gait(
     0.35, (0.20, -0.40), (-10, 0, 0, 8, 25, 45),
     [(0.42, -0.30, 0.33, 70), (0.50, -0.22, 0.44, 75), (0.60, 0.00, 0.42, 50),
      (0.72, 0.22, 0.34, 20), (0.85, 0.36, 0.22, -5), (0.93, 0.32, 0.13, -10)],
-    0.85, 0.035, 0.15, lean=0, sp_lean=6, ch_lean=5, head=-9, yaw=5, yaw_phase=0.8, ch=8,
-    arm0=8, arm_amp=38, arm_phase=0.37, el0=85, el_amp=15)
+    0.85, 0.035, 0.15, lean=4, sp_lean=6, ch_lean=4, head=-10, yaw=6, yaw_phase=0.8, ch=9,
+    arm0=6, arm_amp=34, arm_phase=0.37, el0=88, el_amp=12, add=27, width=-0.02,
+    sway=0.012, hip_roll=2.0)
 # walk: one foot always down, heel strike, hips highest over the standing leg
 WALK = make_gait(
     0.62, (0.27, -0.45), (-18, -3, 0, 0, 12, 40),
     [(0.70, -0.30, 0.20, 45), (0.80, -0.05, 0.15, 15), (0.90, 0.22, 0.13, -12),
      (0.96, 0.28, 0.115, -18)],
-    0.865, -0.015, 0.31, lean=0, sp_lean=3, ch_lean=2, head=-3, yaw=4, yaw_phase=0.95, ch=5,
-    arm0=0, arm_amp=18, arm_phase=0.6, el0=12, el_amp=8)
+    0.865, -0.015, 0.31, lean=1, sp_lean=3, ch_lean=2, head=-3, yaw=5, yaw_phase=0.95, ch=6,
+    arm0=2, arm_amp=22, arm_phase=0.6, el0=18, el_amp=10, add=28, width=-0.015,
+    sway=0.022, hip_roll=2.5)
 # dribble: short quick steps, low and leaning over the ball, arms out for balance
 DRIBBLE = make_gait(
     0.36, (0.17, -0.33), (-10, 0, 0, 8, 25, 42),
@@ -1224,6 +1230,8 @@ FALL = both({
     "r_lz":  (-0.80, -0.70, -0.70, -0.78, -0.80, -0.80, -0.50, -0.78, -0.85),
     "sp_lean": (2, 8, 8, 0, -4, -4, 10, 8, 2),
     "hd_pitch": (0, -10, -25, -35, -30, -25, -15, -5, 0),
+    "l_p":   (0, 10, 45, 72, 78, 78, 40, 8, 0),
+    "r_p":   (0, 15, 45, 72, 78, 78, 40, 8, 0),
 }, a_sw=(0, 40, 90, 150, 160, 160, 100, 30, 0),
    a_el=(20, 40, 40, 30, 25, 25, 60, 40, 20),
    a_add=(30, 22, 18, 20, 22, 22, 20, 25, 30))
@@ -1305,6 +1313,355 @@ RECV_SOLE = {
 }
 
 
+# ------------------------------------------------------------- goalkeeper
+# Reference: coaching videos on YouTube (set position and footwork; the collapse, low and
+# extension dives; distribution from the hands), studied from their transcripts.
+# The dives go to the keeper's left and the throw and roll use the right arm; the
+# viewer mirrors them.
+HOLD_ARMS = {"la_sw": 46, "ra_sw": 46, "la_add": 33, "ra_add": 33, "la_el": 100, "ra_el": 100,
+             "la_tw": 22, "ra_tw": 22}
+
+
+def keeper_ready(t):
+    """Set position: feet a little wider than the shoulders, on the balls of the feet and
+    'pulsing', knees bent, weight forward, hands in front of the body."""
+    s = math.sin(2 * math.pi * t / 0.5)
+    c = max(0.0, s)
+    return {"hip_z": 0.80 + 0.012 * s, "lean": 17, "sp_lean": 9, "ch_lean": 6, "hd_pitch": -22,
+            "l_x": 0.15, "r_x": -0.15, "l_y": 0.02, "r_y": 0.02, "l_turn": 10, "r_turn": 10,
+            "l_z": 0.095 + 0.012 * c, "r_z": 0.095 + 0.012 * c, "l_p": 10, "r_p": 10,
+            "la_sw": 44 + 3 * s, "ra_sw": 44 + 3 * s, "la_add": 6, "ra_add": 6,
+            "la_el": 66, "ra_el": 66, "la_tw": 30, "ra_tw": 30}
+
+
+def keeper_shuffle(p):
+    """Side shuffle in the set position, to the keeper's left: quick, low steps, the feet
+    never cross and never come together, hands stay ready."""
+    v = side_step(p)
+    v.update({"hip_z": 0.80 + 0.008 * math.cos(4 * math.pi * (p - 0.05)), "lean": 16, "sp_lean": 9,
+              "ch_lean": 6, "hd_pitch": -20, "l_x": v["l_x"] + 0.07, "r_x": v["r_x"] - 0.07,
+              "la_sw": 44, "ra_sw": 44, "la_add": 6, "ra_add": 6, "la_el": 66, "ra_el": 66,
+              "la_tw": 30, "ra_tw": 30})
+    return v
+
+
+def keeper_hold(t):
+    v = idle(t)
+    v.update(HOLD_ARMS)
+    return v
+
+
+def keeper_hold_walk(p):
+    v = WALK(p)
+    v.update(HOLD_ARMS)
+    v["sp_lean"] = 3
+    return v
+
+
+# Low dive (collapse): a short step with the near leg, hands and head lead, he goes
+# down and forward, never up, and lands on his side with the ball trapped on the grass.
+DIVE_LOW_T = (0.00, 0.12, 0.26, 0.40, 0.55, 0.75, 1.00)
+DIVE_LOW = both({
+    "side":  (0.00, 0.14, 0.52, 0.95, 1.28, 1.40, 1.42),
+    "fwd":   (0.00, 0.03, 0.10, 0.18, 0.24, 0.26, 0.26),
+    "hip_z": (0.80, 0.70, 0.58, 0.40, 0.22, 0.16, 0.16),
+    "roll":  (0, 10, 48, 74, 84, 84, 84),
+    "lean":  (17, 20, 14, 6, 0, 0, 0),
+    "legs_local": (0, 0, 0.4, 1, 1, 1, 1),
+    "l_x":   (0.15, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30),
+    "r_x":   (-0.15, -0.10, 0.00, 0.00, 0.00, 0.00, 0.00),
+    "l_lx":  (0.00, 0.00, 0.00, -0.04, -0.08, -0.10, -0.10),
+    "l_ly":  (0.05, 0.05, 0.06, 0.08, 0.12, 0.14, 0.14),
+    "l_lz":  (-0.85, -0.84, -0.82, -0.80, -0.76, -0.74, -0.74),
+    "r_ly":  (0.05, 0.10, 0.22, 0.30, 0.34, 0.36, 0.36),
+    "r_lz":  (-0.80, -0.76, -0.66, -0.60, -0.58, -0.56, -0.56),
+    "sp_roll": (0, 6, 14, 10, 4, 0, 0),
+    "sp_lean": (9, 10, 6, 2, 0, 0, 0),
+    "hd_pitch": (-22, -14, -6, 0, 4, 6, 6),
+}, a_sw=(34, 48, 105, 150, 166, 166, 150),
+   a_add=(12, 14, 26, 36, 38, 38, 36),
+   a_el=(72, 66, 30, 8, 6, 14, 60))
+
+# High dive (extension): quick steps, then a snappy power step off the near leg, drive
+# up and across, the top hand to the ball at full stretch, land on the side.
+DIVE_HIGH_T = (0.00, 0.14, 0.28, 0.42, 0.55, 0.72, 0.90, 1.05, 1.30)
+DIVE_HIGH = both({
+    "side":  (0.00, 0.16, 0.50, 1.00, 1.50, 1.95, 2.25, 2.34, 2.36),
+    "hip_z": (0.80, 0.70, 0.90, 1.22, 1.42, 1.15, 0.50, 0.18, 0.16),
+    "roll":  (0, 6, 24, 48, 62, 72, 80, 82, 82),
+    "lean":  (17, 20, 8, -2, -6, -2, 0, 0, 0),
+    "legs_local": (0, 0, 0.5, 1, 1, 1, 1, 1, 1),
+    "l_x":   (0.15, 0.34, 0.34, 0.34, 0.34, 0.34, 0.34, 0.34, 0.34),
+    "r_x":   (-0.15, -0.06, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+    "l_lx":  (0.00, 0.00, 0.00, -0.03, -0.06, -0.08, -0.10, -0.12, -0.12),
+    "l_ly":  (0.05, 0.05, 0.04, 0.00, -0.04, 0.02, 0.08, 0.10, 0.10),
+    "l_lz":  (-0.85, -0.85, -0.86, -0.86, -0.85, -0.82, -0.78, -0.76, -0.76),
+    "r_ly":  (0.05, 0.12, 0.34, 0.40, 0.30, 0.26, 0.30, 0.32, 0.32),
+    "r_lz":  (-0.80, -0.74, -0.52, -0.50, -0.62, -0.66, -0.62, -0.60, -0.60),
+    "sp_roll": (0, 4, 10, 14, 12, 8, 4, 0, 0),
+    "sp_lean": (9, 8, 0, -8, -10, -6, -2, 0, 0),
+    "hd_pitch": (-22, -18, -14, -12, -10, -4, 0, 2, 2),
+}, a_sw=(34, 20, 100, 168, 178, 176, 170, 160, 150),
+   a_add=(12, 12, 24, 36, 40, 38, 36, 34, 32),
+   a_el=(72, 84, 44, 8, 2, 6, 12, 24, 40))
+
+# Standing catch: the ball straight at him is taken into the chest, body behind it.
+SCOOP_T = (0.00, 0.14, 0.28, 0.40, 0.56, 0.80)
+SCOOP = both({
+    "hip_z": (0.80, 0.78, 0.80, 0.81, 0.83, 0.86),
+    "lean":  (17, 16, 12, 14, 10, 4),
+    "sp_lean": (9, 8, 6, 12, 8, 3),
+    "hd_pitch": (-22, -16, -6, 6, 0, -2),
+    "l_x":   (0.15, 0.15, 0.14, 0.13, 0.12, 0.10),
+    "r_x":   (-0.15, -0.15, -0.14, -0.13, -0.12, -0.10),
+}, a_sw=(34, 60, 78, 58, 48, 46),
+   a_add=(12, 22, 30, 33, 33, 33),
+   a_el=(72, 58, 62, 96, 100, 100),
+   a_tw=(30, 26, 22, 22, 22, 22))
+
+# Getting up after a dive, from lying on the left side: roll onto the knee, push up.
+GETUP_T = (0.00, 0.30, 0.60, 0.90, 1.20, 1.50)
+GETUP = both({
+    "hip_z": (0.16, 0.24, 0.44, 0.62, 0.80, 0.86),
+    "roll":  (82, 62, 30, 10, 2, 0),
+    "lean":  (0, 12, 32, 28, 12, 4),
+    "legs_local": (1, 1, 0.6, 0.15, 0, 0),
+    "l_x":   (0.10,) * 6, "r_x": (-0.10, -0.10, -0.10, -0.10, -0.10, -0.10),
+    "l_y":   (0.00, 0.00, -0.20, -0.10, 0.00, 0.00),
+    "r_y":   (0.00, 0.00, 0.25, 0.20, 0.05, 0.00),
+    "l_lx":  (-0.12, -0.10, -0.05, 0.00, 0.00, 0.00),
+    "l_ly":  (0.12, 0.20, 0.10, 0.00, 0.00, 0.00),
+    "l_lz":  (-0.75, -0.60, -0.50, -0.70, -0.85, -0.85),
+    "r_ly":  (0.34, 0.40, 0.40, 0.20, 0.05, 0.00),
+    "r_lz":  (-0.58, -0.50, -0.45, -0.65, -0.82, -0.85),
+    "sp_lean": (0, 6, 14, 12, 6, 3),
+    "hd_pitch": (4, 0, -12, -12, -6, -2),
+}, a_sw=(150, 100, 62, 52, 48, 46),
+   a_add=(34, 34, 33, 33, 33, 33),
+   a_el=(50, 86, 98, 100, 100, 100),
+   a_tw=(15, 20, 22, 22, 22, 22))
+
+# Smother at a striker's feet: out and down in one movement, the long barrier, hands
+# to the ball first and the body wrapped round it.
+SMOTHER_T = (0.00, 0.15, 0.30, 0.45, 0.65, 0.90)
+SMOTHER = both({
+    "fwd":   (0.00, 0.22, 0.62, 1.00, 1.16, 1.18),
+    "side":  (0.00, 0.08, 0.26, 0.44, 0.52, 0.52),
+    "hip_z": (0.80, 0.66, 0.44, 0.24, 0.16, 0.16),
+    "roll":  (0, 16, 48, 72, 82, 82),
+    "lean":  (17, 28, 22, 10, 2, 2),
+    "legs_local": (0, 0, 0.5, 1, 1, 1),
+    "l_x":   (0.15, 0.22, 0.22, 0.22, 0.22, 0.22),
+    "r_x":   (-0.15, -0.10, 0.00, 0.00, 0.00, 0.00),
+    "l_lx":  (0.00, 0.00, -0.02, -0.06, -0.10, -0.10),
+    "l_ly":  (0.05, 0.05, 0.10, 0.20, 0.26, 0.26),
+    "l_lz":  (-0.85, -0.84, -0.80, -0.72, -0.66, -0.66),
+    "r_ly":  (0.05, 0.10, 0.24, 0.36, 0.42, 0.42),
+    "r_lz":  (-0.80, -0.74, -0.62, -0.52, -0.48, -0.48),
+    "sp_lean": (9, 14, 12, 8, 14, 14),
+    "hd_pitch": (-22, -10, 0, 8, 12, 12),
+}, a_sw=(34, 62, 112, 140, 96, 84),
+   a_add=(12, 20, 30, 34, 33, 33),
+   a_el=(72, 50, 20, 14, 86, 100))
+
+# Punch: the same leap as the high catch, but the fists are driven through the ball.
+PUNCH = dict(CATCH)
+both(PUNCH,
+     a_sw=(30, 10, 40, 110, 168, 150, 90, 50, 30),
+     a_add=(10, 26, 40, 44, 42, 38, 32, 30, 30),
+     a_el=(70, 100, 128, 110, 6, 30, 55, 40, 25))
+
+# Overarm throw (right arm): side-on, front arm pointing at the target, a straight
+# throwing arm brought over the top like a bowler, the body following through.
+KTHROW_T = (0.00, 0.20, 0.40, 0.55, 0.65, 0.80, 1.00, 1.20)
+KTHROW = {
+    "fwd":    (0.00, 0.00, 0.06, 0.14, 0.20, 0.26, 0.22, 0.12),
+    "hip_z":  (0.88, 0.86, 0.83, 0.84, 0.85, 0.84, 0.86, 0.88),
+    "yaw":    (0, -35, -58, -42, 8, 30, 16, 0),
+    "ch_yaw": (0, -12, -22, -10, 14, 22, 10, 0),
+    "hd_yaw": (0, 30, 50, 34, -8, -18, -8, 0),
+    "lean":   (2, -3, -8, -2, 14, 20, 12, 3),
+    "sp_lean": (2, -2, -8, -2, 12, 16, 8, 2),
+    "l_x":    (0.04, 0.05, 0.06, 0.06, 0.06, 0.06, 0.05, 0.04),
+    "r_x":    (-0.04, -0.08, -0.10, -0.10, -0.08, -0.06, -0.05, -0.04),
+    "l_y":    (0.00, 0.12, 0.46, 0.50, 0.50, 0.50, 0.36, 0.14),
+    "l_z":    (0.08, 0.14, 0.10, 0.08, 0.08, 0.08, 0.08, 0.08),
+    "r_y":    (0.00, -0.12, -0.24, -0.22, -0.14, 0.10, 0.22, 0.10),
+    "r_z":    (0.08, 0.08, 0.08, 0.10, 0.13, 0.20, 0.10, 0.08),
+    "r_p":    (0, 0, 10, 25, 40, 30, 5, 0),
+    "r_turn": (8, 30, 45, 35, 10, 0, 5, 8),
+    "ra_sw":  (46, 0, -80, -150, -200, -262, -325, -356),
+    "ra_el":  (100, 60, 14, 6, 6, 18, 30, 20),
+    "ra_add": (33, 24, 18, 24, 28, 30, 30, 30),
+    "la_sw":  (46, 70, 96, 84, 42, 8, -10, 0),
+    "la_el":  (100, 50, 12, 28, 62, 56, 34, 20),
+    "la_add": (33, 26, 20, 22, 28, 30, 30, 30),
+}
+
+# Roll out (right arm): a long step, down on a bent front knee, the ball released
+# along the grass in front of the body so it does not bounce.
+KROLL_T = (0.00, 0.20, 0.40, 0.55, 0.70, 0.90, 1.15)
+KROLL = {
+    "fwd":    (0.00, 0.04, 0.16, 0.24, 0.30, 0.28, 0.16),
+    "hip_z":  (0.88, 0.82, 0.64, 0.52, 0.52, 0.66, 0.88),
+    "yaw":    (0, -12, -20, -8, 10, 8, 0),
+    "lean":   (2, 10, 26, 38, 40, 24, 4),
+    "sp_lean": (2, 8, 16, 22, 22, 12, 2),
+    "hd_pitch": (0, -6, -16, -24, -24, -12, -2),
+    "l_x":    (0.04, 0.06, 0.08, 0.08, 0.08, 0.06, 0.04),
+    "r_x":    (-0.04, -0.06, -0.08, -0.08, -0.08, -0.06, -0.04),
+    "l_y":    (0.00, 0.24, 0.62, 0.66, 0.66, 0.50, 0.18),
+    "l_z":    (0.08, 0.16, 0.08, 0.08, 0.08, 0.08, 0.08),
+    "r_y":    (0.00, -0.08, -0.26, -0.32, -0.32, -0.16, 0.10),
+    "r_z":    (0.08, 0.08, 0.13, 0.18, 0.18, 0.12, 0.08),
+    "r_p":    (0, 5, 35, 55, 55, 25, 0),
+    "ra_sw":  (46, -10, -62, -12, 52, 78, 18),
+    "ra_el":  (100, 46, 10, 6, 6, 22, 20),
+    "ra_add": (33, 30, 26, 28, 30, 30, 30),
+    "la_sw":  (46, 34, 12, 20, 30, 22, 4),
+    "la_el":  (100, 70, 44, 40, 40, 32, 20),
+    "la_add": (33, 30, 22, 20, 22, 28, 30),
+}
+
+# Kick from the hands: the ball is held out and dropped onto the swinging boot.
+PUNT = dict(SHOOT)
+PUNT.update({
+    "r_z":    (0.08, 0.177, 0.34, 0.62, 0.40, 0.95, 0.80, 0.08, 0.08, 0.08),
+    "r_y":    (-0.10, -0.006, 0.02, -0.08, 0.62, 1.05, 1.10, 1.00, 1.00, 1.00),
+    "la_add": (44, 42, 30, -10, -30, -10, 10, 22, 28, 30),
+    "la_sw":  (60, 70, 60, 10, 0, 20, 20, 0, 0, 0),
+    "la_el":  (70, 55, 40, 25, 30, 45, 55, 50, 30, 20),
+    "la_back": (0, 0, 5, 30, 20, 0, 0, 0, 0, 0),
+    "ra_add": (44, 42, 40, 30, 15, 15, 15, 22, 28, 30),
+    "ra_sw":  (60, 72, 78, 60, 10, -25, -35, -10, 0, 0),
+    "ra_el":  (70, 55, 40, 30, 40, 45, 45, 50, 30, 20),
+    "hd_pitch": (4, 8, 12, 14, 12, 0, -4, -6, -4, -2),
+})
+
+
+# ------------------------------------------------- cuts, turns, control, idling
+# Sharp cut to the player's left: the outside (right) foot is planted wide, the hips
+# drop and the body leans into the new direction before he drives off it.
+CUT_T = (0.00, 0.10, 0.20, 0.30, 0.42)
+CUT = {
+    "hip_z": (0.84, 0.79, 0.75, 0.80, 0.84),
+    "lean":  (10, 12, 16, 14, 10),
+    "roll":  (0, 9, 15, 9, 0),
+    "sp_roll": (0, 4, 8, 4, 0),
+    "yaw":   (0, 10, 24, 14, 0),
+    "hd_pitch": (-8, -6, -4, -6, -8),
+    "r_x":   (-0.02, -0.20, -0.28, -0.20, -0.04),
+    "r_y":   (0.28, 0.30, 0.10, -0.20, -0.36),
+    "r_z":   (0.14, 0.08, 0.08, 0.12, 0.30),
+    "r_p":   (-5, 0, 10, 35, 60),
+    "r_turn": (0, 20, 28, 15, 0),
+    "l_x":   (0.00, 0.02, 0.06, 0.08, 0.02),
+    "l_y":   (-0.34, -0.12, 0.16, 0.36, 0.30),
+    "l_z":   (0.30, 0.36, 0.30, 0.20, 0.10),
+    "l_p":   (60, 50, 25, 5, -5),
+    "la_add": (22, 8, 0, 8, 22), "ra_add": (22, 2, -10, 4, 22),
+    "la_sw": (-20, 0, 20, 30, 20), "ra_sw": (25, 5, -20, -30, -20),
+    "la_el": (85, 70, 60, 70, 85), "ra_el": (85, 60, 50, 65, 85),
+}
+
+# Turning on the spot: two quick steps to face the other way, staying on the toes.
+TURN_T = (0.00, 0.12, 0.25, 0.38, 0.50)
+TURN = {
+    "hip_z": (0.87, 0.84, 0.85, 0.84, 0.87),
+    "lean":  (3, 6, 6, 5, 3),
+    "yaw":   (0, 14, 0, -10, 0),
+    "l_x":   (0.03, 0.08, 0.05, 0.05, 0.03), "r_x": (-0.03, -0.03, -0.05, -0.09, -0.03),
+    "l_z":   (0.08, 0.15, 0.085, 0.085, 0.08), "r_z": (0.08, 0.085, 0.09, 0.15, 0.08),
+    "l_p":   (0, 22, 8, 8, 0), "r_p": (0, 8, 10, 22, 0),
+    "l_turn": (8, 30, 12, 8, 8), "r_turn": (8, 8, 12, 28, 8),
+    "la_add": (30, 20, 22, 20, 30), "ra_add": (30, 20, 22, 20, 30),
+    "la_el": (20, 45, 40, 45, 20), "ra_el": (20, 45, 40, 45, 20),
+}
+
+# A ball out of the air on the chest: arms wide, chest opened and then dropped away
+# under the ball so it falls at his feet.
+CHEST_T = (0.00, 0.14, 0.28, 0.38, 0.52, 0.72)
+CHEST = both({
+    "hip_z": (0.87, 0.86, 0.84, 0.80, 0.84, 0.87),
+    "lean":  (4, -4, -12, -6, 6, 2),
+    "sp_lean": (3, -6, -16, -4, 6, 3),
+    "ch_lean": (4, -2, -8, 0, 4, 4),
+    "hd_pitch": (-6, 4, 14, 24, 14, 0),
+    "l_x":   (0.05, 0.08, 0.09, 0.09, 0.07, 0.05), "r_x": (-0.05, -0.08, -0.09, -0.09, -0.07, -0.05),
+    "l_y":   (0.00, 0.04, 0.06, 0.06, 0.03, 0.00), "r_y": (0.00, -0.06, -0.10, -0.10, -0.05, 0.00),
+}, a_add=(30, 4, -16, -10, 10, 28),
+   a_el=(20, 40, 52, 50, 35, 20),
+   a_sw=(0, -10, -22, -10, 5, 0))
+
+# On the thigh: the right thigh comes up to meet the ball and gives as it lands.
+THIGH_T = (0.00, 0.14, 0.28, 0.38, 0.54, 0.72)
+THIGH_C = both({
+    "hip_z": (0.87, 0.87, 0.875, 0.86, 0.86, 0.87),
+    "lean":  (3, 0, -5, 0, 4, 2),
+    "sp_lean": (3, 2, -2, 4, 5, 3),
+    "hd_pitch": (0, 10, 18, 24, 12, 0),
+    "r_y":   (0.00, 0.16, 0.33, 0.26, 0.10, 0.00),
+    "r_z":   (0.08, 0.30, 0.50, 0.34, 0.13, 0.08),
+    "r_p":   (0, 22, 26, 20, 5, 0),
+    "l_x":   (0.03, 0.02, 0.00, 0.00, 0.02, 0.03),
+}, a_add=(30, 14, 4, 8, 22, 30),
+   a_el=(20, 36, 44, 40, 28, 20),
+   a_sw=(0, -6, -12, -6, 0, 0))
+
+# With the head: knees give, the neck takes the pace off the ball and drops it down.
+HEADC_T = (0.00, 0.14, 0.28, 0.38, 0.52, 0.70)
+HEADC = both({
+    "hip_z": (0.87, 0.84, 0.885, 0.84, 0.86, 0.87),
+    "lean":  (2, -4, 0, 6, 3, 2),
+    "sp_lean": (3, -6, -2, 8, 4, 3),
+    "hd_pitch": (-8, -24, -12, 12, 6, 0),
+    "l_z":   (0.08, 0.08, 0.10, 0.08, 0.08, 0.08), "r_z": (0.08, 0.08, 0.10, 0.08, 0.08, 0.08),
+    "l_p":   (0, 0, 14, 0, 0, 0), "r_p": (0, 0, 14, 0, 0, 0),
+}, a_add=(30, 16, 8, 14, 24, 30),
+   a_el=(20, 45, 50, 40, 28, 20),
+   a_sw=(0, 10, -5, -10, 0, 0))
+
+
+def idle_shift(t):
+    """Weight on one leg, hands on hips: waiting for a restart."""
+    s = math.sin(2 * math.pi * t / 2.0)
+    return {"hip_z": 0.874 + 0.002 * s, "side": 0.035, "roll": -3, "sp_roll": 4, "lean": 1,
+            "sp_lean": 2, "hd_pitch": -2 + 0.6 * s, "l_x": 0.02, "r_x": -0.10, "r_y": 0.03,
+            "l_turn": 6, "r_turn": 16, "la_add": 6, "ra_add": 6, "la_el": 96 + 2 * s,
+            "ra_el": 96 + 2 * s, "la_sw": -22, "ra_sw": -22, "la_tw": 50, "ra_tw": 50}
+
+
+def idle_look(t):
+    """Standing, looking over each shoulder in turn: checking where everyone is."""
+    v = idle(t * 1.0)
+    a = math.sin(2 * math.pi * t / 4.0)
+    turn = 38 * math.copysign(abs(a) ** 0.6, a)
+    v.update({"hd_yaw": turn * 0.5, "ch_yaw": turn * 0.25, "sp_yaw": turn * 0.1})
+    return v
+
+
+def idle_bounce(t):
+    """Staying loose: up on the toes and down, arms shaken out."""
+    s = math.sin(2 * math.pi * t / 0.5)
+    c = max(0.0, s)
+    return {"hip_z": 0.872 + 0.016 * c, "lean": 3, "sp_lean": 3, "hd_pitch": -3,
+            "l_x": 0.04, "r_x": -0.04, "l_z": 0.08 + 0.02 * c, "r_z": 0.08 + 0.02 * c,
+            "l_p": 16 * c, "r_p": 16 * c, "la_add": 26, "ra_add": 26,
+            "la_el": 28 + 14 * s, "ra_el": 28 - 14 * s, "la_sw": 6 * s, "ra_sw": -6 * s}
+
+
+# Arm gestures, played over whatever the legs are doing: asking for the ball, pointing.
+GEST_T = (0.00, 0.22, 0.45, 0.85, 1.10, 1.30)
+CALL = {
+    "ra_sw": (0, 120, 166, 166, 60, 0), "ra_el": (20, 40, 14, 14, 30, 20),
+    "ra_add": (30, 30, 34, 34, 30, 30), "hd_pitch": (0, -4, -6, -6, -2, 0),
+}
+POINT = {
+    "la_sw": (0, 62, 84, 84, 30, 0), "la_el": (20, 10, 4, 4, 15, 20),
+    "la_add": (30, 12, 2, 2, 20, 30), "hd_yaw": (0, 10, 16, 16, 6, 0),
+}
+
+
 def touch_run(t):
     """Receiving at a jog: one stride where the right boot opens to take the ball
     in its path, eyes down, arms out, without breaking stride."""
@@ -1350,6 +1707,29 @@ CLIPS = {
     "KeeperDive": (67, False, keyed(DIVE_T, DIVE), 33),
     "KeeperCatch": (67, False, keyed(JUMP_T, CATCH), 32),
     "Celebrate":  (121, False, keyed(CELEB_T, CELEB), None),
+    "KeeperReady": (60, True, keeper_ready, None),
+    "KeeperShuffle": (30, True, loop(keeper_shuffle, 30), None),
+    "KeeperHold": (120, True, keeper_hold, None),
+    "KeeperHoldWalk": (60, True, loop(keeper_hold_walk, 60), None),
+    "KeeperDiveLow": (61, False, keyed(DIVE_LOW_T, DIVE_LOW), 30),
+    "KeeperDiveHigh": (79, False, keyed(DIVE_HIGH_T, DIVE_HIGH), 33),
+    "KeeperScoop": (49, False, keyed(SCOOP_T, SCOOP), 17),
+    "KeeperGetUp": (91, False, keyed(GETUP_T, GETUP), None),
+    "KeeperSmother": (55, False, keyed(SMOTHER_T, SMOTHER), 27),
+    "KeeperPunch": (67, False, keyed(JUMP_T, PUNCH), 31),
+    "KeeperThrow": (73, False, keyed(KTHROW_T, KTHROW), 39),
+    "KeeperRoll": (70, False, keyed(KROLL_T, KROLL), 40),
+    "KeeperPunt": (79, False, keyed(SHOOT_T, PUNT), 26),
+    "Cut":        (26, False, keyed(CUT_T, CUT), 12),
+    "Turn":       (31, False, keyed(TURN_T, TURN), None),
+    "ReceiveChest": (44, False, keyed(CHEST_T, CHEST), 17),
+    "ReceiveThigh": (44, False, keyed(THIGH_T, THIGH_C), 17),
+    "ReceiveHead": (43, False, keyed(HEADC_T, HEADC), 17),
+    "IdleShift":  (120, True, idle_shift, None),
+    "IdleLook":   (240, True, idle_look, None),
+    "IdleBounce": (60, True, idle_bounce, None),
+    "Call":       (79, False, keyed(GEST_T, CALL), None),
+    "Point":      (79, False, keyed(GEST_T, POINT), None),
 }
 
 
@@ -1404,7 +1784,8 @@ def build_clips(arm, objs):
         actions[name] = (act, count)
         print(f"{name:11s} {count:3d} frames {count / FPS:4.2f}s  "
               f"{'loop' if looping else 'once'}  contact frame {contact}  "
-              f"lowest point {min(low) * 100:5.1f}..{max(low) * 100:4.1f} cm")
+              f"lowest point {min(low) * 100:5.1f}..{max(low) * 100:4.1f} cm"
+              f" (frame {low.index(min(low)) + 1})")
     return actions
 
 
