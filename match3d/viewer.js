@@ -182,11 +182,18 @@ function start(meta, F, playerGltf, ballGltf, embed) {
       m.position.set(front ? 0.075 : 0, front ? 1.39 : 1.335, front ? chestZ + 0.012 : backZ - 0.012); m.rotation.y = front ? 0 : Math.PI; m.visible = false;
       root.add(m); root.updateMatrixWorld(true); chestBone.attach(m); prints.push(m);
     }
-    P[s].push({ root, mixer, acts, geo, who, prints, no: -1, w: { lo: {}, up: {} }, tg: { lo: {}, up: {} }, fd: { lo: 0.18, up: 0.18 }, phase: 0, freq: 1, upShot: null, plant: null, sel: null, gw: -1, chest: root.getObjectByName('chest'), thighR: root.getObjectByName('thighR'), neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, name: '', shot: null, swing: null, hold: 0,
+    P[s].push({ root, mixer, acts, geo, who, prints, no: -1, var: { stride: 1, gear: 1, arms: 0, lean: 0, sway: 1, nod: 0, phase: 0 }, spine: root.getObjectByName('spine'), armL: root.getObjectByName('upper_armL'), armR: root.getObjectByName('upper_armR'), w: { lo: {}, up: {} }, tg: { lo: {}, up: {} }, fd: { lo: 0.18, up: 0.18 }, phase: 0, freq: 1, upShot: null, plant: null, sel: null, gw: -1, chest: root.getObjectByName('chest'), thighR: root.getObjectByName('thighR'), neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, name: '', shot: null, swing: null, hold: 0,
       speed: 0, x: 0, z: 0, sx: 1, sy: 1, mirror: 1, look: 0, lean: 0, bank: 0, drib: 0, seed: (hash('p' + s + i) % 1000) / 1000 });
   }
   // A mirrored clip mirrors the whole body; the printing is flipped back so a 9 never reads backwards.
   const setMirror = (p, m) => { if (p.mirror !== m) for (const q of p.prints) q.scale.x = Math.abs(q.scale.x) * (m < 0 ? -1 : 1); p.mirror = m; p.root.scale.set(p.sx * m, p.sy, p.sx); };
+  function vary(p, s, i, name) {
+    // Nobody moves like anybody else: how long his stride is, when he breaks into a run, how he carries his
+    // arms, how upright he stands, how much he sways. Fixed per player, from his name.
+    const h = hash('move:' + (name || s + ':' + i)), r = n => ((h >>> n) & 255) / 255;
+    p.var = { stride: 0.93 + r(0) * 0.14, gear: 0.92 + r(8) * 0.16, arms: -0.05 + r(16) * 0.2, lean: -0.035 + r(24) * 0.08, sway: 0.6 + r(4) * 0.8, nod: -0.05 + r(12) * 0.1, phase: r(20) * 6.283 };
+    p.varFor = name;
+  }
   function number(p, s, i, name, no) {
     const col = meta.colors[s], shirt = i === 0 ? col.gk : col.f, ink = dark(shirt) ? '#FFFFFF' : '#15171A';
     p.no = no; p.inkFor = name;
@@ -210,6 +217,7 @@ function start(meta, F, playerGltf, ballGltf, embed) {
       setMirror(p, p.mirror);
       const name = meta.lineups[n].on[s][i], no = b && b[2] || 0;
       if (name && name !== p.who) paint(p, s, i, name);
+      if (p.varFor !== name) vary(p, s, i, name);
       if (no !== p.no || name !== p.inkFor) number(p, s, i, name || '', no);
     }
   }
@@ -272,9 +280,13 @@ function start(meta, F, playerGltf, ballGltf, embed) {
   const px = (k, s, i) => F[k * STRIDE + 6 + (s * 11 + i) * 2];
   const py = (k, s, i) => F[k * STRIDE + 7 + (s * 11 + i) * 2];
   const fa = (k, s, i) => F[k * STRIDE + 50 + s * 11 + i] / 1000;
-  // A body has weight: between two engine positions he follows a curve through the ones before and after
-  // (Catmull-Rom), so he rounds his turns and eases in and out of speed instead of moving in straight pieces.
-  const curve = (a, b, c, d, u) => 0.5 * (2 * b + (c - a) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (3 * b - 3 * c + d - a) * u * u * u);
+  // A body has weight, and it also stops. Between two engine positions he follows a curve whose speed at each
+  // one is shared with the piece before (so nothing jerks), but which never runs past a point where he stopped
+  // or turned back: there the speed in that direction goes to nothing and he pushes off again. A cut is a plant
+  // and a drive, not a rounded corner. (A plain spline through the points slid past every stop and came back.)
+  const tangents = (a, b, c, d) => { const mid = c - b, before = b - a, after = d - c; return [before * mid > 0 ? 2 * before * mid / (before + mid) : 0, mid * after > 0 ? 2 * mid * after / (mid + after) : 0, mid]; };
+  const curve = (a, b, c, d, u) => { const [m1, m2, mid] = tangents(a, b, c, d); return (((m1 + m2 - 2 * mid) * u + 3 * mid - 2 * m1 - m2) * u + m1) * u + b; };
+  const slope = (a, b, c, d, u) => { const [m1, m2, mid] = tangents(a, b, c, d); return (3 * (m1 + m2 - 2 * mid) * u + 2 * (3 * mid - 2 * m1 - m2)) * u + m1; }; // per frame step
   const frameAt = t => { let lo = 0, hi = NF - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (times[m] <= t) lo = m; else hi = m - 1; } return lo; };
 
   /* ---------- action cues from the engine's marks ---------- */
@@ -371,10 +383,15 @@ function start(meta, F, playerGltf, ballGltf, embed) {
   let T = 0, speed = 1, playing = true, ci = 0, ki = 0, ext = embed ? 0 : null, camMode = (embed ? embed.host.clientWidth < embed.host.clientHeight : window.innerWidth < window.innerHeight) ? 0 : 1, noteUntil = 0, cut = true, follow = null, shadows = true;
   const camPos = new THREE.Vector3(0, 30, 60), camAim = new THREE.Vector3();
   const ballPos = new THREE.Vector3(), prevBall = new THREE.Vector3(), spinAxis = new THREE.Vector3();
-  const UP = new THREE.Vector3(0, 1, 0), HV = new THREE.Vector3(), HB = new THREE.Vector3(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
+  const UP = new THREE.Vector3(0, 1, 0), HV = new THREE.Vector3(), HB = new THREE.Vector3(), AX = new THREE.Vector3(), AZ = new THREE.Vector3(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
   const nameOf = (s, i) => { const min = T / 60; let on = meta.lineups[0].on; for (const l of meta.lineups) if (l.min <= min + 1) on = l.on; return on[s][i] || ''; };
   const note = (text, secs) => { $('note').textContent = text; noteUntil = performance.now() + secs * 1000; };
   // Turn a bone about the world's up axis while keeping the pose the clip gave it.
+  function tiltBone(bone, axis, angle) {
+    bone.parent.getWorldQuaternion(qa);
+    qb.setFromAxisAngle(axis, angle);
+    bone.quaternion.premultiply(qa.clone().invert().multiply(qb).multiply(qa));
+  }
   function turnBone(bone, yaw) {
     bone.parent.getWorldQuaternion(qa);
     qb.setFromAxisAngle(UP, yaw);
@@ -448,9 +465,9 @@ function start(meta, F, playerGltf, ballGltf, embed) {
       p.root.visible = true;
       const y0 = py(k, s, i), y1 = py(k2, s, i), jump = x1 === NONE || span > 1;
       const ka = kA !== k && px(kA, s, i) !== NONE ? kA : k, kb = kB !== k2 && px(kB, s, i) !== NONE ? kB : k2;
-      const sharp = cutAt[s * 11 + i].has(k) || cutAt[s * 11 + i].has(k2); // a cut is a corner, not a curve
-      const x = (jump ? x0 : sharp ? x0 + (x1 - x0) * u : curve(px(ka, s, i), x0, x1, px(kb, s, i), u)) / 100, y = (jump ? y0 : sharp ? y0 + (y1 - y0) * u : curve(py(ka, s, i), y0, y1, py(kb, s, i), u)) / 100;
-      const vx0 = jump ? 0 : (x1 - x0) / 100 / step, vy0 = jump ? 0 : (y1 - y0) / 100 / step;
+      const x = (jump ? x0 : curve(px(ka, s, i), x0, x1, px(kb, s, i), u)) / 100, y = (jump ? y0 : curve(py(ka, s, i), y0, y1, py(kb, s, i), u)) / 100;
+      // his speed at this instant, from the same curve: slowing into a stop or a cut, quickening out of it
+      const vx0 = jump ? 0 : slope(px(ka, s, i), x0, x1, px(kb, s, i), u) / 100 / step, vy0 = jump ? 0 : slope(py(ka, s, i), y0, y1, py(kb, s, i), u) / 100 / step;
       const a0 = fa(k, s, i), da = jump ? 0 : wrap(fa(k2, s, i) - a0), a = a0 + da * u;
       let vx = vx0, vy = vy0, v = Math.hypot(vx0, vy0);
       { // He is not always exactly where the engine has him: a keeper's dive carries him and a goal kick has a
@@ -508,8 +525,8 @@ function start(meta, F, playerGltf, ballGltf, embed) {
           const h = far > 22 || F[r + 5] ? hash(s + ':' + i + ':' + Math.floor(T / 7 + p.seed * 5)) % 10 : 9;
           name = h < 3 ? 'IdleShift' : h < 5 ? 'IdleLook' : h < 6 ? 'IdleBounce' : 'Idle'; blend = { [name]: 1 }; fade = 0.4; p.freq = 0;
         } else if (cat === 'go' || cat === 'ball') {
-          const g = gaitOf(v, cat === 'ball' ? GAIT_BALL : GAIT);
-          blend = g.blend; name = g.name; p.freq = clamp(v / g.stride, 0.55, 3.4);
+          const g = gaitOf(v / p.var.gear, cat === 'ball' ? GAIT_BALL : GAIT); // some jog where others still walk
+          blend = g.blend; name = g.name; p.freq = clamp(v / (g.stride * p.var.stride * p.sy), 0.55, 3.4); // a tall man's stride is longer and slower
         } else if (cat in STILL) { name = cat; blend = { [cat]: 1 }; fade = 0.25; p.freq = 0; }
         else { name = cat; blend = { [cat]: 1 }; p.freq = clamp(v / LOCO[cat], 0.6, 2.4) / DUR[cat]; }
         if (p.name in STILL && !(name in STILL)) fade = 0.25;
@@ -540,10 +557,25 @@ function start(meta, F, playerGltf, ballGltf, embed) {
       p.root.rotation.set(still ? 0 : p.lean, Math.PI / 2 - a, still ? 0 : p.bank * p.mirror);
 
       // Eyes on the ball: the neck and head turn towards it (never further than a neck can).
+      // The mixer only rewrites a bone when its clip value changes, so anything added on top (the head following
+      // the ball, his own carriage) starts each frame from the clip's pose, not from last frame's result.
+      if (!p.extra) p.extra = [p.spine, p.armL, p.armR, p.neck, p.head].filter(Boolean).map(bone => ({ bone, base: bone.quaternion.clone(), out: new THREE.Quaternion(9, 9, 9, 9) }));
+      for (const e of p.extra) { if (e.bone.quaternion.equals(e.out)) e.bone.quaternion.copy(e.base); else e.base.copy(e.bone.quaternion); }
       const toBall = wrap(Math.atan2(ballPos.z - p.z, ballPos.x - p.x) - a), far = Math.hypot(ballPos.x - p.x, ballPos.z - p.z);
       const want = mine || far < 1.2 || Math.abs(toBall) > 2.3 || still ? 0 : clamp(-toBall, -1.15, 1.15);
       p.look += (want - p.look) * (1 - Math.exp(-Math.max(dt, 0.001) * 5));
       if (p.neck && p.head && Math.abs(p.look) > 0.02) { turnBone(p.neck, p.look * 0.4 * p.mirror); turnBone(p.head, p.look * 0.6 * p.mirror); }
+      // His own carriage, and the small restlessness of a living body, on top of whatever clip is playing.
+      if (!still && p.spine) {
+        const q = p.var, ry = Math.PI / 2 - a, calm = clamp(1 - v / 6, 0.25, 1);
+        AX.set(Math.cos(ry), 0, -Math.sin(ry)); AZ.set(Math.sin(ry), 0, Math.cos(ry)); // his right, and the way he faces
+        tiltBone(p.spine, AX, q.lean + 0.012 * q.sway * Math.sin(T * 1.7 + q.phase));
+        tiltBone(p.spine, AZ, 0.02 * q.sway * calm * Math.sin(T * 0.83 + q.phase * 2) * p.mirror);
+        turnBone(p.spine, 0.03 * q.sway * calm * Math.sin(T * 0.47 + q.phase * 3));
+        if (!p.shot && !p.upShot && p.armL && p.armR) { tiltBone(p.armL, AZ, -q.arms * p.mirror); tiltBone(p.armR, AZ, q.arms * p.mirror); }
+        tiltBone(p.head, AX, q.nod);
+      }
+      for (const e of p.extra) e.out.copy(e.bone.quaternion);
 
       if (mine) carrier = { p, v, vx, vy, a, s, i };
       if (mine && (p.ox || p.oz)) { ballPos.x += p.ox; ballPos.z += p.oz; } // the ball is at his feet, wherever they are
