@@ -59,9 +59,14 @@ async function boot() {
   start(meta, new Int16Array(bin), playerGltf, ballGltf);
 }
 
-function start(meta, F, playerGltf, ballGltf) {
-  const times = meta.times, NF = times.length, T_END = times[NF - 1];
-  const canvas = $('c');
+// embed: { canvas, host } when the viewer is part of another page (the live match screen). It then has no
+// controls or clock of its own: the page pushes frames and marks as they are played and says what time to show.
+function start(meta, F, playerGltf, ballGltf, embed) {
+  const NOEL = document.createElement('div');
+  const $ = embed ? id => embed.host.querySelector('[data-m3="' + id + '"]') || NOEL : id => document.getElementById(id) || NOEL;
+  const times = meta.times;
+  let NF = times.length, T_END = NF ? times[NF - 1] : 0;
+  const canvas = embed ? embed.canvas : $('c');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
@@ -117,15 +122,15 @@ function start(meta, F, playerGltf, ballGltf) {
   const bodyMat = new THREE.MeshLambertMaterial({ vertexColors: true });
   const hash = s => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822519) >>> 0; return (h ^ (h >>> 13)) >>> 0; };
   const dark = c => new THREE.Color(c).getHSL({}).l < 0.5;
-  function kit(side, i) {
+  function kit(side, i, name) {
     const t = meta.teams[side], col = meta.colors[side], keeper = i === 0;
     const shirt = keeper ? col.gk : col.f, shorts = keeper ? '#1E2A33' : (col.s && col.s !== col.f ? col.s : (dark(col.f) ? '#F1F1F1' : '#1E2A33'));
-    const h = hash(t.id + ':' + i), skin = SKIN[h % SKIN.length], hair = HAIR[(h >>> 8) % HAIR.length];
+    const h = hash(t.id + ':' + (name || i)), skin = SKIN[h % SKIN.length], hair = HAIR[(h >>> 8) % HAIR.length];
     return { shirt, shorts, socks: shirt, head: skin, neck: skin, arms: skin, hands: skin, legs: skin, hair, eyebrows: hair, boots: ['#111316', '#F1F1F1', '#D93A2B', '#1F6FD0', '#E8D21F'][(h >>> 12) % 5], boot_soles: '#E6E6E6', eyes: '#F1F1EC', pupils: '#120C08', mouth: '#8A4840' };
   }
   const P = [[], []];
   for (let s = 0; s < 2; s++) for (let i = 0; i < 11; i++) {
-    const k = kit(s, i), root = cloneSkinned(playerGltf.scene), old = [];
+    const who = meta.lineups[0].on[s][i] || '', k = kit(s, i, who), root = cloneSkinned(playerGltf.scene), old = [];
     root.traverse(o => { if (o.isSkinnedMesh) old.push(o); });
     const geo = body.clone(), part = geo.attributes.part.array, col = new Float32Array(part.length * 3), c = new THREE.Color();
     const cache = partNames.map(n => c.set(k[n] || '#888888').toArray());
@@ -148,10 +153,16 @@ function start(meta, F, playerGltf, ballGltf) {
     }
     root.rotation.order = 'YXZ';
     scene.add(root);
-    P[s].push({ root, mixer, acts, w: { lo: {}, up: {} }, tg: { lo: {}, up: {} }, fd: { lo: 0.18, up: 0.18 }, phase: 0, freq: 1, upShot: null, plant: null, sel: null, gw: -1, chest: root.getObjectByName('chest'), thighR: root.getObjectByName('thighR'), neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, name: '', shot: null, swing: null, hold: 0,
+    P[s].push({ root, mixer, acts, geo, who, w: { lo: {}, up: {} }, tg: { lo: {}, up: {} }, fd: { lo: 0.18, up: 0.18 }, phase: 0, freq: 1, upShot: null, plant: null, sel: null, gw: -1, chest: root.getObjectByName('chest'), thighR: root.getObjectByName('thighR'), neck: root.getObjectByName('neck'), head: root.getObjectByName('head'), handL: root.getObjectByName('handL'), handR: root.getObjectByName('handR'), footR: root.getObjectByName('footR'), travel: null, ox: 0, oz: 0, name: '', shot: null, swing: null, hold: 0,
       speed: 0, x: 0, z: 0, sx: 1, sy: 1, mirror: 1, look: 0, lean: 0, bank: 0, drib: 0, seed: (hash('p' + s + i) % 1000) / 1000 });
   }
   const setMirror = (p, m) => { p.mirror = m; p.root.scale.set(p.sx * m, p.sy, p.sx); };
+  function paint(p, s, i, name) { // a substitute is a different man: his own skin, hair and boots
+    const k = kit(s, i, name), part = p.geo.attributes.part.array, col = p.geo.attributes.color, c = new THREE.Color();
+    const cache = partNames.map(n => c.set(k[n] || '#888888').toArray());
+    for (let v = 0; v < part.length; v++) col.array.set(cache[part[v]], v * 3);
+    col.needsUpdate = true; p.who = name;
+  }
   // Nobody on a pitch is the same size: height and build come from the game's own player data.
   let lineupAt = -1;
   function applyLineup(min) {
@@ -162,6 +173,8 @@ function start(meta, F, playerGltf, ballGltf) {
       const b = bodyOf && bodyOf[s][i], p = P[s][i];
       p.sy = b ? clamp(b[0] / 180, 0.9, 1.1) : 1; p.sx = b ? p.sy * clamp(Math.sqrt(b[1] / 23), 0.92, 1.1) : 1;
       setMirror(p, p.mirror);
+      const name = meta.lineups[n].on[s][i];
+      if (name && name !== p.who) paint(p, s, i, name);
     }
   }
   // Animation is mixed by hand, per half of the body: each half has target weights for the clips it should be
@@ -235,11 +248,11 @@ function start(meta, F, playerGltf, ballGltf) {
   // with it: in stride at a run, on the half-turn, killed under the sole when standing, or the inside of
   // the boot and away. About one in three takes it with the left foot (the clip mirrored).
   const kicksBy = new Map(), touchesBy = new Map(), controls = [];
-  for (const m of meta.marks) if (m.k === 'kick' || m.k === 'touch' || m.k === 'duel') {
+  const indexMarks = marks => { for (const m of marks) if (m.k === 'kick' || m.k === 'touch' || m.k === 'duel') {
     const map = m.k === 'kick' ? kicksBy : touchesBy, key = m.s + ':' + m.who;
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(m.t);
-  }
+  } };
   function receive(t, s, i) {
     if (i == null || i < 1 || i > 10) return;
     if ((kicksBy.get(s + ':' + i) || []).some(k => k >= t && k - t < 0.45)) return; // played first time: the kick is the touch
@@ -255,10 +268,15 @@ function start(meta, F, playerGltf, ballGltf) {
     if (air) controls.push({ s, i, t, part: air });
     cue(t, s, i, clip, { mirror: !air && (h >>> 3) % 3 === 0 });
   }
-  let lastScorer = null;
-  const holds = [], runUps = [];
-  for (const m of meta.marks) {
+  let lastScorer = null, goals = [], kicks = [], shots = [];
+  const holds = [], runUps = [], cutAt = Array.from({ length: 22 }, () => new Set());
+  // Turns marks and frames into cues. Called once for a recording, and again for every minute of a live match
+  // (k0: the first new frame; marks: the new marks only).
+  function ingest(k0, marks) {
+  indexMarks(marks);
+  for (const m of marks) {
     if (m.k === 'kick') {
+      if (m.who === 0) for (const h of holds) if (h.open && h.s === m.s && m.t > h.t0) { h.open = false; h.t1 = m.t; h.style = m.style; }
       const k = frameAt(m.t - 0.5), throwIn = F[k * STRIDE + 5] === 1 && m.kind !== 'shot';
       if (m.who === 0 && m.style === 'punch') continue; // the claim mark plays the punch
       const hand = m.who === 0 && { throw: 'KeeperThrow', roll: 'KeeperRoll', punt: 'KeeperPunt' }[m.style];
@@ -284,22 +302,21 @@ function start(meta, F, playerGltf, ballGltf) {
       cue(m.t + (DUR.KeeperSmother - CONTACT.KeeperSmother) / RATE.KeeperSmother - 0.05, m.s, 0, 'KeeperGetUp', { keep: true });
     } else if (m.k === 'claim') { cue(m.t, m.s, 0, m.res === 'punch' ? 'KeeperPunch' : 'KeeperCatch');
     } else if (m.k === 'hands') { // ball in his hands until he releases it
-      const out = meta.marks.find(k => k.k === 'kick' && k.s === m.s && k.who === 0 && k.t > m.t);
-      holds.push({ s: m.s, t0: m.t, t1: out ? out.t : m.t + 8, style: out ? out.style : '', pre: m.how === 'claim' ? 0.4 : 0.15 });
+      const out = marks.find(k => k.k === 'kick' && k.s === m.s && k.who === 0 && k.t > m.t);
+      holds.push({ s: m.s, t0: m.t, t1: out ? out.t : m.t + 8, style: out ? out.style : '', pre: m.how === 'claim' ? 0.4 : 0.15, open: !out });
     } else if (m.k === 'goal') {
       const who = lastScorer && lastScorer.s === m.s ? lastScorer.i : 9;
       [who, 1 + (who + 2) % 10, 1 + (who + 5) % 10, 1 + (who + 7) % 10].forEach((i, n) => cue(m.t + 0.7 + n * 0.35, m.s, i, 'Celebrate', { hold: 5 }));
     }
   }
-  for (let k = 1; k < NF; k++) { // a keeper taking a high ball; an outfield player collecting a loose or intercepted one
+  for (let k = Math.max(1, k0); k < NF; k++) { // a keeper taking a high ball; an outfield player collecting a loose or intercepted one
     const r = k * STRIDE, q = r - STRIDE;
     if (F[r + 4] > 0 && F[r + 3] >= 0 && !F[r + 5] && (F[q + 4] !== F[r + 4] || F[q + 3] !== F[r + 3])
       && !(touchesBy.get(F[r + 3] + ':' + F[r + 4]) || []).some(t => Math.abs(t - times[k]) < 0.8)) receive(times[k], F[r + 3], F[r + 4]);
     if (!holds.length && F[r + 4] === 0 && F[r + 3] >= 0 && (F[q + 4] !== 0 || F[q + 3] !== F[r + 3]) && F[q + 2] > 120) cue(times[k], F[r + 3], 0, 'KeeperCatch'); // recordings made before the engine marked catches
   }
   // Sharp cuts (a change of direction at speed) and turns on the spot, read from the recorded path.
-  const cutAt = Array.from({ length: 22 }, () => new Set());
-  for (let s = 0; s < 2; s++) for (let i = 1; i < 11; i++) for (let k = 1; k < NF - 1; k++) {
+  for (let s = 0; s < 2; s++) for (let i = 1; i < 11; i++) for (let k = Math.max(1, k0 - 1); k < NF - 1; k++) {
     if (px(k - 1, s, i) === NONE || px(k, s, i) === NONE || px(k + 1, s, i) === NONE || times[k + 1] - times[k - 1] > 1.1) continue;
     const ax = (px(k, s, i) - px(k - 1, s, i)) / 50, ay = (py(k, s, i) - py(k - 1, s, i)) / 50, bx = (px(k + 1, s, i) - px(k, s, i)) / 50, by = (py(k + 1, s, i) - py(k, s, i)) / 50;
     const va = Math.hypot(ax, ay), vb = Math.hypot(bx, by), busy = [kicksBy, touchesBy].some(m => (m.get(s + ':' + i) || []).some(t => Math.abs(t - times[k]) < 0.7));
@@ -308,12 +325,14 @@ function start(meta, F, playerGltf, ballGltf) {
     else if (va < 0.8 && vb < 0.8 && Math.abs(wrap(fa(k + 1, s, i) - fa(k, s, i))) > 1.3) cue(times[k], s, i, 'Turn', { soft: true });
   }
   cues.sort((a, b) => a.t - b.t);
-  const goals = meta.marks.filter(m => m.k === 'goal').sort((a, b) => a.t - b.t);
-  const kicks = meta.marks.filter(m => m.k === 'kick').sort((a, b) => a.t - b.t);
-  const shots = meta.marks.filter(m => m.k === 'shot' || m.k === 'goal').map(m => m.t).sort((a, b) => a - b);
+  goals = meta.marks.filter(m => m.k === 'goal').sort((a, b) => a.t - b.t);
+  kicks = meta.marks.filter(m => m.k === 'kick').sort((a, b) => a.t - b.t);
+  shots = meta.marks.filter(m => m.k === 'shot' || m.k === 'goal').map(m => m.t).sort((a, b) => a - b);
+  }
+  ingest(0, meta.marks);
 
   /* ---------- playback state ---------- */
-  let T = 0, speed = 1, playing = true, ci = 0, ki = 0, camMode = window.innerWidth < window.innerHeight ? 0 : 1, noteUntil = 0, cut = true, follow = null, shadows = true;
+  let T = 0, speed = 1, playing = true, ci = 0, ki = 0, ext = embed ? 0 : null, camMode = (embed ? embed.host.clientWidth < embed.host.clientHeight : window.innerWidth < window.innerHeight) ? 0 : 1, noteUntil = 0, cut = true, follow = null, shadows = true;
   const camPos = new THREE.Vector3(0, 30, 60), camAim = new THREE.Vector3();
   const ballPos = new THREE.Vector3(), prevBall = new THREE.Vector3(), spinAxis = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0), HV = new THREE.Vector3(), HB = new THREE.Vector3(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
@@ -328,7 +347,8 @@ function start(meta, F, playerGltf, ballGltf) {
 
   function seek(t) {
     T = Math.max(0, Math.min(T_END, t));
-    ci = cues.findIndex(c => c.t > T - 0.3); if (ci < 0) ci = cues.length;
+    for (const c of cues) c.done = c.t <= T - 0.3;
+    ci = cues.findIndex(c => !c.done); if (ci < 0) ci = cues.length;
     ki = 0;
     for (const side of P) for (const p of side) { p.shot = null; p.swing = null; p.hold = 0; p.drib = 0; p.travel = null; p.plant = null; p.upShot = null; p.sel = null; p.ox = p.oz = 0; setMirror(p, 1); }
     $('note').textContent = '';
@@ -336,15 +356,17 @@ function start(meta, F, playerGltf, ballGltf) {
   }
 
   function update(dt) {
-    if (playing) T = Math.min(T_END, T + dt * speed);
+    if (playing && ext == null) T = Math.min(T_END, T + dt * speed); // ext: the embedding page owns the clock
     const k = frameAt(T), k2 = Math.min(NF - 1, k + 1), span = times[k2] - times[k];
     const u = span > 0 && span <= 1 ? (T - times[k]) / span : 0, step = span > 0 && span <= 1 ? span : 0.5;
-    const r = k * STRIDE, r2 = k2 * STRIDE, sdt = playing ? dt * Math.min(speed, 2) : 0;
+    const r = k * STRIDE, r2 = k2 * STRIDE, sdt = ext != null ? ext : playing ? dt * Math.min(speed, 2) : 0;
     applyLineup(T / 60);
 
     // action cues that have come due
     while (ci < cues.length && cues[ci].t <= T) {
       const c = cues[ci++], p = P[c.s][c.i];
+      if (c.done) continue;
+      c.done = true;
       if (T - c.t > 0.4 || (c.soft && p.shot)) continue;
       const rate = RATE[c.clip];
       if (SWING[c.clip] && p.speed > 1) { // keep running: the swing alone, timed to the same contact
@@ -571,7 +593,7 @@ function start(meta, F, playerGltf, ballGltf) {
     $('clock').textContent = Math.floor(T / 60) + ':' + String(Math.floor(T % 60)).padStart(2, '0');
     if (document.activeElement !== $('seek')) $('seek').value = T;
     if (noteUntil && performance.now() > noteUntil) { $('note').textContent = ''; noteUntil = 0; }
-    if (T >= T_END && playing) { playing = false; $('play').textContent = 'Replay'; note('Full time', 60); }
+    if (!embed && T >= T_END && playing) { playing = false; $('play').textContent = 'Replay'; note('Full time', 60); }
   }
   function lastScorerAt(t) { let who = null; for (const m of meta.marks) { if (m.t > t + 1) break; if (m.k === 'sfx' && m.res === 'goal') who = m.who; } return who; }
 
@@ -588,24 +610,62 @@ function start(meta, F, playerGltf, ballGltf) {
   $('shade').onclick = () => { setShadows(!shadows); note(shadows ? 'Real shadows (heavier)' : 'Simple shadows (faster)', 2); };
 
   function resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = embed ? Math.max(1, embed.host.clientWidth) : window.innerWidth, h = embed ? Math.max(1, embed.host.clientHeight) : window.innerHeight;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 36 : 26; camera.updateProjectionMatrix();
   }
   window.addEventListener('resize', resize); resize();
 
+  let last = performance.now(), slow = 0;
+  const autoShadows = dt => { // a phone that cannot hold the frame rate with real shadows drops to the simple ones by itself
+    if (shadows && playing) { slow = dt > 0.05 ? slow + 1 : Math.max(0, slow - 1); if (slow > 90) { setShadows(false); note('Simple shadows for a smoother picture', 3); } }
+  };
+  if (embed) {
+    const seen = new Set(), RS = { thr: 1, gk: 2, ck: 3, fk: 4, pen: 5, ko: 6 };
+    return {
+      canvas,
+      // rows: the engine's frames ([t, ball x y z, owner side and slot, restart, 22 positions, 22 facings]);
+      // marks: the engine's marks; lineup: { min, on: names by side and slot, body: [height, build, number] }
+      push(rows, marks, lineup) {
+        const k0 = NF;
+        for (const f of rows) {
+          if (NF && f[0] <= times[NF - 1]) continue;
+          if ((NF + 1) * STRIDE > F.length) { const bigger = new Int16Array(Math.max(F.length * 2, STRIDE * 512)); bigger.set(F); F = bigger; }
+          const o = NF * STRIDE;
+          F[o] = Math.round(f[1] * 100); F[o + 1] = Math.round(f[2] * 100); F[o + 2] = Math.round(f[3] * 100); F[o + 3] = f[4]; F[o + 4] = f[5]; F[o + 5] = RS[f[6]] || 0;
+          for (let n = 7; n < 51; n++) F[o + n - 1] = f[n] == null ? NONE : Math.round(f[n] * 100);
+          for (let n = 51; n < 73; n++) F[o + n - 1] = f[n] == null ? 0 : Math.round(f[n] * 1000);
+          times.push(f[0]); NF++;
+        }
+        if (NF) T_END = times[NF - 1];
+        const fresh = (marks || []).filter(m => { const key = m.t + '|' + m.k + '|' + m.s + '|' + (m.who ?? '') + '|' + (m.kind ?? ''); if (seen.has(key)) return false; seen.add(key); return true; });
+        meta.marks.push(...fresh);
+        if (lineup && JSON.stringify(meta.lineups[meta.lineups.length - 1].on) !== JSON.stringify(lineup.on)) meta.lineups.push(lineup);
+        ingest(k0, fresh);
+        ci = cues.findIndex(c => !c.done && c.t > T - 0.4); if (ci < 0) ci = cues.length;
+        ki = 0;
+      },
+      // Show second t of the match; real: seconds of real time since the last call.
+      frame(t, real) {
+        if (NF < 2) return;
+        t = Math.max(times[0], Math.min(T_END, t));
+        const d = t - T;
+        if (d < -0.05 || d > 1.5) { seek(t); ext = 0; } else { T = t; ext = Math.max(0, Math.min(d, real * 2.5)); }
+        update(Math.min(0.25, Math.max(real, 0.001))); renderer.render(scene, camera);
+        autoShadows(real);
+      },
+      resize, cams: CAMS, get cam() { return camMode; }, setCam(n) { camMode = ((n % CAMS.length) + CAMS.length) % CAMS.length; follow = null; cut = true; }, follow(s, i, wide) { follow = s == null ? null : [s, i, !!wide]; cut = true; },
+      get shadows() { return shadows; }, setShadows, get time() { return T; }, get frames() { return NF; }, cuesOf: name => cues.filter(c => c.clip === name).length,
+      dispose() { window.removeEventListener('resize', resize); renderer.dispose(); if (renderer.forceContextLoss) renderer.forceContextLoss(); },
+    };
+  }
   const q = new URLSearchParams(location.search);
   if (q.has('t')) seek(+q.get('t'));
   if (q.has('cam')) camMode = +q.get('cam') % CAMS.length;
   if (q.has('speed')) { speed = +q.get('speed') || 1; $('speed').textContent = speed + 'x'; }
   const manual = q.has('manual'); // tests drive the clock themselves
-  let last = performance.now(), slow = 0;
   function frame(now) {
     const dt = Math.min(0.25, (now - last) / 1000); last = now;
-    if (!manual) {
-      update(dt); renderer.render(scene, camera);
-      // a phone that cannot hold the frame rate with real shadows drops to the simple ones by itself
-      if (shadows && playing) { slow = dt > 0.05 ? slow + 1 : Math.max(0, slow - 1); if (slow > 90) { setShadows(false); note('Simple shadows for a smoother picture', 3); } }
-    }
+    if (!manual) { update(dt); renderer.render(scene, camera); autoShadows(dt); }
     requestAnimationFrame(frame);
   }
   window.match3d = { cuesOf: name => cues.filter(c => c.clip === name).map(c => [Math.round(c.t * 10) / 10, c.s, c.i]), cueMix: cues.reduce((o, c) => { o[c.clip] = (o[c.clip] || 0) + 1; return o; }, {}), seek, step(dt) { update(dt); renderer.render(scene, camera); }, get time() { return T; }, end: T_END, cues: cues.length, setCam(n) { camMode = n; follow = null; cut = true; }, follow(s, i, wide) { follow = s == null ? null : [s, i, !!wide]; cut = true; }, caption(text) { $('note').textContent = text || ''; noteUntil = 0; }, carrierAt() { const k = frameAt(T); return [F[k * STRIDE + 3], F[k * STRIDE + 4]]; }, clips: clips.map(c => c.name), drawCalls: () => renderer.info.render.calls };
@@ -707,4 +767,11 @@ function buildStadium(scene, meta) {
   }
 }
 
-boot().catch(fail);
+export function bootReplay() { return boot().catch(fail); }
+// The live match: an empty viewer for these two teams, to be fed with push() and driven with frame().
+// meta: { teams: [{ id, name }, ...], colors: [{ f, s, gk }, ...], lineups: [{ min, on, body }] }
+export async function createLive(embed, meta) {
+  const loader = new GLTFLoader(), at = name => new URL('./assets/' + name, import.meta.url).href;
+  const [playerGltf, ballGltf] = await Promise.all([binary(at('player.glb')).then(b => loader.parseAsync(b, '')), binary(at('ball.glb')).then(b => loader.parseAsync(b, ''))]);
+  return start({ pitch: [PW, PL], ...meta, times: [], marks: [] }, new Int16Array(STRIDE * 512), playerGltf, ballGltf, embed);
+}

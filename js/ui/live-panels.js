@@ -1,5 +1,5 @@
 'use strict';
-const MATCH_VIEWS = [['2d', '2D'], ['formation', 'Formation'], ['lineup', 'Line up'], ['stats', 'Match stats']];
+const MATCH_VIEWS = [['2d', '2D'], ['3d', '3D'], ['formation', 'Formation'], ['lineup', 'Line up'], ['stats', 'Match stats']];
 // Team identity never changes: bottom remains the manager's side. Only the
 // projection changes when a new period starts, for canvas, hit testing and maps.
 function livePeriod(L) {
@@ -14,7 +14,8 @@ function matchViewsHtml(L) {
   return `<div class="match-tabs" role="tablist" aria-label="Live match views">${MATCH_VIEWS.map(([k,n])=>`<button id="matchTab-${k}" role="tab" aria-controls="matchPanel-${k}" aria-selected="${active===k}" tabindex="${active===k?0:-1}" class="${active===k?'on':''}" data-a="matchView" data-v="${k}">${n}</button>`).join('')}</div>
     <p id="matchEnds" class="match-ends"></p><div class="match-viewport">
     <section id="matchPanel-2d" class="pitchwrap match-view-panel" role="tabpanel" aria-labelledby="matchTab-2d" ${active==='2d'?'':'hidden'}><canvas id="pitch" aria-label="Live match view"></canvas></section>
-    ${MATCH_VIEWS.slice(1).map(([k])=>`<section id="matchPanel-${k}" class="match-view-panel match-data-panel" role="tabpanel" aria-labelledby="matchTab-${k}" tabindex="0" ${active===k?'':'hidden'}></section>`).join('')}</div>`;
+    <section id="matchPanel-3d" class="pitchwrap match-view-panel m3-panel" role="tabpanel" aria-labelledby="matchTab-3d" ${active==='3d'?'':'hidden'}><div class="m3-stage"></div><p id="m3Load" class="m3-load" hidden></p><div id="m3Over" class="m3-over" role="status" hidden></div><div class="m3-ctl"><button id="m3Cam" data-a="match3dCam">Camera</button><button id="m3Shade" data-a="match3dShade">Shadows on</button></div></section>
+    ${MATCH_VIEWS.slice(2).map(([k])=>`<section id="matchPanel-${k}" class="match-view-panel match-data-panel" role="tabpanel" aria-labelledby="matchTab-${k}" tabindex="0" ${active===k?'':'hidden'}></section>`).join('')}</div>`;
 }
 function matchLineupRow(L, S, id, i, status) {
   const p=G.players[id];if(!p)return '';
@@ -94,7 +95,7 @@ function updateMatchPanels(L) {
   const period=livePeriod(L),flip=liveViewFlipped(L);
   if(L.displayFlip!==flip){if(L.displayFlip!==undefined){L.trail=[];L.fx=[];L.fade=1;}L.displayFlip=flip;if(L.W&&L.H)moveCam(L,0,true);}
   ends.textContent=L.M.sides.map((S,i)=>clubName(S.cid)+' '+liveAttackArrow(L,i)).join(' · ');
-  const active=L.matchView||'2d',panel=document.getElementById('matchPanel-'+active);if(!panel||active==='2d')return;
+  const active=L.matchView||'2d',panel=document.getElementById('matchPanel-'+active);if(!panel||active==='2d'||active==='3d')return;
   let key,html;
   if(active==='lineup'){
     key=JSON.stringify(L.M.sides.map(S=>[S.ip,S.oop,S.on,S.bench,S.off,S.reds,S.roles,S.cap,L.done]));html=()=>matchLineupsHtml(L);
@@ -109,11 +110,13 @@ function updateMatchPanels(L) {
 ACT.matchView=ds=>{
   const L=LIVE;if(!L||!MATCH_VIEWS.some(([k])=>k===ds.v))return;L.matchView=ds.v;
   for(const[k]of MATCH_VIEWS){const b=document.getElementById('matchTab-'+k),p=document.getElementById('matchPanel-'+k);if(!b||!p)continue;b.classList.toggle('on',k===ds.v);b.setAttribute('aria-selected',String(k===ds.v));b.tabIndex=k===ds.v?0:-1;p.hidden=k!==ds.v;}
-  updateBoard(L);if(ds.v==='2d')bindLive();
+  updateBoard(L);if(ds.v==='2d')bindLive();if(ds.v==='3d')live3dOpen(L);
 };
+ACT.match3dCam = () => { const V = LIVE && LIVE.v3; if (V && V.api) { V.api.setCam(V.api.cam + 1); live3dButtons(LIVE); } };
+ACT.match3dShade = () => { const V = LIVE && LIVE.v3; if (V && V.api) { V.api.setShadows(!V.api.shadows); live3dButtons(LIVE); } };
 ACT.matchFormationPhase=ds=>{if(!LIVE||!['ip','oop'].includes(ds.v))return;LIVE.formationPhase=ds.v;updateBoard(LIVE);};
 document.addEventListener('keydown',e=>{
   if(!e.target.matches('.match-tabs [role=tab]')||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();
-  const i=MATCH_VIEWS.findIndex(([k])=>k===e.target.dataset.v),n=e.key==='Home'?0:e.key==='End'?3:(i+(e.key==='ArrowRight'?1:3))%4;
+  const i=MATCH_VIEWS.findIndex(([k])=>k===e.target.dataset.v),N=MATCH_VIEWS.length,n=e.key==='Home'?0:e.key==='End'?N-1:(i+(e.key==='ArrowRight'?1:N-1))%N;
   ACT.matchView({v:MATCH_VIEWS[n][0]});document.getElementById('matchTab-'+MATCH_VIEWS[n][0]).focus();
 });
