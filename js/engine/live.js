@@ -15,6 +15,7 @@ let LIVE = null;
 function newLive(M, fid) {
   const bottom = M.sides[0].user ? 0 : 1;
   M.live = true;
+  if (LIVE && typeof live3dClose === 'function') live3dClose(LIVE); // one 3D view at a time
   M.onAsync = evs => evs.forEach(e => { if (LIVE && LIVE.M === M) pushFeed(LIVE, e.t === 'sub' ? 'info' : 'tac', commLine(LIVE, e), e.side); });
   LIVE = { M, G, fid, bottom, mq: null, t: 0, last: 0, paused: false, hold: 0, dots: [[], []], ball: { x: PW / 2, y: PL / 2, z: 0 }, own: [-1, -1], disp: [M.sides[0].st.g, M.sides[1].st.g], feed: [], overlay: null, done: false, raf: 0, cv: null, ctx: null, W: 0, H: 0, subSel: null, colors: null, line: null, cam: { x: PW / 2, y: PL / 2, s: 0 } };
   LIVE.colors = kitColors(M.sides[bottom].cid, M.sides[1 - bottom].cid);
@@ -110,6 +111,7 @@ function bindLive() {
   if (!L.dots[0].length) placeFromSim(L);
   moveCam(L, 0, true);
   renderFeed(L);
+  if (L.matchView === '3d') live3dOpen(L);
   if (!L.raf) { L.last = 0; L.raf = requestAnimationFrame(liveFrame); }
 }
 // Before the first minute (or after resuming): where the engine has everyone now.
@@ -138,6 +140,7 @@ function liveFrame(ts) {
   if (L.fade > 0) L.fade = Math.max(0, L.fade - dt / 260);
   moveCam(L, dt);
   if(!L.matchView||L.matchView==='2d')draw(L);
+  else if (L.matchView === '3d') live3dFrame(L, dt);
   L.raf = requestAnimationFrame(liveFrame);
 }
 
@@ -173,6 +176,7 @@ async function liveStep(L) {
   const timed = evs.filter(e => e.tt != null).sort((a, b) => a.tt - b.tt), now = evs.filter(e => e.tt == null && e.t !== 'poss');
   const segs = segments(M.marks || [], t0, lo, M, fr);
   L.mq = { min: M.min, fr, t0, p: Math.min(0, segs.length ? segs[0][0] : 0), ev: timed, ei: 0, segs, skip: 0, main: evs[0], marks: (M.marks || []).slice(), mi: 0 };
+  live3dFeed(L);
   now.forEach(e => pushFeed(L, e.t === 'inj' ? 'inj' : e.t === 'sub' ? 'info' : 'tac', commLine(L, e), e.side));
   updateBoard(L);
   if (UI.popup && UI.popup.key === 'live:pl') { const b = document.querySelector('#layer .sh-body'), h = plCardHtml(L); if (b && h) b.innerHTML = h; }
@@ -219,7 +223,8 @@ function playMinuteView(L, dt) {
   const q = L.mq, inSeg = q.segs.find(s => q.p >= s[0] && q.p < s[1]);
   // Dead time at a restart (the ball is out, players walk into position) runs six times faster, as TV cuts it.
   const ff = L.rs && L.rs !== 'pen' ? 6 : 1;
-  if (inSeg) q.p = Math.min(inSeg[1], q.p + dt / 1000 * (SPEED_RATE[G.settings.speed] || 4) * ff);
+  // In 3D the lowest speed is real time (bodies moving at twice life speed do not look like football).
+  if (inSeg) q.p = Math.min(inSeg[1], q.p + dt / 1000 * (SPEED_RATE[G.settings.speed] || 4) * ff * (L.matchView === '3d' ? 0.5 : 1));
   else {
     q.skip += dt;
     if (q.skip < 90) return;
