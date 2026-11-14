@@ -1117,8 +1117,12 @@ function shoot(M, s, i, o = {}) {
   let res=R()<resolution.onTarget ? (R()<resolution.goalGivenTarget?'goal':'save') : 'miss';
   let { ax, az } = shot;
   if (res==='miss') {
-    if (R()<execution.overBar) { az=rf(2.6,4.5); ev.over=true; }
-    else ax=(Math.sign(ax)||(R()<.5?-1:1))*rf(3.9,7.5);
+    // A miss crosses the line just outside the frame: a little wide or over from close in, more from distance
+    // (the error is an angle). It used to be 3.9-7.5 m wide or up to 4.5 m high from anywhere, so a tap-in that
+    // missed flew nowhere near the goal.
+    const range=hyp(launchX-PW/2,launchY-gy);
+    if (R()<execution.overBar) { az=2.56+rf(0,.25+range*.07); ev.over=true; }
+    else ax=(Math.sign(ax)||(R()<.5?-1:1))*(3.77+rf(.05,.35+range*.11));
   }
   const speed = ({ header: 18, volley: 28, chip: 17, placed: 22, power: 31, driven: 28, long: 29, curler: 24, finesse: 23, 'free kick': 25 })[shot.kind] || 26;
   let tx = PW / 2 + ax, ty = gy + fwdY(s) * 1.5;

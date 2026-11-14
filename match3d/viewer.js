@@ -288,6 +288,41 @@ function start(meta, F, playerGltf, ballGltf, embed) {
   const tangents = (a, b, c, d) => { const mid = c - b, before = b - a, after = d - c; return [before * mid > 0 ? 2 * before * mid / (before + mid) : 0, mid * after > 0 ? 2 * mid * after / (mid + after) : 0, mid]; };
   const curve = (a, b, c, d, u) => { const [m1, m2, mid] = tangents(a, b, c, d); return (((m1 + m2 - 2 * mid) * u + 3 * mid - 2 * m1 - m2) * u + m1) * u + b; };
   const slope = (a, b, c, d, u) => { const [m1, m2, mid] = tangents(a, b, c, d); return (3 * (m1 + m2 - 2 * mid) * u + 2 * (3 * mid - 2 * m1 - m2)) * u + m1; }; // per frame step
+  // A shot is drawn along its real flight, as the engine computed it: the frames are half a second apart and the
+  // one after a shot often already has the ball placed for the goal kick or the corner. After it arrives, a ball
+  // that went wide or over carries on out of play, and one saved or blocked behind goes out for the corner; it
+  // is only placed for the restart a moment later, as the television picture would show it.
+  const OUT = 1.6;
+  function shotBallAt(t) {
+    let m = null;
+    for (let n = shotFx.length - 1; n >= 0; n--) { const q = shotFx[n]; if (q.t <= t) { if (t < q.t + Math.max(0.05, q.flight || 0.4) + OUT) m = q; break; } }
+    if (!m) return null;
+    const fl = Math.max(0.05, m.flight || 0.4), end = m.t + fl, gy = m.s === 0 ? 0 : PL, fw = m.s === 0 ? -1 : 1;
+    const at = time => {
+      const u = clamp((time - m.t) / fl, 0, 1), arc = m.kind === 'chip' ? 2.2 : m.kind === 'free kick' ? 0.9 : 0.15;
+      let x = m.x0 + (m.tx - m.x0) * u + (m.curve || 0) * Math.sin(Math.PI * u), y = m.y0 + (m.ty - m.y0) * u, z = (m.z0 || 0) * (1 - u) + (m.az || 0) * u + arc * 4 * u * (1 - u);
+      if (m.res === 'goal') { const depth = (y - gy) * fw; if (depth > 0) { x = clamp(x, PW / 2 - 3.5, PW / 2 + 3.5); y = gy + fw * 1.8 * (1 - Math.exp(-depth / 1.2)); z = Math.min(z, 2.3); } }
+      return [x, y, z];
+    };
+    if (t <= end) return at(t);
+    // after it arrives: only a ball that leaves the pitch is ours to draw (the frames have the rest right)
+    let k = frameAt(end); const kEnd = frameAt(end + OUT);
+    let code = 0; for (; k <= kEnd && k < NF; k++) if (F[k * STRIDE + 5]) { code = F[k * STRIDE + 5]; break; }
+    if (code !== 2 && code !== 3) return null;
+    const [ex, ey, ez] = at(end), [px, py] = at(end - 0.05), s = t - end;
+    let dx = ex - px, dy = ey - py, d = Math.hypot(dx, dy) || 1;
+    if (code === 3 && m.res !== 'miss') { // saved or blocked behind: it goes out over the line towards the corner side
+      const side = (k < NF ? F[k * STRIDE] / 100 : ex) < PW / 2 ? -1 : 1;
+      dx = side * 0.8; dy = fw * 1; d = Math.hypot(dx, dy);
+    }
+    const v = m.res === 'miss' ? Math.min(24, d / 0.05) : 9, go = v * (1 - Math.exp(-1.6 * s)) / 1.6;
+    const vz = m.res === 'miss' ? 0 : 3.2, z = Math.max(0, ez + vz * s - 4.9 * s * s);
+    // it stops at the first board it reaches (behind the goal it is never further than 6.5 m from the line)
+    const room = Math.max(0, 6.1 - Math.abs(ey - gy)) / Math.max(0.05, Math.abs(dy / d));
+    const left = Math.min(go, room);
+    // the advertising boards stop it: 6.5 m behind the goal line, 9 m outside the touchline
+    return [clamp(ex + dx / d * left, -8.6, PW + 8.6), clamp(ey + dy / d * left, -6.1, PL + 6.1), z];
+  }
   const frameAt = t => { let lo = 0, hi = NF - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (times[m] <= t) lo = m; else hi = m - 1; } return lo; };
 
   /* ---------- action cues from the engine's marks ---------- */
@@ -318,11 +353,14 @@ function start(meta, F, playerGltf, ballGltf, embed) {
     cue(t, s, i, clip, { mirror: !air && (h >>> 3) % 3 === 0 });
   }
   let lastScorer = null, goals = [], kicks = [], shots = [];
+  const shotFx = []; // every shot's real flight (the engine's 'sfx' marks)
   const holds = [], runUps = [], cutAt = Array.from({ length: 22 }, () => new Set());
   // Turns marks and frames into cues. Called once for a recording, and again for every minute of a live match
   // (k0: the first new frame; marks: the new marks only).
   function ingest(k0, marks) {
   indexMarks(marks);
+  for (const m of marks) if (m.k === 'sfx' && m.x0 != null && m.tx != null) shotFx.push(m);
+  shotFx.sort((a, b) => a.t - b.t);
   for (const m of marks) {
     if (m.k === 'kick') {
       if (m.who === 0) for (const h of holds) if (h.open && h.s === m.s && m.t > h.t0) { h.open = false; h.t1 = m.t; h.style = m.style; }
@@ -450,9 +488,12 @@ function start(meta, F, playerGltf, ballGltf, embed) {
     const os = F[r + 3], oi = F[r + 4];
     const kA = k > 0 && times[k] - times[k - 1] <= 1 ? k - 1 : k, kB = k2 < NF - 1 && times[k2 + 1] - times[k2] <= 1 ? k2 + 1 : k2;
     const held = os >= 0 && [kA, k2, kB].every(n => F[n * STRIDE + 3] === os && F[n * STRIDE + 4] === oi);
-    const lerp = (a, b, n) => (span > 1 ? a : held ? curve(F[kA * STRIDE + n], a, b, F[kB * STRIDE + n], u) : a + (b - a) * u) / 100;
+    // When the ball is placed for a restart it is carried there, not kicked: no sliding from where it went out.
+    const placed = !F[r + 5] && F[r2 + 5] && Math.hypot(F[r2] - F[r], F[r2 + 1] - F[r + 1]) > 300;
+    const lerp = (a, b, n) => (span > 1 || placed ? a : held ? curve(F[kA * STRIDE + n], a, b, F[kB * STRIDE + n], u) : a + (b - a) * u) / 100;
     prevBall.copy(ballPos);
     ballPos.set(lerp(F[r], F[r2], 0) - PW / 2, Math.max(0, (span > 1 ? F[r + 2] : F[r + 2] + (F[r2 + 2] - F[r + 2]) * u) / 100) + BALL_R, lerp(F[r + 1], F[r2 + 1], 1) - PL / 2);
+    { const p = shotBallAt(T); if (p) ballPos.set(p[0] - PW / 2, Math.max(0, p[2]) + BALL_R, p[1] - PL / 2); }
 
     let n = 0, carrier = null, lastSide = os;
     if (lastSide < 0) { // in flight: it belongs to whoever played it last
@@ -636,6 +677,9 @@ function start(meta, F, playerGltf, ballGltf, embed) {
 
     // camera
     const aspect = camera.aspect, wantPos = new THREE.Vector3(), wantAim = new THREE.Vector3();
+    // the cameras follow the ball, but never off the pitch: a ball out of play is watched from where it left
+    const ballPosReal = ballPos.clone();
+    ballPos.x = clamp(ballPos.x, -PW / 2 - 1, PW / 2 + 1); ballPos.z = clamp(ballPos.z, -PL / 2 - 1, PL / 2 + 1);
     if (follow && follow[2]) { // behind his goal, looking up the pitch over the keeper to the ball
       const f = P[follow[0]][follow[1]], end = Math.sign(f.z) || 1, gap = Math.abs(ballPos.z - f.z);
       wantPos.set(f.x * 0.4, 8 + gap * 0.1, end * (PL / 2 + 17 + gap * 0.08)); wantAim.set(f.x * 0.75 + ballPos.x * 0.25, 0.8, f.z + (ballPos.z - f.z) * 0.3);
@@ -655,6 +699,7 @@ function start(meta, F, playerGltf, ballGltf, embed) {
     const ease = 1 - Math.exp(-dt * 5);
     camPos.lerp(wantPos, cut ? 1 : ease); camAim.lerp(wantAim, cut ? 1 : ease); cut = false;
     camera.position.copy(camPos); camera.lookAt(camAim);
+    ballPos.copy(ballPosReal); // the ball itself stays where it really is
 
     // HUD
     const g = [0, 0]; for (const m of goals) if (m.t <= T) g[m.s]++;
