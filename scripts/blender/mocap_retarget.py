@@ -36,6 +36,13 @@ TAKES = {
     "Jog": ("35", "17", "gait", {}),
     "Stride": ("16", "45", "gait", {}),      # a steady run; the library has no flat-out sprint
     "Shoot": ("10", "01", "kick", {"before": 26, "frames": 79}),
+    # walking backwards, eyes on the play (the backward stretch of a walk forward, back and around)
+    "WalkBack": ("09", "12", "gait", {"window": (12.1, 14.7), "back": True}),
+    # one-off movements, played in place: the body's own turning is taken out (the game turns the player),
+    # the steps, the plant and the lean are kept
+    "Stop": ("127", "05", "once", {"window": (0.25, 1.45), "flat": True}),      # run to a quick stop
+    "Cut": ("127", "15", "once", {"window": (0.35, 1.15), "flat": True}),       # running turn to the left
+    "Turn": ("16", "17", "once", {"window": (2.05, 2.95), "flat": True}),       # walking 90-degree turn to the left
 }
 PAIRS = {"hips": "root", "spine": "lowerback", "chest": "thorax", "neck": "lowerneck", "head": "head"}
 for _side, _k in ((1, "l"), (-1, "r")):
@@ -130,6 +137,9 @@ def slerp(a, b, u):
 def build(folder, clip, subject, take, kind, opt):
     bones, parent = read_asf(os.path.join(folder, subject + ".asf"))
     raw = read_amc(os.path.join(folder, f"{subject}_{take}.amc"))
+    if "window" in opt:
+        a0, a1 = opt["window"]
+        raw = raw[int(a0 * SRC_FPS):int(a1 * SRC_FPS) + 1]
     sol = [solve(bones, parent, f) for f in raw]
     ours = bp.joints()
     # rest-pose correction: our bone's rest direction turned onto the captured bone's rest direction
@@ -145,7 +155,11 @@ def build(folder, clip, subject, take, kind, opt):
     toe = lambda s, k: TO_OURS @ s[2][k + "toes"]
     n = len(sol)
 
-    if kind == "kick":
+    if kind == "once":
+        idx = [i * SRC_FPS / FPS for i in range(int((n - 1) * FPS / SRC_FPS))]
+        travel = root[min(n - 1, 12)] - root[0]
+        mirror = False
+    elif kind == "kick":
         speed = lambda k, i: (toe(sol[i + 2], k) - toe(sol[i - 2], k)).length
         best = max(((speed(k, i), i, k) for k in "lr" for i in range(2, n - 2)))
         hit, foot = best[1], best[2]
@@ -160,8 +174,16 @@ def build(folder, clip, subject, take, kind, opt):
         sol = [mirrored(G, st, en, TO_OURS.transposed() @ r)[:3] for (G, st, en), r in zip(sol, root)]
         root = [TO_OURS @ s[2]["root"] for s in sol]
         travel = Vector((-travel.x, travel.y, travel.z))
-    heading = Matrix.Rotation(math.atan2(travel.x, -travel.y), 3, "Z")   # turn the direction of travel onto -y
+    heading = Matrix.Rotation(math.atan2(travel.x, -travel.y) + (math.pi if opt.get("back") else 0), 3, "Z")   # turn the direction of travel onto -y (backwards: onto +y)
+    # flat: take the body's own turning out, frame by frame, so the clip keeps facing where it started
+    def yaw(G):
+        f = TO_OURS @ G["root"] @ TO_OURS.transposed() @ Vector((0, -1, 0))
+        return math.atan2(f.x, -f.y)
+    y0 = yaw(sol[0][0])
+    turn = [Matrix.Rotation((yaw(s[0]) - y0) if opt.get("flat") else 0.0, 3, "Z") for s in sol]
     root = [heading @ r for r in root]
+    if opt.get("flat"):                                   # in place, as the game moves him
+        root = [Vector((root[0].x, root[0].y, r.z)) for r in root]
 
     if kind == "gait":
         # one stride: left-foot strike to left-foot strike (the left ankle furthest ahead of the pelvis)
@@ -181,12 +203,14 @@ def build(folder, clip, subject, take, kind, opt):
         stride = (root[b] - root[a]).length * scale
     else:
         pick, count, seconds, stride, a, b = idx, len(idx), len(idx) / FPS, 0.0, idx[0], idx[-1]
+        if kind == "once":
+            seconds = count / FPS
 
     def at(x):
         i = min(n - 2, int(x))
         u = x - i
-        p0, _ = fitted(bones, sol[i][0], heading, fix)
-        p1, _ = fitted(bones, sol[i + 1][0], heading, fix)
+        p0, _ = fitted(bones, sol[i][0], heading @ turn[i].transposed(), fix)
+        p1, _ = fitted(bones, sol[i + 1][0], heading @ turn[i + 1].transposed(), fix)
         return {k: slerp(p0[k], p1[k], u) for k in p0}, root[i].lerp(root[i + 1], u) * scale
 
     poses, locs = [], []
@@ -227,7 +251,7 @@ def build(folder, clip, subject, take, kind, opt):
     low = min(ankles(p, q) for p, q in zip(poses, locs))
     locs = [Vector((p.x, p.y, p.z - low + bp.ANKLE_UP)) - Vector((0, 0, 0.95)) + Vector((0, 0, 0)) for p in locs]
     print(f"{clip:6s} {subject}_{take}: {count} frames, {seconds:.2f} s"
-          + (f", stride {stride:.2f} m, {stride / seconds:.2f} m/s" if kind == "gait" else f", struck with the {'left (mirrored)' if mirror else 'right'} foot"))
+          + (f", stride {stride:.2f} m, {stride / seconds:.2f} m/s" if kind == "gait" else f", struck with the {'left (mirrored)' if mirror else 'right'} foot" if kind == "kick" else ""))
     return {"frames": count, "seconds": round(seconds, 4), "speed": round(stride / seconds, 3) if stride else 0,
             "source": f"CMU mocap {subject}_{take}",
             "poses": [{k: [round(v, 5) for row in m for v in row] for k, m in p.items()} for p in poses],
