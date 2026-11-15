@@ -60,11 +60,13 @@ sink 17 cm).
 
 Walk, Jog, Stride (a steady run) and Shoot are motion capture from the Carnegie Mellon University Graphics Lab
 Motion Capture Database (mocap.cs.cmu.edu; its data "may be copied, modified, or redistributed without permission").
-Takes used: 35_01 walk, 35_17 jog, 16_45 run, 10_01 football kick. `mocap_retarget.py` documents the fitting; to add
+Takes used: 35_01 walk, 35_17 jog, 16_45 run, 10_01 football kick; and (added 15 November) 09_12 12.1-14.7 s walking
+backwards (WalkBack), 127_05 run to a quick stop (Stop, new), 127_15 running turn (Cut), 16_17 walking 90-degree turn
+(Turn). One-off clips with `flat` have the body's own turning taken out, since the game turns the player. `mocap_retarget.py` documents the fitting; to add
 a clip, download the subject's `.asf` and the take's `.amc`, add a line to `TAKES`, run it, rebuild the model.
 The library has no flat-out sprint, so the hand-keyed Run stays for top speed; everything else is still hand-keyed.
-Good candidates not yet used: 127_05 run to quick stop, 127_15/16 run and turn, 09_12 walking backwards and sideways,
-16_17 to 16_20 walking 90-degree turns.
+The viewer plays Stop when a player goes from a run (over 3.6 m/s) to under 1.1 m/s between two frames.
+Still hand-keyed: passes, receiving, tackles, headers, side-steps, dribbling and all keeper clips.
 
 ## Movement between engine frames, and tried-and-reverted engine stepping
 

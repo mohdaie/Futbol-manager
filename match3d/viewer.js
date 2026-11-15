@@ -11,8 +11,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const PW = 68, PL = 105, STRIDE = 72, NONE = -32768, BALL_R = 0.11;
 // ground speed (m/s) each looping clip was animated for, so feet match the pitch
-// (Walk, Jog and Stride are motion capture: these are the speeds the people were recorded at, scaled to our legs.)
-const LOCO = { Walk: 1.22, Jog: 2.99, Stride: 3.95, Run: 6.0, Dribble: 2.45, Jockey: 0.95, WalkBack: 0.77, WalkDribble: 1.07, SideStep: 0.83, KeeperShuffle: 1.0, KeeperHoldWalk: 1.16 };
+// (Walk, Jog, Stride and WalkBack are motion capture, as are Shoot, Stop, Cut and Turn: these are the speeds the people were recorded at, scaled to our legs.)
+const LOCO = { Walk: 1.22, Jog: 2.99, Stride: 3.95, Run: 6.0, Dribble: 2.45, Jockey: 0.95, WalkBack: 1.02, WalkDribble: 1.07, SideStep: 0.83, KeeperShuffle: 1.0, KeeperHoldWalk: 1.16 };
 const STILL = { Idle: 1, IdleShift: 1, IdleLook: 1, IdleBounce: 1, KeeperReady: 1, KeeperHold: 1 }; // looping clips that stand on the spot
 // Forward gaits are blended by speed, not switched: between a walk and a jog he is part one, part the other.
 const GAIT = [['Walk', 1.22], ['Jog', 2.99], ['Stride', 3.95], ['Run', 6.0]], GAIT_BALL = [['WalkDribble', 1.07], ['Dribble', 2.45], ['Run', 6.0]];
@@ -25,11 +25,11 @@ const LOOPS = n => n in LOCO || n in STILL;
 // contact; side: metres the clip itself travels sideways by contact.
 const ROOTED = { KeeperDive: { reach: 1.15, side: 1.35 }, KeeperDiveLow: { reach: 1.2, side: 1.2 }, KeeperDiveHigh: { reach: 1.1, side: 1.5 }, KeeperSmother: { reach: 0.6, side: 0.44 } };
 // seconds from the start of a clip to the moment of ball contact, and how fast to play it
-const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0, ReceiveInside: 0.34, ReceiveTurn: 0.36, ReceiveSole: 0.36, ReceiveRun: 0.2, Shoulder: 0.22, Stumble: 0, Fall: 0 , KeeperDiveLow: 0.5, KeeperDiveHigh: 0.55, KeeperScoop: 0.283, KeeperGetUp: 0, KeeperSmother: 0.45, KeeperPunch: 0.517, KeeperThrow: 0.65, KeeperRoll: 0.667, KeeperPunt: 0.433 , Cut: 0.2, Turn: 0, ReceiveChest: 0.283, ReceiveThigh: 0.283, ReceiveHead: 0.283, Call: 0, Point: 0 };
-const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1, ReceiveInside: 1.25, ReceiveTurn: 1.25, ReceiveSole: 1.2, ReceiveRun: 1, Shoulder: 1, Stumble: 1, Fall: 1 , KeeperDiveLow: 1.2, KeeperDiveHigh: 1.15, KeeperScoop: 1.2, KeeperGetUp: 1.3, KeeperSmother: 1.2, KeeperPunch: 1.2, KeeperThrow: 1.1, KeeperRoll: 1.1, KeeperPunt: 1.2 , Cut: 1.1, Turn: 1.1, ReceiveChest: 1.2, ReceiveThigh: 1.2, ReceiveHead: 1.2, Call: 1, Point: 1 };
+const CONTACT = { Pass: 0.5, Shoot: 0.417, LongKick: 0.417, Header: 0.567, Tackle: 0.417, FirstTouch: 0.283, ThrowIn: 0.683, KeeperDive: 0.533, KeeperCatch: 0.517, Celebrate: 0, ReceiveInside: 0.34, ReceiveTurn: 0.36, ReceiveSole: 0.36, ReceiveRun: 0.2, Shoulder: 0.22, Stumble: 0, Fall: 0 , KeeperDiveLow: 0.5, KeeperDiveHigh: 0.55, KeeperScoop: 0.283, KeeperGetUp: 0, KeeperSmother: 0.45, KeeperPunch: 0.517, KeeperThrow: 0.65, KeeperRoll: 0.667, KeeperPunt: 0.433 , Cut: 0.3, Turn: 0.15, ReceiveChest: 0.283, ReceiveThigh: 0.283, ReceiveHead: 0.283, Call: 0, Point: 0 , Stop: 0.35 };
+const RATE = { Pass: 1.7, Shoot: 1.25, LongKick: 1.3, Header: 1.3, Tackle: 1.4, FirstTouch: 1.6, ThrowIn: 1.2, KeeperDive: 1.2, KeeperCatch: 1.2, Celebrate: 1, ReceiveInside: 1.25, ReceiveTurn: 1.25, ReceiveSole: 1.2, ReceiveRun: 1, Shoulder: 1, Stumble: 1, Fall: 1 , KeeperDiveLow: 1.2, KeeperDiveHigh: 1.15, KeeperScoop: 1.2, KeeperGetUp: 1.3, KeeperSmother: 1.2, KeeperPunch: 1.2, KeeperThrow: 1.1, KeeperRoll: 1.1, KeeperPunt: 1.2 , Cut: 1, Turn: 1, ReceiveChest: 1.2, ReceiveThigh: 1.2, ReceiveHead: 1.2, Call: 1, Point: 1 , Stop: 1 };
 // a player already on the move plays only the swing of a kick: seconds kept before and after ball contact
 const SWING = { Pass: [0.2, 0.2], LongKick: [0.28, 0.3], Shoot: [0.3, 0.35] };
-const GROUNDED = /Fall|KeeperDive|KeeperSmother|KeeperGetUp|Celebrate/;
+const GROUNDED = /Fall|KeeperDive|KeeperSmother|KeeperGetUp|Celebrate|Stop/;
 const SKIN = ['#F1C9A5', '#E0AC86', '#C68863', '#A56B46', '#7A4A2E', '#5A3520'];
 const HAIR = ['#1B1410', '#2E2018', '#4A3020', '#7A5632', '#8C6A3A', '#101010'];
 
@@ -404,12 +404,13 @@ function start(meta, F, playerGltf, ballGltf, embed) {
   }
   // Sharp cuts (a change of direction at speed) and turns on the spot, read from the recorded path.
   for (let s = 0; s < 2; s++) for (let i = 1; i < 11; i++) for (let k = Math.max(1, k0 - 1); k < NF - 1; k++) {
-    if (px(k - 1, s, i) === NONE || px(k, s, i) === NONE || px(k + 1, s, i) === NONE || times[k + 1] - times[k - 1] > 1.1) continue;
+    if (px(k - 1, s, i) === NONE || px(k, s, i) === NONE || px(k + 1, s, i) === NONE || times[k + 1] - times[k - 1] > 1.1 || times[k + 1] - times[k] < 0.4 || times[k] - times[k - 1] < 0.4) continue; // a repeated frame at the start of a minute is not a stop
     const ax = (px(k, s, i) - px(k - 1, s, i)) / 50, ay = (py(k, s, i) - py(k - 1, s, i)) / 50, bx = (px(k + 1, s, i) - px(k, s, i)) / 50, by = (py(k + 1, s, i) - py(k, s, i)) / 50;
     const va = Math.hypot(ax, ay), vb = Math.hypot(bx, by), busy = [kicksBy, touchesBy].some(m => (m.get(s + ':' + i) || []).some(t => Math.abs(t - times[k]) < 0.7));
     if (busy) continue;
     if (va > 2.6 && vb > 2.6 && va < 9.5 && vb < 9.5 && !F[k * STRIDE + 5] && (ax * bx + ay * by) / (va * vb) < 0.7) { cutAt[s * 11 + i].add(k); cue(times[k], s, i, 'Cut', { soft: true, mirror: ax * by - ay * bx > 0 }); }
-    else if (va < 0.8 && vb < 0.8 && Math.abs(wrap(fa(k + 1, s, i) - fa(k, s, i))) > 1.3) cue(times[k], s, i, 'Turn', { soft: true });
+    else if (va < 0.8 && vb < 0.8 && Math.abs(wrap(fa(k + 1, s, i) - fa(k, s, i))) > 1.3) cue(times[k], s, i, 'Turn', { soft: true, mirror: wrap(fa(k + 1, s, i) - fa(k, s, i)) < 0 });
+    else if (va > 3.6 && vb < 1.1 && !F[(k + 1) * STRIDE + 5]) cue(times[k] + 0.2, s, i, 'Stop', { soft: true }); // from a run to a standstill: brakes, sinks and plants
   }
   cues.sort((a, b) => a.t - b.t);
   goals = meta.marks.filter(m => m.k === 'goal').sort((a, b) => a.t - b.t);
